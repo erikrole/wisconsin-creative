@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const detail = readFileSync("ios/Wisconsin/Views/BookingDetailView.swift", "utf8");
 const bookings = readFileSync("ios/Wisconsin/Views/BookingsView.swift", "utf8");
 const reservationEdit = readFileSync("ios/Wisconsin/Views/Booking/ReservationEditFlow.swift", "utf8");
 const actionSheets = readFileSync("ios/Wisconsin/Views/Booking/BookingActionSheets.swift", "utf8");
-const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+const api = apiClientSource();
 
 function sliceBetween(source: string, start: string, end: string) {
   const startIndex = source.indexOf(start);
@@ -18,9 +19,9 @@ function sliceBetween(source: string, start: string, end: string) {
 describe("iOS reservation edit", () => {
   it("keeps the checkout editor narrow and routes reservations to their own flow", () => {
     const checkoutEditor = sliceBetween(detail, "struct EditBookingSheet", "struct TransferBookingOwnerSheet");
-    expect(checkoutEditor).toContain('BrandSectionHeader("Booking Name")');
-    expect(checkoutEditor).toContain('Text("Due back")');
-    expect(checkoutEditor).toContain("DayTimeChipPicker(");
+    expect(checkoutEditor).toContain('TextField("Booking name"');
+    expect(checkoutEditor).toContain('LabeledContent("Change return")');
+    expect(checkoutEditor).toContain("ReturnTimeCalendar(");
     expect(checkoutEditor).not.toContain("ReservationEditFlow");
     expect(checkoutEditor).not.toContain("serializedAssetIds");
 

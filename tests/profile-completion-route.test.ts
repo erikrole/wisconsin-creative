@@ -34,7 +34,10 @@ const actor = {
 
 function storedProfile(overrides: Record<string, unknown> = {}) {
   return {
+    id: actor.id,
     role: "STUDENT",
+    onboardingRequired: false,
+    onboardingCompletedAt: null,
     email: "person@wisc.edu",
     athleticsEmail: null,
     phone: "608-555-0100",
@@ -71,6 +74,7 @@ const noParams = { params: Promise.resolve({}) };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("SESSION_SECRET", "profile-completion-test-only-session-secret");
   vi.mocked(requireAuth).mockResolvedValue(actor);
   dbMock.user.findUnique.mockResolvedValue(storedProfile());
   dbMock.user.update.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
@@ -83,6 +87,26 @@ beforeEach(() => {
 });
 
 describe("/api/me/profile-completion", () => {
+  it("rejects postponing required onboarding without changing the profile", async () => {
+    dbMock.user.findUnique.mockResolvedValue(storedProfile({ onboardingRequired: true }));
+    const response = await PATCH(patchRequest({ step: "SNOOZE" }), noParams);
+    expect(response.status).toBe(409);
+    expect(dbMock.user.update).not.toHaveBeenCalled();
+    expect(createAuditEntryTx).not.toHaveBeenCalled();
+  });
+
+  it("unlocks the new account atomically after apparel, with the photo still optional", async () => {
+    const before = storedProfile({ onboardingRequired: true, personalPhone: "608-555-0100", wiscardCardNumber: "1234567890", wiscardIssueCode: "1", studentYearOverride: "FRESHMAN", graduationTerm: "SPRING", gradYear: 2030 });
+    const apparel = { topSizeFit: "UNISEX", topSize: "M", shoeSizeSystem: "US_MENS", shoeSize: "10" };
+    dbMock.user.findUnique.mockResolvedValue(before);
+    dbMock.user.update.mockResolvedValueOnce({ ...before, ...apparel }).mockResolvedValueOnce({ ...before, ...apparel, onboardingRequired: false });
+    const response = await PATCH(patchRequest({ step: "APPAREL", ...apparel }), noParams);
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.completion).toMatchObject({ requiresSetup: false, requiredComplete: true, profileComplete: false });
+    expect(dbMock.user.update).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ onboardingRequired: false, onboardingCompletedAt: expect.any(Date) }) }));
+    expect(createAuditEntryTx).toHaveBeenCalledWith(dbMock, expect.objectContaining({ after: expect.objectContaining({ requiredSetupCompleted: true }) }));
+  });
+
   it("returns server-derived missing fields for the signed-in user", async () => {
     const response = await GET(new Request("https://app.example.com/api/me/profile-completion"), noParams);
     const body = await response.json();

@@ -1,0 +1,27 @@
+{
+  "evidence": "Real web UI saved partial Wiscard; shared-backend read verified before closing the browser",
+  "sourceRevision": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "sourcePatchSHA256": null,
+  "deploymentId": "dpl_4CajpSPWg7DoouQgzcxbtL1X68py",
+  "managedRunId": 39835882763,
+  "imageSHA256": "c25e728c4b880d36e66e380d7f430e1b80e91dac01f9027e3973fc2b3ff2c88a",
+  "testDriverSHA256": "e1154482f57c03763282d49f4f10257631fa50ed20a94e146e9c89fea25aa4bd",
+  "settings": {
+    "browser": "156.0.8078.4",
+    "viewport": {
+      "width": 1280,
+      "height": 1000
+    },
+    "fixture": "none; synthetic invited student on its own managed preview",
+    "role": "STUDENT",
+    "route": "/welcome",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "capturedAt": "2026-10-22T19:04:13.073Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "baseline": "After-only authenticated evidence"
+}

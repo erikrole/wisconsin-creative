@@ -1,6 +1,5 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,8 +24,8 @@ interface AuthScreenProps {
 /**
  * The shared shell for every unauthenticated screen.
  *
- * The login scene is a designed system in `globals.css` — `.login-card` is a
- * translucent material over the gradient, `.login-materialize` settles it into
+ * The login scene is a designed system in `globals.css` — a flat ink surface
+ * that matches the native app, `.login-materialize` settles the form into
  * place, `.login-rise` staggers the content, and `.login-lockup-title` puts the
  * wordmark on the scene rather than inside the card. Sign-in used all of it
  * while password reset, forgot password, and forced password change each
@@ -53,18 +52,19 @@ export function AuthScreen({ subtitle, children, contentClassName, footer }: Aut
           <Image
             src="/Badgers.png"
             alt="Wisconsin"
-            width={64}
-            height={64}
-            className="size-16 object-contain drop-shadow-lg mb-4"
+            width={56}
+            height={56}
+            className="size-14 object-contain mb-4"
             priority
           />
-          <h1 className="login-lockup-title text-[1.875rem] leading-tight">Wisconsin Creative</h1>
-          <p className="text-[0.9375rem] text-white/65 mt-1">{subtitle}</p>
+          <h1 className="login-lockup-title text-[1.75rem] leading-tight">Wisconsin Creative</h1>
+          <p className="text-[0.9375rem] text-[#a6a6ae] mt-1">{subtitle}</p>
         </div>
 
-        <Card data-theme="light" className="login-card login-materialize w-full border-0">
-          <CardContent className={cn("pt-6", contentClassName)}>{children}</CardContent>
-        </Card>
+        {/* The form sits directly on the ink surface, like the native app: no card. */}
+        <div data-theme="dark" className={cn("login-materialize w-full", contentClassName)}>
+          {children}
+        </div>
 
         {footer}
       </div>

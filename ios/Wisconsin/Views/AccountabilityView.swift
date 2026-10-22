@@ -72,6 +72,7 @@ struct AccountabilityView: View {
     @State private var navigationPath = NavigationPath()
     @State private var model = AccountabilityListModel()
     @State private var nameQuery = ""
+    @State private var showsEveryone = false
     @Environment(AppState.self) private var appState
     @Environment(SessionStore.self) private var session
 
@@ -150,8 +151,11 @@ struct AccountabilityView: View {
     }
 
     private func list(_ report: AccountabilityReport) -> some View {
-        let shown = report.matching(nameQuery)
         let trimmedQuery = nameQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let searching = !trimmedQuery.isEmpty
+        let everyone = showsEveryone || searching
+        let shown = everyone ? report.matching(nameQuery) : report.repeatPeople
+        let overdue = report.overdueNow()
         return List {
             if let error = model.error {
                 Section {
@@ -164,11 +168,19 @@ struct AccountabilityView: View {
                 }
             }
 
-            if !report.leaderboard.isEmpty {
-                Section {
-                    standingRow(in: report)
-                } footer: {
-                    summary(report.metrics)
+            if !searching {
+                if let record = yourRecord(in: report) {
+                    Section("Your record") { record }
+                }
+
+                if !overdue.isEmpty {
+                    Section("Overdue now") {
+                        ForEach(overdue) { entry in
+                            NavigationLink(value: BookingRouteId(id: entry.incident.bookingId)) {
+                                AccountabilityOverdueRow(entry: entry)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -187,21 +199,31 @@ struct AccountabilityView: View {
                 } else {
                     ForEach(shown) { person in
                         NavigationLink(value: AccountabilityPersonRoute(userId: person.userId)) {
-                            AccountabilityRankRow(
+                            AccountabilityPersonRow(
                                 person: person,
-                                rank: report.rank(of: person.userId) ?? 0,
                                 sort: model.sort,
                                 isYou: person.userId == session.currentUser?.id
                             )
                         }
                     }
                 }
+                if !searching, report.lateOnceCount > 0 {
+                    Button(showsEveryone
+                        ? "Show only repeat late returns"
+                        : "Show \(report.lateOnceCount) \(report.lateOnceCount == 1 ? "person" : "people") late once") {
+                        showsEveryone.toggle()
+                    }
+                }
             } header: {
                 HStack {
-                    Text(report.scopeTitle)
+                    Text(report.lateOnceCount == 0 && !report.leaderboard.contains { $0.lateEventCount >= 2 }
+                        ? "Late returns"
+                        : "Repeat late returns")
                     Spacer()
-                    Text(model.sort.label)
+                    Text(report.scopeTitle)
                 }
+            } footer: {
+                Text(report.methodology.graceSentence)
             }
 
             if report.truncated == true {
@@ -212,69 +234,47 @@ struct AccountabilityView: View {
                 }
             }
 
-            Section {
-                Text(report.methodology.graceSentence)
-                ForEach(Array(report.notes.enumerated()), id: \.offset) { _, line in
-                    Text(line)
-                }
-                if session.currentUser?.role == "ADMIN" {
-                    Text("Export and taking a checkout off this list stay on the website.")
-                }
-            }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
         }
         .listStyle(.insetGrouped)
         .refreshable { await model.load(force: true) }
     }
 
-    @ViewBuilder
-    private func standingRow(in report: AccountabilityReport) -> some View {
-        if let userId = session.currentUser?.id,
-           let person = report.person(userId),
-           let rank = report.rank(of: userId) {
+    /// Hidden when the viewer has no late returns in this list.
+    private func yourRecord(in report: AccountabilityReport) -> AnyView? {
+        guard let userId = session.currentUser?.id, let person = report.person(userId) else { return nil }
+        return AnyView(
             NavigationLink(value: AccountabilityPersonRoute(userId: person.userId)) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("You are \(accountabilityOrdinal(rank))")
-                        .font(.body.weight(.semibold))
-                    standingDetail(person)
-                        .font(.subheadline)
-                }
+                Text(person.recordSummary)
             }
-            .accessibilityLabel("You are \(accountabilityOrdinal(rank)). \(standingAccessibility(person))")
-        } else {
-            Text("You are not on this list.")
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private func standingDetail(_ person: AccountabilityPerson) -> some View {
-        let late = person.lateEventCount == 1 ? "1 late return" : "\(person.lateEventCount) late returns"
-        if let stillOut = person.stillOutLabel {
-            Text("\(late) · \(Text(stillOut).foregroundStyle(Color.statusText(.red)))")
-                .foregroundStyle(.secondary)
-        } else {
-            Text(late).foregroundStyle(.secondary)
-        }
-    }
-
-    private func standingAccessibility(_ person: AccountabilityPerson) -> String {
-        var parts = [person.lateEventCount == 1 ? "1 late return" : "\(person.lateEventCount) late returns"]
-        if let stillOut = person.stillOutLabel { parts.append(stillOut) }
-        return parts.joined(separator: ", ")
-    }
-
-    private func summary(_ metrics: AccountabilityMetrics) -> some View {
-        let stillOut = Text(metrics.stillOutPhrase)
-            .foregroundStyle(metrics.activeOverdue > 0 ? Color.statusText(.red) : Color.secondary)
-        return Text("\(metrics.peoplePhrase) · \(stillOut) · \(metrics.latePhrase)")
+            .accessibilityLabel("Your record. \(person.recordSummary.replacingOccurrences(of: " · ", with: ", "))")
+        )
     }
 }
 
-private struct AccountabilityRankRow: View {
+private struct AccountabilityOverdueRow: View {
+    let entry: AccountabilityOverdueNow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(entry.person.name)
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(entry.overdueLabel)
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(Color.statusText(.red))
+            }
+            Text(entry.incident.itemSummary.isEmpty ? entry.incident.title : entry.incident.itemSummary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.person.name), \(entry.incident.title), \(entry.overdueLabel)")
+    }
+}
+
+private struct AccountabilityPersonRow: View {
     let person: AccountabilityPerson
-    let rank: Int
     let sort: AccountabilitySort
     let isYou: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -283,16 +283,12 @@ private struct AccountabilityRankRow: View {
         Group {
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("#\(rank)")
-                        Spacer()
-                        Text(trailing)
-                    }
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(.secondary)
                     Text(person.name)
                         .font(.body.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
+                    Text(person.lateShortLabel)
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.secondary)
                     if isYou { Text("You").foregroundStyle(.secondary) }
                     if !person.active { StatusPill(label: "Inactive", tone: .gray) }
                     subtitle
@@ -307,11 +303,6 @@ private struct AccountabilityRankRow: View {
 
     private var standardRow: some View {
         HStack(alignment: .center, spacing: 12) {
-            Text("\(rank)")
-                .font(.subheadline.weight(.semibold).monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 28, alignment: .trailing)
-
             UserAvatarView(name: person.name, avatarUrl: person.avatarUrl, size: 36)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -332,56 +323,53 @@ private struct AccountabilityRankRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(trailing)
+            Text(person.lateShortLabel)
                 .font(.subheadline.weight(.semibold).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.trailing)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
     }
 
     @ViewBuilder
     private var subtitle: some View {
         if let stillOut = person.stillOutLabel {
-            Text("\(quietSubtitle) · \(Text(stillOut).foregroundStyle(Color.statusText(.red)))")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        } else {
-            Text(quietSubtitle)
+            if let rest = quietSubtitle {
+                Text("\(Text(stillOut).foregroundStyle(Color.statusText(.red))) · \(rest)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(stillOut)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.statusText(.red))
+            }
+        } else if let rest = quietSubtitle {
+            Text(rest)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private var quietSubtitle: String {
+    /// On-time rate, plus the sort's own number when it is not the count shown at right.
+    private var quietSubtitle: String? {
         var parts: [String] = []
-        if let area = person.areaLabel { parts.append(area) }
-        parts.append(person.onTimeLabel)
-        return parts.joined(separator: " · ")
-    }
-
-    private var trailing: String {
+        if let onTime = person.onTimePercentLabel { parts.append(onTime) }
         switch sort {
-        case .events:
-            person.lateEventCount == 1 ? "1 late" : "\(person.lateEventCount) late"
-        case .time:
-            accountabilityLateDuration(person.totalLateHours)
-        case .recent:
-            accountabilityRelativeIncident(person.lastIncidentAt)
+        case .events: break
+        case .time: parts.append("\(accountabilityLateDuration(person.totalLateHours)) late in total")
+        case .recent: parts.append("Last \(accountabilityRelativeIncident(person.lastIncidentAt))")
         }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private var accessibilityText: String {
-        var parts = ["\(rank)", person.name]
+        var parts = [person.name]
         if isYou { parts.append("you") }
         if !person.active { parts.append("inactive") }
-        if let area = person.areaLabel { parts.append(area) }
-        parts.append(person.onTimeLabel)
+        parts.append(person.lateShortLabel)
         if let stillOut = person.stillOutLabel { parts.append(stillOut) }
-        parts.append(trailing)
+        if let quiet = quietSubtitle { parts.append(quiet) }
         return parts.joined(separator: ", ")
     }
 }

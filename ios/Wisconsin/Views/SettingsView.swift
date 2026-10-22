@@ -15,6 +15,7 @@ struct SettingsView: View {
     let pushAuth: UNAuthorizationStatus
 
     @State private var showSignOutConfirm = false
+    @State private var showReportProblem = false
     @AppStorage("WisconsinThemeChoice") private var themeChoice: ThemeChoice = .system
     @AppStorage(HapticsPreference.key) private var hapticsEnabled = true
 
@@ -116,8 +117,16 @@ struct SettingsView: View {
                         externalLinkIndicator
                     }
                 }
+                Button {
+                    showReportProblem = true
+                } label: {
+                    SettingsRow(title: "Report a Problem", systemImage: "exclamationmark.bubble.fill", color: .green) {
+                        EmptyView()
+                    }
+                }
+                .foregroundStyle(.primary)
                 Link(destination: Self.supportURL) {
-                    SettingsRow(title: "Contact Support", systemImage: "envelope.fill", color: .green) {
+                    SettingsRow(title: "Contact Support", systemImage: "envelope.fill", color: .blue) {
                         externalLinkIndicator
                     }
                 }
@@ -146,6 +155,9 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(themeChoice.colorScheme)
+        .sheet(isPresented: $showReportProblem) {
+            ReportProblemSheet(supportURL: Self.supportURL)
+        }
         .confirmationDialog(
             "Sign out?",
             isPresented: $showSignOutConfirm,

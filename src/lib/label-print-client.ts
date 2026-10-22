@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { printJobSchema, type CreatePrintJob, type PrintCheckpoint } from "./label-print-job";
+import { printHistoryCursorSchema, printJobSchema, type CreatePrintJob, type PrintCheckpoint } from "./label-print-job";
 import { parseJsonSafely } from "./errors";
-const historySchema = z.object({ jobs: z.array(printJobSchema), nextCursor: z.string().uuid().nullable(), active: printJobSchema.nullable(), blockedByOtherOperator: z.boolean() });
+const historySchema = z.object({ jobs: z.array(printJobSchema), nextCursor: printHistoryCursorSchema.nullable(), active: printJobSchema.nullable(), blockedByOtherOperator: z.boolean() });
 export type PrintHistory = z.infer<typeof historySchema>;
 export class PrintApiError extends Error { constructor(message: string, readonly status: number) { super(message); } }
 async function request(path: string, init?: RequestInit) {

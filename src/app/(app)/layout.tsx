@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { MotionConfig } from "motion/react";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
@@ -17,6 +18,12 @@ import WebMCPProvider from "@/components/WebMCPProvider";
 import { ErrorReporter } from "@/components/error-reporting/ErrorReporter";
 import { ReportProblemProvider } from "@/components/error-reporting/ReportProblemDialog";
 
+// Safari's native Smart App Banner on iPhone, signed-in pages only (login and kiosk stay clean).
+// Safari remembers a dismissal itself and hides the banner once the app is installed.
+export const metadata: Metadata = {
+  itunes: { appId: "6763456945" },
+};
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let user;
   try {
@@ -31,6 +38,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/change-password");
   }
   const cookieStore = await cookies();
+  if (user.onboardingRequired) {
+    const pathname = (await headers()).get("x-pathname")?.split("?")[0];
+    if (pathname !== "/welcome") redirect("/welcome");
+    return (
+      <MotionConfig reducedMotion="user">
+        <QueryProvider userId={user.id}>
+          <TooltipProvider>
+            <OfflineBanner />
+            <main className="min-h-dvh px-5 py-6 sm:px-8">{children}</main>
+            <Toaster position="top-right" duration={4000} />
+          </TooltipProvider>
+        </QueryProvider>
+      </MotionConfig>
+    );
+  }
   const defaultSidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   return (

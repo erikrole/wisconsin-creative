@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 
-/** Mirrors the wc-fresh theme onto <body> so dialogs and menus in portals match the page. */
+/**
+ * Dialogs, sheets and menus render in a portal on <body>, outside the layout wrapper.
+ * Mirroring the wc-fresh classes onto <body> while a page is mounted keeps them in the same look.
+ */
 export default function FreshTheme({ classNames }: { classNames: string }) {
   useEffect(() => {
     const list = classNames.split(" ").filter(Boolean);

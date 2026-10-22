@@ -1,22 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Archive, History, Plus, RotateCcw } from "lucide-react";
+import { Archive, History, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { parseErrorMessage } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import EmptyState from "@/components/EmptyState";
 
@@ -115,11 +113,11 @@ export default function CollaboratorAccessPage() {
       actions={<CreateAffiliation onCreated={reload} />}
       mainClassName="flex flex-col gap-4"
     >
-      <Alert>
-        <AlertTriangle className="size-4" />
-        <AlertTitle>Default deny</AlertTitle>
-        <AlertDescription>New affiliations start suspended with no access. These controls never expose internal notes, private profiles, audit history, borrower identity, or custody mutations.</AlertDescription>
-      </Alert>
+      <p className="m-0 rounded-xl border border-border bg-card px-4 py-3.5 text-[13px] leading-snug text-muted-foreground shadow-xs">
+        <span className="font-bold text-foreground">Default deny.</span>{" "}
+        New affiliations start suspended with no access. These controls never expose internal notes, private profiles,
+        audit history, borrower identity, or custody changes.
+      </p>
 
       {loading ? (
         <div className="grid gap-4 xl:grid-cols-2">
@@ -143,7 +141,7 @@ export default function CollaboratorAccessPage() {
           description="Create an affiliation to decide what outside partners can see and do."
         />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="flex flex-col gap-12">
           {policies.map((policy) => <PolicyCard key={`${policy.id}:${policy.version}`} policy={policy} onChanged={reload} />)}
         </div>
       )}
@@ -298,45 +296,46 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
     onChanged();
   }
 
+  const id = policy.id;
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div><CardTitle className="flex items-center gap-2"><Badge variant="outline">{policy.affiliation.badgeLabel}</Badge>{policy.affiliation.displayName}</CardTitle><CardDescription className="mt-1">{policy.affiliation.key} · policy v{policy.version}</CardDescription></div>
-          <Badge variant={status === "ACTIVE" ? "green" : "gray"}>{status === "ACTIVE" ? "Active" : "Suspended"}</Badge>
+    <section className="flex flex-col gap-4" aria-label={`${policy.affiliation.displayName} policy`}>
+      <div className="flex items-start justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <h3 className="m-0 flex items-center gap-2 text-lg">
+            {policy.affiliation.displayName}
+            <Badge variant="outline">{policy.affiliation.badgeLabel}</Badge>
+          </h3>
+          <p className="m-0 mt-0.5 text-[13px] text-muted-foreground">{policy.affiliation.key} · policy v{policy.version}</p>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${policy.id}-name`}>Name</Label>
-            <Input
-              id={`${policy.id}-name`}
-              name={`${policy.id}-name`}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              disabled={saving}
-              className="h-10"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${policy.id}-badge`}>Badge</Label>
-            <Input
-              id={`${policy.id}-badge`}
-              name={`${policy.id}-badge`}
-              value={badge}
-              maxLength={12}
-              onChange={(event) => setBadge(event.target.value)}
-              disabled={saving}
-              className="h-10"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3 rounded-md border p-3">
-          <div>
-            <p className="font-medium">Affiliation access</p>
-            <p className="text-sm text-muted-foreground">Suspension blocks login, invitations, registration, kiosk roster, and every capability.</p>
-          </div>
+        <Badge variant={status === "ACTIVE" ? "green" : "gray"}>{status === "ACTIVE" ? "Active" : "Suspended"}</Badge>
+      </div>
+
+      <SettingsGroup>
+        <SettingsRow label="Name" htmlFor={`${id}-name`}>
+          <Input
+            id={`${id}-name`}
+            name={`${id}-name`}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            disabled={saving}
+            className="h-10"
+          />
+        </SettingsRow>
+        <SettingsRow label="Badge" htmlFor={`${id}-badge`} description="Short label shown next to their names.">
+          <Input
+            id={`${id}-badge`}
+            name={`${id}-badge`}
+            value={badge}
+            maxLength={12}
+            onChange={(event) => setBadge(event.target.value)}
+            disabled={saving}
+            className="h-10"
+          />
+        </SettingsRow>
+        <SettingsRow
+          label="Affiliation access"
+          description="Suspending blocks login, invitations, registration, the kiosk roster, and every capability."
+        >
           <Button
             type="button"
             className="h-10"
@@ -346,39 +345,38 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
           >
             {status === "ACTIVE" ? "Suspend" : "Activate"}
           </Button>
-        </div>
-        {(["Can see", "Can do", "Kiosk"] as const).map((group) => (
-          <div key={group} className="grid gap-2">
-            <p className="text-sm font-semibold">{group}</p>
-            {CAPABILITIES.filter((entry) => entry.group === group).map((entry) => (
-              <label
-                key={entry.key}
-                className={`flex items-start gap-3 rounded-md border p-3 ${saving ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-              >
-                <Checkbox
-                  checked={capabilities.includes(entry.key)}
-                  disabled={saving}
-                  onCheckedChange={(checked) => toggleCapability(entry.key, checked === true)}
-                />
-                <span>
-                  <span className="block text-sm font-medium">{entry.label}</span>
-                  <span className="block text-xs text-muted-foreground">{entry.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        ))}
-        <Separator />
-        <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-          <Count label="Active users" value={policy.counts.activeUsers} />
-          <Count label="Pending invites" value={policy.counts.pendingInvites} />
-          <Count label="Reservations" value={policy.counts.activeReservations} />
-          <Count label="Checkouts" value={policy.counts.activeCheckouts} />
-        </div>
-        <div className="flex flex-wrap gap-2">
+        </SettingsRow>
+      </SettingsGroup>
+
+      {(["Can see", "Can do", "Kiosk"] as const).map((group) => (
+        <SettingsGroup key={group} title={group}>
+          {CAPABILITIES.filter((entry) => entry.group === group).map((entry) => (
+            <label
+              key={entry.key}
+              className={`flex items-center justify-between gap-6 px-4 py-3.5 ${saving ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-muted/40"}`}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-bold">{entry.label}</span>
+                <span className="block text-[13px] text-muted-foreground">{entry.description}</span>
+              </span>
+              <Checkbox
+                checked={capabilities.includes(entry.key)}
+                disabled={saving}
+                onCheckedChange={(checked) => toggleCapability(entry.key, checked === true)}
+              />
+            </label>
+          ))}
+        </SettingsGroup>
+      ))}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <p className="m-0 text-[13px] text-muted-foreground">
+          {policy.counts.activeUsers} active {policy.counts.activeUsers === 1 ? "user" : "users"} · {policy.counts.pendingInvites} pending {policy.counts.pendingInvites === 1 ? "invite" : "invites"} · {policy.counts.activeReservations} {policy.counts.activeReservations === 1 ? "reservation" : "reservations"} · {policy.counts.activeCheckouts} {policy.counts.activeCheckouts === 1 ? "checkout" : "checkouts"}
+        </p>
+        <div className="flex gap-2">
           <Button type="button" variant="outline" className="h-10" onClick={loadHistory} disabled={saving}>
             <History />
-            History
+            {history ? "Hide history" : "History"}
           </Button>
           <Button
             type="button"
@@ -391,45 +389,42 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
             Archive
           </Button>
         </div>
-        <SettingsSaveBar
-          dirty={dirty}
-          saving={saving}
-          onReset={resetChanges}
-          onSave={() => void save()}
-          saveLabel="Save policy"
-          savedLabel="Saved"
-        />
-        {history && (
-          <div className="grid gap-2 rounded-md border p-3">
-            <p className="font-semibold">Policy history</p>
-            {history.map((revision) => (
-              <div key={revision.id} className="flex items-center justify-between gap-3 border-t pt-2 first:border-0 first:pt-0">
-                <div>
-                  <p className="text-sm font-medium">Version {revision.version} · {revision.status}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {revision.capabilities.length} capabilities · {revision.actor?.name ?? "Migration"} · {new Date(revision.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <Button
-                  className="h-10"
-                  variant="ghost"
-                  disabled={saving || revision.version === policy.version}
-                  onClick={() => restore(revision)}
-                >
-                  <RotateCcw />
-                  Restore
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+      </div>
 
-function Count({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-md bg-muted/50 p-2"><p className="text-lg font-semibold tabular-nums">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>;
+      {history && (
+        <SettingsGroup title="Policy history">
+          {history.map((revision) => (
+            <div key={revision.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div>
+                <p className="m-0 text-sm font-bold">Version {revision.version} · {revision.status === "ACTIVE" ? "Active" : "Suspended"}</p>
+                <p className="m-0 text-[13px] text-muted-foreground">
+                  {revision.capabilities.length} capabilities · {revision.actor?.name ?? "Migration"} · {new Date(revision.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <Button
+                className="h-10"
+                variant="ghost"
+                disabled={saving || revision.version === policy.version}
+                onClick={() => restore(revision)}
+              >
+                <RotateCcw />
+                Restore
+              </Button>
+            </div>
+          ))}
+        </SettingsGroup>
+      )}
+
+      <SettingsSaveBar
+        dirty={dirty}
+        saving={saving}
+        onReset={resetChanges}
+        onSave={() => void save()}
+        saveLabel="Save policy"
+        savedLabel="Saved"
+      />
+    </section>
+  );
 }
 
 function CreateAffiliation({ onCreated }: { onCreated: () => void }) {

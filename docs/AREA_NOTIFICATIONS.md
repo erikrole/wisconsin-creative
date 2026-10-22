@@ -47,7 +47,7 @@ For `PERSON` custody, the table applies as written. For `SHARED` custody, every 
 
 Responder and Admin pushes between 10 PM and 7 AM Central are delivered silently (`quietOvernight`, ledger reason `overnight`) regardless of the recipient's settings; the requester's own stages keep their normal presentation. Location responders are active visible STAFF or ADMIN users configured at `/settings/escalation`. If none are configured, delivery falls back to the active staff/admin booking creator, then active admins. Requester and operational recipient caps are independent and enforced inside fanout.
 
-Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notifications.ts`, and `src/workflows/checkout-overdue-notifications.ts`.
+Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/checkout-escalation-notifications.ts`, and `src/workflows/checkout-overdue-notifications.ts`.
 
 ## Reservation Lifecycle Triggers (Implemented 2026-04-23)
 
@@ -61,7 +61,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Channel: IN_APP only (email deferred)
 - Self-cancel: requester is not notified when they cancel their own reservation
 - Self-made: a reservation the requester created or merged themselves writes a read receipt (`readAt` set) and sends no push
-- Implementation: `createReservationLifecycleNotification` in `src/lib/services/notifications.ts`
+- Implementation: `createReservationLifecycleNotification` in `src/lib/services/booking-notifications.ts`
 
 ## Shift Trade Triggers (Implemented 2026-05-05)
 
@@ -90,7 +90,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Reviewer rows are deduplicated by assignment and reviewer, carry the event-routable payload, and use the schedule notification preference category for push gating. A retry is safe.
 - Initial open-slot request alerts plus the request workflow's escalation, blocked, and auto-approved outcome alerts are Admin-only. Staff have no claim approve/decline permission or queue visibility. Trade Board claim reviewer alerts follow the same Admin-only policy.
 - The student receives the existing `shift_request_pending` lifecycle notification; approval or decline continues through the existing assignment notification path.
-- Implementation: `handleOpenShiftPickup` in `src/app/api/shift-assignments/pickup/handler.ts` and `notifyPickupRequestReviewers` in `src/lib/services/notifications.ts`.
+- Implementation: `handleOpenShiftPickup` in `src/app/api/shift-assignments/pickup/handler.ts` and `notifyPickupRequestReviewers` in `src/lib/services/shift-notifications.ts`.
 
 ## Shift Schedule Triggers (Implemented 2026-05-21)
 
@@ -109,18 +109,20 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Changed-after-publish call-time edits clear assignment acknowledgement before notifying the worker.
 - Payloads are event-routable with `target: "event"`, `/events/{eventId}`, `eventId`, `shiftId`, and `assignmentId`.
 - Delivery respects additive notification categories: `schedule`, `trade`, and `gearPrep`. Old preference JSON defaults these categories to enabled.
-- Implementation: `src/lib/services/schedule-notification-policy.ts` and `src/lib/services/notifications.ts`.
+- Implementation: `src/lib/services/schedule-notification-policy.ts` and `src/lib/services/shift-notifications.ts`.
 
 ## Badge Award Triggers (Implemented 2026-05-09)
 
 | Event | Type | Recipient | Channels |
 |---|---|---|---|
 | Manual badge awarded by admin | `badge_awarded` | Awarded user | In-app |
+| Badge earned automatically | `badge_awarded` | Earning user | In-app, one row per day |
 
 - Persistent inbox only. No toast fanout, email, APNs, or push in this slice.
 - Link target comes from `payload.href` and points to `/staff/{userId}?tab=badges`.
 - Delivery respects `User.notificationPrefs.badges`; missing or old preference shapes default to enabled.
 - Implementation: `POST /api/badges/award` and `awardBadgeManually` in `src/lib/badges/queries.ts`.
+- Daily summary (2026-10-21): automatic awards fold into one row per person per app-timezone day, keyed `badge_day_{userId}_{YYYY-MM-DD}` (`grantBadges` in `src/lib/badges/evaluator.ts`). A later badge the same day rewrites that row's title and body ("3 badges earned", "You earned A, B and C."), appends to `payload.badges`, moves it to the top, and marks it unread. `payload.studentBadgeId`/`badgeDefinitionId` hold the latest badge for older clients. Manual awards stay one row each, keyed `badge_awarded_{studentBadgeId}`, because revoking deletes that row.
 
 ## Deduplication (Local Candidate)
 - Key format: `"{bookingId}:{dueVersion}:{type}:{recipientKind}:{recipientId}"`
@@ -143,7 +145,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Deferred sends: request-path pushes go through `deferPush()` (`after()` from `next/server`, with an awaited-detach fallback outside request scope) so the serverless function can't be frozen mid-APNs-round-trip after the response is written.
 - Delivery self-test: `POST /api/devices/test` accepts the current installation's APNs token, verifies that it is an active token owned by the caller, sends a real test push only to that registration, and returns `{ delivered, devices, revoked }`. Normal push delivery can still reach every active registration signed in to the account.
 - Required env vars: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_P8_KEY` (base64-encoded full PEM including headers). Missing = push silently skipped.
-- Source: `src/lib/push/apns.ts` (dispatch/sendPush), `src/lib/services/notifications.ts` (sendPushToUser, deferPush), `src/app/api/devices/route.ts`, `src/app/api/devices/test/route.ts`
+- Source: `src/lib/push/apns.ts` (dispatch/sendPush), `src/lib/services/notification-delivery.ts` (sendPushToUser, deferPush), `src/app/api/devices/route.ts`, `src/app/api/devices/test/route.ts`
 
 ## Browser Push (Android PWA — 2026-08-28)
 - Transport: Web Push via the Node `web-push` library and VAPID keys; the root-scoped `/sw.js` service worker presents the payload and routes notification taps to the authenticated inbox.
@@ -412,6 +414,7 @@ renders a tap-only alert. Neither side needs to ship first.
 - Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
 
 ## Change Log
+- 2026-10-21: **Daily badge summary (local).** Badges were the largest notification type (478 rows in the prior 60 days), and one nightly shift pass or return can cross several thresholds at once. Automatically earned badges now share one inbox row per person per day instead of a row each. Manual awards are unchanged. Focused evaluator tests pass.
 - 2026-10-21: **Inbox counts open work, and self-made actions stop pinging (local).** Production showed 40–50 unread rows per staff member and student, about 85% of them settled (gear already returned, requests another Admin decided, events already over, months-old badges), so the bell and iOS icon badge meant nothing. Settled rows are now marked read automatically (see Notification Center). A reservation the requester created or merged themselves, the owner's side of a kiosk handover, and a shift someone put themselves on by linking their own reservation or checkout to an event are written as read receipts with no push or email. The gear-up nudge is skipped when the assignment came from the person's own reservation or they already have an active booking for the shift or event (29% of nudges in the prior 60 days went to people who had just reserved). Notification email buttons open the exact checkout or event instead of the list page. Staff and Admin overdue follow-up pushes between 10 PM and 7 AM Central now arrive silently (16 of the prior 24 +4h alerts landed 2–4 AM); the student's own alerts are unchanged. Source and focused tests pass; production read-back after deploy remains open.
 - 2026-10-16: **Native blast history is the messages this phone already fetched (local).** Browse → Blasts lists and opens them with the existing `/api/me/blasts` client. Acknowledging removes the home banner and keeps the message in the on-device list. The list is cleared at sign-out. It is not a second copy of the web staff tracker, and it cannot recover a blast this install never downloaded. Xcode and authenticated phone proof remain open.
 - 2026-10-11: **Blasts web recovery and acknowledgment polish (local).** `/blasts` and `/blasts/[id]` now surface load failures with retry instead of an empty history or a false "not found", keep a Refresh action, and summarize people still waiting to acknowledge. Detail filters use the shared ToggleGroup, recipients stack as cards on narrow widths, and compose recovers when event or people lookups fail. Source contracts and focused tests cover the recovery paths; authenticated browser proof remains open.

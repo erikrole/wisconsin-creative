@@ -212,3 +212,125 @@ enum BlastHistory {
         return decoder
     }
 }
+
+// MARK: - Sending (staff and admins)
+
+/// Who a new blast reaches. Mirrors `blastTargetSchema` in src/lib/validation.ts.
+/// The phone offers an event's crew and area/worker-type groups; picking people
+/// one by one and sport groups stay on the web.
+enum BlastTarget: Equatable, Sendable, Encodable {
+    case eventCrew(eventId: String)
+    case groups(areas: [String], workerTypes: [String])
+
+    /// An empty group would resolve to nobody, and the server refuses it.
+    var isComplete: Bool {
+        switch self {
+        case .eventCrew(let eventId): !eventId.isEmpty
+        case .groups(let areas, let workerTypes): !areas.isEmpty || !workerTypes.isEmpty
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind, eventId, areas, workerTypes
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .eventCrew(let eventId):
+            try c.encode("EVENT_CREW", forKey: .kind)
+            try c.encode(eventId, forKey: .eventId)
+        case .groups(let areas, let workerTypes):
+            try c.encode("DYNAMIC", forKey: .kind)
+            if !areas.isEmpty { try c.encode(areas, forKey: .areas) }
+            if !workerTypes.isEmpty { try c.encode(workerTypes, forKey: .workerTypes) }
+        }
+    }
+}
+
+/// `POST /api/blasts/preview`: who a target reaches right now, before anything is sent.
+struct BlastPreview: Decodable, Equatable, Sendable {
+    let count: Int
+    let summary: String
+    let users: [BlastPerson]
+}
+
+struct BlastPerson: Decodable, Equatable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+}
+
+/// `POST /api/blasts` result.
+struct SentBlastReceipt: Decodable, Sendable {
+    let id: String
+    let recipientCount: Int
+}
+
+/// A row of `GET /api/blasts`, the team's sent blasts.
+struct SentBlast: Decodable, Identifiable, Equatable, Sendable {
+    let id: String
+    let title: String
+    let body: String
+    let severity: BlastSeverity
+    let status: String
+    let targetSummary: String?
+    let recipientCount: Int
+    let acknowledgedCount: Int
+    let requiresAck: Bool
+    let sentAt: Date?
+    let cancelledAt: Date?
+    let createdBy: BlastPerson?
+
+    var isCancelled: Bool { status == "CANCELLED" || cancelledAt != nil }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, body, severity, status, targetSummary, recipientCount, acknowledgedCount
+        case requiresAck, sentAt, cancelledAt, createdBy
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        body = try c.decode(String.self, forKey: .body)
+        severity = try c.decodeIfPresent(BlastSeverity.self, forKey: .severity) ?? .info
+        status = try c.decodeIfPresent(String.self, forKey: .status) ?? "SENT"
+        targetSummary = try c.decodeIfPresent(String.self, forKey: .targetSummary)
+        recipientCount = try c.decodeIfPresent(Int.self, forKey: .recipientCount) ?? 0
+        acknowledgedCount = try c.decodeIfPresent(Int.self, forKey: .acknowledgedCount) ?? 0
+        requiresAck = try c.decodeIfPresent(Bool.self, forKey: .requiresAck) ?? true
+        sentAt = try c.decodeIfPresent(Date.self, forKey: .sentAt)
+        cancelledAt = try c.decodeIfPresent(Date.self, forKey: .cancelledAt)
+        createdBy = try c.decodeIfPresent(BlastPerson.self, forKey: .createdBy)
+    }
+}
+
+/// `GET /api/blasts/:id`: one sent blast with who has and hasn't acknowledged.
+struct SentBlastDetail: Decodable, Sendable {
+    let blast: SentBlast
+    let recipients: [BlastRecipient]
+    let addedSinceSend: [BlastPerson]
+
+    enum CodingKeys: String, CodingKey {
+        case recipients, addedSinceSend
+    }
+
+    init(from decoder: Decoder) throws {
+        blast = try SentBlast(from: decoder)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        recipients = try c.decodeIfPresent([BlastRecipient].self, forKey: .recipients) ?? []
+        addedSinceSend = try c.decodeIfPresent([BlastPerson].self, forKey: .addedSinceSend) ?? []
+    }
+
+    var waiting: [BlastRecipient] { recipients.filter { $0.acknowledgedAt == nil } }
+    var acknowledged: [BlastRecipient] { recipients.filter { $0.acknowledgedAt != nil } }
+}
+
+struct BlastRecipient: Decodable, Identifiable, Sendable {
+    let userId: String
+    let readAt: Date?
+    let acknowledgedAt: Date?
+    let user: BlastPerson
+
+    var id: String { userId }
+}

@@ -176,6 +176,7 @@ struct NativeRegistrationView: View {
     }
 
     private func submit() {
+        guard !isSubmitting else { return }
         guard let validationError else {
             focusedField = nil
             formError = nil

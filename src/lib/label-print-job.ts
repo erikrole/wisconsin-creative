@@ -42,6 +42,7 @@ export const printJobSchema = z.object({
   if (new Set(job.labels.map((label) => label.copyId)).size !== job.labels.length) ctx.addIssue({ code: "custom", message: "Duplicate copy identity." });
   const active = job.outcomes.flatMap((o, i) => o.status === "sending" ? [i] : []);
   const buffered = job.outcomes.some((o) => o.status === "buffered");
+  if (new TextEncoder().encode(JSON.stringify(job)).length > 3_300_000) ctx.addIssue({ code: "custom", message: "This print receipt is too large. Split the sheet into smaller batches." });
   const allPrinted = job.outcomes.every((o) => o.status === "printed");
   if (job.outcomes.length !== job.labels.length || active.length > 1 ||
       (active[0] ?? null) !== job.activeIndex ||
@@ -58,7 +59,11 @@ export type PrintJob = z.infer<typeof printJobSchema>;
 export const createPrintJobSchema = z.object({
   transport: z.literal("sdk-chain-v1").optional(), id: z.string().uuid(), browserId: z.string().uuid(), labels: z.array(printLabelSchema).min(1).max(500),
   parentId: z.string().uuid().optional(), parentRevision: z.number().int().nonnegative().optional(),
-}).strict();
+}).strict().superRefine((input, ctx) => {
+  // Leave room for 500 bounded outcome/physical-review snapshots to grow.
+  if (new TextEncoder().encode(JSON.stringify(input)).length > 2_000_000) ctx.addIssue({ code: "custom", message: "This print sheet is too large. Split it into smaller batches." });
+});
+export const printHistoryCursorSchema = z.union([z.string().uuid(), z.literal("history-start")]);
 export type CreatePrintJob = z.infer<typeof createPrintJobSchema>;
 const ordinaryCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("begin"), index: z.number().int().nonnegative() }).strict(),

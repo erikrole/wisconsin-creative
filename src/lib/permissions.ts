@@ -146,6 +146,13 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     // D-056: Scoreboard identity and metrics are shared authenticated team data.
     view: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],
   },
+  wrapped: {
+    // Team members see their own recap. Collaborators stay default-denied
+    // (D-041). Previewing before unlock, reading someone else's, and
+    // regenerating are admin checks on the recap before it goes out.
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    preview: ["ADMIN"],
+  },
   event_worker: {
     // Workers recorded outside the schedule. Staff can see who was added to an
     // event they are running; adding or removing one rewrites season stats

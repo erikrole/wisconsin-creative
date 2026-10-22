@@ -1,0 +1,12 @@
+{
+  "evidence": "Physical PhotosPicker selection/decoding/cancellation; onboarding fixture, no successful server upload",
+  "device": "iPhone 18 Pro Max",
+  "os": "iOS 27.2",
+  "test": "OnboardingLiveUITests/testPhysicalPhotosPickerSelectsAndDecodesOnlyTheTechnicalSample",
+  "sourceBase": "c1176ab530414ca3a01a070ae8b99de17f283320",
+  "photo": "Synthetic orange/teal image marked WC PHOTO TEST OCT 22, added through add-only Photos permission",
+  "sha256": "3de0f626361b63b3c1ca2f719b9bf417cdcfc5721bcba44a9fd8d5047fa4338e",
+  "testDriverSHA256": "874c5548105c5e5452a3f5a0cfc1c9648e72208fd40bd47b20a89dc80f1456f8",
+  "timestamp": 1792689609.569,
+  "baseline": "After-only physical evidence"
+}

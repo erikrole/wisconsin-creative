@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const detail = () => source("ios/Wisconsin/Views/BookingDetailView.swift");
 const screen = () => source("ios/Wisconsin/Views/Booking/BookingActivityView.swift");
 const models = () => source("ios/Wisconsin/Models/BookingActivityModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 const project = () => source("ios/Wisconsin.xcodeproj/project.pbxproj");
 
 describe("iOS booking activity", () => {
@@ -16,8 +17,7 @@ describe("iOS booking activity", () => {
 
     expect(booking).toContain("BookingActivityAccess.canRead(role: session.currentUser?.role)");
     expect(booking).toContain("BookingActivityView(bookingId: booking.id)");
-    expect(booking).toContain('Text("Activity")');
-    expect(booking).toContain("What changed on this booking.");
+    expect(booking).toContain('Label("Activity", systemImage: "clock.arrow.circlepath")');
     expect(booking).toContain("if canExtendBooking");
     expect(booking).toContain("BookingExtendBar(");
 

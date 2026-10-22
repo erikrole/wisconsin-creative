@@ -51,9 +51,11 @@ const baseConfig: NextConfig = {
   },
   transpilePackages: ["@mdxeditor/editor"],
   serverExternalPackages: ["web-push"],
-  // The equipment sheet route reads the department's workbook template at runtime.
+  // These routes read files at runtime: the department's workbook template and
+  // the Wrapped share image's fonts.
   outputFileTracingIncludes: {
     "/api/gear-picks/admin/export.xlsx": ["./src/lib/gear-picks/templates/**"],
+    "/api/wrapped/card": ["./src/lib/wrapped/fonts/**"],
   },
   images: {
     remotePatterns: [
@@ -120,6 +122,13 @@ const baseConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400" },
         ],
       },
+      // Brand fonts are static files with unhashed names. Next serves public/
+      // files with max-age=0, so every cold load revalidated all six. A month
+      // with background revalidation keeps updates possible without the round trips.
+      {
+        source: "/:font(Gotham-[A-Za-z]+\\.woff2|Wisconsin-Regular\\.ttf)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=604800" }],
+      },
       // Auth pages: never cache — prevents BFCache from replaying the form
       // after sign-out and avoids any shared-cache leakage.
       {
@@ -171,7 +180,9 @@ const nextConfig: NextConfig = {
 };
 const config = withWorkflow(withBundleAnalyzer(nextConfig));
 export default withSentryConfig(config, {
-  // Upload source maps only when SENTRY_AUTH_TOKEN is set (CI/Vercel)
+  // Preview and local builds have no upload token. Avoid generating unused
+  // server/client maps there; keep them for configured release uploads.
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
   silent: !process.env.SENTRY_AUTH_TOKEN,
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,

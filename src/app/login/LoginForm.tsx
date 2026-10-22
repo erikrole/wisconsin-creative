@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   browserSupportsWebAuthn,
@@ -29,6 +28,7 @@ import { safeReturnTo } from "@/lib/return-to";
 type LoginResponse = {
   user?: {
     forcePasswordChange?: boolean;
+    onboardingRequired?: boolean;
   };
 };
 
@@ -54,7 +54,6 @@ function validateEmail(email: string): string {
 }
 
 export default function LoginForm() {
-  const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -109,7 +108,8 @@ export default function LoginForm() {
       // A password the manager just filled can become a passkey with no prompt.
       // Not during a forced change: that password is about to be replaced.
       if (!data.user?.forcePasswordChange) void upgradeToPasskeyAfterSignIn(passwordRef.current?.value ?? "");
-      router.replace(data.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
+      // A new session must read a fresh server layout and discard pre-login routing state.
+      window.location.replace(data.user?.forcePasswordChange ? "/change-password" : data.user?.onboardingRequired ? "/welcome" : returnTo ?? "/");
     },
     onError: (kind) => setIsNetworkError(kind === "network"),
   });
@@ -124,7 +124,7 @@ export default function LoginForm() {
     skipAuthRedirect: true,
     onSuccess: () => {
       void upgradeToPasskeyAfterSignIn(passwordRef.current?.value ?? "");
-      router.replace("/welcome");
+      window.location.replace("/welcome");
     },
     onError: (kind) => setIsNetworkError(kind === "network"),
   });
@@ -303,7 +303,7 @@ export default function LoginForm() {
       const result = await parseJsonSafely<LoginResponse>(verifyResponse);
       if (!isCurrent()) return assertionReceived;
       passkeyNavigatedRef.current = true;
-      router.replace(result?.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
+      window.location.replace(result?.user?.forcePasswordChange ? "/change-password" : result?.user?.onboardingRequired ? "/welcome" : returnTo ?? "/");
     } catch (error) {
       if (!isCurrent()) return assertionReceived;
       if (isPasskeyCancellation(error)) return assertionReceived;
@@ -377,7 +377,7 @@ export default function LoginForm() {
     <AuthScreen
       subtitle={
         isOnboarding
-          ? "Create your password to join Wisconsin Creative"
+          ? "Create your password"
           : isPassword
             ? "Enter your password"
             : "Sign in to your account"
@@ -435,12 +435,9 @@ export default function LoginForm() {
 
               {isOnboarding && (
                 <>
-                  <Alert role="status" aria-live="polite" className="bg-muted/40">
-                    <AlertCircle className="size-4" />
-                    <AlertDescription>
-                      You’re invited. Choose a password to create your account, then a short welcome setup collects the details the team needs for work.
-                    </AlertDescription>
-                  </Alert>
+                  <p role="status" aria-live="polite" className="text-sm text-[#a6a6ae]">
+                    You’re invited. Choose a password to create your account. A short setup (about three minutes) follows, and you can pause it any time.
+                  </p>
 
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="name">Name</Label>
@@ -555,7 +552,7 @@ export default function LoginForm() {
                 </div>
               </div>
 
-              <Button type="submit" className="login-cta login-rise login-press w-full h-11 text-base font-semibold" style={{ "--rise-index": 5 } as React.CSSProperties} disabled={authBusy}>
+              <Button type="submit" className="login-cta login-rise login-press w-full h-[52px] text-base font-semibold" style={{ "--rise-index": 5 } as React.CSSProperties} disabled={authBusy}>
                 {authBusy && !passkeyLoading ? <Spinner data-icon="inline-start" /> : null}
                 {primaryButtonLabel}
               </Button>

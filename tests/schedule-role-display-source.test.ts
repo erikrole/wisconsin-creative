@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 describe("schedule staff/student display source contracts", () => {
   it("uses assigned user scheduling-class labels for filled schedule rows", () => {
@@ -16,8 +16,8 @@ describe("schedule staff/student display source contracts", () => {
     expect(eventCrew).toContain("shiftWorkerLabelForProfile(activeAssignment.user)");
     expect(eventCrew).toContain("const rowClassLabel = activeAssignment");
     expect(eventCrew).toContain("<TableHead>Person</TableHead>");
-    expect(picker).toContain("shiftWorkerTypeForProfile(u)");
-    expect(picker).toContain("shiftWorkerLabelForProfile(u)");
+    expect(picker).toContain("shiftWorkerTypeForProfile(user)");
+    expect(picker).toContain("shiftWorkerLabelForProfile(user)");
     expect(picker).toContain("Will use ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()}");
     expect(picker).toContain("leave ${shiftWorkerSlotLabel(slotWorkerType).toLowerCase()} open");
   });
@@ -95,8 +95,8 @@ describe("schedule staff/student display source contracts", () => {
     const dashboardRoute = source("src/app/api/dashboard/route.ts");
     const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
     const dashboardColumn = source("src/app/(app)/_home/home-model.ts");
-    const notifications = source("src/lib/services/notifications.ts");
-    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const notifications = serviceModuleSource("notifications");
+    const home = source("ios/Wisconsin/Views/Home/HomeModel.swift");
     const profile = source("ios/Wisconsin/Views/ProfileNextUp.swift");
 
     expect((dashboardRoute.match(/a\.shift\.workerType === "ST"/g) ?? []).length).toBeGreaterThanOrEqual(2);
@@ -107,8 +107,9 @@ describe("schedule staff/student display source contracts", () => {
     expect(notifications).toContain("dueAt: callStartsAt?.toISOString()");
     // Only the Student call time is ever named; Staff copy has none.
     expect(notifications).toContain("` Call time: ${formatShiftNotifyTime(assignment.studentCallStartsAt)}.`");
-    expect(home).toContain('queueCallTime(workerType: shift.workerType');
-    expect(home).toContain('guard workerType == "ST", let callStartsAt else { return nil }');
+    expect(home).toContain('let studentCall = s.workerType == "ST" && !allDay && s.callStartsAt != nil');
+    expect(home).toContain('let display = (studentCall ? s.callStartsAt : nil) ?? s.event.startsAt');
+    expect(home).toContain('studentCall ? "Call time" : nil');
     expect(profile).toContain('if shift.workerType == "ST"');
   });
 

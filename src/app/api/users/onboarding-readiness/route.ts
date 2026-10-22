@@ -9,7 +9,7 @@ import { readinessProfileSelect } from "@/lib/services/onboarding-readiness";
 export const GET = withAuth(async (_req, { user }) => {
   requirePermission(user.role, "allowed_email", "view");
 
-  const [invitations, accounts] = await Promise.all([
+  const [invitations, accounts, classBlocks] = await Promise.all([
     db.allowedEmail.findMany({
       where: {
         AND: [
@@ -40,9 +40,16 @@ export const GET = withAuth(async (_req, { user }) => {
     db.user.findMany({
       where: { active: true, hiddenFromRoster: false },
       orderBy: { name: "asc" },
-      select: readinessProfileSelect,
+      select: { ...readinessProfileSelect, createdAt: true },
+    }),
+    // Students who have said when they can't work (weekly or dated), so staff can see who hasn't.
+    db.studentAvailabilityBlock.groupBy({
+      by: ["userId"],
+      where: { intent: "CANNOT_WORK" },
+      _count: { _all: true },
     }),
   ]);
+  const withUnavailable = new Set(classBlocks.map((row) => row.userId));
 
   return ok({
     data: {
@@ -69,6 +76,8 @@ export const GET = withAuth(async (_req, { user }) => {
           missingFields: completion.missingFields,
           completedCount: completion.completedCount,
           totalCount: completion.totalCount,
+          createdAt: account.createdAt,
+          hasUnavailableTimes: account.role === "STUDENT" ? withUnavailable.has(account.id) : null,
         };
       }),
     },

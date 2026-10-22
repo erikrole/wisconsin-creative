@@ -30,7 +30,7 @@ import { PROFILE_FIELD_LABELS } from "@/lib/profile-completion";
 import { AlertTriangle, ClipboardList, Copy, ExternalLink, Mail, RefreshCw, Send, Trash2, UserPlus, WifiOff } from "lucide-react";
 
 type Role = "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR";
-type StatusFilter = "all" | "pending" | "stale" | "claimed" | "setup" | "ready";
+type StatusFilter = "all" | "pending" | "stale" | "claimed" | "setup" | "stalled" | "ready";
 type OnboardingStatus = "pending" | "stale" | "claimed";
 
 type AllowedEmail = {
@@ -68,9 +68,14 @@ type ReadinessAccount = {
   missingFields: string[];
   completedCount: number;
   totalCount: number;
+  createdAt: string;
+  /** Students only: whether they have said when they can't work. Null for other roles. */
+  hasUnavailableTimes: boolean | null;
 };
 
-const STALE_DAYS = 14;
+/** A new person who hasn't signed in, or hasn't finished setup, after this many days needs a nudge. */
+const STALE_DAYS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const ROLE_META: Record<Role, { label: string; variant: BadgeProps["variant"] }> = {
   ADMIN: { label: "Admin", variant: "purple" },
   STAFF: { label: "Staff", variant: "blue" },
@@ -88,12 +93,12 @@ const READINESS_FIELD_LABELS: Record<string, string> = {
 function statusFor(item: AllowedEmail, now: Date): OnboardingStatus {
   if (item.claimedAt) return "claimed";
   const ageMs = now.getTime() - new Date(item.createdAt).getTime();
-  return ageMs >= STALE_DAYS * 24 * 60 * 60 * 1000 ? "stale" : "pending";
+  return ageMs >= STALE_DAYS * DAY_MS ? "stale" : "pending";
 }
 
 function statusBadge(status: OnboardingStatus) {
   if (status === "claimed") return <Badge variant="gray">Claimed</Badge>;
-  if (status === "stale") return <Badge variant="orange">Stale pending</Badge>;
+  if (status === "stale") return <Badge variant="orange">Not signed in</Badge>;
   return <Badge variant="blue">Pending</Badge>;
 }
 
@@ -111,13 +116,22 @@ function initialsOf(name: string) {
     .join("");
 }
 
-function accountStatus(account: ReadinessAccount) {
+/** Days since the account was created when setup is still unfinished past the nudge window, else null. */
+function stalledDays(account: ReadinessAccount, now: Date): number | null {
+  if (account.profileComplete) return null;
+  const days = Math.floor((now.getTime() - new Date(account.createdAt).getTime()) / DAY_MS);
+  return days >= STALE_DAYS ? days : null;
+}
+
+function accountStatus(account: ReadinessAccount, now: Date) {
   if (account.profileComplete) return <Badge variant="green">Profile complete</Badge>;
+  const stalled = stalledDays(account, now);
+  if (stalled !== null) return <Badge variant="orange">Stalled {stalled} days</Badge>;
   if (account.operationalReady) return <Badge variant="blue">Operationally ready</Badge>;
   return <Badge variant="orange">Setup needed</Badge>;
 }
 
-const ROW_GRID = "md:grid md:grid-cols-[minmax(0,1.4fr)_150px_minmax(0,1fr)_minmax(0,1.2fr)_44px] md:items-center md:gap-4";
+const ROW_GRID = "md:grid md:grid-cols-[minmax(0,1.4fr)_150px_minmax(0,1fr)_minmax(0,1.2fr)_168px] md:items-center md:gap-4";
 
 export default function OnboardingStatusPage() {
   const confirm = useConfirm();
@@ -169,6 +183,7 @@ export default function OnboardingStatusPage() {
       { total: 0, pending: 0, stale: 0, claimed: 0 },
     );
   }, [enrichedRows]);
+  const stalledAccounts = useMemo(() => accounts.filter((account) => stalledDays(account, now) !== null), [accounts, now]);
   const readinessCounts = useMemo(() => ({
     setupNeeded: accounts.filter((account) => !account.operationalReady).length,
     operational: accounts.filter((account) => account.operationalReady && !account.profileComplete).length,
@@ -194,21 +209,35 @@ export default function OnboardingStatusPage() {
       people.push({ kind: "invite", key: `invite-${invite.id}`, sortRank: invite.onboardingStatus === "stale" ? 0 : claimed ? 9 : 1, invite });
     }
     for (const account of visibleAccounts) {
+      const stalled = stalledDays(account, now) !== null;
+      if (statusFilter === "stalled") {
+        if (stalled) people.push({ kind: "account", key: `account-${account.id}`, sortRank: 0, account });
+        continue;
+      }
       const state = account.profileComplete ? "ready" : account.operationalReady ? "ready" : "setup";
       if (statusFilter === "all" || statusFilter === state || (statusFilter === "setup" && !account.operationalReady)) {
         if (statusFilter === "ready" && !account.operationalReady) continue;
         if (statusFilter === "setup" && account.operationalReady) continue;
-        people.push({ kind: "account", key: `account-${account.id}`, sortRank: account.operationalReady ? (account.profileComplete ? 4 : 3) : 2, account });
+        people.push({ kind: "account", key: `account-${account.id}`, sortRank: stalled ? 0 : account.operationalReady ? (account.profileComplete ? 4 : 3) : 2, account });
       }
     }
     return people.sort((a, b) => a.sortRank - b.sortRank);
-  }, [enrichedRows, statusFilter, visibleAccounts, query]);
+  }, [enrichedRows, statusFilter, visibleAccounts, query, now]);
 
   const isInitialLoad = loading && rows.length === 0;
   const railItems: OperationalStatusRailItem[] = [
+    ...(stalledAccounts.length > 0 ? [{
+      id: "stalled",
+      label: "Stalled setup",
+      value: stalledAccounts.length,
+      detail: `Signed in but setup unfinished after ${STALE_DAYS} days.`,
+      icon: AlertTriangle,
+      tone: "warning" as const,
+      onSelect: () => setStatusFilter("stalled"),
+    }] : []),
     ...(counts.stale > 0 ? [{
       id: "stale",
-      label: "Stale pending",
+      label: "Not signed in",
       value: counts.stale,
       detail: `Invitations still unclaimed after ${STALE_DAYS} days.`,
       icon: AlertTriangle,
@@ -303,6 +332,39 @@ export default function OnboardingStatusPage() {
       toast.error(classifyError(error) === "network" ? "You\u2019re offline. Check your connection." : "Could not send the nudge");
     } finally {
       setNudgingId(null);
+    }
+  }
+
+  /** One reminder per stalled account, through the single-account route; staff press it, nothing is automatic. */
+  async function nudgeEveryoneStalled() {
+    if (stalledAccounts.length === 0) return;
+    const ok = await confirm({
+      title: "Nudge everyone stalled",
+      message: `Email a setup reminder to ${stalledAccounts.length} ${stalledAccounts.length === 1 ? "person" : "people"} who signed in but haven't finished setup?`,
+      confirmLabel: "Send nudges",
+    });
+    if (!ok) return;
+    setRemindingAll(true);
+    let sent = 0;
+    try {
+      for (const account of stalledAccounts) {
+        const response = await fetch(`/api/users/${account.id}/setup-reminder`, { method: "POST" });
+        if (handleAuthRedirect(response, "/staff/onboarding-status")) return;
+        if (!response.ok) continue;
+        const json = (await response.json().catch(() => null)) as { data?: { emailStatus?: string } } | null;
+        if (json?.data?.emailStatus === "not_configured") {
+          toast.warning("Email isn't set up on this site yet, so nothing was sent.");
+          return;
+        }
+        sent += 1;
+      }
+      if (sent > 0) toast.success(`Nudged ${sent} ${sent === 1 ? "person" : "people"}`);
+      else toast.error("No nudges went out. Try again later.");
+    } catch (error) {
+      if (isAbortError(error)) return;
+      toast.error(classifyError(error) === "network" ? "You\u2019re offline. Check your connection." : "Could not send the nudges");
+    } finally {
+      setRemindingAll(false);
     }
   }
 
@@ -407,8 +469,8 @@ export default function OnboardingStatusPage() {
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <OperationalMetricCard label="Invitations" value={counts.total} onClick={() => setStatusFilter("all")} ariaPressed={statusFilter === "all"} />
             <OperationalMetricCard label="Pending" value={counts.pending} tone={counts.pending ? "blue" : "muted"} onClick={() => setStatusFilter("pending")} ariaPressed={statusFilter === "pending"} />
-            <OperationalMetricCard label="Stale pending" value={counts.stale} tone={counts.stale > 0 ? "orange" : "muted"} onClick={() => setStatusFilter("stale")} ariaPressed={statusFilter === "stale"} />
-            <OperationalMetricCard label="Setup needed" value={readinessCounts.setupNeeded} tone={readinessCounts.setupNeeded ? "orange" : "muted"} />
+            <OperationalMetricCard label="Not signed in" value={counts.stale} tone={counts.stale > 0 ? "orange" : "muted"} onClick={() => setStatusFilter("stale")} ariaPressed={statusFilter === "stale"} />
+            <OperationalMetricCard label="Stalled setup" value={stalledAccounts.length} tone={stalledAccounts.length ? "orange" : "muted"} onClick={() => setStatusFilter("stalled")} ariaPressed={statusFilter === "stalled"} />
             <OperationalMetricCard label="Operational" value={readinessCounts.operational} tone={readinessCounts.operational ? "blue" : "muted"} />
             <OperationalMetricCard label="Profile complete" value={readinessCounts.complete} />
           </div>
@@ -432,7 +494,8 @@ export default function OnboardingStatusPage() {
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="stale">Stale pending</SelectItem>
+            <SelectItem value="stale">Not signed in after {STALE_DAYS} days</SelectItem>
+            <SelectItem value="stalled">Stalled setup</SelectItem>
             <SelectItem value="setup">Setup needed</SelectItem>
             <SelectItem value="ready">Operationally ready</SelectItem>
             <SelectItem value="claimed">Claimed</SelectItem>
@@ -442,6 +505,12 @@ export default function OnboardingStatusPage() {
           <Button type="button" variant="outline" className="h-10 px-3 text-sm" onClick={remindEveryoneWaiting} disabled={remindingAll}>
             <Send data-icon="inline-start" />
             {remindingAll ? "Sending..." : "Remind everyone waiting"}
+          </Button>
+        )}
+        {stalledAccounts.length > 0 && (
+          <Button type="button" variant="outline" className="h-10 px-3 text-sm" onClick={nudgeEveryoneStalled} disabled={remindingAll}>
+            <Send data-icon="inline-start" />
+            {remindingAll ? "Sending..." : "Nudge everyone stalled"}
           </Button>
         )}
         {lastRefreshed && (
@@ -498,7 +567,7 @@ export default function OnboardingStatusPage() {
                   loginHref={loginPath()}
                 />
               ) : (
-                <AccountRow key={row.key} account={row.account} nudging={nudgingId === row.account.id} onNudge={() => nudgeAccount(row.account)} />
+                <AccountRow key={row.key} account={row.account} now={now} nudging={nudgingId === row.account.id} onNudge={() => nudgeAccount(row.account)} />
               ),
             )}
           </ul>
@@ -575,7 +644,7 @@ function InviteRow({
   );
 }
 
-function AccountRow({ account, nudging, onNudge }: { account: ReadinessAccount; nudging: boolean; onNudge: () => void }) {
+function AccountRow({ account, now, nudging, onNudge }: { account: ReadinessAccount; now: Date; nudging: boolean; onNudge: () => void }) {
   const percent = account.totalCount > 0 ? Math.round((account.completedCount / account.totalCount) * 100) : 0;
   const missing = account.missingFields.map((field) => READINESS_FIELD_LABELS[field] ?? field);
   return (
@@ -589,14 +658,17 @@ function AccountRow({ account, nudging, onNudge }: { account: ReadinessAccount; 
           <div className="truncate text-xs text-muted-foreground">{account.email}</div>
         </div>
       </div>
-      <div>{accountStatus(account)}</div>
+      <div>{accountStatus(account, now)}</div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${account.name} profile progress`}>
           <div className={`h-full rounded-full ${account.profileComplete ? "bg-[#218358]" : "bg-primary"}`} style={{ width: `${percent}%` }} />
         </div>
         <span className="tabular-nums">{account.completedCount}/{account.totalCount}</span>
       </div>
-      <div className="text-sm text-muted-foreground">{missing.length ? `Missing ${missing.join(", ")}` : "Everything done"}</div>
+      <div className="text-sm text-muted-foreground">
+        <div>{missing.length ? `Missing ${missing.join(", ")}` : "Everything done"}</div>
+        {account.hasUnavailableTimes === false && <div className="text-xs">Hasn’t added when they can’t work</div>}
+      </div>
       <div className="flex items-center gap-1 md:justify-end">
         {!account.profileComplete && (
           <Button type="button" variant="ghost" className="h-10 px-3 text-sm" onClick={onNudge} disabled={nudging} aria-label={`Nudge ${account.name} to finish setup`}>

@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const bookings = readFileSync("ios/Wisconsin/Views/BookingsView.swift", "utf8");
 const detail = readFileSync("ios/Wisconsin/Views/BookingDetailView.swift", "utf8");
 const create = readFileSync("ios/Wisconsin/Views/CreateBookingSheet.swift", "utf8");
-const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+const api = apiClientSource();
 
 describe("iOS booking list actions", () => {
   it("offers state-aware native row actions", () => {
@@ -50,12 +51,15 @@ describe("iOS focused booking edit and transfer", () => {
       detail.indexOf("struct EditBookingSheet"),
       detail.indexOf("struct TransferBookingOwnerSheet"),
     );
-    expect(editor).toContain('BrandSectionHeader("Booking Name")');
-    expect(editor).toContain('Text("Due back")');
-    expect(editor).toContain("DayTimeChipPicker(");
+    expect(editor).toContain('TextField("Booking name"');
+    expect(editor).toContain('LabeledContent("Change return")');
+    // Tapping Due back opens an inline calendar, like Calendar's Ends row.
+    expect(editor).toContain("ReturnTimeCalendar(");
+    expect(editor).toContain("showsReturnCalendar.toggle()");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).toContain('Label("This return time works"');
-    expect(editor).toContain('Text("Transfer Ownership")');
+    expect(editor).toContain('Text("Owner")');
+    expect(editor).toContain("Transfer Ownership");
     expect(editor).not.toContain("TextEditor(");
     expect(editor).not.toContain("OptionPickerView(");
     expect(editor).not.toContain('DatePicker("From"');

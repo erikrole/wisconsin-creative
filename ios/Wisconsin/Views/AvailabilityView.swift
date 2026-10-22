@@ -27,28 +27,30 @@ struct AvailabilityView: View {
     }
 
     var body: some View {
-        ScrollView {
+        Group {
             if isLoading && blocks.isEmpty {
-                AvailabilityLoadingState()
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                ScrollView {
+                    AvailabilityLoadingState()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                }
             } else {
-                LazyVStack(spacing: 16) {
+                List {
                     if let error {
-                        AvailabilityErrorBanner(message: error) {
-                            Task { await load() }
-                        } onDismiss: {
-                            self.error = nil
+                        Section {
+                            AvailabilityErrorBanner(message: error) {
+                                Task { await load() }
+                            } onDismiss: {
+                                self.error = nil
+                            }
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
                         }
                     }
-
-                    availabilityOverview
-                    weeklyCanvas
-                    exceptionsCard
-                    guidanceCard
+                    weeklySection
+                    daysAwaySection
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .listStyle(.insetGrouped)
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -97,164 +99,81 @@ struct AvailabilityView: View {
         }
     }
 
-    private var availabilityOverview: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Your schedule signals")
-                        .font(.headline)
-                    Text("Add recurring class times, then flag days away as needed.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 12)
-                Image(systemName: "calendar.badge.clock")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.brandPrimary)
-                    .accessibilityHidden(true)
-            }
-
-            ViewThatFits {
-                HStack(spacing: 8) { availabilitySummaryItems }
-                VStack(spacing: 8) { availabilitySummaryItems }
-            }
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
-    }
-
-    @ViewBuilder
-    private var availabilitySummaryItems: some View {
-        AvailabilitySummaryPill(
-            title: "Time off",
-            value: blocks.filter(\.isApprovedTimeOff).count,
-            tone: .red
-        )
-        AvailabilitySummaryPill(
-            title: "Advisory",
-            value: blocks.filter(\.isAdvisory).count,
-            tone: .orange
-        )
-        AvailabilitySummaryPill(
-            title: "Preferred",
-            value: blocks.filter(\.isPreference).count,
-            tone: .green
-        )
-    }
-
-    private var weeklyCanvas: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Weekly class schedule")
-                    .font(.headline)
-                Spacer()
-                Text("Repeats every week")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
+    private var weeklySection: some View {
+        Section {
             AvailabilityWeekStrip(
                 selectedDay: $selectedWeekday,
                 blocks: blocks.filter(\.isWeekly)
             )
+            .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
 
-            Divider()
-
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(availabilityDayNames[selectedWeekday])
-                        .font(.headline)
-                    Text(selectedDayBlocks.isEmpty ? "No scheduling signals" : "\(selectedDayBlocks.count) saved \(selectedDayBlocks.count == 1 ? "window" : "windows")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    editorContext = .newWeekly(day: selectedWeekday)
-                } label: {
-                    Label("Add", systemImage: "plus")
-                }
-                .buttonStyle(.bordered)
-                .tint(Color.brandPrimary)
-                .controlSize(.small)
+            ForEach(selectedDayBlocks) { block in
+                blockRow(block)
             }
 
             if selectedDayBlocks.isEmpty {
-                AvailabilityOpenDayState(day: availabilityDayNames[selectedWeekday]) {
-                    editorContext = .newWeekly(day: selectedWeekday)
-                }
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(selectedDayBlocks) { block in
-                        AvailabilityBlockCard(
-                            block: block,
-                            onEdit: { editorContext = .edit(block) },
-                            onDelete: { blockPendingDelete = block }
-                        )
-                    }
-                }
+                Text("Nothing saved for \(availabilityDayNames[selectedWeekday]).")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
+
+            Button {
+                editorContext = .newWeekly(day: selectedWeekday)
+            } label: {
+                Label("Add class time", systemImage: "plus")
+            }
+            .tint(Color.brandPrimary)
+        } header: {
+            Text(availabilityDayNames[selectedWeekday])
+        } footer: {
+            Text("Weekly times repeat every week.")
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
     }
 
-    private var exceptionsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("One-off days and ranges")
-                        .font(.headline)
-                    Text("Trips, visitors, appointments, and other days away")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 8)
-                Button {
-                    editorContext = .newException(date: .now)
-                } label: {
-                    Image(systemName: "plus")
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.circle)
-                .tint(Color.brandPrimary)
-                .accessibilityLabel("Add day away")
+    private var daysAwaySection: some View {
+        Section {
+            ForEach(datedBlocks) { block in
+                blockRow(block)
             }
 
             if datedBlocks.isEmpty {
-                Text("No one-time exceptions added.")
+                Text("No days away added.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(datedBlocks) { block in
-                        AvailabilityBlockCard(
-                            block: block,
-                            onEdit: { editorContext = .edit(block) },
-                            onDelete: { blockPendingDelete = block }
-                        )
-                    }
-                }
             }
+
+            Button {
+                editorContext = .newException(date: .now)
+            } label: {
+                Label("Add day away", systemImage: "plus")
+            }
+            .tint(Color.brandPrimary)
+        } header: {
+            Text("Days away")
+        } footer: {
+            Text("Approved time off blocks shift pickup and trades. Other signals help staff schedule with better context.")
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
     }
 
-    private var guidanceCard: some View {
-        Label {
-            Text("Approved time off blocks shift pickup and trade actions. Other signals help staff schedule with better context.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        } icon: {
-            Image(systemName: "info.circle.fill")
-                .foregroundStyle(Color.statusText(.blue))
-        }
-        .padding(.horizontal, 4)
-        .padding(.bottom, 12)
+    private func blockRow(_ block: AvailabilityBlock) -> some View {
+        AvailabilityBlockRow(block: block, onEdit: { editorContext = .edit(block) })
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    blockPendingDelete = block
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                Button {
+                    editorContext = .edit(block)
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.gray)
+            }
+            .contextMenu {
+                Button("Edit…", systemImage: "pencil") { editorContext = .edit(block) }
+                Button("Delete", systemImage: "trash", role: .destructive) { blockPendingDelete = block }
+            }
     }
 
     private func sortBlocks(_ lhs: AvailabilityBlock, _ rhs: AvailabilityBlock) -> Bool {
@@ -336,141 +255,82 @@ private struct AvailabilityWeekStrip: View {
     let blocks: [AvailabilityBlock]
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             ForEach(0..<7, id: \.self) { day in
-                let dayBlocks = blocks.filter { $0.dayOfWeek == day }
+                let count = blocks.filter { $0.dayOfWeek == day }.count
+                let isSelected = day == selectedDay
                 Button {
                     selectedDay = day
                     Haptics.selection()
                 } label: {
-                    VStack(spacing: 7) {
+                    VStack(spacing: 5) {
                         Text(availabilityShortDayNames[day])
-                            .font(.caption2.weight(.semibold))
-                        ZStack {
-                            Circle()
-                                .fill(day == selectedDay ? Color.brandPrimary : Color(.tertiarySystemFill))
-                            Text("\(dayBlocks.count)")
-                                .font(.caption.weight(.bold).monospacedDigit())
-                                .foregroundStyle(day == selectedDay ? Color.white : Color.primary)
-                        }
-                        .frame(width: 30, height: 30)
+                            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                            .foregroundStyle(isSelected ? Color.white : Color.primary)
+                        Circle()
+                            .fill(count > 0 ? (isSelected ? Color.white : Color.secondary) : Color.clear)
+                            .frame(width: 5, height: 5)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 58)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(isSelected ? Color.brandPrimary : Color.clear)
+                    )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(availabilityDayNames[day]), \(dayBlocks.count) availability \(dayBlocks.count == 1 ? "window" : "windows")")
-                .accessibilityAddTraits(day == selectedDay ? .isSelected : [])
+                .accessibilityLabel("\(availabilityDayNames[day]), \(count) saved \(count == 1 ? "window" : "windows")")
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
     }
 }
 
-private struct AvailabilitySummaryPill: View {
-    let title: String
-    let value: Int
-    let tone: StatusTone
+private struct AvailabilityBlockRow: View {
+    let block: AvailabilityBlock
+    let onEdit: () -> Void
 
     var body: some View {
-        HStack(spacing: 7) {
-            Circle()
-                .fill(Color.statusText(tone))
-                .frame(width: 7, height: 7)
-                .accessibilityHidden(true)
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 4)
-            Text("\(value)")
-                .font(.caption.weight(.bold).monospacedDigit())
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
-        .background(Color.statusBackground(tone), in: Capsule())
-    }
-}
-
-private struct AvailabilityOpenDayState: View {
-    let day: String
-    let onAdd: () -> Void
-
-    var body: some View {
-        Button(action: onAdd) {
-            HStack(spacing: 12) {
-                Image(systemName: "checkmark.circle")
-                    .font(.title3)
-                    .foregroundStyle(Color.statusText(.green))
+        Button(action: onEdit) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Circle()
+                    .fill(markerColor)
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("No limits saved")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Add a preferred or unavailable window for \(day).")
-                        .font(.caption)
+                    Text(block.primaryLine)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                    Text(block.secondaryLine)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    if let statusLine = block.statusLine {
+                        Text(statusLine)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 8)
+                if block.hasCustomLabel {
+                    Text(block.intentMetadata.label)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
             }
-            .padding(12)
-            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
-}
 
-private struct AvailabilityBlockCard: View {
-    let block: AvailabilityBlock
-    let onEdit: () -> Void
-    let onDelete: () -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Button(action: onEdit) {
-                HStack(alignment: .top, spacing: 12) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.statusText(block.intentMetadata.tone))
-                        .frame(width: 4)
-                        .padding(.vertical, 2)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(block.primaryLine)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Spacer(minLength: 8)
-                            Text(block.intentMetadata.label)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.statusText(block.intentMetadata.tone))
-                        }
-                        Text(block.secondaryLine)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if let statusLine = block.statusLine {
-                            Text(statusLine)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Color.statusText(block.statusTone))
-                        }
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            Menu {
-                Button("Edit…", systemImage: "pencil", action: onEdit)
-                Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
-            } label: {
-                Image(systemName: "ellipsis")
-                    .frame(width: 36, height: 44)
-            }
-            .accessibilityLabel("Actions for \(block.primaryLine)")
+    /// Color only where it carries status: preferred is green, a pending
+    /// request is orange, approved time off is the one red. Everything else is
+    /// a quiet gray dot.
+    private var markerColor: Color {
+        switch block.normalizedIntent {
+        case "PREFER": return Color.statusText(.green)
+        case "TIME_OFF": return Color.statusText(block.statusTone)
+        default: return Color(.tertiaryLabel)
         }
-        .padding(12)
-        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
-        .accessibilityElement(children: .contain)
     }
 }
 
@@ -1011,6 +871,8 @@ private extension AvailabilityBlock {
         default: .gray
         }
     }
+
+    var hasCustomLabel: Bool { !(label ?? "").isEmpty }
 
     var primaryLine: String {
         if let label, !label.isEmpty { return label }

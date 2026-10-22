@@ -4,6 +4,8 @@ struct BrowseView: View {
     @State private var navigationPath = NavigationPath()
     @Environment(AppState.self) private var appState
     @Environment(SessionStore.self) private var session
+    @State private var openDamageCases = 0
+    @State private var openTool: FieldTool?
 
     private var isStaffOrAdmin: Bool {
         let role = session.currentUser?.role ?? ""
@@ -21,6 +23,7 @@ struct BrowseView: View {
                 rows.insert(.batteries, at: 5)
                 rows.append(.badges)
                 rows.append(.reports)
+                rows.insert(.damage, at: 6)
             }
             return rows
         }
@@ -49,20 +52,58 @@ struct BrowseView: View {
                                         subtitle: destination.subtitle,
                                         systemImage: destination.systemImage,
                                         tint: destination.tint
-                                    ) { EmptyView() }
+                                    ) {
+                                        if destination == .damage, openDamageCases > 0 {
+                                            Text("\(openDamageCases)")
+                                                .font(.caption.weight(.semibold).monospacedDigit())
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 2)
+                                                .background(Color.statusBackground(.orange), in: Capsule())
+                                                .foregroundStyle(Color.statusText(.orange))
+                                                .accessibilityLabel("\(openDamageCases) open")
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                // The web's sidebar Tools: public static pages with no team data,
+                // so every role (collaborators included) gets them, like on web.
+                Section {
+                    ForEach(FieldTool.allCases) { tool in
+                        Button {
+                            openTool = tool
+                        } label: {
+                            SettingsMenuRow(
+                                title: tool.title,
+                                subtitle: tool.subtitle,
+                                systemImage: tool.systemImage,
+                                tint: tool.tint
+                            ) { EmptyView() }
+                        }
+                        .foregroundStyle(.primary)
+                        .accessibilityHint("Opens in the app")
+                    }
+                } header: {
+                    Text("Tools")
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Browse")
+            .sheet(item: $openTool) { tool in
+                InAppSafariView(url: tool.url)
+                    .ignoresSafeArea()
+            }
             .navigationDestination(for: BrowseDestination.self) { destination in
                 destinationView(for: destination)
             }
             .onAppear {
                 consumePendingDestination()
+            }
+            .task(id: isStaffOrAdmin) {
+                guard isStaffOrAdmin else { return }
+                openDamageCases = (try? await APIClient.shared.damageCases(view: .open))?.counts.open ?? 0
             }
             .onChange(of: appState.pendingBrowseDestination) { _, _ in
                 consumePendingDestination()
@@ -113,6 +154,8 @@ struct BrowseView: View {
             TeamBadgesView(wrapsInNavigationStack: false)
         case .reports:
             ReportsView()
+        case .damage:
+            DamageCasesView(wrapsInNavigationStack: false)
         case .blasts:
             BlastsView(wrapsInNavigationStack: false)
         case .whatsNew:
@@ -147,13 +190,14 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case gearPicks
     case badges
     case reports
+    case damage
 
     var id: String { rawValue }
 
     var group: BrowseGroup {
         switch self {
         case .blasts, .whatsNew: .work
-        case .items, .kits, .batteries, .accountability, .reports: .equipment
+        case .items, .kits, .batteries, .accountability, .reports, .damage: .equipment
         case .guides, .brandAssets, .licenses, .sharedLogins: .resources
         case .scoreboard, .users, .gearPicks, .badges: .team
         }
@@ -176,6 +220,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .gearPicks: "UA Gear"
         case .badges: "Badges"
         case .reports: "Reports"
+        case .damage: "Damage and loss"
         }
     }
 
@@ -211,6 +256,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Recognition and staff awards"
         case .reports:
             "Usage, activity, and inventory"
+        case .damage:
+            "Close out damaged and missing gear"
         }
     }
 
@@ -231,6 +278,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .gearPicks: "tshirt"
         case .badges: "medal"
         case .reports: "chart.bar.xaxis"
+        case .damage: "exclamationmark.triangle"
         }
     }
 
@@ -251,6 +299,71 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .gearPicks: Color.statusText(.purple)
         case .badges: Color.statusText(.purple)
         case .reports: Color.statusText(.red)
+        case .damage: Color.statusText(.orange)
+        }
+    }
+}
+
+/// Mirrors WEB_TOOLS in src/lib/web-tools.ts. Each opens the live page in an
+/// in-app Safari view, so tool updates on the web reach the phone at once.
+private enum FieldTool: String, CaseIterable, Identifiable {
+    case goldenHour
+    case photoFrame
+    case qrStudio
+    case boardSizes
+    case timelapse
+
+    var id: String { rawValue }
+
+    var path: String {
+        switch self {
+        case .goldenHour: "/golden-hour"
+        case .photoFrame: "/frame"
+        case .qrStudio: "/qrcode"
+        case .boardSizes: "/board-sizes"
+        case .timelapse: "/timelapse"
+        }
+    }
+
+    var url: URL { AppEnvironment.activeAPIBaseURL.appendingPathComponent(path) }
+
+    var title: String {
+        switch self {
+        case .goldenHour: "Golden Hour"
+        case .photoFrame: "Photo Frame"
+        case .qrStudio: "QR Studio"
+        case .boardSizes: "Board Sizes"
+        case .timelapse: "Timelapse"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .goldenHour: "When the light is good to shoot"
+        case .photoFrame: "Frame a photo with its settings and credit"
+        case .qrStudio: "Branded, scan-checked QR codes"
+        case .boardSizes: "Videoboard sizes and specs by venue"
+        case .timelapse: "Interval, roll time and clip length"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .goldenHour: "sun.horizon"
+        case .photoFrame: "photo.artframe"
+        case .qrStudio: "qrcode"
+        case .boardSizes: "ruler"
+        case .timelapse: "timer"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .goldenHour: Color.statusText(.orange)
+        case .photoFrame: Color.statusText(.purple)
+        case .qrStudio: Color.statusText(.blue)
+        case .boardSizes: Color.statusText(.green)
+        case .timelapse: Color.statusText(.red)
         }
     }
 }

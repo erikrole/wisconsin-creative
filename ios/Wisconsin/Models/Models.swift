@@ -60,9 +60,13 @@ struct CurrentUser: Codable, Identifiable, Equatable {
     let capabilities: [String]?
     let collaboratorPolicy: CollaboratorPolicyMetadata?
     let staffingType: String?
-    let avatarUrl: String?
+    var avatarUrl: String?
     let forcePasswordChange: Bool
+    let onboardingRequired: Bool
     let preview: RolePreviewInfo?
+    /// ISO-8601 account creation time from `/api/me`. Nil on the optimistic
+    /// launch snapshot, so first-weeks surfaces wait for the live response.
+    let accountCreatedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -76,7 +80,9 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         case staffingType
         case avatarUrl
         case forcePasswordChange
+        case onboardingRequired
         case preview
+        case accountCreatedAt
     }
 
     init(
@@ -91,7 +97,9 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         staffingType: String? = nil,
         avatarUrl: String?,
         forcePasswordChange: Bool = false,
-        preview: RolePreviewInfo? = nil
+        onboardingRequired: Bool = false,
+        preview: RolePreviewInfo? = nil,
+        accountCreatedAt: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -104,7 +112,9 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         self.staffingType = staffingType
         self.avatarUrl = avatarUrl
         self.forcePasswordChange = forcePasswordChange
+        self.onboardingRequired = onboardingRequired
         self.preview = preview
+        self.accountCreatedAt = accountCreatedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -120,7 +130,9 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         staffingType = try container.decodeIfPresent(String.self, forKey: .staffingType)
         avatarUrl = try container.decodeIfPresent(String.self, forKey: .avatarUrl)
         forcePasswordChange = try container.decodeIfPresent(Bool.self, forKey: .forcePasswordChange) ?? false
+        onboardingRequired = try container.decodeIfPresent(Bool.self, forKey: .onboardingRequired) ?? false
         preview = try container.decodeIfPresent(RolePreviewInfo.self, forKey: .preview)
+        accountCreatedAt = try container.decodeIfPresent(String.self, forKey: .accountCreatedAt)
     }
 
     /// Preview mode is a presentation/inspection state over an Admin session,

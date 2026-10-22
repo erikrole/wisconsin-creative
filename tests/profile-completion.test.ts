@@ -28,6 +28,12 @@ function profile(overrides: Record<string, unknown> = {}) {
 }
 
 describe("profile completion", () => {
+  it("requires new-user apparel even after a snooze, and keeps setup active until Finish records a receipt", () => {
+    const base = profile({ role: "STUDENT", onboardingRequired: true, profilePromptSnoozedUntil: "2099-10-23T00:00:00Z", personalPhone: "608-555-0100", wiscardCardNumber: "1234567890", wiscardIssueCode: "1", studentYearOverride: "FRESHMAN", graduationTerm: "SPRING", gradYear: 2030 });
+    expect(getProfileCompletion(base)).toMatchObject({ requiresSetup: true, requiredComplete: false, shouldPrompt: true, firstIncompleteStep: "APPAREL" });
+    expect(getProfileCompletion({ ...base, topSizeFit: "UNISEX", topSize: "M", shoeSizeSystem: "US_MENS", shoeSize: "10" })).toMatchObject({ requiresSetup: true, requiredComplete: true, onboardingComplete: false, profileComplete: false, firstIncompleteStep: "PHOTO" });
+  });
+
   it("requires the requested contact, Wiscard, and apparel details", () => {
     const result = getProfileCompletion(profile());
 
@@ -72,14 +78,14 @@ describe("profile completion", () => {
     expect(result.missingFields).toEqual([]);
   });
 
-  it("requires year and anticipated graduation for students", () => {
+  it("requires year but not anticipated graduation for students", () => {
     const result = getProfileCompletion(profile({ role: "STUDENT" }));
 
-    expect(result.totalCount).toBe(8);
+    expect(result.totalCount).toBe(7);
     expect(result.missingFields).not.toContain("workPhone");
     expect(result.missingFields).not.toContain("athleticsEmail");
     expect(result.missingFields).toContain("studentYear");
-    expect(result.missingFields).toContain("anticipatedGraduation");
+    expect(result.missingFields).not.toContain("anticipatedGraduation");
   });
 
   it("accepts complete student academic details", () => {
@@ -101,7 +107,7 @@ describe("profile completion", () => {
     }));
 
     expect(result.isComplete).toBe(true);
-    expect(result.completedCount).toBe(8);
+    expect(result.completedCount).toBe(7);
   });
 
   it("separates operational readiness from profile completion", () => {

@@ -7,6 +7,8 @@ import { requirePermission } from "@/lib/rbac";
 import { createAllowedEmailSchema, createAllowedEmailBulkSchema } from "@/lib/validation";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { shouldIncludeHiddenUsers } from "@/lib/user-visibility";
+import { createAuditEntry } from "@/lib/audit";
+import { sendInviteEmail } from "@/lib/services/invite-email";
 import {
   createAllowedEmailInvite,
   createAllowedEmailInvitesBulk,
@@ -95,6 +97,21 @@ export const POST = withAuth(async (req, { user }) => {
 
   const result = await createAllowedEmailInvite({ actor: user, ...invite, email });
   if (result.skipped) return ok(result, 201);
+
+  // Opt-in per add: the invite is the one automatic email a new person gets.
+  // Collaborators are onboarded by their organization, not this email.
+  if (body?.sendInvite === true && invite.role !== "COLLABORATOR") {
+    const emailStatus = await sendInviteEmail({ email, name: "preloadedName" in invite ? invite.preloadedName : null });
+    await createAuditEntry({
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "allowed_email",
+      entityId: result.entry.id,
+      action: "invite_sent",
+      after: { emailStatus },
+    });
+    return ok({ ...result.entry, emailStatus }, 201);
+  }
 
   return ok(result.entry, 201);
 });

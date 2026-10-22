@@ -1,0 +1,78 @@
+{
+  "native": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 25348,
+      "counts": {
+        "passed": 251,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T12-37-37-726Z_pid46447_9bda83f3.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-37-37-726Z_pid46447_7d448202.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T12-37-37-726Z_pid46447_9e346de6.xctestproducts"
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:460"
+        }
+      ],
+      "errors": [],
+      "testFailures": []
+    }
+  },
+  "onboarding": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 83333,
+      "counts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T12-38-15-577Z_pid46447_1158ad49.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-38-15-578Z_pid46447_b7c925dc.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T12-38-15-578Z_pid46447_52af4e22.xctestproducts"
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:460"
+        }
+      ],
+      "errors": [],
+      "testFailures": []
+    }
+  },
+  "reviewRegression": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 63430,
+      "counts": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T12-18-52-556Z_pid46447_cf71c661.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-18-52-556Z_pid46447_1f7a58d1.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T12-18-52-556Z_pid46447_ecfb8f43.xctestproducts"
+    },
+    "diagnostics": {
+      "warnings": [],
+      "errors": [],
+      "testFailures": []
+    }
+  }
+}

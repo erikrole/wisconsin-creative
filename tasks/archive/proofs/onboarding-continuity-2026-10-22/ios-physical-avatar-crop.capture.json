@@ -1,0 +1,15 @@
+{
+  "evidence": "Physical iPhone; synthetic crop fixture, no successful upload or authenticated account",
+  "device": "iPhone 18 Pro Max",
+  "os": "iOS 27.2",
+  "bundle": "com.erikrole.Wisconsin.OnboardingReview",
+  "sourceBase": "c1176ab530414ca3a01a070ae8b99de17f283320",
+  "test": "OnboardingWalkthroughUITests/testCropKeepsAdjustmentsAvailableAfterAnUnconfirmedUpload",
+  "sha256": "bcc9fd8d687cdcaaf81bd1600f8417025c07f58b6a16e79a2dfce7ce65c7ae6c",
+  "sourceHashes": {
+    "ios/Wisconsin/Views/Welcome/ProfilePhotoCropView.swift": "fbc66f07587165b84c6e3293b72836ca9e4c4b202917cab7a9ebb4224488c7ae",
+    "ios/WisconsinUITests/OnboardingWalkthroughUITests.swift": "6faf35cbb63c201fa57e5e9381fa76494c24b240a4cfddcbde459f32589b05cd"
+  },
+  "timestamp": 1792689259.907,
+  "baseline": "After-only; physical pre-change framing is not a trustworthy matched comparison"
+}

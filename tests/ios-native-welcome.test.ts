@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native iOS Welcome flow", () => {
   it("routes forced-password users before Welcome and Welcome before the tab shell", () => {
@@ -67,7 +68,7 @@ describe("native iOS Welcome flow", () => {
   });
 
   it("uses the existing completion and multipart avatar contracts", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
 
     expect(api).toContain('request(path: "/api/me/profile-completion")');
     expect(api).toContain('request(path: "/api/me/profile-completion", method: "PATCH")');
@@ -86,9 +87,9 @@ describe("native iOS Welcome flow", () => {
     expect(welcome).toContain("NativeImageProcessor.downsample");
     expect(welcome).toContain("reduceMotion ? .easeOut(duration: 0.12)");
     expect(welcome).toContain("photoLoadError = \"That photo couldn’t be opened.");
-    expect(crop).toContain("DragGesture()");
-    expect(crop).toContain("MagnifyGesture()");
-    expect(imageProcessor).toContain("width: 1024, height: 1024");
+    expect(crop).toContain("UIScrollViewDelegate");
+    expect(crop).toContain("viewForZooming(in scrollView: UIScrollView)");
+    expect(imageProcessor).toContain("width: 512, height: 512");
     expect(imageProcessor).toContain("jpegData(compressionQuality: 0.9)");
     expect(crop).toContain("@Environment(\\.dismiss)");
   });
@@ -110,12 +111,47 @@ describe("native iOS Welcome flow", () => {
     expect(crop).toContain('Text("Save").fontWeight(.semibold)');
   });
 
-  it("keeps a final photo skip local to the current session", () => {
+  it("records a final photo skip on the account before showing the finish screen", () => {
     const welcome = source("ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeView.swift");
+    const store = source("ios/Wisconsin/Core/ProfileCompletionStore.swift");
     const skip = welcome.slice(welcome.indexOf("private func skipOptionalStep"), welcome.indexOf("private func snooze"));
 
-    expect(skip).toContain("continueForSession(for: user.id)");
+    expect(skip).toContain("completionStore.finishSetup(for: user)");
     expect(skip).not.toContain("snooze()");
+    // The finish screen holds the Welcome route and only Continue hands off to the app.
+    expect(store).toContain("if finish?.userId == user.id { return .welcome }");
+    expect(store).toMatch(/func dismissFinish[\s\S]*continueForSession/);
+  });
+
+  it("does not require graduation and sends it only when a term is chosen", () => {
+    const draft = source("ios/Wisconsin/Views/Welcome/ProfileCompletionDraft.swift");
+    const models = source("ios/Wisconsin/Models/ProfileCompletionModels.swift");
+    const components = source("ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeComponents.swift");
+
+    expect(draft).toContain("return !studentYear.isEmpty\n");
+    expect(draft).not.toContain("!graduationTerm.isEmpty\n        case .apparel");
+    expect(draft).toContain("graduationTerm: hasTerm ? graduationTerm : nil");
+    expect(models).toContain("case student(year: String, graduationTerm: String?, gradYear: Int?)");
+    expect(models).toContain("encodeIfPresent(graduationTerm");
+    expect(components).toContain('WelcomeFieldLabel(title: "Anticipated graduation")');
+    expect(components).not.toMatch(/Anticipated graduation[^"]*optional/i);
+  });
+
+  it("closes Welcome with the native finish screen that matches the web copy", () => {
+    const finish = source("ios/Wisconsin/Views/Welcome/WelcomeFinishView.swift");
+
+    expect(finish).toContain("You’re all set, \\(firstName)");
+    expect(finish).toContain("Welcome, \\(firstName)");
+    expect(finish).toContain("We’ll remind you tomorrow to finish your profile");
+    for (const title of ["Check the schedule", "Find your gear", "Read the guides"]) {
+      expect(finish).toContain(title);
+    }
+    expect(finish).toContain("static func steps(for role: String)");
+    // Role-aware like the web: students add unavailable times first; collaborators get Continue only.
+    expect(finish).toContain('case "COLLABORATOR": []');
+    expect(finish).toContain("Add when you can’t work");
+    expect(finish).toContain("Build crews and see which events still need people.");
+    expect(finish).toContain("Text(\"Continue\")");
   });
 
   it("manages field focus, the number-pad keyboard, and deterministic preview states", () => {
@@ -147,5 +183,53 @@ describe("native iOS Welcome flow", () => {
 
     expect(profile).toContain('title: "Complete profile"');
     expect(profile).toContain("profileCompletion.presentManually(for: user.id)");
+  });
+
+  it("offers an optional first-weeks checklist on Home for new students", () => {
+    const card = source("ios/Wisconsin/Views/GettingStartedCard.swift");
+    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const models = source("ios/Wisconsin/Models/Models.swift");
+    const welcome = source("ios/Wisconsin/Views/Welcome/WelcomeFinishView.swift");
+
+    // Students only, inside the same 14-day window as the web card.
+    expect(card).toContain('role == "STUDENT"');
+    expect(card).toContain("static let windowDays = 14");
+    expect(models).toContain("accountCreatedAt = try container.decodeIfPresent(String.self");
+    // Optional offer: dismissible, and notifications only navigate, never prompt.
+    expect(card).toContain("Hide getting started");
+    expect(card).toContain("pendingSettingsDestination = .notifications");
+    expect(card).not.toMatch(/requestAuthorization|registerForRemoteNotifications|PushPrePromptView/);
+    // Any "cannot work" block counts as done from the API, matching the web isUnavailableBlock rule.
+    expect(card).toContain("availabilityBlocks(userId:");
+    expect(card).toContain('($0.intent ?? "CANNOT_WORK") == "CANNOT_WORK"');
+    // Stores row ids and a dismissed flag only, per user.
+    expect(card).toContain('"WisconsinGettingStarted.\\(userId)"');
+    expect(card).not.toMatch(/phone|wiscard|topSize|shoeSize|avatarUrl/i);
+    expect(home).toContain("GettingStartedCard(model: gettingStarted)");
+    // The finish screen and the card open the same screens.
+    expect(welcome).toContain("step.destination.open(in: appState)");
+    expect(welcome).toContain("case .schedule: .schedule");
+  });
+
+  it("keeps days a student can't work one tap away on Home and Schedule", () => {
+    const card = source("ios/Wisconsin/Views/CantWorkCard.swift");
+    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
+
+    // Student workers only, matching the web gate and Schedule's availability gate.
+    expect(card).toContain('user.role == "STUDENT" && user.staffingType == "ST" && !user.isReadOnlyRolePreview');
+    // One dated "cannot work" block through the existing availability API.
+    expect(card).toContain('kind: "AD_HOC"');
+    expect(card).toContain('intent: "CANNOT_WORK"');
+    expect(card).toContain("createAvailabilityBlock(");
+    // Upcoming-only summary with the same copy as the web card.
+    expect(card).toContain("through >= startOfToday");
+    expect(card).toContain("Every week: ");
+    expect(card).toContain("Add days you can’t work");
+    expect(home).toContain("CantWorkCard()");
+    // Schedule gets a labelled toolbar action for the same sheet, starting on the focused day.
+    expect(schedule).toContain('Label("Can’t work", systemImage: "calendar.badge.minus")');
+    expect(schedule).toContain("CantWorkQuickSheet(userId:");
+    expect(schedule).toContain("scrollTracker.topDay ?? today");
   });
 });

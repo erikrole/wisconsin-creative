@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "ecc399c3c222fa767b477f585ee391382d645ffe",
+  "sourcePatchSha256": "a054612b73ccfc8ebd60664c93f1b4fb914b0ff0573d2e6f1f26b7c00f8dd9eb",
+  "settings": {
+    "device": "iPhone 18 Pro Max / iOS 27.0",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "tradeBoardStaff current snapshot / 2026-10-22",
+    "role": "synthetic admin",
+    "route": "Trade Board / Review",
+    "appearance": "light",
+    "textSize": "default large",
+    "locale": "English",
+    "timezone": "America/Chicago",
+    "clock": "09:41 status-bar override; fixture day offsets at fixed hours",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "a4181343ae68cc572f89162a968a63bedd0d88c588fb419c6144bdb4aaebd10c",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

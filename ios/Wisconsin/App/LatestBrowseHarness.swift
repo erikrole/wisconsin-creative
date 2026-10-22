@@ -62,19 +62,16 @@ enum LatestBrowseFixtureAPI {
     "ranking": "Late events, then total late time, then most recent incident"
   },
   "metrics": {
-    "peopleNeedingAttention": 2,
-    "lateEvents": 2,
-    "activeOverdue": 1,
-    "totalLateHours": 30,
+    "peopleNeedingAttention": 5,
+    "lateEvents": 9,
+    "activeOverdue": 2,
+    "totalLateHours": 138,
     "excludedRecords": 4
   },
   "capabilities": {
     "canExport": true,
     "canManageExclusions": true
   },
-  "spotlightJeers": [
-    "The gear shelf appreciates a little less suspense."
-  ],
   "locations": [
     {
       "id": "loc_1",
@@ -100,14 +97,14 @@ enum LatestBrowseFixtureAPI {
       "avatarUrl": null,
       "active": true,
       "primaryArea": "LIVE_PRODUCTION",
-      "checkoutCount": 6,
-      "completedCount": 5,
-      "lateEventCount": 1,
+      "checkoutCount": 9,
+      "completedCount": 7,
+      "lateEventCount": 3,
       "activeOverdueCount": 1,
-      "totalLateHours": 26,
+      "totalLateHours": 80,
       "medianLateHours": 26,
-      "worstLateHours": 26,
-      "onTimeRate": 80,
+      "worstLateHours": 52,
+      "onTimeRate": 67,
       "lastIncidentAt": "2026-10-15T18:00:00.000Z",
       "incidents": [
         {
@@ -118,42 +115,208 @@ enum LatestBrowseFixtureAPI {
           "returnedAt": null,
           "extendedAt": null,
           "extendedTo": null,
-          "lateHours": 26,
+          "lateHours": 52,
           "state": "active",
           "location": {
             "id": "loc_1",
             "name": "Studio"
           },
-          "itemSummary": "CAM-1"
+          "itemSummary": "CAM-1, TRIPOD-3"
+        },
+        {
+          "incidentId": "book_3:resolved",
+          "bookingId": "book_3",
+          "title": "Podcast bag",
+          "dueAt": "2026-09-20T15:00:00.000Z",
+          "returnedAt": "2026-09-21T09:00:00.000Z",
+          "extendedAt": null,
+          "extendedTo": null,
+          "lateHours": 18,
+          "state": "resolved",
+          "location": {
+            "id": "loc_1",
+            "name": "Studio"
+          },
+          "itemSummary": "MIC-2"
+        },
+        {
+          "incidentId": "book_4:resolved",
+          "bookingId": "book_4",
+          "title": "Lens loan",
+          "dueAt": "2026-08-30T15:00:00.000Z",
+          "returnedAt": "2026-08-30T22:00:00.000Z",
+          "extendedAt": null,
+          "extendedTo": null,
+          "lateHours": 10,
+          "state": "resolved",
+          "location": {
+            "id": "loc_1",
+            "name": "Studio"
+          },
+          "itemSummary": ""
         }
       ]
     },
     {
       "userId": "user_grace",
       "name": "Jordan Lee",
-      "avatarUrl": "https://example.com/grace.jpg",
-      "active": false,
-      "primaryArea": null,
-      "checkoutCount": 2,
-      "completedCount": 2,
-      "lateEventCount": 1,
-      "activeOverdueCount": 0,
-      "totalLateHours": 4,
-      "medianLateHours": 4,
-      "worstLateHours": 4,
+      "avatarUrl": null,
+      "active": true,
+      "primaryArea": "PHOTO",
+      "checkoutCount": 5,
+      "completedCount": 3,
+      "lateEventCount": 2,
+      "activeOverdueCount": 1,
+      "totalLateHours": 35,
+      "medianLateHours": 17,
+      "worstLateHours": 31,
       "onTimeRate": null,
-      "lastIncidentAt": "2026-08-01T18:00:00.000Z",
+      "lastIncidentAt": "2026-10-16T08:00:00.000Z",
       "incidents": [
         {
-          "incidentId": "book_2:extended",
+          "incidentId": "book_5:active",
+          "bookingId": "book_5",
+          "title": "Sideline lens",
+          "dueAt": "2026-10-18T12:00:00.000Z",
+          "returnedAt": null,
+          "extendedAt": null,
+          "extendedTo": null,
+          "lateHours": 31,
+          "state": "active",
+          "location": {
+            "id": "loc_1",
+            "name": "Studio"
+          },
+          "itemSummary": "LENS-70200"
+        },
+        {
+          "incidentId": "book_2:resolved",
           "bookingId": "book_2",
           "title": "Sunday lens",
           "dueAt": "2026-08-01T15:00:00.000Z",
           "returnedAt": "2026-08-01T20:00:00.000Z",
-          "extendedAt": "2026-08-01T16:00:00.000Z",
-          "extendedTo": "2026-08-01T18:00:00.000Z",
+          "extendedAt": null,
+          "extendedTo": null,
           "lateHours": 4,
-          "state": "extended",
+          "state": "resolved",
+          "location": {
+            "id": "loc_1",
+            "name": "Studio"
+          },
+          "itemSummary": ""
+        }
+      ]
+    },
+    {
+      "userId": "fixture-staff",
+      "name": "Bucky Badger",
+      "avatarUrl": null,
+      "active": true,
+      "primaryArea": "GRAPHICS",
+      "checkoutCount": 12,
+      "completedCount": 11,
+      "lateEventCount": 2,
+      "activeOverdueCount": 0,
+      "totalLateHours": 15,
+      "medianLateHours": 7,
+      "worstLateHours": 12,
+      "onTimeRate": 85,
+      "lastIncidentAt": "2026-09-30T18:00:00.000Z",
+      "incidents": [
+        {
+          "incidentId": "book_6:resolved",
+          "bookingId": "book_6",
+          "title": "Gameday laptop",
+          "dueAt": "2026-09-30T15:00:00.000Z",
+          "returnedAt": "2026-10-01T05:00:00.000Z",
+          "extendedAt": null,
+          "extendedTo": null,
+          "lateHours": 12,
+          "state": "resolved",
+          "location": {
+            "id": "loc_1",
+            "name": "Studio"
+          },
+          "itemSummary": "LAPTOP-4"
+        },
+        {
+          "incidentId": "book_7:resolved",
+          "bookingId": "book_7",
+          "title": "Field mics",
+          "dueAt": "2026-09-02T15:00:00.000Z",
+          "returnedAt": "2026-09-02T18:00:00.000Z",
+          "extendedAt": null,
+          "extendedTo": null,
+          "lateHours": 3,
+          "state": "resolved",
+          "location": {
+            "id": "loc_1",
+            "name": "Studio"
+          },
+          "itemSummary": ""
+        }
+      ]
+    },
+    {
+      "userId": "user_casey",
+      "name": "Casey Rivera",
+      "avatarUrl": null,
+      "active": true,
+      "primaryArea": "VIDEO",
+      "checkoutCount": 6,
+      "completedCount": 6,
+      "lateEventCount": 1,
+      "activeOverdueCount": 0,
+      "totalLateHours": 5,
+      "medianLateHours": 5,
+      "worstLateHours": 5,
+      "onTimeRate": 83,
+      "lastIncidentAt": "2026-09-10T18:00:00.000Z",
+      "incidents": [
+        {
+          "incidentId": "book_8:resolved",
+          "bookingId": "book_8",
+          "title": "Interview kit",
+          "dueAt": "2026-09-10T15:00:00.000Z",
+          "returnedAt": "2026-09-10T20:00:00.000Z",
+          "extendedAt": null,
+          "extendedTo": null,
+          "lateHours": 5,
+          "state": "resolved",
+          "location": {
+            "id": "loc_1",
+            "name": "Studio"
+          },
+          "itemSummary": "CAM-2"
+        }
+      ]
+    },
+    {
+      "userId": "user_sam",
+      "name": "Sam Patel",
+      "avatarUrl": null,
+      "active": false,
+      "primaryArea": "VIDEO",
+      "checkoutCount": 3,
+      "completedCount": 3,
+      "lateEventCount": 1,
+      "activeOverdueCount": 0,
+      "totalLateHours": 3,
+      "medianLateHours": 3,
+      "worstLateHours": 3,
+      "onTimeRate": null,
+      "lastIncidentAt": "2026-08-12T18:00:00.000Z",
+      "incidents": [
+        {
+          "incidentId": "book_9:resolved",
+          "bookingId": "book_9",
+          "title": "Drone case",
+          "dueAt": "2026-08-12T15:00:00.000Z",
+          "returnedAt": "2026-08-12T18:00:00.000Z",
+          "extendedAt": null,
+          "extendedTo": null,
+          "lateHours": 3,
+          "state": "resolved",
           "location": {
             "id": "loc_1",
             "name": "Studio"
@@ -163,6 +326,7 @@ enum LatestBrowseFixtureAPI {
       ]
     }
   ]
+
 }
 """#.utf8)
         case "/api/resources/assets": return Data(#"""

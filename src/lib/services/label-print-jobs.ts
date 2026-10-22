@@ -70,14 +70,27 @@ export async function listLabelPrintJobs(user: AuthUser, browserId?: string, cur
   requirePermission(user.role, "label_print", "view");
   const staff = ["ADMIN", "STAFF"].includes(user.role);
   const [rows, active] = await Promise.all([
-    db.labelPrintJob.findMany({ where: staff ? {} : { actorUserId: user.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 21, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) }),
+    db.labelPrintJob.findMany({ where: staff ? {} : { actorUserId: user.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 21, ...(cursor && cursor !== "history-start" ? { cursor: { id: cursor }, skip: 1 } : {}) }),
     browserId ? db.labelPrintJob.findUnique({ where: { activeBrowserId: browserId } }) : null,
   ]);
   const activeJob = active ? printJobSchema.parse(active.job) : null;
-  // Keep the browser-level safety guard across accounts without disclosing another person's sheet to students.
-  return { jobs: rows.slice(0, 20).map((row) => printJobSchema.parse(row.job)), nextCursor: rows.length > 20 ? rows[19]!.id : null,
-    active: activeJob && (staff || activeJob.actor.id === user.id) ? activeJob : null,
-    blockedByOtherOperator: Boolean(activeJob && !staff && activeJob.actor.id !== user.id) };
+  // Always carry recovery on the first page; later pages only carry history.
+  const result: { jobs: PrintJob[]; nextCursor: string | null; active: PrintJob | null; blockedByOtherOperator: boolean } = {
+    jobs: [], nextCursor: null,
+    active: !cursor && activeJob && (staff || activeJob.actor.id === user.id) ? activeJob : null,
+    blockedByOtherOperator: Boolean(activeJob && !staff && activeJob.actor.id !== user.id),
+  };
+  // Vercel's 4.5MB response limit includes the UTF-8 outer envelope. Keep headroom.
+  // A schema-valid individual receipt is <=3.3MB, so history-only pages advance.
+  const budget = 3_500_000;
+  for (const row of rows.slice(0, 20)) {
+    const job = printJobSchema.parse(row.job);
+    const candidate = { ...result, jobs: [...result.jobs, job], nextCursor: job.id };
+    if (Buffer.byteLength(JSON.stringify({ data: candidate }), "utf8") > budget) break;
+    result.jobs.push(job);
+  }
+  if (result.jobs.length < rows.length) result.nextCursor = result.jobs.at(-1)?.id ?? "history-start";
+  return result;
 }
 
 export async function getLabelPrintJob(id: string, user: AuthUser) {

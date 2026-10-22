@@ -41,7 +41,6 @@ final class AccountabilityModelTests: XCTestCase {
             "excludedRecords": 4
           },
           "capabilities": { "canExport": true, "canManageExclusions": true },
-          "spotlightJeers": ["The gear shelf appreciates a little less suspense."],
           "locations": [{ "id": "loc_1", "name": "Studio" }],
           "excluded": [{
             "bookingId": "book_hidden",
@@ -120,11 +119,9 @@ final class AccountabilityModelTests: XCTestCase {
         XCTAssertEqual(report.scopeTitle, "2026-27")
         XCTAssertEqual(report.metrics.summary, "2 people · 1 still out · 2 late returns")
         XCTAssertEqual(report.methodology.graceSentence, "A return is late after 2 hours past due.")
-        XCTAssertEqual(report.rank(of: "user_grace"), 2)
         XCTAssertEqual(report.person("user_ada")?.areaLabel, "Live Production")
         XCTAssertEqual(report.person("user_grace")?.onTimeLabel, "Not enough checkouts")
         XCTAssertEqual(report.matching("lovelace").map(\.userId), ["user_ada"])
-        XCTAssertEqual(report.notes.count, 1)
 
         let active = try XCTUnwrap(report.person("user_ada")?.incidents.first)
         XCTAssertEqual(active.style.label, "Currently overdue")
@@ -138,7 +135,7 @@ final class AccountabilityModelTests: XCTestCase {
         XCTAssertEqual(extended.detailLine.contains("moved to"), true)
     }
 
-    func testAllTimeReportToleratesAMissingYearAndMissingJeers() throws {
+    func testAllTimeReportToleratesAMissingYear() throws {
         let json = """
         {
           "generatedAt": "2026-10-16T15:00:00.000Z",
@@ -163,9 +160,10 @@ final class AccountabilityModelTests: XCTestCase {
 
         XCTAssertEqual(report.scopeTitle, "All time")
         XCTAssertEqual(report.truncated, true)
-        XCTAssertTrue(report.notes.isEmpty)
         XCTAssertEqual(report.methodology.graceSentence, "A return is late after 1 hour past due.")
-        XCTAssertNil(report.rank(of: "missing"))
+        XCTAssertNil(report.person("missing"))
+        XCTAssertTrue(report.overdueNow().isEmpty)
+        XCTAssertEqual(report.repeatPeople.count, 0)
     }
 
     func testQuerySendsSortAndOnlyAllTimeYear() {
@@ -178,18 +176,97 @@ final class AccountabilityModelTests: XCTestCase {
         XCTAssertEqual(allTime.map(\.value), ["recent", "all"])
     }
 
-    func testDurationAndOrdinalStayInProductLanguage() {
+    func testDurationStaysInProductLanguage() {
         XCTAssertEqual(accountabilityLateDuration(0), "0h")
         XCTAssertEqual(accountabilityLateDuration(23), "23h")
         XCTAssertEqual(accountabilityLateDuration(24), "1d")
         XCTAssertEqual(accountabilityLateDuration(25), "1d 1h")
-        XCTAssertEqual(accountabilityOrdinal(1), "1st")
-        XCTAssertEqual(accountabilityOrdinal(2), "2nd")
-        XCTAssertEqual(accountabilityOrdinal(3), "3rd")
-        XCTAssertEqual(accountabilityOrdinal(11), "11th")
-        XCTAssertEqual(accountabilityOrdinal(12), "12th")
-        XCTAssertEqual(accountabilityOrdinal(13), "13th")
-        XCTAssertEqual(accountabilityOrdinal(21), "21st")
+    }
+
+    func testOverdueNowIsLongestFirstActiveOnlyAndCappedAtFive() throws {
+        func incident(_ id: String, hours: Int, state: String) -> String {
+            """
+            {"incidentId":"\(id)","bookingId":"b_\(id)","title":"Kit \(id)","dueAt":"2026-10-14T18:00:00.000Z",
+             "returnedAt":null,"extendedAt":null,"extendedTo":null,"lateHours":\(hours),"state":"\(state)",
+             "location":{"id":"l","name":"Studio"},"itemSummary":""}
+            """
+        }
+        func person(_ id: String, late: Int, incidents: [String]) -> String {
+            """
+            {"userId":"\(id)","name":"\(id)","avatarUrl":null,"active":true,"primaryArea":null,"checkoutCount":4,
+             "completedCount":3,"lateEventCount":\(late),"activeOverdueCount":1,"totalLateHours":10,"medianLateHours":5,
+             "worstLateHours":9,"onTimeRate":75,"lastIncidentAt":"2026-10-15T18:00:00.000Z",
+             "incidents":[\(incidents.joined(separator: ","))]}
+            """
+        }
+        let people = [
+            person("a", late: 1, incidents: [incident("a1", hours: 5, state: "active")]),
+            person("b", late: 2, incidents: [incident("b1", hours: 52, state: "active"), incident("b2", hours: 90, state: "resolved")]),
+            person("c", late: 1, incidents: [incident("c1", hours: 30, state: "active")]),
+            person("d", late: 1, incidents: [incident("d1", hours: 7, state: "active"), incident("d2", hours: 8, state: "extended")]),
+            person("e", late: 1, incidents: [incident("e1", hours: 9, state: "active")]),
+            person("f", late: 1, incidents: [incident("f1", hours: 11, state: "active")]),
+        ]
+        let json = """
+        {"generatedAt":"2026-10-16T15:00:00.000Z","truncated":false,
+         "methodology":{"gracePeriodHours":2,"minimumCheckoutsForRate":3,"sort":"events","ranking":"x"},
+         "metrics":{"peopleNeedingAttention":6,"lateEvents":7,"activeOverdue":6,"totalLateHours":0},
+         "leaderboard":[\(people.joined(separator: ","))]}
+        """
+        let report = try JSONDecoder().decode(AccountabilityReport.self, from: Data(json.utf8))
+
+        let overdue = report.overdueNow()
+        XCTAssertEqual(overdue.map(\.incident.incidentId), ["b1", "c1", "f1", "e1", "d1"])
+        XCTAssertEqual(overdue.first?.overdueLabel, "2d 4h overdue")
+        XCTAssertEqual(overdue.first?.incident.bookingId, "b_b1")
+        XCTAssertEqual(report.overdueNow(limit: 2).count, 2)
+    }
+
+    func testRepeatListHidesLateOnceUnlessNobodyIsRepeat() throws {
+        func report(lateCounts: [Int]) throws -> AccountabilityReport {
+            let rows = lateCounts.enumerated().map { index, late in
+                """
+                {"userId":"u\(index)","name":"Person \(index)","avatarUrl":null,"active":true,"primaryArea":null,
+                 "checkoutCount":5,"completedCount":5,"lateEventCount":\(late),"activeOverdueCount":0,"totalLateHours":\(late),
+                 "medianLateHours":1,"worstLateHours":1,"onTimeRate":\(index == 0 ? "80" : "null"),
+                 "lastIncidentAt":"2026-10-15T18:00:00.000Z","incidents":[]}
+                """
+            }
+            let json = """
+            {"generatedAt":"2026-10-16T15:00:00.000Z","truncated":false,
+             "methodology":{"gracePeriodHours":2,"minimumCheckoutsForRate":3,"sort":"events","ranking":"x"},
+             "metrics":{"peopleNeedingAttention":\(lateCounts.count),"lateEvents":0,"activeOverdue":0,"totalLateHours":0},
+             "leaderboard":[\(rows.joined(separator: ","))]}
+            """
+            return try JSONDecoder().decode(AccountabilityReport.self, from: Data(json.utf8))
+        }
+
+        let mixed = try report(lateCounts: [3, 2, 1, 1])
+        XCTAssertEqual(mixed.repeatPeople.map(\.userId), ["u0", "u1"])
+        XCTAssertEqual(mixed.lateOnceCount, 2)
+
+        let allOnce = try report(lateCounts: [1, 1])
+        XCTAssertEqual(allOnce.repeatPeople.count, 2)
+        XCTAssertEqual(allOnce.lateOnceCount, 0)
+    }
+
+    func testRecordSummaryHasNoRankAndOmitsMissingOnTimeRate() throws {
+        let json = """
+        {"userId":"u","name":"U","avatarUrl":null,"active":true,"primaryArea":null,"checkoutCount":5,
+         "completedCount":5,"lateEventCount":2,"activeOverdueCount":0,"totalLateHours":6,"medianLateHours":3,
+         "worstLateHours":4,"onTimeRate":60,"lastIncidentAt":"2026-10-15T18:00:00.000Z","incidents":[]}
+        """
+        let person = try JSONDecoder().decode(AccountabilityPerson.self, from: Data(json.utf8))
+        XCTAssertEqual(person.recordSummary, "2 late returns · 60% on time")
+        XCTAssertEqual(person.lateShortLabel, "2 late")
+
+        let quiet = try JSONDecoder().decode(
+            AccountabilityPerson.self,
+            from: Data(json.replacingOccurrences(of: "\"onTimeRate\":60", with: "\"onTimeRate\":null")
+                .replacingOccurrences(of: "\"lateEventCount\":2", with: "\"lateEventCount\":1").utf8)
+        )
+        XCTAssertEqual(quiet.recordSummary, "1 late return")
+        XCTAssertNil(quiet.onTimePercentLabel)
     }
 
     func testUnknownIncidentStateDoesNotShowTheRawToken() {

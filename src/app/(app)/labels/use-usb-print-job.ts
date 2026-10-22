@@ -202,9 +202,12 @@ export function useUsbPrintJob(actor: PrintActor | null, onCompleted: (label: Pr
     archiveUnreadableJournal(localStorage, unreadable); setUnreadable(null); update(null);
   })).then(() => refresh());
   const loadMore = () => action(async () => {
-    if (!history.nextCursor) return;
-    const next = await printJobApi.list(printerBrowserId(localStorage), history.nextCursor);
-    setHistory((previous) => ({ ...next, jobs: [...previous.jobs, ...next.jobs] }));
+    const cursor = history.nextCursor, generation = refreshGeneration.current, operator = currentActor.current?.id;
+    if (!cursor) return;
+    const next = await printJobApi.list(printerBrowserId(localStorage), cursor);
+    if (operator !== currentActor.current?.id || generation !== refreshGeneration.current) return;
+    setHistory((previous) => previous.nextCursor !== cursor ? previous : ({ ...previous,
+      jobs: [...previous.jobs, ...next.jobs], nextCursor: next.nextCursor }));
   });
   return { supported, device, busy, message, messageError, envelope, unreadable, history, historyReady, historyError,
     connect, print, command, sync, reconcile, recoverChain, adopt, archive, refresh, loadMore,

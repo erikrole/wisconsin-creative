@@ -10,6 +10,13 @@ function sliceBetween(sourceText: string, start: string, end: string) {
 }
 
 describe("iOS Scan result retry recovery", () => {
+  it("shows a scanned family even after searching another source", () => {
+    const search = source("ios/Wisconsin/Views/Search/GlobalSearchSheet.swift");
+    const match = sliceBetween(search, "case .itemFamily(let family):", "showScanner = false");
+    expect(match).toContain("scope = .gear");
+    expect(match).toContain("SearchResults(itemFamilies: [family])");
+  });
+
   it("keeps the camera pre-prompt copy multiline at accessibility text sizes", () => {
     const prompt = source("ios/Wisconsin/Views/ScanPrePromptView.swift");
 

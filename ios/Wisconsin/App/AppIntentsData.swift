@@ -338,6 +338,7 @@ struct NextShiftSnippetView: View {
 /// with what it found and whether it is available, spoken and as a short list.
 /// Read-only; opening an item stays in the app.
 struct SearchGearIntent: AppIntent {
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
     static let title: LocalizedStringResource = "Search Gear"
     static let description = IntentDescription("Find gear by name, tag, or model and see whether it's available.")
 
@@ -373,7 +374,7 @@ private func searchGearMatches(_ term: String) async throws -> ([GearSearchMatch
     try await requireIntentCapability("GEAR_CATALOG_VIEW")
     do {
         let response = try await APIClient.shared.assets(search: term, limit: 5)
-        return (response.data.map(GearSearchMatch.init), response.total)
+        return (response.orderedRows.map(GearSearchMatch.init), response.total)
     } catch {
         throw mapIntentError(error)
     }
@@ -407,13 +408,23 @@ struct GearSearchMatch: Identifiable, Sendable {
     let status: String
     let isAvailable: Bool
 
-    init(_ asset: Asset) {
-        id = asset.id
-        title = asset.itemListPrimaryTitle
-        detail = asset.displayName
-        status = asset.computedStatus.label
-        isAvailable = asset.computedStatus == .available
+    init(_ row: ItemListRow) {
+        switch row {
+        case .asset(let asset):
+            id = asset.id
+            title = asset.itemListPrimaryTitle
+            detail = asset.displayName
+            status = asset.computedStatus.label
+            isAvailable = asset.computedStatus == .available
+        case .family(let family):
+            id = "bulk-\(family.id)"
+            title = family.name
+            detail = family.category
+            status = family.availabilityLabel
+            isAvailable = family.availableQuantity > 0
+        }
     }
+
 }
 
 struct GearSearchSnippetView: View {
@@ -456,5 +467,186 @@ struct GearSearchSnippetView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
+    }
+}
+
+// MARK: - Extend Checkout
+
+enum ExtendIntentError: Error, CustomLocalizedStringResourceConvertible {
+    case nothingOut
+    case notExtendable(String)
+    case noRoom(String)
+
+    var localizedStringResource: LocalizedStringResource {
+        switch self {
+        case .nothingOut: "You don't have any gear checked out right now."
+        case .notExtendable(let title): "\(title) can't be extended. Open Wisconsin Creative to see why."
+        case .noRoom(let title): "Someone needs the gear in \(title) soon, so it can't be extended. Plan to return it on time."
+        }
+    }
+}
+
+enum ExtendDuration: String, AppEnum {
+    case oneHour
+    case twoHours
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Extension"
+    static let caseDisplayRepresentations: [ExtendDuration: DisplayRepresentation] = [
+        .oneHour: "1 more hour",
+        .twoHours: "2 more hours",
+    ]
+
+    var interval: TimeInterval {
+        switch self {
+        case .oneHour: 60 * 60
+        case .twoHours: 2 * 60 * 60
+        }
+    }
+}
+
+/// The one intent that writes. It runs the same POST as the Extend sheet,
+/// with the same next-booking limit (`ExtendWindow`), and always asks for a
+/// spoken or tapped confirmation first, so a mis-heard phrase can't move a
+/// return time. Offers only short extensions; anything longer stays a
+/// deliberate choice in the sheet, where the calendar and the limit are shown.
+struct ExtendCheckoutIntent: AppIntent {
+    static let title: LocalizedStringResource = "Extend Checkout"
+    static let description = IntentDescription(
+        "Push back the return time on gear you have checked out, without opening the app."
+    )
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    @Parameter(title: "Checkout")
+    var checkout: BookingEntity?
+
+    @Parameter(title: "Extend By", default: .oneHour)
+    var duration: ExtendDuration
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Extend \(\.$checkout) by \(\.$duration)")
+    }
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let me = try await requireIntentCapability("MY_GEAR_VIEW")
+        let booking = try await resolveCheckout(for: me)
+
+        let canExtend = booking.allows("extend")
+            ?? (booking.requester.id == me.id && booking.status == .open)
+        guard booking.kind == .checkout, canExtend else {
+            throw ExtendIntentError.notExtendable(booking.title)
+        }
+
+        let base = ExtendWindow.base(currentEndsAt: booking.endsAt)
+        var newEndsAt = QuarterHour.roundedUp(base.addingTimeInterval(duration.interval))
+        let insight = await APIClient.shared.checkoutReturnInsight(for: booking)
+        if let latest = ExtendWindow.latestEndsAt(nextNeedAt: insight.nextNeedAt) {
+            // Shorten to the limit rather than fail, as long as it still buys
+            // at least a quarter hour; the confirmation names the real time.
+            guard latest >= QuarterHour.roundedUp(base.addingTimeInterval(15 * 60)) else {
+                throw ExtendIntentError.noRoom(booking.title)
+            }
+            newEndsAt = min(newEndsAt, latest)
+        }
+
+        let label = newEndsAt.operationalDateTimeLabel(now: Date(), capitalizesRelativeDay: false)
+        try await requestConfirmation(
+            result: .result(dialog: "Extend \(booking.title) until \(label)?")
+        )
+
+        do {
+            let updated = try await APIClient.shared.extendBooking(
+                id: booking.id,
+                endsAt: newEndsAt,
+                updatedAt: booking.updatedAt
+            )
+            let dueLabel = updated.endsAt.operationalDateTimeLabel(now: Date(), capitalizesRelativeDay: false)
+            return .result(dialog: "Done. \(updated.title) is now due back \(dueLabel).")
+        } catch {
+            throw mapIntentError(error)
+        }
+    }
+
+    /// Uses the checkout the shortcut names; otherwise the one due back
+    /// soonest. Always re-reads the booking so the
+    /// write carries a fresh `updatedAt`.
+    private func resolveCheckout(for me: CurrentUser) async throws -> Booking {
+        do {
+            if let checkout {
+                return try await APIClient.shared.booking(id: checkout.id)
+            }
+            let open = try await APIClient.shared
+                .checkouts(activeOnly: false, status: .open, requesterId: me.id, sort: "endsAt", limit: 10)
+                .data
+            // Sorted by due time, so the first is the one most likely to need
+            // more time. The confirmation names it, so a wrong guess is a "No".
+            guard let first = open.first else { throw ExtendIntentError.nothingOut }
+            return try await APIClient.shared.booking(id: first.id)
+        } catch let error as ExtendIntentError {
+            throw error
+        } catch {
+            throw mapIntentError(error)
+        }
+    }
+}
+
+// MARK: - Focus Filter
+
+/// What the server stamps on each push as `filter-criteria`: the catalog
+/// group (src/lib/notification-catalog.ts), or `blast` for staff blasts.
+enum CreativeAlertGroup: String, AppEnum {
+    case gear
+    case schedule
+    case blast
+    case account
+    case admin
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Alert Type"
+    static let caseDisplayRepresentations: [CreativeAlertGroup: DisplayRepresentation] = [
+        .gear: "Gear",
+        .schedule: "Shifts and schedule",
+        .blast: "Staff blasts",
+        .account: "Licenses",
+        .admin: "Staff reviews",
+    ]
+}
+
+/// Lets a Focus (Work, Game Day) keep gear and shift alerts while holding the
+/// rest. iOS applies the predicate to each alert's `filterCriteria`; nothing
+/// is filtered in the app itself.
+struct CreativeFocusFilter: SetFocusFilterIntent {
+    static let title: LocalizedStringResource = "Set Creative Alerts"
+    static let description = IntentDescription(
+        "Choose which Wisconsin Creative alerts come through while this Focus is on."
+    )
+
+    @Parameter(title: "Allow", default: [.gear, .schedule, .blast])
+    var allowed: [CreativeAlertGroup]
+
+    var displayRepresentation: DisplayRepresentation {
+        let names = allowed.map { Self.label(for: $0) }
+        return DisplayRepresentation(
+            title: "Creative alerts",
+            subtitle: names.isEmpty ? "None" : "\(names.joined(separator: ", "))"
+        )
+    }
+
+    var appContext: FocusFilterAppContext {
+        FocusFilterAppContext(
+            notificationFilterPredicate: NSPredicate(format: "SELF IN %@", allowed.map(\.rawValue))
+        )
+    }
+
+    func perform() async throws -> some IntentResult {
+        .result()
+    }
+
+    private static func label(for group: CreativeAlertGroup) -> String {
+        switch group {
+        case .gear: "Gear"
+        case .schedule: "Shifts"
+        case .blast: "Blasts"
+        case .account: "Licenses"
+        case .admin: "Reviews"
+        }
     }
 }

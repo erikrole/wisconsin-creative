@@ -1,0 +1,9 @@
+{
+  "serverSource": "09561456e64fade677afc6c03552537c158e2f8f",
+  "deploymentId": "dpl_CgYFMPPg8zzPhQszCdqwcGxucTfW",
+  "lostCommittedResponse": "reconciled",
+  "independentGroups": "both preserved",
+  "sameGroupConflict": "use saved and explicit keep edits passed",
+  "offlineAnswer": "retained, honest error and saved on reconnect",
+  "checkedAt": "2026-10-22T20:08:10.451Z"
+}

@@ -1,0 +1,10 @@
+{
+  "sourceRevision": "f705184d0ccbf53f3a9f31551e00ba6dcb7d5726",
+  "builtApp": "/private/tmp/pr605-native-followup-20261022/derived-before/Build/Products/Debug-iphonesimulator/Wisconsin Creative.app",
+  "installedApp": "/Users/role/Library/Developer/CoreSimulator/Devices/795AB4E9-3E4A-4C13-9D4F-27FD822C190B/data/Containers/Bundle/Application/1EC8C4D4-63C9-49A2-AC73-86D04266BC2A/Wisconsin Creative.app",
+  "executable": "Wisconsin Creative",
+  "binarySha256": "42bbe7268f1d9a12cbeb6ba98589189a2aa946bb42acd2e50a4ff01180eddfc8",
+  "device": "iPhone 18 Pro Max",
+  "runtime": "iOS 27.0",
+  "simulatorId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B"
+}

@@ -85,6 +85,10 @@ Values: `OPEN`, `COMPLETED`, `CANCELLED`
 
 Values: `DAMAGED`, `LOST`
 
+## Enum `ReportResolution`
+
+Values: `REPAIRED`, `REPLACED`, `WRITTEN_OFF`, `FOUND`, `NO_ISSUE`
+
 ## Enum `BadgeCategory`
 
 Values: `CHECKOUT`, `ON_TIME`, `SCAN`, `SHIFT`, `TRADE`, `STREAK`, `MILESTONE`
@@ -131,13 +135,15 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 140
+Fields: 145
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
 - `email                         String                           @unique`
 - `passwordHash                  String                           @map("password_hash")`
 - `forcePasswordChange           Boolean                          @default(false) @map("force_password_change")`
+- `onboardingRequired            Boolean                          @default(false) @map("onboarding_required")`
+- `onboardingCompletedAt         DateTime?                        @map("onboarding_completed_at")`
 - `role                          Role`
 - `affiliation                   Affiliation?`
 - `collaboratorProfile           CollaboratorProfile?             @map("collaborator_profile")`
@@ -203,6 +209,7 @@ Fields: 140
 - `bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")`
 - `checkinReports                CheckinItemReport[]              @relation("CheckinReports")`
 - `dismissedCheckinReports       CheckinItemReport[]              @relation("CheckinReportDismissals")`
+- `resolvedCheckinReports        CheckinItemReport[]              @relation("CheckinReportResolutions")`
 - `allowedEmailsCreated          AllowedEmail[]                   @relation("AllowedEmailCreator")`
 - `allowedEmailsClaimed          AllowedEmail[]                   @relation("AllowedEmailClaimer")`
 - `licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")`
@@ -228,6 +235,8 @@ Fields: 140
 - `badgeStreaks                  BadgeStreak[]`
 - `badgeEventReceipts            BadgeEventReceipt[]`
 - `notificationPrefs             Json?                            @map("notification_prefs")`
+- `sidebarPrefs                  Json?                            @map("sidebar_prefs")`
+- `gettingStarted                Json?                            @map("getting_started")`
 - `icsToken                      String?                          @unique @map("ics_token")`
 - `scheduleEventFollows          ScheduleEventFollow[]`
 - `collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
@@ -1363,6 +1372,53 @@ Indexes and constraints:
 
 Values: `MANUAL`, `BOOKING`
 
+## Model `GameSnapshot`
+
+Fields: 21
+
+- `id               String               @id @default(cuid())`
+- `eventId          String               @unique @map("event_id")`
+- `seasonKey        String               @map("season_key")`
+- `startsAt         DateTime             @map("starts_at")`
+- `endsAt           DateTime             @map("ends_at")`
+- `sportCode        String?              @map("sport_code")`
+- `opponent         String?`
+- `site             CalendarEventSite?`
+- `venue            String?`
+- `title            String`
+- `rawSummary       String?              @map("raw_summary")`
+- `status           CalendarEventStatus`
+- `official         Boolean`
+- `result           CalendarEventResult?`
+- `resultRecordedAt DateTime?            @map("result_recorded_at")`
+- `resultHistory    Json                 @default("[]") @map("result_history")`
+- `crew             Json                 @default("[]")`
+- `crewCount        Int                  @default(0) @map("crew_count")`
+- `eventDeletedAt   DateTime?            @map("event_deleted_at")`
+- `capturedAt       DateTime             @default(now()) @map("captured_at")`
+- `updatedAt        DateTime             @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([seasonKey, startsAt])`
+- `@@map("game_snapshots")`
+
+## Model `WrappedRecap`
+
+Fields: 6
+
+- `id          String   @id @default(cuid())`
+- `userId      String   @map("user_id")`
+- `seasonKey   String   @map("season_key")`
+- `version     Int`
+- `payload     Json`
+- `generatedAt DateTime @default(now()) @map("generated_at")`
+
+Indexes and constraints:
+
+- `@@unique([userId, seasonKey])`
+- `@@map("wrapped_recaps")`
+
 ## Model `EventWorker`
 
 Fields: 10
@@ -1996,12 +2052,13 @@ Indexes and constraints:
 
 ## Model `StudentBadge`
 
-Fields: 10
+Fields: 11
 
 - `id           String          @id @default(cuid())`
 - `userId       String          @map("user_id")`
 - `definitionId String          @map("definition_id")`
 - `awardedAt    DateTime        @default(now()) @map("awarded_at")`
+- `celebratedAt DateTime?       @map("celebrated_at")`
 - `source       BadgeSource     @default(AUTO)`
 - `awardedById  String?         @map("awarded_by_id")`
 - `note         String?`
@@ -2502,10 +2559,10 @@ Indexes and constraints:
 
 ## Model `CheckinItemReport`
 
-Fields: 20
+Fields: 25
 
 - `id             String            @id @default(cuid())`
-- `bookingId      String            @map("booking_id")`
+- `bookingId      String?           @map("booking_id")`
 - `assetId        String?           @map("asset_id")`
 - `bulkSkuUnitId  String?           @map("bulk_sku_unit_id")`
 - `bulkSkuId      String?           @map("bulk_sku_id")`
@@ -2518,12 +2575,17 @@ Fields: 20
 - `lastReportedAt DateTime          @default(now()) @map("last_reported_at")`
 - `dismissedAt    DateTime?         @map("dismissed_at")`
 - `dismissedById  String?           @map("dismissed_by_id")`
-- `booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
+- `resolution     ReportResolution?`
+- `resolvedAt     DateTime?         @map("resolved_at")`
+- `resolvedById   String?           @map("resolved_by_id")`
+- `resolutionNote String?           @map("resolution_note")`
+- `booking     Booking?     @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
 - `asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)`
 - `bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)`
 - `bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)`
 - `reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)`
 - `dismissedBy User?        @relation("CheckinReportDismissals", fields: [dismissedById], references: [id], onDelete: SetNull)`
+- `resolvedBy  User?        @relation("CheckinReportResolutions", fields: [resolvedById], references: [id], onDelete: SetNull)`
 
 Indexes and constraints:
 
@@ -2533,6 +2595,7 @@ Indexes and constraints:
 - `@@index([bookingId])`
 - `@@index([dismissedAt, lastReportedAt(sort: Desc)])`
 - `@@index([assetId, lastReportedAt(sort: Desc)])`
+- `@@index([resolvedAt])`
 - `@@map("checkin_item_reports")`
 
 ## Model `KioskDevice`

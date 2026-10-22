@@ -1,0 +1,32 @@
+{
+  "ActionErrorRecoveryUITests/testExtensionFailureStaysVisibleAndKeepsChanges": {
+    "status": "passed",
+    "durationMs": 11505,
+    "result": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-53-58-597Z_pid46447_f1451f32.xcresult"
+  },
+  "RecentIOSRegressionUITests/testHomeAttentionOpensItsBooking": {
+    "status": "passed",
+    "durationMs": 8411,
+    "result": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-49-21-824Z_pid46447_5052640a.xcresult"
+  },
+  "RecentIOSRegressionUITests/testTradeDetailsAndInlineDecisionStaySeparate": {
+    "status": "passed",
+    "durationMs": 17324,
+    "result": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-55-39-298Z_pid46447_dedb8efa.xcresult"
+  },
+  "TradeBoardReviewScreenshotUITests/testStaffReviewQueueCaptures": {
+    "status": "passed",
+    "durationMs": 8610,
+    "result": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-49-21-824Z_pid46447_5052640a.xcresult"
+  },
+  "TradeBoardReviewScreenshotUITests/testStudentAvailableInventoryCaptures": {
+    "status": "passed",
+    "durationMs": 9017,
+    "result": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-49-21-824Z_pid46447_5052640a.xcresult"
+  },
+  "TradeBoardReviewScreenshotUITests/testStudentWaitingStateCaptures": {
+    "status": "passed",
+    "durationMs": 9831,
+    "result": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-49-21-824Z_pid46447_5052640a.xcresult"
+  }
+}

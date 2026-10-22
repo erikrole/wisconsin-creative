@@ -32,9 +32,14 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
+vi.mock("@/lib/services/invite-email", () => ({
+  sendInviteEmail: vi.fn(),
+}));
+
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
+import { sendInviteEmail } from "@/lib/services/invite-email";
 import { GET, POST } from "@/app/api/allowed-emails/route";
 import { DELETE } from "@/app/api/allowed-emails/[id]/route";
 
@@ -266,6 +271,36 @@ describe("POST /api/allowed-emails (single)", () => {
         }),
       })
     );
+  });
+
+  it("emails the invite once when asked, and records how the send ended", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    vi.mocked(db.user.findUnique).mockResolvedValue(null);
+    vi.mocked(db.allowedEmail.create).mockResolvedValue(allowedEmailResult({ id: "e-2", email: "jo@wisc.edu", role: Role.STUDENT }));
+    vi.mocked(sendInviteEmail).mockResolvedValue("sent");
+
+    const res = await POST(makePostRequest({ email: "jo@wisc.edu", role: "STUDENT", preloadedName: "Jo Park", sendInvite: true }), noParams);
+
+    expect(res.status).toBe(201);
+    expect((await res.json()).emailStatus).toBe("sent");
+    expect(sendInviteEmail).toHaveBeenCalledTimes(1);
+    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "jo@wisc.edu", name: "Jo Park" });
+    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      entityId: "e-2",
+      action: "invite_sent",
+      after: { emailStatus: "sent" },
+    }));
+  });
+
+  it("sends nothing unless the invite email is asked for", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    vi.mocked(db.user.findUnique).mockResolvedValue(null);
+    vi.mocked(db.allowedEmail.create).mockResolvedValue(allowedEmailResult({ id: "e-3", email: "al@wisc.edu", role: Role.STUDENT }));
+
+    const res = await POST(makePostRequest({ email: "al@wisc.edu", role: "STUDENT" }), noParams);
+
+    expect(res.status).toBe(201);
+    expect(sendInviteEmail).not.toHaveBeenCalled();
   });
 
   it("creates a claimed allowlist row when the email already belongs to a registered user", async () => {

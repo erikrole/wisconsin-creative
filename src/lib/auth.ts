@@ -6,6 +6,7 @@ import { Role, ShiftWorkerType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
+import { requiresOnboarding } from "@/lib/profile-completion";
 import { randomHex } from "@/lib/crypto";
 import {
   capabilitiesForActor,
@@ -38,6 +39,7 @@ export type AuthUser = {
   staffingType?: ShiftWorkerType;
   avatarUrl: string | null;
   forcePasswordChange?: boolean;
+  onboardingRequired?: boolean;
   preview?: RolePreviewInfo;
 };
 
@@ -240,6 +242,8 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
           staffingType: true,
           avatarUrl: true,
           forcePasswordChange: true,
+          onboardingRequired: true,
+          onboardingCompletedAt: true,
           lastActiveAt: true,
           collaboratorPolicy: { select: collaboratorPolicyActorSelect },
         },
@@ -295,13 +299,14 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
     staffingType: session.user.staffingType,
     avatarUrl: session.user.avatarUrl ?? null,
     forcePasswordChange: session.user.forcePasswordChange,
+    onboardingRequired: requiresOnboarding(session.user),
     preview: preview ? rolePreviewInfo(preview) : undefined,
   };
 }
 
 // ── Kiosk Device Auth ────────────────────────────────────
 
-const KIOSK_COOKIE = "kiosk_session";
+export const KIOSK_COOKIE = "kiosk_session";
 
 export type KioskContext = {
   kioskId: string;
@@ -403,8 +408,9 @@ export async function requireKiosk(): Promise<KioskContext> {
   // `lastSeenAt` is throttled the same way the session slide above is, and for
   // the same reason: it was writing on EVERY kiosk request, including pure
   // reads. That turned every dashboard poll, roster load, and heartbeat into a
-  // write, and write traffic — not read traffic — is what keeps a Neon compute
-  // endpoint from suspending. Minute-level "last seen" precision was never
+  // write. Any query (read or write) wakes a suspended Neon compute, so idle
+  // heartbeats also skip this function entirely (see kiosk-heartbeat-cache).
+  // Minute-level "last seen" precision was never
   // worth a WAL record per request; five minutes is well inside what the admin
   // Kiosk Devices column needs to distinguish a live device from a dark one.
   const lastSeenThrottleMs = 1000 * 60 * 5;

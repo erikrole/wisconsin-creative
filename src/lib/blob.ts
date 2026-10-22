@@ -1,6 +1,6 @@
 import { put, del } from "@vercel/blob";
 import { toBhStaticImageUrl } from "@/lib/bhphoto-image";
-import { assertPublicHost } from "@/lib/security/ssrf";
+import { fetchPublicUrl } from "@/lib/security/ssrf";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 
@@ -119,13 +119,11 @@ export async function downloadImageToBlob(
       return null;
     }
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-    await assertPublicHost(parsed.hostname);
-
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     // Some image CDNs reject the default undici user agent outright.
-    const res = await fetch(url, {
+    const res = await fetchPublicUrl(url, {
       signal: controller.signal,
       headers: {
         Accept: "image/jpeg,image/png,image/webp,image/gif,image/*;q=0.8",

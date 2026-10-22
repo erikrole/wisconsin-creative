@@ -1,0 +1,27 @@
+{
+  "evidence": "Web read-back of physical native Finish without a photo",
+  "sourceRevision": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "sourcePatchSHA256": null,
+  "deploymentId": "dpl_4CajpSPWg7DoouQgzcxbtL1X68py",
+  "managedRunId": 39835882763,
+  "imageSHA256": "977ad530453b608f0f54af985496626fa6a56545a94b2dcdcad21b273b24c973",
+  "testDriverSHA256": "b2a4b7a7cc243430de0dca1c0f9179e683fe4155b48c30a840d3a6d4aabb2dbf",
+  "settings": {
+    "browser": "156.0.8078.4",
+    "viewport": {
+      "width": 1280,
+      "height": 1000
+    },
+    "fixture": "none; synthetic invited student on its own managed preview",
+    "role": "STUDENT",
+    "route": "/welcome",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "capturedAt": "2026-10-22T19:13:03.768Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "baseline": "After-only authenticated evidence"
+}

@@ -340,7 +340,7 @@ struct LicensesView: View {
                 Button("Retry") { Task { await vm.load(forceRefresh: true) } }
                     .buttonStyle(.borderedProminent)
             }
-        } else if vm.codes.isEmpty {
+        } else if vm.codes.isEmpty && vm.activeClaim == nil {
             ContentUnavailableView(
                 "No licenses",
                 systemImage: "key",

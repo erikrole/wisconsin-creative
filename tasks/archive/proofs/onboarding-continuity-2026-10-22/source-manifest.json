@@ -1,0 +1,331 @@
+{
+  "sourceRevision": "69f30b657910d9b52cff6441d9b6c150e8990771",
+  "sourceSnapshot": "source-snapshot.tar.gz",
+  "sourcePatchSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+  "files": [
+    {
+      "path": "docs/AREA_MOBILE.md",
+      "sha256": "e0346072fcd879216e08bcf4aa6772a13b6bd29187817df4779f9789407c7ff0"
+    },
+    {
+      "path": "docs/AREA_USERS.md",
+      "sha256": "48c53edf5f243c3ef185085670a3e636642a51fe1f4ba65f49a0ae2fa8e151c5"
+    },
+    {
+      "path": "docs/BRIEF_ONBOARDING_V1.md",
+      "sha256": "f2b499f064310d158877abfa387f19d1567d9b12bd2c0b6b51482a545019f597"
+    },
+    {
+      "path": "docs/CODEMAPS/architecture.md",
+      "sha256": "17ec5556a7f4dfe960ec175d7ecf8193c7b34aa4c4a6c84a9a1f438cabe30a92"
+    },
+    {
+      "path": "docs/CODEMAPS/backend.md",
+      "sha256": "00729adead9afd3809f15ba531f6d871a340630f995e1cdecdca5f854e519aa6"
+    },
+    {
+      "path": "docs/CODEMAPS/data.md",
+      "sha256": "81ac45e16cff2109259abf93815a21d21f06aa1a4abeaf29980145c6a36d62b2"
+    },
+    {
+      "path": "docs/CODEMAPS/frontend.md",
+      "sha256": "191dc8b752935394202f10cb6f3fb3dc8202968397c8756091987f7c37e18144"
+    },
+    {
+      "path": "docs/CODEMAPS/schema.md",
+      "sha256": "850a691ee34dc8984a00588dabdff5bceec0912a4e95fb8f7f5591071127795b"
+    },
+    {
+      "path": "docs/DECISIONS.md",
+      "sha256": "fa5fa0d28b95a948e3ff6aa3842f0929f9b2b4a5fb6b17517b7350900fbd0c85"
+    },
+    {
+      "path": "docs/GAPS_AND_RISKS.md",
+      "sha256": "3a33db6f172bd5b77da0de6e78d1c88e780d7d0f3942317d3b06eddd09bac240"
+    },
+    {
+      "path": "ios/Wisconsin.xcodeproj/project.pbxproj",
+      "sha256": "cb6923d3acf86f08b1ac061f62b2e46417f6f3e678444904ebc92265db9d6299"
+    },
+    {
+      "path": "ios/Wisconsin/App/OnboardingTestHarness.swift",
+      "sha256": "1906115f73ba255e22a0ee905851ca77cc3714752d13995245522d78136d7610"
+    },
+    {
+      "path": "ios/Wisconsin/App/PerformanceTestHarness.swift",
+      "sha256": "dbd46958174b4941b9fa261732a35e645302761894537026d348ac8f62b12d8f"
+    },
+    {
+      "path": "ios/Wisconsin/App/WisconsinApp.swift",
+      "sha256": "2b0d3bbf23ea20910b4ebd7bd7e5ad6c44a7272d57b88b9b748216d9ee673b29"
+    },
+    {
+      "path": "ios/Wisconsin/Core/APIClient.swift",
+      "sha256": "205b47077607470d46742f7d66c3ea5476b28bf9a0dd77599890e43bf5250c34"
+    },
+    {
+      "path": "ios/Wisconsin/Core/PerformanceInstrumentation.swift",
+      "sha256": "39694126ffe0d76b26121923e7518491f02589a33b03f654bd1c1a31eb294cd2"
+    },
+    {
+      "path": "ios/Wisconsin/Core/ProfileCompletionStore.swift",
+      "sha256": "8284b3385d0fcdcb2bce5e79797a09d8d36a03f54c499fa672e79a6eaa35269a"
+    },
+    {
+      "path": "ios/Wisconsin/Core/SessionStore.swift",
+      "sha256": "e2362a787563be75569ae7a5eb2cb43f56dd80b9df8cec29f8bc29c2d22ff9d8"
+    },
+    {
+      "path": "ios/Wisconsin/Core/ThumbnailLoader.swift",
+      "sha256": "f9347b69bdb3c0061c974b3be8136f0020e1691e12e9a54173a68aa22f4cb1b6"
+    },
+    {
+      "path": "ios/Wisconsin/Models/Models.swift",
+      "sha256": "02098daaa029f88146fce30bc3ffe77bb53434889fea7e70dfd13b29f3db73dc"
+    },
+    {
+      "path": "ios/Wisconsin/Models/ProfileCompletionModels.swift",
+      "sha256": "ac721c7c57c5999b236eddfb7244f697a8a9e6e5f7878b44e73768c7439bff3c"
+    },
+    {
+      "path": "ios/Wisconsin/Views/Components/ProfileAvatarEditor.swift",
+      "sha256": "c93460cdb51955937963a44edc9eed7c8d2e33ef1c9c36e97ac4b5b9f9b843b1"
+    },
+    {
+      "path": "ios/Wisconsin/Views/GettingStartedCard.swift",
+      "sha256": "b1670647a3af499ce6747caebef56d2a6e48bb2a133ab7b6fabdecdd1143674d"
+    },
+    {
+      "path": "ios/Wisconsin/Views/HomeView.swift",
+      "sha256": "b9addb5409dce4a482fb8291172582e8257d34b42e53305239f87d82bd21e26a"
+    },
+    {
+      "path": "ios/Wisconsin/Views/NativeAuthViews.swift",
+      "sha256": "c367b347727ae589c0d2ac3ffd785477ab38dda9a09e30398dcd7aa352b06a00"
+    },
+    {
+      "path": "ios/Wisconsin/Views/ProfileView.swift",
+      "sha256": "e391eddd732a7e85da6a578f8bcb2c84ee662a034c2fcbd4711282488f6fef7a"
+    },
+    {
+      "path": "ios/Wisconsin/Views/Welcome/ProfileCompletionDraft.swift",
+      "sha256": "b2256f2d1d1213ac8b96af416264a2cdba71a14c0503c85f20b9ac25e1cdbf9e"
+    },
+    {
+      "path": "ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeComponents.swift",
+      "sha256": "5c8596da037aa55188b8257b458f0c4f9e6e92daffdf7f78fc04c007dbb42e7b"
+    },
+    {
+      "path": "ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeView.swift",
+      "sha256": "242be2e2a78b6745f8cb1b9075cbdc14da29d0dffa3efcf62e45078e5d2a429b"
+    },
+    {
+      "path": "ios/Wisconsin/Views/Welcome/ProfilePhotoCropView.swift",
+      "sha256": "3504593b04a58cc565ec4cd0ce8d16afabada41e43cd8193d754d89aed3ddd94"
+    },
+    {
+      "path": "ios/WisconsinTests/ProfileCompletionModelsTests.swift",
+      "sha256": "c454f91569149b318703780574aa6d3e2c6bf07eeebdb022007b1655a6b4b332"
+    },
+    {
+      "path": "ios/WisconsinUITests/OnboardingWalkthroughUITests.swift",
+      "sha256": "2c78edb8e1004041c56d96a209b48061acebda225313d2afe0c3c2d99352c1c8"
+    },
+    {
+      "path": "playwright.onboarding.config.ts",
+      "sha256": "813ced3f31b23e5882da7ed051cdad1c9eedf4042bd8ea768a888402961ad204"
+    },
+    {
+      "path": "prisma/migrations/0200_account_onboarding_completion/migration.sql",
+      "sha256": "899278d5e9ec50e96ecd2607614f8716f1079c9078be7d329ab0a832293f073d"
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "sha256": "db9fd589a109f9d918ac1519802a6500ae2fa0b56e9a7380c16535750567d989"
+    },
+    {
+      "path": "scripts/ios-audit-inventory.sh",
+      "sha256": "cb307b0ce57f7443133b6955f07fdc49810978864aedc5ce9eddfb4f0ec1f77c"
+    },
+    {
+      "path": "scripts/test-onboarding-postgres.mjs",
+      "sha256": "792e51a0b2a5ca9b556cc91d066afdf30b5a25df91a52a59d249bff62161fb43"
+    },
+    {
+      "path": "src/app/(app)/_home/GettingStartedCard.tsx",
+      "sha256": "5e16d8b076586f247b954e70ef46abf54246c3b72dc5e943c1d702583e23d57c"
+    },
+    {
+      "path": "src/app/(app)/layout.tsx",
+      "sha256": "37627bc4e1f18576b22f53c686afebbd35d7baca43b1eabf8ed0563166b53c1d"
+    },
+    {
+      "path": "src/app/(app)/settings/profile/page.tsx",
+      "sha256": "aadf900f08cb9dce4a1ae8eae94c473b99be6a7cdc0121d168efe2763eb56c41"
+    },
+    {
+      "path": "src/app/(app)/staff/[id]/AvatarCropDialog.tsx",
+      "sha256": "bc444512f38281a48e8e903976874353f6b70ca1b0911ec0c837fe2d1c9956d6"
+    },
+    {
+      "path": "src/app/(app)/staff/[id]/page.tsx",
+      "sha256": "4b9baf0d953c9dfdf2f206d66162d3f73670ab4a8f16446f7e665a760c095ebe"
+    },
+    {
+      "path": "src/app/(app)/welcome/availability/page.tsx",
+      "sha256": "80a60c95d9be2eb9e93e9262160c7451041b4795d67b0f0554d48e03b73c5b82"
+    },
+    {
+      "path": "src/app/(app)/welcome/page.tsx",
+      "sha256": "194a9ef8ba14637b6b3458884f120de9dc08aec2ca540a3a42fca605bc38b5ca"
+    },
+    {
+      "path": "src/app/api/auth/login/route.ts",
+      "sha256": "f4ff07f4e52a215acd4d7d6900477f323b72a33aa3054ac3c87d1cabe4438c71"
+    },
+    {
+      "path": "src/app/api/auth/register/route.ts",
+      "sha256": "34e1ed12afe3ae439a15ae2254a76895238b5738ae974a24d259bf316ed9a40e"
+    },
+    {
+      "path": "src/app/api/me/getting-started/route.ts",
+      "sha256": "f80e0ff4b3ece2ad321e9f0b694e6742fb7e87befacc7e2fbb644caec8fa1e29"
+    },
+    {
+      "path": "src/app/api/me/profile-completion/route.ts",
+      "sha256": "4db6d5f543463b75d78464993913d5e1a1d8c8fda78d23385aca2c78cfb66e45"
+    },
+    {
+      "path": "src/app/api/users/[id]/avatar/route.ts",
+      "sha256": "86fdc0322b0ce7303e0f58174be8e9a2f421276550bded1e451ee1a22c4a30a9"
+    },
+    {
+      "path": "src/components/profile-completion/ProfileCompletionWizard.tsx",
+      "sha256": "07cfc53f6b8c4093790d0b48b24f8732f9531aefca8764906e8e6d8348e24dda"
+    },
+    {
+      "path": "src/hooks/use-current-user.ts",
+      "sha256": "01fe00ef4990f0f3d481bfb588e115fc5b6ed882279eb2dd3a0aef7fee6ba4ac"
+    },
+    {
+      "path": "src/hooks/use-getting-started.ts",
+      "sha256": "4b7b496d81bdeda43d869532e8146d0e5d4995f629b8a95e65ccf5aae5a7f037"
+    },
+    {
+      "path": "src/hooks/use-onboarding-save.ts",
+      "sha256": "566c7cc9a930df14867e6b3b9c842626ee797bd159ec685d8d35cc2201dd5dea"
+    },
+    {
+      "path": "src/hooks/use-profile-completion.ts",
+      "sha256": "b7a1d82a7ffef3e38ab974fb0b9c53efaa14eb449582c3a41c42f073d6b2e607"
+    },
+    {
+      "path": "src/lib/api.ts",
+      "sha256": "e31b6125570b16841858f33551ea56dc4cb6150511af9e206deb0253a9f265e9"
+    },
+    {
+      "path": "src/lib/auth.ts",
+      "sha256": "8406ba10d46be47c460f8b484bbdb1b2dc471dfa3037a0c5a43e080e86fca2c8"
+    },
+    {
+      "path": "src/lib/avatar-image.ts",
+      "sha256": "f7b3974bdfec2742eb1f849906cc47cebbe5b1ac2fcf42148c99c5bf13cf4da2"
+    },
+    {
+      "path": "src/lib/avatar-upload.ts",
+      "sha256": "71be167edee04e2510a6ced74e4c0db6b3ff720c4150cb59aec4abb82a6f55eb"
+    },
+    {
+      "path": "src/lib/onboarding-save.ts",
+      "sha256": "6180ddbdb54abc3430526ab0e885ec3f90a9f3e3b63106b716ad324de1a5eaec"
+    },
+    {
+      "path": "src/lib/onboarding-versions.ts",
+      "sha256": "15cce8757d431c7d7ee40b7125ded7990478e4fa7d4458ab4471149374ac1fa9"
+    },
+    {
+      "path": "src/lib/passkey.ts",
+      "sha256": "f83877ee230830b644464fd24d7db484d4eef3303be6bc96e2dfb5bde465f72f"
+    },
+    {
+      "path": "src/lib/profile-completion-cache.ts",
+      "sha256": "3992b60ec16f9a6f6c30549ac5860e31c42fd267c1544ab133fd7f859866e7cd"
+    },
+    {
+      "path": "src/lib/profile-completion.ts",
+      "sha256": "d0666fc7a9c1528123fc023a26ebcd4e1cb364ee53338f9610f45cd4eb2e3db0"
+    },
+    {
+      "path": "src/lib/user-list-cache.ts",
+      "sha256": "331cd5acfb7b1b8f01e0e821b91dfb0c35702b5ec916050e5f129039c0ea0b78"
+    },
+    {
+      "path": "tasks/INDEX.md",
+      "sha256": "5b81ce545c4f5c28b26c087b0b11a100e4de5b5a430a61c606a55db87814cf43"
+    },
+    {
+      "path": "tasks/audit-profile-ios.md",
+      "sha256": "3909c2e6086d89a1fe88ff460f083991c315d4f055fd4e4acb0904038deecd18"
+    },
+    {
+      "path": "tasks/onboarding-continuity-2026-10-22.md",
+      "sha256": "75bfbdb5d98d392706487fd6423b8955565d0f45f272059d8994c12f059882fa"
+    },
+    {
+      "path": "tests/api-wrapper.test.ts",
+      "sha256": "742f091126621d8d3dca20b88f912534cc847d6504df85f4308e8bf401d2c9dd"
+    },
+    {
+      "path": "tests/avatar-image.test.ts",
+      "sha256": "9df6bca9ec3d41c098d27510cc61099a1cde877d179100507537377978557a1d"
+    },
+    {
+      "path": "tests/avatar-upload.test.ts",
+      "sha256": "4e44f7a9f7e93a239b989036b0f41768f77c52eab72a5946f38e985e11a671d1"
+    },
+    {
+      "path": "tests/browser/onboarding-continuity.spec.ts",
+      "sha256": "c66cccc3936c9cb342ab2de95de1111918ba13deb7c08e1e4d15bc2378b64e3b"
+    },
+    {
+      "path": "tests/fixtures/onboarding-browser.tsx",
+      "sha256": "8fc1c7f0e6ebd5065ffa905c391d6b86bcdd0689ae488c88aa73197b97079ce3"
+    },
+    {
+      "path": "tests/getting-started.test.ts",
+      "sha256": "7b9176fe5027607a0852da124c45532c0cdc09e69e809b3ae69a1f7be7b93114"
+    },
+    {
+      "path": "tests/ios-native-welcome.test.ts",
+      "sha256": "5dadde1dbdbc761e8d52e217772844e04cb3c30396dae88e4b34bab2a808f047"
+    },
+    {
+      "path": "tests/postgres/onboarding-continuity.postgres.ts",
+      "sha256": "b1fd90989781b330104aa8ed8aeb8ea587bb26d26e2f1990e04e8f9622c9d3a7"
+    },
+    {
+      "path": "tests/profile-completion-route.test.ts",
+      "sha256": "3501505a7c1735989190ce53a1a9c215c6b51eb54f7e95b7585e42f9794d58a1"
+    },
+    {
+      "path": "tests/profile-completion.test.ts",
+      "sha256": "e86447373a1935d41bbde0056fd0589857dd681fc403ade2fc694b7f56c4a021"
+    },
+    {
+      "path": "tests/user-avatar-route.test.ts",
+      "sha256": "9aa8bfd6d3c130fc5564bed122fb1f0f9a70d03585b8d8a5a4d22d6aa0328236"
+    },
+    {
+      "path": "tests/users-hidden-visibility.test.ts",
+      "sha256": "a52800625f9439a41d8b08cfc51b462da2949dbb18705ce7cf8fa70807f39ce9"
+    },
+    {
+      "path": "vitest.onboarding-postgres.config.ts",
+      "sha256": "5f394b1c03015e4851ee1e144551eb7cd792cf102587e401ad4b54251c564f98"
+    }
+  ],
+  "runtimeEvidence": {
+    "web": "Actual current components built by esbuild; all API responses deterministic fixtures; no authenticated account.",
+    "native": "Swift files in the private installed test snapshot verified byte-identical to this source. Bundle identifiers/app group differ intentionally to preserve the regular app. iPhone 18 Pro Max, iOS 27.0; final passing XCResult retained in /private/tmp/wc-continuity-ui-20261022/run-final-ui.xcresult."
+  }
+}

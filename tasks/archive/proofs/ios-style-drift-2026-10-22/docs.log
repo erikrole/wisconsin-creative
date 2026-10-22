@@ -1,0 +1,9 @@
+
+> creative-ops@2026.04.08.1 verify:docs
+> npm run codemap:check
+
+
+> creative-ops@2026.04.08.1 codemap:check
+> node scripts/generate-codemaps.mjs --check
+
+Codemaps are current.

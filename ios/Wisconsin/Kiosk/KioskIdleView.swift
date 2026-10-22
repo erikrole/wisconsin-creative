@@ -1,4 +1,7 @@
+import OSLog
 import SwiftUI
+
+private let idleLog = Logger(subsystem: "com.erikrole.WisconsinKiosk", category: "IdleView")
 
 struct KioskIdleView: View {
     @Environment(\.today) private var today
@@ -117,6 +120,9 @@ struct KioskIdleView: View {
         .task(id: "refresh") {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(refreshInterval * 1_000_000_000))
+                // A cancelled sleep returns at once; without this, leaving Home
+                // for any flow fired one more full dashboard reload.
+                guard !Task.isCancelled else { break }
                 guard !store.isDeviceIdle else { continue }
                 await loadAll()
             }
@@ -789,7 +795,7 @@ struct KioskIdleView: View {
         case .failure(let error) where isCancellation(error):
             sawCancellation = true
         case .failure(let error):
-            print("[KioskIdleView] dashboard load failed: \(error.localizedDescription)")
+            idleLog.error("Dashboard load failed: \(error.localizedDescription, privacy: .public)")
             hitFailure = true
         }
 
@@ -804,7 +810,7 @@ struct KioskIdleView: View {
         case .failure(let error) where isCancellation(error):
             sawCancellation = true
         case .failure(let error):
-            print("[KioskIdleView] users load failed: \(error.localizedDescription)")
+            idleLog.error("Users load failed: \(error.localizedDescription, privacy: .public)")
             hitFailure = true
         }
 

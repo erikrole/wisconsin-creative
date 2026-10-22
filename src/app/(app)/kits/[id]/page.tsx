@@ -13,6 +13,7 @@ import {
   ArchiveRestoreIcon,
   ArrowLeftIcon,
   CopyPlusIcon,
+  MoreHorizontalIcon,
   XIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EmptyState from "@/components/EmptyState";
 import { FadeUp } from "@/components/ui/motion";
@@ -586,27 +587,35 @@ export default function KitDetailPage() {
         title={kit.name}
         description={`${kit.location.name}${footballGamedayKitRoleLabel(kit.gamedayRole) ? ` · ${footballGamedayKitRoleLabel(kit.gamedayRole)}` : kit.sportCode ? ` · ${sportLabel(kit.sportCode)}` : ""} · ${kit.members.length + kit.bulkMembers.length} total contents`}
       >
-        <Button variant="outline" className="h-10" onClick={() => router.push("/kits")}>
-          <ArrowLeftIcon className="size-4" />
-          Back
-        </Button>
         {!kit.active && <Badge variant="outline" className="h-10 px-3">Archived</Badge>}
         <Button variant="outline" className="h-10" onClick={handleClone} disabled={cloning || togglingActive || deleting}>
             {cloning && <Spinner data-icon="inline-start" />}
             <CopyPlusIcon className="mr-2 size-4" />
             Duplicate
         </Button>
-        <Button variant="outline" className="h-10" onClick={handleToggleActive} disabled={togglingActive || deleting}>
-            {togglingActive && <Spinner data-icon="inline-start" />}
-            {kit.active ? (
-              <><ArchiveIcon className="mr-2 size-4" />Archive</>
-            ) : (
-              <><ArchiveRestoreIcon className="mr-2 size-4" />Restore</>
-            )}
-        </Button>
-        <Button variant="destructive" className="h-10" onClick={() => setDeleteOpen(true)} disabled={togglingActive || deleting}>
-          <Trash2Icon className="mr-2 size-4" />Delete
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="h-10" aria-label="More kit actions" disabled={togglingActive || deleting}>
+              <MoreHorizontalIcon className="size-4" />
+              <span className="sr-only sm:not-sr-only sm:ml-1.5">More</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onSelect={() => router.push("/kits")}>
+              <ArrowLeftIcon className="size-4" />
+              All kits
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleToggleActive}>
+              {kit.active ? <ArchiveIcon className="size-4" /> : <ArchiveRestoreIcon className="size-4" />}
+              {kit.active ? "Archive" : "Restore"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+              <Trash2Icon className="size-4" />
+              Delete kit
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </PageHeader>
 
       <div className="grid gap-4">

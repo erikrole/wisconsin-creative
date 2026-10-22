@@ -36,6 +36,8 @@ export type AssetDetail = {
   residualValue: string | number | null;
   status: string;
   computedStatus: string;
+  /** Held as an open missing-item case. */
+  missing?: boolean;
   isFavorited: boolean;
   checkinReports?: Array<{
     id: string;
@@ -45,8 +47,12 @@ export type AssetDetail = {
     createdAt: string;
     /** When the evidence last changed; a kiosk update moves it past createdAt. */
     lastReportedAt?: string;
+    resolution?: "REPAIRED" | "REPLACED" | "WRITTEN_OFF" | "FOUND" | "NO_ISSUE" | null;
+    resolvedAt?: string | null;
+    resolutionNote?: string | null;
+    resolvedBy?: { name: string } | null;
     reportedBy: { name: string };
-    booking: { id: string; title: string };
+    booking: { id: string; title: string } | null;
   }>;
   notes: string | null;
   linkUrl: string | null;

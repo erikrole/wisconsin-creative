@@ -75,7 +75,7 @@ final class SessionStore {
         // the strict path so they can't slip past that gate.
         if !AppRuntimeMode.isPerformanceTesting,
            let snapshot = SessionSnapshot.load(),
-           !snapshot.forcePasswordChange {
+           !snapshot.forcePasswordChange, !snapshot.onboardingRequired {
             currentUser = snapshot
             isRestoring = false
             didSeedFromSnapshot = true
@@ -422,6 +422,12 @@ final class SessionStore {
             guard authRequests.owns(requestToken), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
+    }
+
+    func applyConfirmedAvatar(_ avatarURL: String?, for userId: String) {
+        guard var user = currentUser, user.id == userId else { return }
+        user.avatarUrl = avatarURL
+        publishCurrentUserIfChanged(user)
     }
 
     private func restoreSession(requestToken: UUID) async {

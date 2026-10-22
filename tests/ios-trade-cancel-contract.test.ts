@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS trade cancel contract", () => {
   it("uses the server PATCH route and decodes the returned trade", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const route = source("src/app/api/shift-trades/[id]/cancel/route.ts");
 
     expect(route).toContain("export const PATCH");

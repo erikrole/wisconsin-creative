@@ -476,7 +476,7 @@ struct ItemsView: View {
                 }
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                if asset.computedStatus != .retired {
+                if !asset.isHeld {
                     Button {
                         startReservation(for: asset)
                     } label: {
@@ -495,7 +495,7 @@ struct ItemsView: View {
                     )
                 }
 
-                if asset.computedStatus != .retired {
+                if !asset.isHeld {
                     Button {
                         startReservation(for: asset)
                     } label: {
@@ -794,6 +794,7 @@ func assetStatusTone(_ asset: Asset) -> StatusTone {
     if asset.computedStatus == .checkedOut, asset.activeBooking?.isOverdue == true {
         return .red
     }
+    if asset.missing, asset.computedStatus == .maintenance { return .red }
     switch asset.computedStatus {
     case .available:   return .green
     case .checkedOut:  return .blue
@@ -815,7 +816,7 @@ private struct AssetListBadge: View {
         if showsHolderAvatar, let booking = asset.activeBooking {
             return booking.requesterName
         }
-        return asset.computedStatus.label
+        return asset.statusLabel
     }
 
     private var showsHolderAvatar: Bool {

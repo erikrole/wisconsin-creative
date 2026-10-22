@@ -67,8 +67,8 @@ describe("Settings route role registry", () => {
   it("enforces STAFF and ADMIN thresholds", () => {
     expect(getSettingsRouteAccess("/settings/categories", "STUDENT").allowed).toBe(false);
     expect(getSettingsRouteAccess("/settings/categories", "STAFF").allowed).toBe(true);
-    expect(getSettingsRouteAccess("/settings/audit", "STAFF").allowed).toBe(false);
-    expect(getSettingsRouteAccess("/settings/audit", "ADMIN").allowed).toBe(true);
+    expect(getSettingsRouteAccess("/settings/data-export", "STAFF").allowed).toBe(false);
+    expect(getSettingsRouteAccess("/settings/data-export", "ADMIN").allowed).toBe(true);
   });
 
   it("requires the separate owner allowlist for app activity", () => {
@@ -89,13 +89,13 @@ describe("Settings route role registry", () => {
 
 describe("SettingsRouteContent", () => {
   it("does not render children while identity is loading or absent", () => {
-    expect(renderRoute("/settings/audit", null, true)).not.toContain("RESTRICTED-CONTROL");
-    expect(renderRoute("/settings/audit", null)).not.toContain("RESTRICTED-CONTROL");
+    expect(renderRoute("/settings/data-export", null, true)).not.toContain("RESTRICTED-CONTROL");
+    expect(renderRoute("/settings/data-export", null)).not.toContain("RESTRICTED-CONTROL");
   });
 
   it("does not render forbidden children for students or staff", () => {
     const studentHtml = renderRoute("/settings/categories", "STUDENT");
-    const staffHtml = renderRoute("/settings/audit", "STAFF");
+    const staffHtml = renderRoute("/settings/data-export", "STAFF");
 
     expect(studentHtml).toContain("Access denied");
     expect(studentHtml).not.toContain("RESTRICTED-CONTROL");
@@ -106,7 +106,7 @@ describe("SettingsRouteContent", () => {
   it("renders allowed children for personal, STAFF, and ADMIN routes", () => {
     expect(renderRoute("/settings/profile", "STUDENT")).toContain("RESTRICTED-CONTROL");
     expect(renderRoute("/settings/categories", "STAFF")).toContain("RESTRICTED-CONTROL");
-    expect(renderRoute("/settings/audit/details", "ADMIN")).toContain("RESTRICTED-CONTROL");
+    expect(renderRoute("/settings/data-export/details", "ADMIN")).toContain("RESTRICTED-CONTROL");
   });
 
   it("keeps the app activity children hidden from role-only admins", () => {

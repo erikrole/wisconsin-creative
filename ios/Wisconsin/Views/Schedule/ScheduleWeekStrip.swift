@@ -36,6 +36,20 @@ final class ScheduleScrollTracker {
     /// scrolled.
     @ObservationIgnored private var isAtBottom = false
 
+    /// A short list can be at both edges at once. Keep its first visible day
+    /// selected, including while rubber-banding, and only prefer the last day
+    /// once scrollable content has moved away from the top.
+    nonisolated static func isScrolledToBottom(_ geometry: ScrollGeometry) -> Bool {
+        let tolerance: CGFloat = 8
+        let scrollableHeight = geometry.contentSize.height
+            + geometry.contentInsets.top + geometry.contentInsets.bottom
+            - geometry.containerSize.height
+        let distanceFromTop = geometry.contentOffset.y + geometry.contentInsets.top
+        guard scrollableHeight > tolerance, distanceFromTop > tolerance else { return false }
+        return geometry.contentOffset.y + geometry.containerSize.height
+            >= geometry.contentSize.height - tolerance
+    }
+
     func setAtBottom(_ atBottom: Bool) {
         guard atBottom != isAtBottom else { return }
         isAtBottom = atBottom
@@ -163,6 +177,10 @@ struct ScheduleWeekStrip: View {
             }
         }
         .padding(.bottom, 4)
+        // Day cells are fixed 34pt tiles in a seven-column row, like
+        // Calendar's. Past this size the numerals clip and the month title
+        // pushes Today off the row; the list below keeps scaling.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .onAppear {
             visibleWeek = weekStart(of: focusedDay ?? .now)
         }
@@ -245,7 +263,6 @@ struct ScheduleWeekStrip: View {
 
     private var weekdayLabels: some View {
         let symbols = calendar.veryShortWeekdaySymbols
-        let fullNames = calendar.weekdaySymbols
         let first = max(0, calendar.firstWeekday - 1)
         return HStack(spacing: 0) {
             ForEach(0..<7, id: \.self) { idx in
@@ -253,10 +270,12 @@ struct ScheduleWeekStrip: View {
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
-                    .accessibilityLabel(fullNames[(first + idx) % fullNames.count])
             }
         }
         .padding(.horizontal, 8)
+        // Every day cell already names its weekday; reading seven column
+        // letters first only delays the days.
+        .accessibilityHidden(true)
     }
 
     // MARK: Week pager

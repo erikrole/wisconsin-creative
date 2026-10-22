@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { coverageVariant } from "./types";
 
@@ -9,7 +8,7 @@ import { coverageVariant } from "./types";
  * unified here and only the container density differs per view:
  *   - `CoverageTag`  : dot + fraction, for tight chips (Calendar).
  *   - `CoverageMeter`: fill bar + fraction, for cards (Week).
- *   - `CoverageBadge`: dot + semantic Badge, for scannable table rows (List).
+ *   - `CoverageBadge`: dot + plain "Covered" or "N open", for scannable table rows (List).
  */
 
 type CoverageProps = {
@@ -61,17 +60,18 @@ export function CoverageMeter({ percentage, filled, total, className }: Coverage
   );
 }
 
-/** Dot + semantic Badge, for scannable operational table rows (List view). */
+/** Dot + "Covered" or "N open", for scannable operational table rows (List view). */
 export function CoverageBadge({ percentage, filled, total, className }: CoverageProps) {
+  const open = Math.max(0, total - filled);
   return (
     <span
-      className={cn("flex items-center gap-1", className)}
+      className={cn("flex items-center gap-1.5 text-xs font-medium tabular-nums", className)}
       aria-label={`${filled} of ${total} shifts filled`}
     >
       <span className={cn("inline-flex size-[7px] flex-shrink-0 rounded-full", accentClass(percentage))} />
-      <Badge variant={coverageVariant(percentage)} size="sm">
-        {filled}/{total}
-      </Badge>
+      <span className={open === 0 ? "text-muted-foreground" : "text-foreground"}>
+        {open === 0 ? "Covered" : `${open} open`}
+      </span>
     </span>
   );
 }

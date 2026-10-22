@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 140 | 5 |
+| `User` | 145 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -51,6 +51,8 @@
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
 | `CalendarEvent` | 42 | 7 |
+| `GameSnapshot` | 21 | 2 |
+| `WrappedRecap` | 6 | 2 |
 | `EventWorker` | 10 | 4 |
 | `ScheduleEventFollow` | 9 | 3 |
 | `BookingEvent` | 7 | 4 |
@@ -79,7 +81,7 @@
 | `CollaboratorPolicyRevision` | 9 | 3 |
 | `SystemConfig` | 3 | 1 |
 | `BadgeDefinition` | 14 | 3 |
-| `StudentBadge` | 10 | 5 |
+| `StudentBadge` | 11 | 5 |
 | `BadgeStreak` | 8 | 3 |
 | `BadgeEventReceipt` | 6 | 3 |
 | `LicenseCode` | 17 | 4 |
@@ -98,7 +100,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 20 | 7 |
+| `CheckinItemReport` | 25 | 8 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |
@@ -264,6 +266,14 @@
 
 - `DAMAGED`
 - `LOST`
+
+### `ReportResolution`
+
+- `REPAIRED`
+- `REPLACED`
+- `WRITTEN_OFF`
+- `FOUND`
+- `NO_ISSUE`
 
 ### `BadgeCategory`
 

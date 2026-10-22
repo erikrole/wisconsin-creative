@@ -1,0 +1,12 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "browser": "149.0.7827.55",
+  "clock": "2026-10-22T15:00:00Z",
+  "locale": "en-US",
+  "timezone": "America/Chicago",
+  "fixture": "tests/browser/onboarding-continuity.spec.ts",
+  "evidence": "component fixture; no authenticated account or database"
+}

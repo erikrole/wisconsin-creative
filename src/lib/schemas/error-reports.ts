@@ -45,6 +45,27 @@ export const supportReportBodySchema = z.object({
   breadcrumbs: z.array(breadcrumbSchema).max(40).optional(),
 });
 
+/**
+ * What an Apple app remembers about one of its recent runs. MetricKit reports
+ * a crash a day later from a new run, so the app keeps the last few runs'
+ * actions by process id and the server pairs them with the crash's `pid`.
+ */
+export const appSessionSchema = z.object({
+  pid: z.number().int().nonnegative(),
+  screen: z.string().max(300).nullish(),
+  breadcrumbs: z.array(breadcrumbSchema).max(40),
+});
+
+export const diagnosticUploadSchema = z
+  .object({
+    platform: z.enum(["ios", "kiosk", "macos"]),
+    payload: z.record(z.string(), z.unknown()),
+    sessions: z.array(appSessionSchema).max(5).optional(),
+  })
+  .strict();
+
+export type AppSession = z.infer<typeof appSessionSchema>;
+
 export const issueUpdateSchema = z
   .object({
     status: z.enum(["open", "resolved", "ignored"]).optional(),
