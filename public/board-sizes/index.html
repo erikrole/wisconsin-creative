@@ -353,6 +353,27 @@
     .toast.is-on { opacity: 1; transform: translate(-50%, 0); }
     .footnote { margin: 36px 0 0; font-size: 12px; color: var(--ink-3); }
 
+    /* ---- art preview ---- */
+    .btn.ghost { min-height: 32px; padding: 0 10px; border-color: transparent; background: transparent; box-shadow: none; color: var(--ink-2); font-weight: 700; }
+    .btn.ghost:hover { background: var(--hover); color: var(--ink); }
+    .art-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 10px 10px 12px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+    .art-thumb { width: 52px; height: 36px; flex: none; border-radius: 6px; background: var(--well) center / contain no-repeat; box-shadow: inset 0 0 0 1px var(--line); }
+    .art-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; flex: 1 1 260px; min-width: 0; }
+    .art-text b { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+    .art-text i { font: normal 12px var(--mono); color: var(--ink-3); }
+    .art-note { flex-basis: 100%; font-size: 13px; color: var(--ink-2); }
+    .art-note::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #2e9e5b; vertical-align: 1px; }
+    .art-bar.is-off .art-note::before { background: var(--hot); }
+    .art-tools { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .art-tools .chip { min-height: 32px; }
+    .drawing.hide-zones .zone-hit:not(:hover):not(:focus-visible):not(.is-picked) { border-color: transparent; }
+    .drawing.hide-zones .zone-hit:not(:hover):not(:focus-visible):not(.is-picked) .zone-label { visibility: hidden; }
+    .drawing.has-art .zone-label { border-radius: 4px; background: color-mix(in srgb, var(--card) 86%, transparent); }
+    .drawing.has-art .zone-hit { border-color: color-mix(in srgb, var(--zone) 70%, #fff); }
+    .art-target { position: relative; }
+    .art-target::after { content: attr(data-drop); position: absolute; inset: 8px; z-index: 6; display: none; place-items: center; border: 2px dashed var(--accent); border-radius: 12px; background: color-mix(in srgb, var(--card) 82%, transparent); color: var(--accent-ink); font-weight: 900; font-size: 15px; pointer-events: none; }
+    .is-dragging .art-target::after { display: grid; }
+
     /* ---- phones ---- */
     @media (max-width: 900px) {
       main { padding-top: 24px; }
@@ -393,6 +414,9 @@
       .chips::-webkit-scrollbar { display: none; }
       .chip, .chips .tag { flex: none; }
       .chips-label { flex: none; min-width: 0; margin-right: 4px; }
+      .is-board-view .page-head .actions .art-btn { order: 3; flex: 1; }
+      .art-tools { margin-left: 0; width: 100%; }
+      .art-target::after { inset: 4px; font-size: 13px; }
     }
     @media (hover: none) { .search kbd { display: none; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; } }
@@ -446,6 +470,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="data.js?v=13aaf0ce7b9d"></script>
-  <script src="app.js?v=f2364b88c600"></script>
+  <script src="app.js?v=04f7ec3d14a1"></script>
 </body>
 </html>

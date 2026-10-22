@@ -438,10 +438,19 @@
     defs.innerHTML = '<pattern id="' + id + '" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="currentColor" fill-opacity=".1"/><line x1="0" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="2.5" stroke-opacity=".7"/></pattern>';
     svg.appendChild(defs);
     svg.appendChild(svgNode('rect', { class: 'canvas', x: 0, y: 0, width: d.w, height: d.h, 'vector-effect': 'non-scaling-stroke' }));
+    // Previewed art sits on the board's canvas, under the crops, scrims and
+    // seams, so you see what the board will hide.
+    if (opts.art) {
+      opts.art.places.forEach(function (p) {
+        svg.appendChild(svgNode('image', { class: 'art', href: opts.art.url, x: p.x, y: p.y, width: p.w, height: p.h, preserveAspectRatio: 'none' }));
+      });
+    }
     var used = {}, placed = 0;
     (d.overlays || []).forEach(function (o) {
       if (o.kind === 'crop' || o.kind === 'scrim') {
         var g = svgNode('g', { class: 'ov-' + o.kind });
+        // Over previewed art, dim what the board hides so the cut reads.
+        if (opts.art) g.appendChild(svgNode('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: '#000', 'fill-opacity': '0.5' }));
         g.appendChild(svgNode('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: 'url(#' + id + ')' }));
         svg.appendChild(g);
         used[o.kind] = true;
@@ -716,7 +725,7 @@
     card.appendChild(props);
 
     var drawing = node('div', 'drawing');
-    var fig = renderFigure(v, d, zoneMatch, card, { big: opts.board, show: opts.show });
+    var fig = renderFigure(v, d, zoneMatch, card, { big: opts.board, show: opts.show, art: opts.art });
     if (fig.ribbon) {
       drawing.classList.add('is-scroll');
       drawing.tabIndex = 0;
@@ -731,6 +740,13 @@
     drawing.appendChild(fig.el);
     var legend = renderLegend(fig.used);
     if (legend) drawing.appendChild(legend);
+    if (opts.board) {
+      drawing.classList.add('art-target');
+      drawing.setAttribute('data-drop', 'Drop to preview on ' + d.name);
+      if (opts.art) drawing.classList.add('has-art');
+      if (opts.art && !artZones) drawing.classList.add('hide-zones');
+      if (!opts.art) drawing.appendChild(node('p', 'fig-note art-hint', 'Drop or paste an image here to preview it on the board. It stays on this device.'));
+    }
     if (!fig.placed && d.zones.length) {
       drawing.appendChild(node('p', 'fig-note', 'The sources give sizes for this display, not zone positions.'));
       if (opts.board) {
@@ -988,7 +1004,7 @@
     });
     return [
       '// Board Sizes · ' + c.name,
-      '// ' + specs.length + ' comps, one per distinct canvas this content needs (×N = placed N times on that board), in a new project folder.',
+      '// ' + specs.length + ' comps, ' + (c.board ? 'one for the whole board and one per distinct zone size' : 'one per distinct canvas this content needs (×N = placed N times on that board)') + ', in a new project folder.',
       '// Frame rates follow the venue guide where it states one; otherwise 59.94.',
       '// Duration ' + dur + ' s' + (c.duration ? ' (from Colosseum’s deliverables sheet)' : ' (placeholder)') + '. Run from File › Scripts › Run Script File.',
       '(function () {',
@@ -1367,6 +1383,92 @@
     return b;
   }
 
+  /* ---------------- art preview ---------------- */
+
+  // An image dropped, pasted or picked in the board view, drawn on the board
+  // at true scale. It never leaves the browser (a blob: URL, revoked when
+  // replaced or removed) and stays while you move between boards.
+  var art = null;
+  var artZones = true;
+  var MAX_ART_BYTES = 80 * 1024 * 1024;
+  var artInput = document.createElement('input');
+  artInput.type = 'file';
+  artInput.accept = 'image/*';
+  artInput.hidden = true;
+  artInput.addEventListener('change', function () { if (artInput.files && artInput.files[0]) setArt(artInput.files[0]); artInput.value = ''; });
+  document.body.appendChild(artInput);
+  function pickArt() { artInput.click(); }
+  function setArt(file) {
+    if (!file || !/^image\//.test(file.type || '')) { toast('That isn’t an image. Try a PNG, JPEG or WebP.'); return; }
+    if (file.size > MAX_ART_BYTES) { toast('That image is over 80 MB.'); return; }
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      if (!img.naturalWidth || !img.naturalHeight) { URL.revokeObjectURL(url); toast('Couldn’t read that image.'); return; }
+      clearArt(true);
+      art = { url: url, name: file.name || 'Pasted image', w: img.naturalWidth, h: img.naturalHeight };
+      if (state.display) render(false);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); toast('Couldn’t read that image.'); };
+    img.src = url;
+  }
+  function clearArt(quiet) {
+    if (art) URL.revokeObjectURL(art.url);
+    art = null;
+    if (!quiet && state.display) render(false);
+  }
+  function sameShape(aw, ah, bw, bh) { return aw * bh === ah * bw; }
+  // Where the art goes on this board: the whole board at its exact size, a
+  // zone at its exact size (every placement), then the same shape at another
+  // scale, else scaled to fit and flagged.
+  function artPlacement(d) {
+    var whole = [{ x: 0, y: 0, w: d.w, h: d.h }];
+    var rows = groupZones(d.zones).filter(function (r) { return r.first.at && r.first.at.length && !(r.w === d.w && r.h === d.h); });
+    function at(row) { return row.first.at.map(function (p) { return { x: p.x, y: p.y, w: row.w, h: row.h }; }); }
+    function where(row) { var n = row.first.at.length; return row.base + (n > 1 ? ' (' + n + ' placements)' : ''); }
+    var built = 'Build at ' + pretty(d.w, d.h) + '.';
+    if (art.w === d.w && art.h === d.h) return { places: whole, note: 'Exact size for this board.', ok: true };
+    var exact = rows.filter(function (r) { return r.w === art.w && r.h === art.h; })[0];
+    if (exact) return { places: at(exact), note: 'Exact size for ' + where(exact) + '.', ok: true, row: exact };
+    if (sameShape(art.w, art.h, d.w, d.h)) return { places: whole, note: 'Same shape as the board at ' + Math.round(art.w / d.w * 100) + '% size. ' + built, ok: false };
+    var shape = rows.filter(function (r) { return sameShape(art.w, art.h, r.w, r.h); })[0];
+    if (shape) return { places: at(shape), note: 'Same shape as ' + where(shape) + ' at ' + Math.round(art.w / shape.w * 100) + '% size. Build at ' + pretty(shape.w, shape.h) + '.', ok: false, row: shape };
+    var sc = Math.min(d.w / art.w, d.h / art.h), w = Math.round(art.w * sc), h = Math.round(art.h * sc);
+    return { places: [{ x: Math.round((d.w - w) / 2), y: Math.round((d.h - h) / 2), w: w, h: h }], note: 'Not a size on this board, so it’s scaled to fit. ' + built, ok: false };
+  }
+  function artBar(d, placed) {
+    var box = node('div', 'art-bar' + (placed.ok ? '' : ' is-off'));
+    box.setAttribute('role', 'status');
+    var thumb = node('span', 'art-thumb');
+    thumb.style.backgroundImage = 'url("' + art.url + '")';
+    box.appendChild(thumb);
+    var text = node('span', 'art-text');
+    var name = node('b', '', art.name);
+    name.title = art.name;
+    text.appendChild(name);
+    text.appendChild(node('i', '', pretty(art.w, art.h)));
+    text.appendChild(node('span', 'art-note', placed.note));
+    box.appendChild(text);
+    var tools = node('span', 'art-tools');
+    tools.appendChild(chip('Zones', artZones, function () { artZones = !artZones; render(false); }));
+    var rb = button('Replace', null, pickArt); rb.classList.add('ghost'); tools.appendChild(rb);
+    var xb = button('Remove', null, function () { clearArt(); }); xb.classList.add('ghost'); tools.appendChild(xb);
+    box.appendChild(tools);
+    return box;
+  }
+  function boardComps(v, d) {
+    var rows = [{ v: v, d: d, label: d.name, w: d.w, h: d.h, count: 1 }];
+    groupZones(d.zones).forEach(function (row) {
+      if (rows.some(function (r) { return r.w === row.w && r.h === row.h; })) {
+        var same = rows.filter(function (r) { return r.w === row.w && r.h === row.h && r !== rows[0]; })[0];
+        if (same) same.label += ' / ' + row.base;
+        return;
+      }
+      rows.push({ v: v, d: d, label: d.name + ' › ' + row.base, w: row.w, h: row.h, count: 1 });
+    });
+    return rows;
+  }
+
   function renderBoard(v, d) {
     el.crumbs.textContent = '';
     var back = node('a', 'crumb-link', v.name);
@@ -1395,6 +1497,9 @@
       pager.appendChild(b);
     });
     acts.push(pager);
+    var ab = button('Preview art', 'image', pickArt, 'art-btn');
+    ab.title = 'Preview an image on this board. It stays on this device.';
+    acts.push(ab);
     acts.push(button('Copy spec', 'copy', function () { copy(specText(v, d, null), 'Copied ' + d.name); }, 'primary'));
     acts.push(moreMenu(withShare([
       { label: 'Guide SVG', icon: 'image', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
@@ -1404,6 +1509,12 @@
         var table = displaysCsv(null, d);
         download(filename, toCsv(table), 'text/csv');
         toast('Downloaded ' + filename + ' (' + (table.length - 1) + ' rows)');
+      } },
+      { label: 'AE comps script', icon: 'ae', onClick: function () {
+        var rows = boardComps(v, d);
+        var name = 'board-sizes_' + d.id.replace(/\//g, '_') + '.jsx';
+        download(name, aeScript({ name: v.name + ' ' + d.name, board: true }, rows), 'text/plain');
+        toast('Downloaded ' + name + ' (' + rows.length + ' comps)');
       } },
       { label: 'Copy id', icon: 'copy', onClick: function () { copy(d.id, 'Copied ' + d.id); } }
     ]), d.name));
@@ -1448,8 +1559,10 @@
       fg.appendChild(chip(f[1], filter === f, function () { state.filter = f[0]; render(false); }, n));
     });
     if (fg.querySelectorAll('.chip').length > 1) bar.appendChild(fg);
+    var placed = art ? artPlacement(d) : null;
+    if (placed) bar.appendChild(artBar(d, placed));
     if (bar.childNodes.length) el.view.appendChild(bar);
-    el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show }).el);
+    el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show, art: placed ? { url: art.url, places: placed.places } : null }).el);
   }
 
   /* ---------------- venue + search views ---------------- */
@@ -1612,6 +1725,27 @@
       else if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
       else if (document.activeElement === el.search && el.search.value) { clearSearch(); render(false); }
     }
+  });
+
+  // Drop an image anywhere in the board view (the drawing lights up), or
+  // paste one. Outside the board view a dropped file is ignored rather than
+  // letting the browser navigate away to it.
+  function hasFiles(e) { return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1); }
+  var dragDepth = 0;
+  document.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; dragDepth++; if (state.display && !state.query) document.body.classList.add('is-dragging'); });
+  document.addEventListener('dragleave', function (e) { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove('is-dragging'); });
+  document.addEventListener('dragover', function (e) { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = state.display && !state.query ? 'copy' : 'none'; });
+  document.addEventListener('drop', function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    document.body.classList.remove('is-dragging');
+    if (state.display && !state.query && e.dataTransfer.files.length) setArt(e.dataTransfer.files[0]);
+  });
+  document.addEventListener('paste', function (e) {
+    if (!state.display || state.query || /^(input|textarea)$/i.test(e.target.tagName || '')) return;
+    var items = (e.clipboardData && e.clipboardData.files) || [];
+    for (var i = 0; i < items.length; i++) if (/^image\//.test(items[i].type)) { e.preventDefault(); setArt(items[i]); return; }
   });
 
   var initialHash = safeDecode(window.location.hash.slice(1));

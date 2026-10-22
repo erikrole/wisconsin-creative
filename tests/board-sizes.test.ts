@@ -94,6 +94,30 @@ describe("Board Sizes wc-fresh shell and hardening", () => {
   });
 });
 
+describe("Board Sizes art preview and board comps", () => {
+  it("keeps previewed art on the device", () => {
+    const preview = app.slice(app.indexOf("/* ---------------- art preview"), app.indexOf("function renderBoard"));
+    expect(preview).toContain("URL.createObjectURL(file)");
+    expect(preview).toContain("URL.revokeObjectURL");
+    expect(preview).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon/);
+    expect(html).toMatch(/img-src data: blob:/);
+    expect(html).toMatch(/connect-src 'none'/);
+  });
+
+  it("places art on the exact board, then the exact zone, then the same shape, else fits and flags it", () => {
+    const place = app.slice(app.indexOf("function artPlacement"), app.indexOf("function artBar"));
+    const order = ["Exact size for this board", "'Exact size for ' + where(exact)", "Same shape as the board", "'Same shape as ' + where(shape)", "Not a size on this board"];
+    const at = order.map((t) => place.indexOf(t));
+    expect(at.every((i) => i >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+
+  it("downloads an After Effects comps script for a whole board", () => {
+    expect(app).toContain("aeScript({ name: v.name + ' ' + d.name, board: true }, rows)");
+    expect(app).toContain("one for the whole board and one per distinct zone size");
+  });
+});
+
 describe("Board manifest", () => {
   it("matches the schema and every generated file is fresh", () => {
     expect(validateSchema(manifest, schema)).toEqual([]);
