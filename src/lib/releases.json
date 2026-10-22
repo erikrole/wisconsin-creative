@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-22",
+    "title": "QR Studio, refreshed",
+    "type": "improvement",
+    "summary": "QR Studio has a calmer Badger red look, codes that scan more reliably, calendar event codes, and an optional caption under any code.",
+    "details": [
+      "Every style now scans reliably: rounded corner eyes are redrawn, and there is a new Eye shape choice.",
+      "The scan check is stricter and flags a code that only reads at some sizes.",
+      "New Event type: scan the code to add a game or shoot to your phone's calendar.",
+      "Add an optional caption like \"Scan for tickets\" under the code, in PNG and SVG, without affecting scanning.",
+      "Deleting a saved code, or clearing the library, can now be undone.",
+      "Cleaner logo backings, no hairline seams, and the shared tool header with Apps top right."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 594
+  },
+  {
+    "date": "2026-10-22",
     "title": "A calmer, shareable Timelapse planner",
     "type": "improvement",
     "summary": "The Timelapse planner is redesigned and now lets you share an exact plan with a link.",
