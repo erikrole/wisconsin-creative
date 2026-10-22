@@ -15,15 +15,22 @@ final class OnboardingWalkthroughUITests: XCTestCase {
         let originalZoom = crop.value as? String
         crop.pinch(withScale: 1.6, velocity: 1)
         XCTAssertNotEqual(crop.value as? String, originalZoom)
-        let adjustedZoom = crop.value as? String
+        let pinchedZoom = crop.value as? String
         crop.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 0.1, thenDragTo: crop.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.6)))
+        let adjustedZoom = crop.value as? String
+        XCTAssertEqual(adjustedZoom, pinchedZoom, "Dragging the crop must preserve the chosen zoom")
+        let adjustedPreview = crop.screenshot().pngRepresentation
         attach(app, "avatar-crop")
+        XCTAssertEqual(crop.value as? String, adjustedZoom)
         app.buttons["Save"].tap()
         XCTAssertTrue(app.staticTexts["The photo could not be saved. Check your connection and try again."].waitForExistence(timeout: 10))
         XCTAssertEqual(crop.value as? String, adjustedZoom)
+        XCTAssertEqual(crop.screenshot().pngRepresentation, adjustedPreview, "An unconfirmed upload must preserve the crop preview")
         XCTAssertEqual(app.sliders.count, 0)
         XCTAssertTrue(app.buttons["Save"].isEnabled)
         attach(app, "avatar-upload-retry")
+        app.buttons["Reset"].tap()
+        XCTAssertEqual(crop.value as? String, originalZoom)
     }
 
     func testNewStudentMustSaveRequiredDetailsAndCanSkipOnlyPhoto() throws {

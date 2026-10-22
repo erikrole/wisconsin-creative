@@ -1,6 +1,6 @@
 {
   "title": "Onboarding that continues with you",
-  "eyebrow": "Wisconsin Creative \u00b7 Web + iOS \u00b7 October 22, 2026",
+  "eyebrow": "Wisconsin Creative · Web + iOS · October 22, 2026",
   "lede": "Account-backed setup, optional photo completion, and direct photo gestures. Current local evidence for the six-student onboarding rollout.",
   "stats": [
     {
@@ -28,20 +28,20 @@
           "image": "ios-avatar-crop.png",
           "title": "Native photo crop",
           "cap": "iPhone 18 Pro Max: system pan/pinch, Cancel, Save and a quiet Reset. VoiceOver offers zoom and movement actions.",
-          "tag": "iOS \u00b7 current"
+          "tag": "iOS · current"
         },
         {
           "image": "web-avatar-crop.png",
           "title": "Web photo crop",
           "cap": "Desktop: direct dragging and cursor-anchored wheel zoom. Small minus/plus buttons and keyboard commands support mouse and keyboard use.",
           "wide": true,
-          "tag": "Web \u00b7 current"
+          "tag": "Web · current"
         },
         {
           "image": "web-avatar-touch.png",
           "title": "Web touch crop",
           "cap": "Phone browser: actual two-finger pinch exercised. The same editor is used in onboarding, Settings and roster photo changes.",
-          "tag": "Web \u00b7 touch"
+          "tag": "Web · touch"
         }
       ]
     },
@@ -53,14 +53,38 @@
           "image": "ios-avatar-upload-retry.png",
           "title": "Native retry",
           "cap": "The crop stays open and Save becomes available again after an unconfirmed upload.",
-          "tag": "iOS \u00b7 failure recovery"
+          "tag": "iOS · failure recovery"
         },
         {
           "image": "web-avatar-retry.png",
           "title": "Web retry",
           "cap": "The actual upload error appears without discarding the photo or its adjustments.",
           "wide": true,
-          "tag": "Web \u00b7 failure recovery"
+          "tag": "Web · failure recovery"
+        }
+      ]
+    },
+    {
+      "heading": "Verified on the physical iPhone",
+      "note": "After-only physical iPhone 18 Pro Max evidence, iOS 27.2. This test exposed and fixed a stale SwiftUI gesture echo. Drag preserves the pinched zoom; an unconfirmed save preserves the exact crop pixels, and Reset restores the original zoom. Synthetic fixture; successful server upload remains a separate gate.",
+      "shots": [
+        {
+          "image": "ios-physical-avatar-crop.png",
+          "title": "Physical crop after pinch and drag",
+          "cap": "System UIScrollView owns pan/pinch. Explicit commands drive Reset and VoiceOver; gesture changes are not echoed back as older zoom values.",
+          "tag": "Physical iPhone · crop"
+        },
+        {
+          "image": "ios-physical-avatar-retry.png",
+          "title": "Physical failed-save recovery",
+          "cap": "The crop remains identical after the simulated failure. Save freezes the export adjustment and stops remaining motion.",
+          "tag": "Physical iPhone · recovery"
+        },
+        {
+          "image": "ios-physical-photos-picker.png",
+          "title": "A real system photo selection",
+          "cap": "The physical phone added and selected the marked technical sample through PhotosPicker, verified its decoded colors and cancelled cleanly. The personal photo-library grid is excluded. Successful upload is still pending the hosted backend.",
+          "tag": "Physical iPhone · PhotosPicker"
         }
       ]
     },
@@ -71,28 +95,28 @@
         {
           "image": "web-apparel-saved.png",
           "title": "Saved apparel answers",
-          "cap": "Clothing and shoe sizing are independent Men\u2019s/Women\u2019s choices. Custom sizes remain editable.",
+          "cap": "Clothing and shoe sizing are independent Men’s/Women’s choices. Custom sizes remain editable.",
           "wide": true,
-          "tag": "Web \u00b7 saved"
+          "tag": "Web · saved"
         },
         {
           "image": "web-save-conflict.png",
           "title": "Saved-answer conflict",
           "cap": "Choose the saved answers or explicitly save the retained edits using the latest version.",
           "wide": true,
-          "tag": "Web \u00b7 conflict"
+          "tag": "Web · conflict"
         },
         {
           "image": "ios-required-apparel.png",
           "title": "Native apparel",
           "cap": "The refreshed native Welcome design is retained, with save status visible under the header.",
-          "tag": "iOS \u00b7 required setup"
+          "tag": "iOS · required setup"
         },
         {
           "image": "ios-apparel-confirmation.png",
           "title": "Native apparel confirmation",
           "cap": "The summary reflects the selected clothing and shoe sizes separately.",
-          "tag": "iOS \u00b7 apparel summary"
+          "tag": "iOS · apparel summary"
         }
       ]
     },
@@ -104,19 +128,19 @@
           "image": "web-optional-photo.png",
           "title": "Optional web photo",
           "cap": "Finish works without a photo; all required answers have already been acknowledged.",
-          "tag": "Web \u00b7 photo step"
+          "tag": "Web · photo step"
         },
         {
           "image": "ios-optional-photo.png",
           "title": "Optional native photo",
           "cap": "The photo can be added later from native Profile.",
-          "tag": "iOS \u00b7 photo step"
+          "tag": "iOS · photo step"
         },
         {
           "image": "ios-photo-skipped-setup-complete.png",
           "title": "Finished without photo",
           "cap": "The native fixture reaches the final Welcome screen after the photo-free completion response.",
-          "tag": "iOS \u00b7 setup complete"
+          "tag": "iOS · setup complete"
         }
       ]
     }
@@ -144,11 +168,13 @@
     "All 780 native source-contract tests pass across 148 files. Native target build and 10 model/image XCTest cases pass, including distinctive off-center crop pixels.",
     "Both final iPhone 18 Pro Max UI scenarios pass: actual pinch/drag with retained crop on failure, and the required student sequence through photo skip and Finish.",
     "Xcode project registration, schema validation, 201 migration-prefix checks, docs/codemaps and diff whitespace checks pass.",
-    "Mobbin MCP connected and queried successfully. WHOOP, Me+ and Tripadvisor references informed the circular guide, image context and brief guidance. Their stills establish layout/copy, not live gesture behavior."
+    "Mobbin MCP connected and queried successfully. WHOOP, Me+ and Tripadvisor references informed the circular guide, image context and brief guidance. Their stills establish layout/copy, not live gesture behavior.",
+    "Physical iPhone 18 Pro Max: crop pan/pinch, exact preview preservation after unconfirmed save, and Reset passed. PhotosPicker selection and real shared-backend upload/handoff are tracked separately.",
+    "Physical PhotosPicker sample selection/decoding/cancellation passed. Add-only permission belongs to the isolated UI test runner; the app uses the system picker. A marked technical sample was added to the phone library."
   ],
   "notes": [
     "These are current fixture captures with no trustworthy matched pre-change baseline; no before/after size or performance measurement is claimed. Older slider captures in this folder are superseded.",
-    "Authenticated web-to-iOS and iOS-to-web handoff remains pending. D-063 requires this branch\u2019s own Managed preview, obtained after an authorized scoped commit, push and draft PR. No branch environment is currently available.",
+    "Authenticated web-to-iOS and iOS-to-web handoff remains pending. D-063 requires this branch’s own Managed preview, obtained after an authorized scoped commit, push and draft PR. No branch environment is currently available.",
     "Physical iPhone photo-library/permission behavior and shared-backend avatar display remain pending. Simulator and fixture proof do not establish those device/backend outcomes.",
     "Migration 0200 has not been deployed. No commit, push, PR, production mutation, deployment, email or distribution has occurred.",
     "Source snapshot, per-file hashes, capture hashes and passing logs are retained alongside this page. Native Swift source in the installed private test snapshot was verified byte-identical; only bundle/app-group identity differs intentionally.",

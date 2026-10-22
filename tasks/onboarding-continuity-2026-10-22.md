@@ -16,7 +16,7 @@ Owner: this chat. Target: Monday, October 26, 2026.
 3. Wire web/native autosave, honest save states, pending-save retries, foreground refresh and dirty-field reconciliation. Derive the resume step from server completion.
 4. Share Getting started progress across both clients, including retries, account isolation and safe concurrent merges.
 5. Test web-to-iOS and iOS-to-web against shared persisted state, plus lost responses, interrupted saves, stale edits, skipped photo, session changes, and network loss. Run web/native/build/schema gates and matched UI evidence.
-6. Record actual acceptance and any hosted/authenticated boundary. No commit, push, deployment, production mutation, or external email is authorized yet.
+6. Record actual acceptance and hosted/authenticated boundaries. The user authorized scoped commit, push and a draft PR, both handoffs and the physical photo check. Production merge/deployment and App Store submission remain separate from the prepared release candidate.
 
 ## Save contract
 
@@ -46,15 +46,22 @@ Implemented locally; authenticated handoff and release remain open. Fixture/sour
 
 ## Remaining acceptance and rollout
 
-- [ ] Obtain this branch’s hosted Managed preview via a scoped commit, push and same-repository draft PR, once the user authorizes those actions. The current branch has no PR or environment; D-063 prohibits borrowing another branch’s environment or production credentials.
+- [x] Commit and push the scoped work and open [draft PR #606](https://github.com/erikrole/wisconsin-creative/pull/606).
+- [ ] Obtain this branch’s hosted Managed preview. Required CI passed at `c1176ab530414ca3a01a070ae8b99de17f283320`; its preview workflow is queued. D-063 prohibits borrowing another branch’s environment or production credentials.
 - [ ] Seed one student in that sanitized preview, authenticate web and native to that same backend, verify web→iOS and iOS→web continuation, concurrent edits, relaunch, lost-response recovery, and photo-free completion. Local fixture/API tests do not substitute for these handoffs.
-- [ ] Verify real PhotosPicker/photo-library behavior on the physical iPhone 16 Pro, including permission/selection recovery and the chosen photo appearing on both clients.
+- [ ] Verify real PhotosPicker/photo-library behavior on the user-selected physical iPhone 18 Pro Max, including permission/selection recovery and the chosen photo appearing on both clients. The separate Creative Preview app is signed and installed. Gesture/retry proof and successful shared-backend upload are recorded separately below.
 - [ ] Apply migration `0200` and ship/distribute the verified server/native slice only with explicit release authorization. Existing accounts remain outside the new required gate.
 
-No commit, push, PR, hosted database mutation, deployment, external email or distribution has occurred in this task.
+No production mutation, merge, deployment, external email or App Store distribution has occurred in this task.
 
 ## Authorized shipping follow-up
 
-2026-10-22: The user authorized scoped commit, push and a draft PR, authenticated handoff tests both ways, and a physical iPhone photo upload check, with the intent to release an app update today. The physical iPhone 16 Pro is currently unavailable in Xcode; a connection request is pending. No merge or production release has occurred.
+2026-10-22: The user authorized scoped commit, push and a draft PR, authenticated handoff tests both ways, and a physical iPhone photo upload check, with the intent to release an app update today. They selected and connected the physical iPhone 18 Pro Max (`00008160-000A7C610C100036`) and allowed the device automation prompt. No merge or production release has occurred.
 
 Draft PR: [#606](https://github.com/erikrole/wisconsin-creative/pull/606). Source commit `b706b774`; first main integration `978d1f63`. Full suite after obsolete source-check reconciliation: 6,326 passing tests, one existing skip. Replaced slider/call-shape checks with the actual browser gesture cases, QueryClient avatar-consumer behavior and retained route audit-failure/old-blob coverage. Native managed-preview origin and exact-origin token checks pass in XCTest. The user explicitly selected the physical iPhone 18 Pro Max (`00008160-000A7C610C100036`), now paired and available; actual photo upload is pending the branch preview.
+
+Current integration `c1176ab5` passes required CI and 6,390 local tests (one existing skip). A signed Release archive and local IPA for 1.4/build 35 were prepared and the App Store publish plan was dry-run only. That candidate is superseded by the physical crop fix below and must be rebuilt before upload.
+
+Physical testing found a real crop feedback problem: pinching to 150%, then dragging and retrying an unconfirmed save, left 116% zoom. UIKit gesture updates were being echoed through stale SwiftUI bindings. Explicit Reset/VoiceOver command revisions now drive UIKit while gestures remain authoritative, with deferred-layout/clamp guards and a frozen export adjustment that stops motion during Save. The strengthened test isolates drag from Save and compares the exact crop preview pixels before/after failure. The revision fix passed on the physical phone; the final export-freeze/Reset refinement passed on the required iPhone 18 Pro Max simulator and the physical iPhone. Real PhotosPicker sample selection, decoded color verification and crop cancellation also pass; the private driver uses add-only permission and added a marked technical sample to the library. All 781 native source-contract tests pass. This is fixture-based physical gesture/recovery proof, not a successful server upload.
+
+Fixture-free live web/native drivers are prepared privately in `.tmp/` and the isolated native project. They use this branch’s attested managed origin, short-lived exact-origin OIDC access and synthetic invited students, never production credentials. Successful authenticated handoffs and the 512px normalized photo read-back remain open until the hosted preview is Ready.

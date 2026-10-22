@@ -9,6 +9,8 @@ struct ProfilePhotoCropView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var adjustment = AvatarCropAdjustment()
+    @State private var cropCommandRevision = 0
+    @State private var exportAdjustment: AvatarCropAdjustment?
     @State private var isSaving = false
     @State private var error: String?
 
@@ -23,7 +25,7 @@ struct ProfilePhotoCropView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
 
-                    AvatarCropCanvas(image: image, cropDiameter: cropDiameter, adjustment: $adjustment, isSaving: isSaving)
+                    AvatarCropCanvas(image: image, cropDiameter: cropDiameter, adjustment: $adjustment, commandRevision: cropCommandRevision, exportAdjustment: exportAdjustment, isSaving: isSaving)
                         .frame(width: 320, height: 320)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .accessibilityElement(children: .ignore)
@@ -38,6 +40,7 @@ struct ProfilePhotoCropView: View {
                             case .decrement: adjustment.zoom = max(adjustment.zoom - 0.15, 1)
                             @unknown default: break
                             }
+                            cropCommandRevision += 1
                         }
                         .accessibilityAction(named: "Move left") { movePhoto(x: -20) }
                         .accessibilityAction(named: "Move right") { movePhoto(x: 20) }
@@ -87,31 +90,38 @@ struct ProfilePhotoCropView: View {
     private func resetCrop() {
         guard !isSaving else { return }
         adjustment = AvatarCropAdjustment()
+        cropCommandRevision += 1
     }
 
     private func movePhoto(x: CGFloat = 0, y: CGFloat = 0) {
         guard !isSaving else { return }
         adjustment.offset.width += x
         adjustment.offset.height += y
+        cropCommandRevision += 1
     }
 
     private func save() {
         guard !isSaving else { return }
         error = nil
+        let frozen = adjustment
+        exportAdjustment = frozen
         isSaving = true
         Task {
+            defer {
+                adjustment = frozen
+                isSaving = false
+                exportAdjustment = nil
+            }
             guard let data = await NativeImageProcessor.croppedJPEGData(
                 image: image,
                 cropDiameter: cropDiameter,
-                zoom: adjustment.zoom,
-                offset: adjustment.offset
+                zoom: frozen.zoom,
+                offset: frozen.offset
             ) else {
-                isSaving = false
                 error = "The selected photo could not be cropped. Choose another photo and try again."
                 return
             }
             let saved = await onSave(data)
-            isSaving = false
             if !saved {
                 error = saveFailureMessage() ?? "The photo could not be saved. Check your connection and try again."
                 Haptics.error()
@@ -139,6 +149,8 @@ private struct AvatarCropCanvas: UIViewRepresentable {
     let image: UIImage
     let cropDiameter: CGFloat
     @Binding var adjustment: AvatarCropAdjustment
+    let commandRevision: Int
+    let exportAdjustment: AvatarCropAdjustment?
     let isSaving: Bool
 
     func makeUIView(context: Context) -> AvatarCropScrollView {
@@ -151,14 +163,20 @@ private struct AvatarCropCanvas: UIViewRepresentable {
             guard !isSaving else { return }
             adjustment = value
         }
-        if !view.currentAdjustment.matches(adjustment) {
-            let clamped = view.apply(adjustment)
+        view.freezeForExport(exportAdjustment)
+        // Gesture callbacks update SwiftUI for export and accessibility. Echoing
+        // those values back while UIKit is handling a pinch/drag can replay an
+        // older zoom. Only explicit Reset/VoiceOver commands drive UIKit.
+        if let clamped = view.applyCommand(adjustment, revision: commandRevision) {
             // A VoiceOver move/zoom can exceed an edge. Reflect the actual crop
             // after the SwiftUI update completes, without interrupting gestures.
             if !clamped.matches(adjustment) {
                 let expected = adjustment
                 DispatchQueue.main.async {
-                    if !isSaving && adjustment.matches(expected) { adjustment = clamped }
+                    if !isSaving, view.appliedCommandRevision == commandRevision,
+                       view.currentAdjustment.matches(clamped), adjustment.matches(expected) {
+                        adjustment = clamped
+                    }
                 }
             }
         }
@@ -170,6 +188,9 @@ private final class AvatarCropScrollView: UIView, UIScrollViewDelegate {
     let imageView: UIImageView
     let cropDiameter: CGFloat
     var onChange: ((AvatarCropAdjustment) -> Void)?
+    var appliedCommandRevision = -1
+    private var pendingCommand: (value: AvatarCropAdjustment, revision: Int)?
+    private var frozenForExport: AvatarCropAdjustment?
     private let shade = CAShapeLayer()
     private let guide = CAShapeLayer()
     private let overlay = UIView()
@@ -226,7 +247,18 @@ private final class AvatarCropScrollView: UIView, UIScrollViewDelegate {
         guide.path = UIBezierPath(ovalIn: circle).cgPath
         laidOutSize = bounds.size
         applying = false
-        _ = apply(previous)
+        if let frozenForExport {
+            _ = apply(frozenForExport)
+        } else if let pending = pendingCommand,
+           let actual = applyCommand(pending.value, revision: pending.revision) {
+            if !actual.matches(pending.value) {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.appliedCommandRevision == pending.revision,
+                          self.currentAdjustment.matches(actual) else { return }
+                    self.onChange?(actual)
+                }
+            }
+        } else { _ = apply(previous) }
     }
 
     var currentAdjustment: AvatarCropAdjustment {
@@ -237,9 +269,29 @@ private final class AvatarCropScrollView: UIView, UIScrollViewDelegate {
         ))
     }
 
-    @discardableResult func apply(_ value: AvatarCropAdjustment) -> AvatarCropAdjustment {
+    func applyCommand(_ value: AvatarCropAdjustment, revision: Int) -> AvatarCropAdjustment? {
+        guard revision != appliedCommandRevision else { return nil }
+        pendingCommand = (value, revision)
+        guard laidOutSize != .zero else { return nil }
+        pendingCommand = nil
+        let actual = apply(value)
+        appliedCommandRevision = revision
+        return actual
+    }
+
+    func freezeForExport(_ value: AvatarCropAdjustment?) {
+        let wasFrozen = frozenForExport != nil
+        frozenForExport = value
+        if let value, !wasFrozen { _ = apply(value) }
+    }
+
+    @discardableResult private func apply(_ value: AvatarCropAdjustment) -> AvatarCropAdjustment {
         guard laidOutSize != .zero else { return value }
         applying = true
+        // Explicit commands interrupt motion rather than being lost during it.
+        scrollView.panGestureRecognizer.isEnabled = false
+        scrollView.pinchGestureRecognizer?.isEnabled = false
+        scrollView.setContentOffset(scrollView.contentOffset, animated: false)
         scrollView.setZoomScale(min(max(value.zoom, 1), 3), animated: false)
         let inset = scrollView.contentInset
         let center = CGPoint(x: (scrollView.contentSize.width - bounds.width) / 2, y: (scrollView.contentSize.height - bounds.height) / 2)
@@ -247,6 +299,8 @@ private final class AvatarCropScrollView: UIView, UIScrollViewDelegate {
             x: min(max(center.x - value.offset.width, -inset.left), scrollView.contentSize.width - bounds.width + inset.right),
             y: min(max(center.y - value.offset.height, -inset.top), scrollView.contentSize.height - bounds.height + inset.bottom)
         ), animated: false)
+        scrollView.panGestureRecognizer.isEnabled = true
+        scrollView.pinchGestureRecognizer?.isEnabled = true
         applying = false
         return currentAdjustment
     }
@@ -254,6 +308,9 @@ private final class AvatarCropScrollView: UIView, UIScrollViewDelegate {
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
     func scrollViewDidScroll(_ scrollView: UIScrollView) { reportAdjustment() }
     func scrollViewDidZoom(_ scrollView: UIScrollView) { reportAdjustment() }
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) { reportAdjustment() }
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { reportAdjustment() }
+    func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) { reportAdjustment() }
     private func reportAdjustment() {
         guard !applying, laidOutSize != .zero else { return }
         onChange?(currentAdjustment)
