@@ -254,17 +254,37 @@ struct ReturnTimeCalendar: View {
         (9, 0), (12, 0), (15, 0), (17, 0), (20, 0), (22, 0),
     ]
 
-    /// One-tap times on the picked day: the usual handoff hours, plus the
-    /// latest allowed time when it falls on that day. Times outside the
-    /// window are left out.
+    /// One-tap times on the picked day, six at most. Later days get the usual
+    /// handoff hours; when the window starts or ends that day, the next
+    /// half hours inside it are offered instead, so a short window still has
+    /// real choices. The latest allowed time is always one of them.
     private var quickTimes: [Date] {
         let day = calendar.startOfDay(for: selection)
-        var times = Self.quickHours.compactMap {
-            calendar.date(bySettingHour: $0.hour, minute: $0.minute, second: 0, of: day)
+        let earliest = QuarterHour.roundedUp(minimum)
+        let isTight = calendar.isDate(earliest, inSameDayAs: day)
+            || latest.map { calendar.isDate($0, inSameDayAs: day) } == true
+        var times: [Date]
+        if isTight {
+            let start = max(earliest, day)
+            let step = TimeInterval(30 * 60)
+            let firstHalfHour = Date(timeIntervalSinceReferenceDate: ceil(start.timeIntervalSinceReferenceDate / step) * step)
+            times = (0..<12).map { firstHalfHour.addingTimeInterval(Double($0) * step) }
+        } else {
+            times = Self.quickHours.compactMap {
+                calendar.date(bySettingHour: $0.hour, minute: $0.minute, second: 0, of: day)
+            }
         }
-        if let latest, calendar.isDate(latest, inSameDayAs: day) { times.append(latest) }
-        let valid = times.filter { time in time >= QuarterHour.roundedUp(minimum) && (latest.map { time <= $0 } ?? true) }
-        return Array(Set(valid)).sorted()
+        times = times.filter { time in
+            calendar.isDate(time, inSameDayAs: day)
+                && time >= earliest
+                && (latest.map { time <= $0 } ?? true)
+        }
+        times = Array(times.prefix(6))
+        if let latest, calendar.isDate(latest, inSameDayAs: day), latest >= earliest, !times.contains(latest) {
+            if times.count == 6 { times.removeLast() }
+            times.append(latest)
+        }
+        return times.sorted()
     }
 
     @ViewBuilder

@@ -342,7 +342,7 @@ struct ExtendBookingSheet: View {
         guard let nextNeedAt, let latestEndsAt else {
             return "Nothing else is booked on this gear afterward."
         }
-        return "\(nextNeedName) needs this gear \(label(nextNeedAt, lowercased: true)), so the latest return is \(label(latestEndsAt, lowercased: true))."
+        return "\(nextNeedName) needs this gear \(label(nextNeedAt, lowercased: true)), so the latest return is \(label(latestEndsAt, lowercased: true)), leaving 30 minutes to get it back."
     }
 
     private var cannotExtendMessage: String {
