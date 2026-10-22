@@ -7,7 +7,7 @@ const models = () => source("ios/Wisconsin/Models/BrandAssetModels.swift");
 const client = () => source("ios/Wisconsin/Core/APIClient.swift");
 
 describe("iOS Brand assets browse", () => {
-  it("adds a read-only Brand assets row for internal roles and keeps collaborators off it", () => {
+  it("adds a read-only Brand assets row for internal roles and only for collaborators granted BRAND_ASSETS_VIEW", () => {
     const menu = browse();
     const internalRows = menu.slice(
       menu.indexOf('guard session.currentUser?.role == "COLLABORATOR" else {'),
@@ -25,7 +25,7 @@ describe("iOS Brand assets browse", () => {
       menu.indexOf("let capabilities"),
       menu.indexOf("var body: some View"),
     );
-    expect(collaboratorRows).not.toContain(".brandAssets");
+    expect(collaboratorRows).toContain('capabilities.contains("BRAND_ASSETS_VIEW") ? .brandAssets : nil');
     expect(collaboratorRows).toContain(".scoreboard");
   });
 

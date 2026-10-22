@@ -51,7 +51,7 @@ describe("Brand asset experience source contracts", () => {
     expect(service).toContain("toggleResourceAssetFavorite");
     expect(service).toContain("resource_asset_favorite_added");
     expect(service).toContain("resource_asset_favorite_removed");
-    expect(route).toContain('requirePermission(user.role, "resource", "favorite")');
+    expect(route).toContain('requirePermissionOrCollaboratorCapability(user, "resource", "favorite", "BRAND_ASSETS_VIEW")');
   });
 
   it("exposes previews, recents, links, resilient uploads, and conflict choices in the UI", () => {

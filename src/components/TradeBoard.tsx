@@ -1,38 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  ArrowLeftRightIcon,
-  AlertTriangleIcon,
-  CalendarClockIcon,
-  CalendarDaysIcon,
-  CheckIcon,
-  Clock3Icon,
-  ClipboardListIcon,
-  ShieldCheckIcon,
-  XIcon,
-} from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
-import EmptyState from "@/components/EmptyState";
 import { FilterChip } from "@/components/FilterChip";
-import { OperationalActiveFilterChips, type OperationalActiveFilter } from "@/components/OperationalToolbar";
-import { OperationalRowActions } from "@/components/OperationalRowActions";
-import { UserAvatar } from "@/components/UserAvatar";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+  TradeBoardView,
+  type BoardAction,
+  type BoardNotice,
+  type BoardRow,
+  type BoardTab,
+  type BoardTabSpec,
+} from "@/components/trade-board/TradeBoardView";
+import type { BadgeProps } from "@/components/ui/badge";
 import { scheduleEventTitleParts } from "@/app/(app)/schedule/_components/types";
 import { AREA_LABELS } from "@/types/areas";
 import { formatCalendarEventAllDayLabel } from "@/lib/calendar-event-dates";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
-import { cn } from "@/lib/utils";
 
 type TradeEvent = {
   id: string;
@@ -144,15 +130,6 @@ type ReviewQueueItem =
   | { kind: "trade"; key: string; startsAtMs: number; trade: Trade };
 
 const AREAS = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"] as const;
-const TRADE_STATUSES = ["OPEN", "CLAIMED", "COMPLETED", "CANCELLED"] as const;
-
-const STATUS_OPTIONS = [
-  { value: "OPEN_SHIFT", label: "Open shifts" },
-  { value: "OPEN", label: "Open" },
-  { value: "CLAIMED", label: "Claimed" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
 
 const STATUS_META: Record<string, { label: string; variant: BadgeProps["variant"]; helper: string }> = {
   OPEN: {
@@ -224,10 +201,6 @@ function statusMeta(status: string) {
   };
 }
 
-function isTradeStatus(value: string): value is typeof TRADE_STATUSES[number] {
-  return (TRADE_STATUSES as readonly string[]).includes(value);
-}
-
 function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt" | "workerType" | "shiftGroup">) {
   // An all-day event's shift inherits the event's own UTC-midnight boundary,
   // so reading a clock off it prints 7:00 PM the evening before. Such a shift
@@ -250,20 +223,17 @@ function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt" | "work
   return `${date}, ${startTime} - ${formatDateShort(endsAt)}, ${endTime}`;
 }
 
-function openShiftActionCopy(item: OpenWorkShift) {
-  if (item.action === "claim") return "An admin reviews this before you're on the schedule.";
-  return item.reason;
-}
-
-function tradeOutcomeCopy(trade: Trade, args: { currentUserId: string; isStaff: boolean }) {
-  const isOwnTrade = trade.postedBy.id === args.currentUserId;
-  if (isOwnTrade && (trade.status === "OPEN" || trade.status === "CLAIMED")) {
-    return "Canceling removes the post; the shift stays assigned to you.";
-  }
-  if (trade.status === "OPEN") {
-    return "Claiming sends this to an admin for approval; the shift stays with its owner until then.";
-  }
-  return statusMeta(trade.status).helper;
+/** "2:00 PM – 7:00 PM"; the date lives on the row's date tile. */
+function formatShiftTimes(shift: Pick<TradeShift, "startsAt" | "endsAt" | "workerType" | "shiftGroup">) {
+  if (shift.shiftGroup?.event.allDay) return "All day";
+  const useEventWindow = shift.workerType === "ST"
+    && !studentCallTimeAppliesToEvent(shift.shiftGroup.event);
+  const startsAt = useEventWindow ? shift.shiftGroup.event.startsAt : shift.startsAt;
+  const endsAt = useEventWindow ? shift.shiftGroup.event.endsAt : shift.endsAt;
+  const sameDay = new Date(startsAt).toDateString() === new Date(endsAt).toDateString();
+  return sameDay
+    ? `${formatTimeShort(startsAt)} – ${formatTimeShort(endsAt)}`
+    : `${formatTimeShort(startsAt)} – ${formatDateShort(endsAt)}, ${formatTimeShort(endsAt)}`;
 }
 
 function canViewerClaimTrade(trade: Trade, isStaff: boolean) {
@@ -325,78 +295,6 @@ function reviewDeadlineCopy(
     : `Auto-approval check by ${when}. You are not on the schedule until a decision lands.`;
 }
 
-function TradeSkeleton() {
-  return (
-    <div className="flex flex-col gap-3 p-3">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="rounded-lg border border-border/50 p-3">
-          <div className="flex items-start gap-3">
-            <Skeleton className="size-9 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 flex flex-col gap-2">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
-              <Skeleton className="h-3 w-full" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function WorkSection({
-  title,
-  description,
-  count,
-  children,
-}: {
-  title: string;
-  description: string;
-  count: number;
-  children: ReactNode;
-}) {
-  if (count === 0) return null;
-
-  return (
-    <section className="border-b border-border/50 last:border-b-0">
-      <div className="border-b border-border/40 bg-muted/30 px-4 py-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
-          <span className="text-xs font-medium tabular-nums text-muted-foreground">
-            {count}
-          </span>
-        </div>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
-      </div>
-      <div className="divide-y divide-border/50">{children}</div>
-    </section>
-  );
-}
-
-function AvailabilityContextNote({ context }: { context?: AvailabilityContext | null }) {
-  if (!context) return null;
-  const variant: BadgeProps["variant"] = context.state === "blocked"
-    ? "red"
-    : context.state === "preferred"
-      ? "green"
-      : "orange";
-
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-      <AlertTriangleIcon className={cn(
-        "mt-0.5 size-3.5 shrink-0",
-        context.state === "blocked" ? "text-destructive" : context.state === "preferred" ? "text-[var(--green-text)]" : "text-[var(--orange-text)]",
-      )} />
-      <div className="min-w-0">
-        <Badge variant={variant} size="sm" className="mb-1 h-5 px-1.5 text-[10px]">
-          {context.label}
-        </Badge>
-        <p>{context.detail}</p>
-      </div>
-    </div>
-  );
-}
-
 export default function TradeBoard({ currentUserId, currentUserRole, initialStatusFilter = "", onChanged }: Props) {
   const confirm = useConfirm();
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -413,15 +311,10 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   const openWorkSeqRef = useRef(0);
 
   const [areaFilter, setAreaFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
-  const [myTradesOnly, setMyTradesOnly] = useState(false);
+  const [tab, setTab] = useState<BoardTab | null>(null);
 
   const isStaff = currentUserRole === "ADMIN" || currentUserRole === "STAFF";
   const canReview = currentUserRole === "ADMIN";
-
-  useEffect(() => {
-    if (initialStatusFilter) setStatusFilter(initialStatusFilter);
-  }, [initialStatusFilter]);
 
   const loadTrades = useCallback(async () => {
     const requestId = loadSeqRef.current + 1;
@@ -431,7 +324,6 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     try {
       const params = new URLSearchParams({ limit: "100" });
       if (areaFilter) params.set("area", areaFilter);
-      if (isTradeStatus(statusFilter)) params.set("status", statusFilter);
 
       const res = await fetch(`/api/shift-trades?${params}`, { cache: "no-store" });
       if (handleAuthRedirect(res)) return false;
@@ -456,7 +348,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       if (requestId === loadSeqRef.current) setLoading(false);
     }
     return false;
-  }, [areaFilter, statusFilter]);
+  }, [areaFilter]);
 
   const loadOpenWork = useCallback(async () => {
     const requestId = openWorkSeqRef.current + 1;
@@ -500,31 +392,71 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     void loadOpenWork();
   }, [loadOpenWork]);
 
-  const filteredTrades = useMemo(() => {
-    if (statusFilter === "OPEN_SHIFT") return [];
-    let result = trades;
-    if (myTradesOnly) {
-      result = result.filter(
-        (trade) => trade.postedBy.id === currentUserId || trade.claimedBy?.id === currentUserId,
-      );
-    } else if (!statusFilter && !isStaff) {
-      // A trade the viewer claimed has to survive this filter: it is neither
-      // OPEN nor theirs to post, and dropping it took "Waiting on Admin" — and
-      // with it the only Withdraw claim button — off the default board.
-      result = result.filter(
-        (trade) => trade.status === "OPEN"
-          || trade.postedBy.id === currentUserId
-          || trade.claimedBy?.id === currentUserId,
-      );
-    }
-    return result;
-  }, [trades, statusFilter, isStaff, currentUserId, myTradesOnly]);
+  // A trade the viewer claimed has to survive the student filter: it is neither
+  // OPEN nor theirs to post, and dropping it took Withdraw off the board.
+  const filteredTrades = isStaff
+    ? trades
+    : trades.filter(
+      (trade) => trade.status === "OPEN"
+        || trade.postedBy.id === currentUserId
+        || trade.claimedBy?.id === currentUserId,
+    );
+  const filteredOpenShifts = openWork.openShifts;
 
-  const filteredOpenShifts = useMemo(() => {
-    if (myTradesOnly) return [];
-    if (statusFilter && statusFilter !== "OPEN_SHIFT") return [];
-    return openWork.openShifts;
-  }, [myTradesOnly, openWork.openShifts, statusFilter]);
+  // Admins owe a decision on every claimed trade and every pending request.
+  // Urgency is the shift, not the post, so the queue runs soonest-first.
+  const tradesAwaitingReview = canReview
+    ? filteredTrades.filter((trade) => trade.status === "CLAIMED")
+    : [];
+  const requestsAwaitingReview = canReview ? openWork.pickupRequests : [];
+  const reviewQueue: ReviewQueueItem[] = [
+    ...requestsAwaitingReview.map((request): ReviewQueueItem => ({
+      kind: "request",
+      key: `request:${request.id}`,
+      startsAtMs: effectiveStartMs(request.shift),
+      request,
+    })),
+    ...tradesAwaitingReview.map((trade): ReviewQueueItem => ({
+      kind: "trade",
+      key: `trade:${trade.id}`,
+      startsAtMs: effectiveStartMs(trade.shiftAssignment.shift, trade.shiftAssignment.callStartsAt),
+      trade,
+    })),
+  ].sort((a, b) => a.startsAtMs - b.startsAtMs);
+
+  // The server scopes pickupRequests to every row for Admin and to the
+  // viewer's own rows for everyone else.
+  const myPendingRequests = canReview ? [] : openWork.pickupRequests;
+  const myPendingClaims = canReview
+    ? []
+    : filteredTrades.filter(
+      (trade) => trade.status === "CLAIMED" && trade.claimedBy?.id === currentUserId,
+    );
+
+  const claimableOpenShifts = filteredOpenShifts.filter((item) => item.action === "claim");
+  const unavailableOpenShifts = filteredOpenShifts.filter((item) => item.action === "none");
+  const blockedClaimableTrades = filteredTrades.filter((trade) =>
+    !isStaff
+    && trade.status === "OPEN"
+    && trade.postedBy.id !== currentUserId
+    && !canViewerClaimTrade(trade, isStaff)
+  );
+  const claimableTrades = filteredTrades.filter((trade) =>
+    trade.status === "OPEN" && trade.postedBy.id !== currentUserId
+    && canViewerClaimTrade(trade, isStaff)
+  );
+  const myTradePosts = filteredTrades.filter((trade) =>
+    trade.postedBy.id === currentUserId && (trade.status === "OPEN" || trade.status === "CLAIMED")
+  );
+  const resolvedTrades = filteredTrades.filter((trade) => trade.status === "COMPLETED" || trade.status === "CANCELLED");
+  const postedTrades = filteredTrades.filter((trade) =>
+    !claimableTrades.some((item) => item.id === trade.id)
+    && !blockedClaimableTrades.some((item) => item.id === trade.id)
+    && !myTradePosts.some((item) => item.id === trade.id)
+    && !resolvedTrades.some((item) => item.id === trade.id)
+    && !tradesAwaitingReview.some((item) => item.id === trade.id)
+    && !myPendingClaims.some((item) => item.id === trade.id)
+  );
 
   const reloadWork = useCallback(async () => {
     const results = await Promise.all([loadTrades(), loadOpenWork()]);
@@ -782,1071 +714,260 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     }
   }, [beginAction, confirm, endAction, recoverUncertainAction, reloadWork]);
 
-  const hasFilters = !!(areaFilter || statusFilter || myTradesOnly);
-  const activeFilters: OperationalActiveFilter[] = [
-    ...(areaFilter
-      ? [{
-        key: "area",
-        label: `Area: ${AREA_LABELS[areaFilter] ?? areaFilter}`,
-        onRemove: () => setAreaFilter(""),
-      }]
-      : []),
-    ...(statusFilter
-      ? [{
-        key: "status",
-        label: `Status: ${STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label ?? statusFilter}`,
-        onRemove: () => setStatusFilter(""),
-      }]
-      : []),
-    ...(myTradesOnly
-      ? [{
-        key: "my-trades",
-        label: "My trades",
-        onRemove: () => setMyTradesOnly(false),
-      }]
-      : []),
-  ];
-  const totalRows = filteredOpenShifts.length + filteredTrades.length + openWork.pickupRequests.length;
-  const isLoadingWork = loading && openWorkLoading && totalRows === 0;
-  const hasAnyLoadError = loadError || openWorkError;
-  const hasLoadError = loadError && openWorkError;
-  const countLabel = `${totalRows} ${totalRows === 1 ? "item" : "items"}`;
-  // Admins owe a decision on every claimed trade and every pending request.
-  // Urgency is the shift, not the post: a claim filed this morning on a shift
-  // tonight outranks one filed last week on a shift in March, so the queue runs
-  // soonest-first rather than in the list order the two sources happen to use.
-  const tradesAwaitingReview = canReview
-    ? filteredTrades.filter((trade) => trade.status === "CLAIMED")
-    : [];
-  const requestsAwaitingReview = canReview ? openWork.pickupRequests : [];
-  const reviewCount = tradesAwaitingReview.length + requestsAwaitingReview.length;
-  // Trade claims and pickup requests are two records but one job, so they share
-  // one queue and one ordering key. Rendering them as two consecutive groups
-  // sorted each separately: a request four days out still landed above a claim
-  // on tomorrow's shift, which looks ordered without being ordered.
-  const reviewQueue: ReviewQueueItem[] = [
-    ...requestsAwaitingReview.map((request): ReviewQueueItem => ({
-      kind: "request",
-      key: `request:${request.id}`,
-      startsAtMs: effectiveStartMs(request.shift),
-      request,
-    })),
-    ...tradesAwaitingReview.map((trade): ReviewQueueItem => ({
-      kind: "trade",
-      key: `trade:${trade.id}`,
-      startsAtMs: effectiveStartMs(trade.shiftAssignment.shift, trade.shiftAssignment.callStartsAt),
-      trade,
-    })),
-  ].sort((a, b) => a.startsAtMs - b.startsAtMs);
-
-  // A student sees what they are waiting on. The server already scopes
-  // pickupRequests to all rows only for Admin and to the viewer's own rows for
-  // everyone else.
-  const myPendingRequests = canReview ? [] : openWork.pickupRequests;
-  const myPendingClaims = canReview
-    ? []
-    : filteredTrades.filter(
-      (trade) => trade.status === "CLAIMED" && trade.claimedBy?.id === currentUserId,
-    );
-
-  const claimableOpenShifts = filteredOpenShifts.filter((item) => item.action === "claim");
-  const unavailableOpenShifts = filteredOpenShifts.filter((item) => item.action === "none");
-  const blockedClaimableTrades = filteredTrades.filter((trade) =>
-    !isStaff
-    && trade.status === "OPEN"
-    && trade.postedBy.id !== currentUserId
-    && !canViewerClaimTrade(trade, isStaff)
-  );
-  const claimableTrades = filteredTrades.filter((trade) =>
-    trade.status === "OPEN" && trade.postedBy.id !== currentUserId
-    && canViewerClaimTrade(trade, isStaff)
-  );
-  const myTradePosts = filteredTrades.filter((trade) =>
-    trade.postedBy.id === currentUserId && (trade.status === "OPEN" || trade.status === "CLAIMED")
-  );
-  const resolvedTrades = filteredTrades.filter((trade) => trade.status === "COMPLETED" || trade.status === "CANCELLED");
-  const postedTrades = filteredTrades.filter((trade) =>
-    !claimableTrades.some((item) => item.id === trade.id)
-    && !blockedClaimableTrades.some((item) => item.id === trade.id)
-    && !myTradePosts.some((item) => item.id === trade.id)
-    && !resolvedTrades.some((item) => item.id === trade.id)
-    && !tradesAwaitingReview.some((item) => item.id === trade.id)
-    && !myPendingClaims.some((item) => item.id === trade.id)
-  );
-
-  // Both review row shapes, so one ordered queue can render either.
-  const renderReviewRequest = (request: PickupRequest) => {
-    const shift = request.shift;
+  const titleOf = (shift: TradeShift) => {
     const event = shift.shiftGroup.event;
-    const titleParts = scheduleEventTitleParts({
+    return scheduleEventTitleParts({
       summary: event.summary,
       sportCode: event.sportCode,
       opponent: event.opponent ?? null,
       isHome: event.isHome ?? null,
     });
-    const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-    const isApproving = acting === `approve:${request.id}`;
-    const isDeclining = acting === `decline:${request.id}`;
-    const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt, "reviewer");
-
-    return (
-      <article key={`review-request-${request.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
-        <div className="flex items-start gap-3">
-          <UserAvatar name={request.user.name} size="sm" className="mt-0.5 shrink-0" />
-          <div className="min-w-0 flex-1 flex flex-col gap-2">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {request.user.name} wants this slot
-                </p>
-              </div>
-              <Badge variant="orange" size="sm">Needs review</Badge>
-            </div>
-
-            <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-              <span className="flex min-w-0 items-center gap-1.5">
-                <CalendarClockIcon className="size-3.5 shrink-0" />
-                <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-              </span>
-              <span className="flex min-w-0 items-center gap-1.5">
-                <ClipboardListIcon className="size-3.5 shrink-0" />
-                <span className="truncate">{areaLabel}</span>
-              </span>
-            </div>
-
-            {request.conflictNote && (
-              <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
-                <span>{request.conflictNote}</span>
-              </p>
-            )}
-
-            {deadline && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock3Icon className="size-3.5 shrink-0" />
-                <span>{deadline}</span>
-              </p>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              <Button className="h-10"
-                onClick={() => void handleReviewRequest(request, "approve")}
-                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
-              >
-                {isApproving ? "Approving…" : "Approve"}
-              </Button>
-              <Button className="h-10"
-                variant="outline"
-                onClick={() => void handleReviewRequest(request, "decline")}
-                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
-              >
-                {isDeclining ? "Declining…" : "Decline"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </article>
-    );
   };
+  const blocked = loadError || openWorkError || needsReview;
+  const anyBusy = acting !== null || blocked;
+  const action = (
+    id: string,
+    label: string,
+    busyLabel: string,
+    variant: BoardAction["variant"],
+    onClick: () => void,
+    disabled = false,
+  ): BoardAction => ({
+    label,
+    busyLabel,
+    variant,
+    busy: acting === id,
+    disabled: anyBusy || disabled,
+    onClick,
+  });
+  const base = (
+    key: string,
+    shift: TradeShift,
+    callStartsAt?: string | null,
+  ) => {
+    const parts = titleOf(shift);
+    const startsAt = new Date(effectiveStartMs(shift, callStartsAt)).toISOString();
+    return {
+      key,
+      startsAt: Number.isFinite(effectiveStartMs(shift, callStartsAt)) ? startsAt : shift.startsAt,
+      title: parts.title,
+      detail: parts.detail,
+      times: formatShiftTimes(shift),
+      area: AREA_LABELS[shift.area] ?? shift.area,
+    };
+  };
+  const availabilityNotice = (context?: AvailabilityContext | null): BoardNotice[] =>
+    context
+      ? [{ tone: context.blocking ? "block" : "warn", text: `${context.label}. ${context.detail}` }]
+      : [];
+  const bySoonest = (a: BoardRow, b: BoardRow) => a.startsAt.localeCompare(b.startsAt);
 
-  const renderReviewTrade = (trade: Trade) => {
+  const tradeToRow = (trade: Trade, mode: "claim" | "blocked" | "mine" | "watch" | "waiting" | "review" | "done"): BoardRow => {
     const shift = trade.shiftAssignment.shift;
-    const event = shift.shiftGroup.event;
-    const titleParts = scheduleEventTitleParts({
-      summary: event.summary,
-      sportCode: event.sportCode,
-      opponent: event.opponent ?? null,
-      isHome: event.isHome ?? null,
-    });
-    const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-    const isApproving = acting === `approve:${trade.id}`;
-    const isDeclining = acting === `decline:${trade.id}`;
-    const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt, "reviewer");
-
-    return (
-      <article key={`review-trade-${trade.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
-        <div className="flex items-start gap-3">
-          <UserAvatar name={trade.claimedBy?.name ?? trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-          <div className="min-w-0 flex-1 flex flex-col gap-2">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {trade.claimedBy?.name ?? "Someone"} wants to take {trade.postedBy.name}&apos;s shift
-                </p>
-              </div>
-              <Badge variant="orange" size="sm">Needs review</Badge>
-            </div>
-
-            <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-              <span className="flex min-w-0 items-center gap-1.5">
-                <CalendarClockIcon className="size-3.5 shrink-0" />
-                <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-              </span>
-              <span className="flex min-w-0 items-center gap-1.5">
-                <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                <span className="truncate">{areaLabel}</span>
-              </span>
-            </div>
-
-            {trade.notes && (
-              <p className="rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                {trade.notes}
-              </p>
-            )}
-            <AvailabilityContextNote context={trade.claimedByAvailabilityContext} />
-
-            {deadline && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock3Icon className="size-3.5 shrink-0" />
-                <span>{deadline}</span>
-              </p>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              <Button className="h-10"
-                onClick={() => void handleReviewTrade(trade.id, "approve")}
-                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
-              >
-                {isApproving ? "Approving…" : "Approve trade"}
-              </Button>
-              <Button className="h-10"
-                variant="outline"
-                onClick={() => void handleReviewTrade(trade.id, "decline")}
-                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
-              >
-                {isDeclining ? "Declining…" : "Decline"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </article>
-    );
+    const row = base(`trade:${trade.id}:${mode}`, shift, trade.shiftAssignment.callStartsAt);
+    const poster = { name: trade.postedBy.name };
+    const common = { ...row, note: trade.notes, muted: false, status: null, actions: [] as BoardAction[], notices: [] as BoardNotice[] };
+    if (mode === "claim") {
+      return {
+        ...common,
+        person: poster,
+        summary: `${trade.postedBy.name} can't work this`,
+        notices: availabilityNotice(trade.viewerAvailabilityContext),
+        actions: [action(trade.id, "Claim", "Claiming…", "primary", () => void handleClaim(trade))],
+      };
+    }
+    if (mode === "blocked") {
+      return {
+        ...common,
+        person: poster,
+        summary: `${trade.postedBy.name} can't work this`,
+        muted: true,
+        status: { label: "Can't claim", variant: "gray" },
+        notices: trade.viewerAvailabilityContext
+          ? availabilityNotice(trade.viewerAvailabilityContext)
+          : trade.viewerClaimReason ? [{ tone: "info", text: trade.viewerClaimReason }] : [],
+      };
+    }
+    if (mode === "mine") {
+      const claimed = trade.status === "CLAIMED";
+      return {
+        ...common,
+        person: trade.claimedBy ? { name: trade.claimedBy.name } : poster,
+        summary: claimed
+          ? `${trade.claimedBy?.name ?? "Someone"} claimed it. Waiting on an admin`
+          : "Posted. You keep the shift until someone claims it and an admin approves",
+        status: claimed ? { label: "Claimed", variant: "orange" } : { label: "Open", variant: "green" },
+        menuAction: action(trade.id, "Cancel post", "Cancelling…", "danger", () => void handleCancel(trade)),
+      };
+    }
+    if (mode === "waiting") {
+      const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt, "claimant");
+      return {
+        ...common,
+        person: poster,
+        summary: `Your claim on ${trade.postedBy.name}'s shift`,
+        status: { label: "Pending", variant: "orange" },
+        notices: deadline ? [{ tone: "info", text: deadline }] : [],
+        actions: [action(`withdraw-claim:${trade.id}`, "Withdraw claim", "Withdrawing…", "outline", () => void handleWithdrawClaim(trade))],
+      };
+    }
+    if (mode === "review") {
+      const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt, "reviewer");
+      return {
+        ...common,
+        person: trade.claimedBy ? { name: trade.claimedBy.name } : poster,
+        summary: `${trade.claimedBy?.name ?? "Someone"} wants ${trade.postedBy.name}'s shift`,
+        status: { label: "Needs review", variant: "orange" },
+        notices: [
+          ...availabilityNotice(trade.claimedByAvailabilityContext),
+          ...(deadline ? [{ tone: "info" as const, text: deadline }] : []),
+        ],
+        actions: [
+          action(`approve:${trade.id}`, "Approve", "Approving…", "primary", () => void handleReviewTrade(trade.id, "approve")),
+          action(`decline:${trade.id}`, "Decline", "Declining…", "outline", () => void handleReviewTrade(trade.id, "decline")),
+        ],
+      };
+    }
+    const meta = statusMeta(trade.status);
+    return {
+      ...common,
+      person: poster,
+      summary: trade.claimedBy
+        ? `${trade.postedBy.name} → ${trade.claimedBy.name}`
+        : `Posted by ${trade.postedBy.name}`,
+      muted: mode === "done",
+      status: { label: meta.label, variant: meta.variant },
+    };
   };
+
+  const openShiftToRow = (item: OpenWorkShift): BoardRow => {
+    const row = base(`open:${item.id}`, item.shift, item.shift.callStartsAt);
+    const claimable = item.action === "claim";
+    const warning = claimable
+      ? (item.availabilityContext ? null : item.advisoryConflictNote ?? item.warnings[0]?.label ?? null)
+      : item.reason || item.advisoryConflictNote || item.warnings[0]?.label || null;
+    return {
+      ...row,
+      person: null,
+      summary: item.requestCount > 0
+        ? `Open slot · ${item.requestCount} ${item.requestCount === 1 ? "request" : "requests"} so far`
+        : "Open slot nobody holds yet",
+      note: null,
+      muted: !claimable,
+      status: claimable ? { label: "Open", variant: "green" } : { label: "Can't claim", variant: "gray" },
+      notices: [
+        ...(warning ? [{ tone: claimable ? "warn" as const : "info" as const, text: warning }] : []),
+        ...(claimable ? availabilityNotice(item.availabilityContext) : []),
+      ],
+      actions: claimable
+        ? [action(`pickup:${item.id}`, "Claim", "Claiming…", "primary", () => void handlePickup(item), !item.canAct)]
+        : [],
+    };
+  };
+
+  const requestToRow = (request: PickupRequest, mode: "review" | "waiting"): BoardRow => {
+    const row = base(`request:${request.id}:${mode}`, request.shift, request.shift.callStartsAt);
+    const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt, mode === "review" ? "reviewer" : "claimant");
+    const notices: BoardNotice[] = [
+      ...(request.conflictNote ? [{ tone: "warn" as const, text: request.conflictNote }] : []),
+      ...(deadline ? [{ tone: "info" as const, text: deadline }] : []),
+    ];
+    return {
+      ...row,
+      person: { name: request.user.name, avatarUrl: request.user.avatarUrl },
+      summary: mode === "review" ? `${request.user.name} wants this open slot` : "Your request for this open slot",
+      note: null,
+      muted: false,
+      status: mode === "review"
+        ? { label: "Needs review", variant: "orange" }
+        : { label: "Pending", variant: "orange" },
+      notices,
+      actions: mode === "review"
+        ? [
+          action(`approve:${request.id}`, "Approve", "Approving…", "primary", () => void handleReviewRequest(request, "approve")),
+          action(`decline:${request.id}`, "Decline", "Declining…", "outline", () => void handleReviewRequest(request, "decline")),
+        ]
+        : [action(`withdraw-request:${request.id}`, "Withdraw request", "Withdrawing…", "outline", () => void handleWithdrawRequest(request))],
+    };
+  };
+
+  // Trades and open slots are two records but one job, so each tab sorts them
+  // together by the shift's real start.
+  const availableRows = [
+    ...claimableOpenShifts.map(openShiftToRow),
+    ...claimableTrades.map((trade) => tradeToRow(trade, "claim")),
+    ...postedTrades.filter((trade) => trade.status !== "COMPLETED" && trade.status !== "CANCELLED").map((trade) => tradeToRow(trade, "watch")),
+  ].sort(bySoonest);
+  const unavailableRows = [
+    ...unavailableOpenShifts.map(openShiftToRow),
+    ...blockedClaimableTrades.map((trade) => tradeToRow(trade, "blocked")),
+  ].sort(bySoonest);
+  const mineRows = [
+    ...myTradePosts.map((trade) => tradeToRow(trade, "mine")),
+    ...myPendingClaims.map((trade) => tradeToRow(trade, "waiting")),
+    ...myPendingRequests.map((request) => requestToRow(request, "waiting")),
+  ].sort(bySoonest);
+  const reviewRows = reviewQueue.map((item) =>
+    item.kind === "request" ? requestToRow(item.request, "review") : tradeToRow(item.trade, "review"),
+  );
+  const historyRows = resolvedTrades.map((trade) => tradeToRow(trade, "done")).sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const tabs: BoardTabSpec[] = [
+    ...(canReview ? [{
+      id: "review" as const,
+      label: "Review",
+      count: reviewRows.length,
+      rows: reviewRows,
+      summary: reviewRows.length ? `${reviewRows.length} waiting on you` : null,
+    }] : []),
+    {
+      id: "available",
+      label: "Available",
+      count: availableRows.length,
+      rows: [...availableRows, ...unavailableRows],
+      summary: availableRows.length ? plural(availableRows.length, "shift you can pick up", "shifts you can pick up") : null,
+    },
+    { id: "mine", label: "Mine", count: mineRows.length, rows: mineRows, summary: mineRows.length ? `${mineRows.length} in motion` : null },
+    { id: "history", label: "History", count: 0, rows: historyRows },
+  ];
+  const defaultTab: BoardTab = initialStatusFilter === "CLAIMED" && canReview
+    ? "review"
+    : canReview && reviewRows.length > 0 ? "review" : "available";
+  const activeTab = tab ?? defaultTab;
+
+  const errors = [
+    ...(loadError ? [{ text: "Trade posts did not load. What you see may be stale.", retryLabel: "Retry", onRetry: () => void loadTrades(), busy: loading }] : []),
+    ...(openWorkError ? [{ text: "Open slots did not load. What you see may be stale.", retryLabel: "Retry", onRetry: () => void loadOpenWork(), busy: openWorkLoading }] : []),
+  ];
 
   return (
-    <div className="flex flex-col gap-3">
-      {needsReview && (
-        <div role="alert" className="rounded-md border border-border bg-muted/30 p-3 text-sm">
-          <p>The last action could not be confirmed. It may already have completed. Review the refreshed work before another action.</p>
-          <Button variant="outline" className="mt-2 h-10" disabled={loading || openWorkLoading} onClick={async () => {
-            if (await reloadWork()) {
-              uncertainRef.current = false;
-              setNeedsReview(false);
-            }
-          }}>Review latest work</Button>
-        </div>
+    <TradeBoardView
+      tabs={tabs}
+      tab={tabs.some((item) => item.id === activeTab) ? activeTab : "available"}
+      onTab={setTab}
+      loading={loading || openWorkLoading}
+      errors={errors}
+      needsReview={needsReview ? {
+        busy: loading || openWorkLoading,
+        onReview: async () => {
+          if (await reloadWork()) {
+            uncertainRef.current = false;
+            setNeedsReview(false);
+          }
+        },
+      } : null}
+      intro={isStaff ? null : "Claim open shifts and trades in your area. An admin approves every change before it reaches the schedule."}
+      toolbar={(
+        <FilterChip
+          label="Area"
+          value={areaFilter}
+          displayValue={areaFilter ? AREA_LABELS[areaFilter] ?? areaFilter : ""}
+          options={AREAS.map((area) => ({ value: area, label: AREA_LABELS[area] ?? area }))}
+          onSelect={(value) => setAreaFilter(value)}
+          onClear={() => setAreaFilter("")}
+        />
       )}
-      {!isStaff && (
-        <div className="flex items-start gap-2.5 rounded-md border border-border/60 bg-muted/50 px-3 py-2.5 text-sm">
-          <CalendarDaysIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-          <p className="leading-snug text-muted-foreground">
-            Claim open Student shifts here, or post a trade from an assignment you already own.
-          </p>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterChip
-            label="Area"
-            value={areaFilter}
-            displayValue={areaFilter ? AREA_LABELS[areaFilter] ?? areaFilter : ""}
-            options={AREAS.map((area) => ({ value: area, label: AREA_LABELS[area] ?? area }))}
-            onSelect={(value) => setAreaFilter(value)}
-            onClear={() => setAreaFilter("")}
-          />
-          <FilterChip
-            label="Status"
-            value={statusFilter}
-            displayValue={STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label ?? ""}
-            options={STATUS_OPTIONS}
-            onSelect={(value) => setStatusFilter(value)}
-            onClear={() => setStatusFilter("")}
-          />
-          <FilterChip
-            label="My trades"
-            value={myTradesOnly ? "mine" : ""}
-            displayValue={myTradesOnly ? "My trades" : ""}
-            options={[{ value: "mine", label: "My trades" }]}
-            onSelect={() => setMyTradesOnly(true)}
-            onClear={() => setMyTradesOnly(false)}
-          />
-          {hasFilters && (
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-10 rounded-full px-2.5 text-xs text-muted-foreground"
-              onClick={() => {
-                setAreaFilter("");
-                setStatusFilter("");
-                setMyTradesOnly(false);
-              }}
-            >
-              Clear all
-            </Button>
-          )}
-        </div>
-        <OperationalActiveFilterChips filters={activeFilters} />
-      </div>
-
-      <Card elevation="flat" className="overflow-hidden border-border/60 shadow-sm">
-        <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
-          <CardTitle className="text-sm">Trade Board</CardTitle>
-          <span className="text-xs font-medium tabular-nums text-muted-foreground">
-            {hasAnyLoadError ? "Partial data" : countLabel}
-          </span>
-        </CardHeader>
-
-        {hasAnyLoadError && !hasLoadError && (
-          <div className="divide-y divide-border/50 border-b border-border/60 bg-[var(--orange-bg)]">
-            {loadError && (
-              <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2 text-[var(--orange-text)]">
-                  <AlertTriangleIcon className="size-4 shrink-0" />
-                  <span>Trade Board posts are unavailable. Visible posts may be stale.</span>
-                </span>
-                <Button className="h-10" variant="outline" onClick={loadTrades} disabled={loading}>
-                  {loading ? "Retrying..." : "Retry posts"}
-                </Button>
-              </div>
-            )}
-            {openWorkError && (
-              <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2 text-[var(--orange-text)]">
-                  <AlertTriangleIcon className="size-4 shrink-0" />
-                  <span>Open Student slots are unavailable. Visible slots may be stale.</span>
-                </span>
-                <Button className="h-10" variant="outline" onClick={loadOpenWork} disabled={openWorkLoading}>
-                  {openWorkLoading ? "Retrying..." : "Retry open slots"}
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {isLoadingWork ? (
-          <TradeSkeleton />
-        ) : hasLoadError ? (
-          <CardContent className="p-4 text-center">
-            <p className="mb-3 text-sm text-muted-foreground">Open shifts did not load. Retry before acting on shift or trade coverage.</p>
-            <Button className="h-10" variant="outline" onClick={reloadWork}>
-              Retry
-            </Button>
-          </CardContent>
-        ) : !hasAnyLoadError && totalRows === 0 ? (
-          <EmptyState
-            icon="clipboard"
-            title={hasFilters ? "No matching work" : "No open shifts"}
-            description={
-              hasFilters
-                ? "Clear or adjust the filters to see more shift and trade activity."
-                : "No shifts are currently open for pickup or posted for trade. Published shifts will appear here when someone opens a slot or requests coverage."
-            }
-            actionLabel={hasFilters ? "Clear filters" : "View schedule"}
-            actionHref={!hasFilters ? "/schedule" : undefined}
-            onAction={hasFilters ? () => {
-              setAreaFilter("");
-              setStatusFilter("");
-              setMyTradesOnly(false);
-            } : undefined}
-            compact
-          />
-        ) : totalRows > 0 ? (
-          <div>
-            {reviewCount > 0 && (
-              <WorkSection
-                title="Admin Review"
-                description="Students are waiting on these. Nothing moves on the schedule until you decide."
-                count={reviewCount}
-              >
-                {reviewQueue.map((item) => (
-                  item.kind === "request"
-                    ? renderReviewRequest(item.request)
-                    : renderReviewTrade(item.trade)
-                ))}
-              </WorkSection>
-            )}
-
-            {claimableOpenShifts.length > 0 && (
-              <WorkSection
-                title="Open Shifts"
-                description="Unassigned Student slots. Claiming sends a pickup request to an admin."
-                count={claimableOpenShifts.length}
-              >
-              {claimableOpenShifts.map((item) => {
-              const shift = item.shift;
-              const event = shift.shiftGroup.event;
-              const titleParts = scheduleEventTitleParts({
-                summary: event.summary,
-                sportCode: event.sportCode,
-                opponent: event.opponent ?? null,
-                isHome: event.isHome ?? null,
-              });
-              const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-              const isBusy = acting === `pickup:${item.id}`;
-              const primaryWarning = item.availabilityContext ? null : item.advisoryConflictNote ?? item.warnings[0]?.label ?? null;
-
-              return (
-                <article
-                  key={`open-${item.id}`}
-                  className="group/open-work px-4 py-3 transition-colors hover:bg-muted/25"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <ClipboardListIcon className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1 flex flex-col gap-2">
-                      <div className="flex min-w-0 items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                          {titleParts.detail && (
-                            <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                          )}
-                        </div>
-                        <Badge variant="green" size="sm">
-                          Open
-                        </Badge>
-                      </div>
-
-                      <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <CalendarClockIcon className="size-3.5 shrink-0" />
-                          <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                        </span>
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                          <span className="truncate">{areaLabel}</span>
-                        </span>
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <ShieldCheckIcon className="size-3.5 shrink-0" />
-                          <span className="truncate">{openShiftActionCopy(item)}</span>
-                        </span>
-                        {item.score !== null && (
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <Clock3Icon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">Fit score {item.score}</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {primaryWarning && (
-                        <p className="flex items-start gap-1.5 rounded-md bg-[var(--orange-bg)] px-2.5 py-2 text-xs leading-relaxed text-[var(--orange-text)]">
-                          <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
-                          <span>{primaryWarning}</span>
-                        </p>
-                      )}
-                      <AvailabilityContextNote context={item.availabilityContext} />
-
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Button
-                          className="h-10 gap-1.5"
-                          onClick={() => void handlePickup(item)}
-                          disabled={acting !== null || needsReview || loadError || openWorkError || !item.canAct}
-                        >
-                          <CheckIcon className="size-3.5" />
-                          {isBusy ? "Claiming..." : "Claim shift"}
-                        </Button>
-                        {item.requestCount > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            {item.requestCount} pending {item.requestCount === 1 ? "request" : "requests"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              );
-              })}
-              </WorkSection>
-            )}
-
-            {claimableTrades.length > 0 && (
-              <WorkSection
-                title="Trade Posts"
-                description="Shifts another student posted for coverage. Claiming sends the trade to an admin."
-                count={claimableTrades.length}
-              >
-              {claimableTrades.map((trade) => {
-                const shift = trade.shiftAssignment.shift;
-                const event = shift.shiftGroup.event;
-                const titleParts = scheduleEventTitleParts({
-                  summary: event.summary,
-                  sportCode: event.sportCode,
-                  opponent: event.opponent ?? null,
-                  isHome: event.isHome ?? null,
-                });
-                const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                const meta = statusMeta(trade.status);
-                const isBusy = acting === trade.id;
-
-                return (
-                  <article
-                    key={trade.id}
-                    className="group/trade px-4 py-3 transition-colors hover:bg-muted/25"
-                  >
-                    <div className="flex items-start gap-3">
-                      <UserAvatar name={trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1 flex flex-col gap-2">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                            {titleParts.detail && (
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                            )}
-                          </div>
-                          <Badge variant={meta.variant} size="sm">
-                            {meta.label}
-                          </Badge>
-                        </div>
-
-                        <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <CalendarClockIcon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{areaLabel}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ShieldCheckIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{tradeOutcomeCopy(trade, { currentUserId, isStaff })}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <Clock3Icon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">Posted {formatDateShort(trade.postedAt)}</span>
-                          </span>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>
-                            Posted by <span className="font-medium text-foreground">{trade.postedBy.name}</span>
-                          </span>
-                          <span className="font-medium text-[var(--green-text)]">
-                            Available to claim
-                          </span>
-                        </div>
-
-                        {trade.notes && (
-                          <p className="rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                            {trade.notes}
-                          </p>
-                        )}
-
-                        <AvailabilityContextNote context={trade.viewerAvailabilityContext} />
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <Button
-                            className="h-10 gap-1.5"
-                            onClick={() => void handleClaim(trade)}
-                            disabled={acting !== null || needsReview || loadError || openWorkError}
-                          >
-                            <CheckIcon className="size-3.5" />
-                            {isBusy ? "Claiming..." : "Claim"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-                })}
-              </WorkSection>
-            )}
-
-            <WorkSection
-              title="My Posts"
-              description="Trades you posted. Canceling a post keeps the shift assigned to you."
-              count={myTradePosts.length}
-            >
-              {myTradePosts.map((trade) => {
-              const shift = trade.shiftAssignment.shift;
-              const event = shift.shiftGroup.event;
-              const titleParts = scheduleEventTitleParts({
-                summary: event.summary,
-                sportCode: event.sportCode,
-                opponent: event.opponent ?? null,
-                isHome: event.isHome ?? null,
-              });
-              const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-              const meta = statusMeta(trade.status);
-              const isOwnTrade = trade.postedBy.id === currentUserId;
-              const isBusy = acting === trade.id;
-              const canCancel = isOwnTrade && (trade.status === "OPEN" || trade.status === "CLAIMED");
-
-              return (
-                <article
-                  key={trade.id}
-                  className="group/trade px-4 py-3 transition-colors hover:bg-muted/25"
-                >
-                  <div className="flex items-start gap-3">
-                    <UserAvatar name={trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-                    <div className="min-w-0 flex-1 flex flex-col gap-2">
-                      <div className="flex min-w-0 items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                          {titleParts.detail && (
-                            <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                          )}
-                        </div>
-                        <Badge variant={meta.variant} size="sm">
-                          {meta.label}
-                        </Badge>
-                      </div>
-
-                      <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <CalendarClockIcon className="size-3.5 shrink-0" />
-                          <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                        </span>
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                          <span className="truncate">{areaLabel}</span>
-                        </span>
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <ShieldCheckIcon className="size-3.5 shrink-0" />
-                          <span className="truncate">
-                            Admin approval required
-                          </span>
-                        </span>
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <Clock3Icon className="size-3.5 shrink-0" />
-                          <span className="truncate tabular-nums">Posted {formatDateShort(trade.postedAt)}</span>
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span>
-                          Posted by <span className="font-medium text-foreground">{trade.postedBy.name}</span>
-                        </span>
-                        {trade.claimedBy && (
-                          <span>
-                            Claimed by <span className="font-medium text-foreground">{trade.claimedBy.name}</span>
-                          </span>
-                        )}
-                        <span className={cn(
-                          "font-medium",
-                          trade.status === "OPEN" ? "text-[var(--green-text)]" : "text-muted-foreground",
-                        )}>
-                          {tradeOutcomeCopy(trade, { currentUserId, isStaff })}
-                        </span>
-                      </div>
-
-                      {trade.notes && (
-                        <p className="rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                          {trade.notes}
-                        </p>
-                      )}
-
-                      {canCancel && (
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <OperationalRowActions
-                            label={`Actions for ${titleParts.title} trade`}
-                          >
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled={acting !== null || needsReview || loadError || openWorkError}
-                              onSelect={() => void handleCancel(trade)}
-                            >
-                              <XIcon className="size-4" />
-                              {isBusy ? "Cancelling..." : "Cancel"}
-                            </DropdownMenuItem>
-                          </OperationalRowActions>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-            </WorkSection>
-
-            {(myPendingRequests.length + myPendingClaims.length) > 0 && (
-              <WorkSection
-                title="Waiting on Admin"
-                description="These requests and claims are waiting for an admin. You are not on the schedule until approval."
-                count={myPendingRequests.length + myPendingClaims.length}
-              >
-                {myPendingRequests.map((request) => {
-                  const shift = request.shift;
-                  const event = shift.shiftGroup.event;
-                  const titleParts = scheduleEventTitleParts({
-                    summary: event.summary,
-                    sportCode: event.sportCode,
-                    opponent: event.opponent ?? null,
-                    isHome: event.isHome ?? null,
-                  });
-                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                  const isBusy = acting === `withdraw-request:${request.id}`;
-                  const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt, "claimant");
-
-                  return (
-                    <article key={`mine-request-${request.id}`} className="px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                          <ClipboardListIcon className="size-4" />
-                        </div>
-                        <div className="min-w-0 flex-1 flex flex-col gap-2">
-                          <div className="flex min-w-0 items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                              {titleParts.detail && (
-                                <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                              )}
-                            </div>
-                            <Badge variant="orange" size="sm">Waiting</Badge>
-                          </div>
-                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <CalendarClockIcon className="size-3.5 shrink-0" />
-                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <ClipboardListIcon className="size-3.5 shrink-0" />
-                              <span className="truncate">{areaLabel}</span>
-                            </span>
-                          </div>
-                          {deadline && (
-                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock3Icon className="size-3.5 shrink-0" />
-                              <span>{deadline}</span>
-                            </p>
-                          )}
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            <Button
-                              variant="outline"
-                              className="h-10"
-                              onClick={() => void handleWithdrawRequest(request)}
-                              disabled={acting !== null || needsReview || loadError || openWorkError}
-                            >
-                              {isBusy ? "Withdrawing…" : "Withdraw request"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-
-                {myPendingClaims.map((trade) => {
-                  const shift = trade.shiftAssignment.shift;
-                  const event = shift.shiftGroup.event;
-                  const titleParts = scheduleEventTitleParts({
-                    summary: event.summary,
-                    sportCode: event.sportCode,
-                    opponent: event.opponent ?? null,
-                    isHome: event.isHome ?? null,
-                  });
-                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                  const isBusy = acting === `withdraw-claim:${trade.id}`;
-                  const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt, "claimant");
-
-                  return (
-                    <article key={`mine-claim-${trade.id}`} className="px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <UserAvatar name={trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-                        <div className="min-w-0 flex-1 flex flex-col gap-2">
-                          <div className="flex min-w-0 items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                {trade.postedBy.name}&apos;s shift
-                              </p>
-                            </div>
-                            <Badge variant="orange" size="sm">Waiting</Badge>
-                          </div>
-                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <CalendarClockIcon className="size-3.5 shrink-0" />
-                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                              <span className="truncate">{areaLabel}</span>
-                            </span>
-                          </div>
-                          {deadline && (
-                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock3Icon className="size-3.5 shrink-0" />
-                              <span>{deadline}</span>
-                            </p>
-                          )}
-                          {trade.viewerClaimReason && (
-                            <p className="text-xs leading-relaxed text-muted-foreground">{trade.viewerClaimReason}</p>
-                          )}
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            <Button
-                              variant="outline"
-                              className="h-10"
-                              onClick={() => void handleWithdrawClaim(trade)}
-                              disabled={acting !== null || needsReview || loadError || openWorkError}
-                            >
-                              {isBusy ? "Withdrawing…" : "Withdraw claim"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </WorkSection>
-            )}
-
-            <WorkSection
-              title="Waiting or Blocked"
-              description="These shifts are visible for context, but cannot be picked up from your current state."
-              count={unavailableOpenShifts.length + blockedClaimableTrades.length}
-            >
-              {unavailableOpenShifts.map((item) => {
-                const shift = item.shift;
-                const event = shift.shiftGroup.event;
-                const titleParts = scheduleEventTitleParts({
-                  summary: event.summary,
-                  sportCode: event.sportCode,
-                  opponent: event.opponent ?? null,
-                  isHome: event.isHome ?? null,
-                });
-                const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                const primaryWarning = item.reason || item.advisoryConflictNote || item.warnings[0]?.label;
-
-                return (
-                  <article
-                    key={`open-${item.id}`}
-                    className="group/open-work px-4 py-3 transition-colors hover:bg-muted/25"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                        <ClipboardListIcon className="size-4" />
-                      </div>
-                      <div className="min-w-0 flex-1 flex flex-col gap-2">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                            {titleParts.detail && (
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                            )}
-                          </div>
-                          <Badge variant="gray" size="sm">
-                            Not available
-                          </Badge>
-                        </div>
-
-                        <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <CalendarClockIcon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{areaLabel}</span>
-                          </span>
-                        </div>
-
-                        {primaryWarning && (
-                          <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                            <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
-                            <span>{primaryWarning}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-
-              {blockedClaimableTrades.map((trade) => {
-                const shift = trade.shiftAssignment.shift;
-                const event = shift.shiftGroup.event;
-                const titleParts = scheduleEventTitleParts({
-                  summary: event.summary,
-                  sportCode: event.sportCode,
-                  opponent: event.opponent ?? null,
-                  isHome: event.isHome ?? null,
-                });
-                const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-
-                return (
-                  <article
-                    key={trade.id}
-                    className="group/trade px-4 py-3 transition-colors hover:bg-muted/25"
-                  >
-                    <div className="flex items-start gap-3">
-                      <UserAvatar name={trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1 flex flex-col gap-2">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                            {titleParts.detail && (
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                            )}
-                          </div>
-                          <Badge variant="red" size="sm">
-                            Blocked
-                          </Badge>
-                        </div>
-
-                        <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <CalendarClockIcon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{areaLabel}</span>
-                          </span>
-                        </div>
-
-                        <AvailabilityContextNote context={trade.viewerAvailabilityContext} />
-                        {!trade.viewerAvailabilityContext && trade.viewerClaimReason && (
-                          <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                            <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
-                            <span>{trade.viewerClaimReason}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </WorkSection>
-
-            <WorkSection
-              title="Posted Trades"
-              description="Trade posts visible for coverage context."
-              count={postedTrades.length}
-            >
-              {postedTrades.map((trade) => {
-                const shift = trade.shiftAssignment.shift;
-                const event = shift.shiftGroup.event;
-                const titleParts = scheduleEventTitleParts({
-                  summary: event.summary,
-                  sportCode: event.sportCode,
-                  opponent: event.opponent ?? null,
-                  isHome: event.isHome ?? null,
-                });
-                const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                const meta = statusMeta(trade.status);
-
-                return (
-                  <article
-                    key={trade.id}
-                    className="group/trade px-4 py-3 transition-colors hover:bg-muted/25"
-                  >
-                    <div className="flex items-start gap-3">
-                      <UserAvatar name={trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1 flex flex-col gap-2">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                            {titleParts.detail && (
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                            )}
-                          </div>
-                          <Badge variant={meta.variant} size="sm">
-                            {meta.label}
-                          </Badge>
-                        </div>
-
-                        <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <CalendarClockIcon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{areaLabel}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ShieldCheckIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{tradeOutcomeCopy(trade, { currentUserId, isStaff })}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <Clock3Icon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">Posted {formatDateShort(trade.postedAt)}</span>
-                          </span>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>
-                            Posted by <span className="font-medium text-foreground">{trade.postedBy.name}</span>
-                          </span>
-                          {trade.claimedBy && (
-                            <span>
-                              Claimed by <span className="font-medium text-foreground">{trade.claimedBy.name}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </WorkSection>
-
-            <WorkSection
-              title="Resolved"
-              description="Completed or cancelled trade history shown by the current filters."
-              count={resolvedTrades.length}
-            >
-              {resolvedTrades.map((trade) => {
-                const shift = trade.shiftAssignment.shift;
-                const event = shift.shiftGroup.event;
-                const titleParts = scheduleEventTitleParts({
-                  summary: event.summary,
-                  sportCode: event.sportCode,
-                  opponent: event.opponent ?? null,
-                  isHome: event.isHome ?? null,
-                });
-                const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                const meta = statusMeta(trade.status);
-
-                return (
-                  <article
-                    key={trade.id}
-                    className="group/trade px-4 py-3 transition-colors hover:bg-muted/25"
-                  >
-                    <div className="flex items-start gap-3">
-                      <UserAvatar name={trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1 flex flex-col gap-2">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                            {titleParts.detail && (
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
-                            )}
-                          </div>
-                          <Badge variant={meta.variant} size="sm">
-                            {meta.label}
-                          </Badge>
-                        </div>
-
-                        <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <CalendarClockIcon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{areaLabel}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <ShieldCheckIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{meta.helper}</span>
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <Clock3Icon className="size-3.5 shrink-0" />
-                            <span className="truncate tabular-nums">Posted {formatDateShort(trade.postedAt)}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </WorkSection>
-          </div>
-        ) : null}
-      </Card>
-    </div>
+    />
   );
 }

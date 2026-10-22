@@ -14,6 +14,10 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/services/notification-resolution", () => ({
+  resolveSettledNotificationsForUser: vi.fn(),
+}));
+
 vi.mock("@/lib/audit", () => ({
   createAuditEntry: vi.fn(),
 }));
@@ -25,6 +29,7 @@ vi.mock("@sentry/nextjs", () => ({
 import { createAuditEntry } from "@/lib/audit";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { resolveSettledNotificationsForUser } from "@/lib/services/notification-resolution";
 import { GET, PATCH } from "@/app/api/notifications/route";
 
 const user = {
@@ -189,5 +194,6 @@ describe("GET /api/notifications", () => {
     });
     expect(db.notification.count).toHaveBeenNthCalledWith(2, { where: { userId: user.id } });
     expect(db.notification.count).toHaveBeenNthCalledWith(3, { where: { userId: user.id, readAt: null } });
+    expect(resolveSettledNotificationsForUser).toHaveBeenCalledWith(user.id);
   });
 });

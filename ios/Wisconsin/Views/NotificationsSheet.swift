@@ -126,6 +126,26 @@ final class NotificationsViewModel {
         }
     }
 
+    /// Puts one row back to unread, the counterpart of the swipe that marked it.
+    /// Uses the same bulk endpoint the Undo banner does; a failed or unconfirmed
+    /// response re-reads the inbox rather than guessing which state won.
+    func markUnread(id: String) async {
+        guard !isMutating, !isLoading, authSessionBoundary.owns(sessionBoundary),
+              notifications.contains(where: { $0.id == id && !$0.isUnread }) else { return }
+        isMutating = true
+        actionError = nil
+        defer { isMutating = false }
+        do {
+            try await api.markNotificationsUnread(ids: [id])
+            guard authSessionBoundary.owns(sessionBoundary) else { return }
+            notifications = notifications.map { $0.id == id ? $0.asUnread : $0 }
+            unreadCount += 1
+            await refreshUnread()
+        } catch {
+            await reconcileReadFailure()
+        }
+    }
+
     func markAllRead() async {
         guard !isMutating, !isLoading, authSessionBoundary.owns(sessionBoundary), unreadCount > 0 else { return }
         isMutating = true
@@ -193,6 +213,13 @@ private extension AppNotification {
     var asRead: AppNotification {
         AppNotification(id: id, type: type, title: title, body: body,
                         readAt: readAt ?? Date(), createdAt: createdAt, payload: payload, sentAt: sentAt)
+    }
+}
+
+private extension AppNotification {
+    var asUnread: AppNotification {
+        AppNotification(id: id, type: type, title: title, body: body,
+                        readAt: nil, createdAt: createdAt, payload: payload, sentAt: sentAt)
     }
 }
 
@@ -323,9 +350,14 @@ struct NotificationsSheet: View {
                             NotificationRow(notification: notif)
                         }
                         .buttonStyle(.plain)
-                        .swipeActions(edge: .leading) {
+                        // Leading is the Spark-style "done": a full swipe marks
+                        // an unread row read. Trailing offers the same, or puts
+                        // a read row back to unread. The API has no delete, so
+                        // there is deliberately no destructive action here.
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             if notif.isUnread && !vm.isMutating && !vm.isLoading {
                                 Button {
+                                    Haptics.success()
                                     Task { await vm.markRead(id: notif.id) }
                                 } label: {
                                     Label("Mark Read", systemImage: "checkmark")
@@ -334,15 +366,27 @@ struct NotificationsSheet: View {
                                 .accessibilityLabel("Mark as read")
                             }
                         }
-                        .swipeActions(edge: .trailing) {
-                            if notif.isUnread && !vm.isMutating && !vm.isLoading {
-                                Button {
-                                    Task { await vm.markRead(id: notif.id) }
-                                } label: {
-                                    Label("Mark Read", systemImage: "checkmark")
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if !vm.isMutating && !vm.isLoading {
+                                if notif.isUnread {
+                                    Button {
+                                        Haptics.success()
+                                        Task { await vm.markRead(id: notif.id) }
+                                    } label: {
+                                        Label("Mark Read", systemImage: "checkmark")
+                                    }
+                                    .tint(Color.statusText(.blue))
+                                    .accessibilityLabel("Mark as read")
+                                } else {
+                                    Button {
+                                        Haptics.selection()
+                                        Task { await vm.markUnread(id: notif.id) }
+                                    } label: {
+                                        Label("Mark Unread", systemImage: "circle.fill")
+                                    }
+                                    .tint(Color.statusText(.gray))
+                                    .accessibilityLabel("Mark as unread")
                                 }
-                                .tint(Color.statusText(.blue))
-                                .accessibilityLabel("Mark as read")
                             }
                         }
                         // Long press agrees with the swipe. A row that offers
@@ -350,10 +394,16 @@ struct NotificationsSheet: View {
                         // distrust both.
                         .contextMenu {
                             if notif.isUnread && !vm.isMutating && !vm.isLoading {
-                                 Button {
-                                     Task { await vm.markRead(id: notif.id) }
-                                 } label: {
+                                Button {
+                                    Task { await vm.markRead(id: notif.id) }
+                                } label: {
                                     Label("Mark Read", systemImage: "checkmark")
+                                }
+                            } else if !notif.isUnread && !vm.isMutating && !vm.isLoading {
+                                Button {
+                                    Task { await vm.markUnread(id: notif.id) }
+                                } label: {
+                                    Label("Mark Unread", systemImage: "circle")
                                 }
                             }
                         }
@@ -419,32 +469,35 @@ struct NotificationsSheet: View {
         dismiss()
     }
 
+    /// One section per calendar day, newest first: Today, Yesterday, then the
+    /// weekday for the rest of the week and a date beyond that. Order follows
+    /// the inbox itself, so a day appears where its first row does.
     private var groupedSections: [(String, [AppNotification])] {
         let cal = Calendar.current
-        var todays: [AppNotification] = []
-        var yesterday: [AppNotification] = []
-        var thisWeek: [AppNotification] = []
-        var older: [AppNotification] = []
-
+        var order: [Int] = []
+        var buckets: [Int: [AppNotification]] = [:]
         for n in vm.notifications {
-            let daysAgo = -cal.dayOffset(of: n.displayDate, from: today)
-            if daysAgo <= 0 {
-                todays.append(n)
-            } else if daysAgo == 1 {
-                yesterday.append(n)
-            } else if daysAgo < 7 {
-                thisWeek.append(n)
-            } else {
-                older.append(n)
-            }
+            let daysAgo = max(0, -cal.dayOffset(of: n.displayDate, from: today))
+            if buckets[daysAgo] == nil { order.append(daysAgo) }
+            buckets[daysAgo, default: []].append(n)
         }
+        return order.map { daysAgo in
+            let items = buckets[daysAgo] ?? []
+            return (Self.dayTitle(daysAgo: daysAgo, sample: items.first?.displayDate ?? today), items)
+        }
+    }
 
-        return [
-            ("Today", todays),
-            ("Yesterday", yesterday),
-            ("Previous 7 Days", thisWeek),
-            ("Older", older),
-        ].filter { !$0.1.isEmpty }
+    static func dayTitle(daysAgo: Int, sample: Date) -> String {
+        switch daysAgo {
+        case 0: return "Today"
+        case 1: return "Yesterday"
+        case 2..<7: return sample.formatted(.dateTime.weekday(.wide))
+        default:
+            let sameYear = Calendar.current.isDate(sample, equalTo: .now, toGranularity: .year)
+            return sameYear
+                ? sample.formatted(.dateTime.month(.abbreviated).day())
+                : sample.formatted(.dateTime.month(.abbreviated).day().year())
+        }
     }
 }
 
@@ -538,7 +591,7 @@ private extension String {
         if hasPrefix("checkout_overdue") { return .red }
         if hasPrefix("checkout_due") { return .orange }
         if hasPrefix("checkin_item_damaged") || hasPrefix("checkin_item_lost") { return .red }
-        if self == "trade_claimed" || self == "trade_approved" { return .blue }
+        if self == "trade_available" || self == "trade_claimed" || self == "trade_approved" { return .blue }
         if self == "trade_declined" || self == "trade_expired" { return .red }
         if hasPrefix("shift_gear_up") { return .green }
         if hasPrefix("shift_") { return .blue }

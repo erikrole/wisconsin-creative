@@ -85,6 +85,7 @@ export function buildNotificationEmail({
   bookingTitle,
   dueAt,
   kind,
+  href,
 }: {
   title: string;
   body: string;
@@ -92,6 +93,12 @@ export function buildNotificationEmail({
   dueAt?: string;
   /** Picks the label, fact names, and button destination. Omit for a generic notice. */
   kind?: NotificationEmailKind;
+  /**
+   * The app path this notice is about, e.g. `/checkouts/{id}`. The button
+   * opens it instead of the kind's list page, so the reader lands on the
+   * checkout or event rather than having to find it.
+   */
+  href?: string;
 }): RenderedEmail {
   const copy = kind ? NOTIFICATION_KINDS[kind] : null;
   const dueStr = dueAt
@@ -122,8 +129,18 @@ export function buildNotificationEmail({
     paragraphs: [body],
     facts,
     action: copy
-      ? { label: copy.actionLabel, url: `${env.appUrl}${copy.path}` }
+      ? { label: actionLabel(kind!, href), url: `${env.appUrl}${appPath(href) ?? copy.path}` }
       : { label: "Open Wisconsin Creative", url: env.appUrl },
     manageNotifications: true,
   });
+}
+
+/** Only same-app paths become links; anything else falls back to the list page. */
+function appPath(href: string | undefined): string | null {
+  return href && href.startsWith("/") && !href.startsWith("//") ? href : null;
+}
+
+function actionLabel(kind: NotificationEmailKind, href: string | undefined): string {
+  if (kind === "schedule" && appPath(href)?.startsWith("/events/")) return "View event";
+  return NOTIFICATION_KINDS[kind].actionLabel;
 }

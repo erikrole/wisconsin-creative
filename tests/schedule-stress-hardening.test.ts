@@ -124,8 +124,9 @@ describe("Schedule follow-up hardening (drafts, claims, token)", () => {
 
   it("uses personal call time and UTC dates on Trade Board rows, and notes a capped list", () => {
     const board = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
-    expect(board).toContain("func dateTimeLine(personalStartsAt: Date?, personalEndsAt: Date?) -> String");
-    expect(board).toContain("personalStartsAt: trade.shiftAssignment.callStartsAt,");
+    expect(board).toContain("func timesLine(personalStartsAt: Date?, personalEndsAt: Date?) -> String");
+    expect(board).toContain("func boardStart(personalStartsAt: Date?, personalEndsAt: Date?) -> Date");
+    expect(board).toContain("personalStartsAt: assignment.callStartsAt,");
     expect(board).toContain("vm.openWork.openShiftsTruncated || vm.openWork.pickupRequestsTruncated");
   });
 });

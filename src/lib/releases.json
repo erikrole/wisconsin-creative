@@ -1,5 +1,220 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "Tools in the sidebar",
+    "type": "feature",
+    "summary": "A new Tools item in the sidebar opens QR Studio, Board Sizes, Golden Hour, Timelapse, and Photo Frame in one click.",
+    "details": [
+      "Hover Tools at the bottom of the sidebar, or click or tap it, to see each tool.",
+      "It works from the collapsed sidebar and on your phone, and with the keyboard.",
+      "All apps and tools at the bottom of the list opens the full page."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 589
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A calmer Bookings screen on iPhone",
+    "type": "improvement",
+    "summary": "Bookings on iPhone is rebuilt to be quieter and easier to scan.",
+    "details": [
+      "The list is grouped by day, with anything overdue or waiting on pickup first.",
+      "Each row shows who has it and a colored time: red overdue, orange missed pickup, blue checked out, purple reserved.",
+      "Switch between Everyone and Mine at the top, and the filter button now says what you are looking at.",
+      "Booking details are redesigned: a status line, pickup and return side by side with a progress bar while gear is out, and the owner with their photo.",
+      "Extend shows the current and new return side by side with quick picks like 1 more hour or Tomorrow, and picking a time is one tap. Booking notes are gone from iPhone.",
+      "When gear is needed again, the booking says which booking needs it next."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 586
+  },
+ {
+    "date": "2026-10-21",
+    "title": "Hide gear from partners",
+    "type": "feature",
+    "summary": "Admins and staff can now keep individual items out of the Big Ten Network and Learfield catalog.",
+    "details": [
+      "Each item has a new Visible to collaborators switch under Workflow Eligibility, on by default.",
+      "Turned off, the item disappears from collaborators' catalog and they can't reserve it, including through a kit.",
+      "Staff and students are unaffected."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Brand assets for partners",
+    "type": "feature",
+    "summary": "Big Ten Network and Learfield collaborators can now browse and download the brand asset library.",
+    "details": [
+      "Logos, fonts and brand files are available from a new Brand assets link in the sidebar.",
+      "Internal guides and the contacts list stay hidden from collaborators.",
+      "Admins can switch this off per organization in Settings, Collaborator access."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Partners see team gear activity",
+    "type": "improvement",
+    "summary": "Big Ten Network and Learfield collaborators can now see what gear is booked and who has it, not just their own bookings.",
+    "details": [
+      "Bookings and Checkouts show everyone's reservations and checkouts, with full names.",
+      "The Items list shows who currently has a piece of gear and when it is due back.",
+      "Brand now shows in the gear catalog for collaborators.",
+      "View only: collaborators still can only change their own reservations, and pickups and returns still happen at the kiosk.",
+      "Admins can switch this off per organization in Settings, Collaborator access."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 552
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A new Home page",
+    "type": "improvement",
+    "summary": "Home was rebuilt around what you need first: what needs attention, what is up next, and the gear you have out.",
+    "details": [
+      "A greeting and one line about your day sit at the top, like your call time and what gear is due back, followed by four quick counts for your role.",
+      "Needs attention gathers overdue gear, missed pickups, damage and loss reports, shifts that still need gear, drafts, and (for admins) trade claims waiting on approval. Staff can send an overdue reminder right from the row, and the browser tab shows how much gear is overdue.",
+      "Up next spotlights your next shift or pickup with how soon it starts, then lists the rest by day.",
+      "Working today shows who is on each of today's events, and staff see Recent activity: the latest kiosk pickups and returns. Students can claim open trades, and admins can approve trade claims, right from Home after a confirm.",
+      "Each card loads, fails and retries on its own, so one slow part no longer blanks the page.",
+      "Partner staff get the same layout with just their gear and the published schedule."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 578
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A cleaner Trade Board",
+    "type": "improvement",
+    "summary": "The Trade Board is easier to scan, and students now hear when a shift they could take is posted.",
+    "details": [
+      "Tabs for Review, Available, Mine, and History, with shifts grouped by day, soonest first.",
+      "Open shifts and trades from other students sit in one list with a single Claim button.",
+      "When someone posts a shift to trade, eligible students in the same area get a notification.",
+      "The iPhone app's Trade Board has the same tabs and day grouping."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 577
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Quieter, more accurate notifications",
+    "type": "improvement",
+    "summary": "Your unread count now shows what still needs you, and the app stops notifying you about things you just did yourself.",
+    "details": [
+      "Notifications clear on their own once they're settled: gear returned, a request decided, an event over, or a newer schedule update for the same event.",
+      "Badge notifications clear after two weeks, so they no longer pile up in the count.",
+      "Reserving gear, merging your own reservations, or handing gear to someone at the kiosk no longer sends you a push about it.",
+      "\"Gear up for your shift\" is skipped when you already have gear booked for that shift or event.",
+      "Buttons in notification emails open the exact checkout or event.",
+      "Staff follow-ups about overdue gear arrive silently overnight, from 10 PM to 7 AM. The person who has the gear is still alerted."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 570
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Search kits, events and guides",
+    "type": "improvement",
+    "summary": "Search in the iPhone app now also finds kits, upcoming events and guides, each with its own filter.",
+    "details": [
+      "New Kits, Events and Guides filters sit beside Gear and People.",
+      "Events search matches the title, opponent or location of upcoming events.",
+      "Results open the kit, event or guide directly."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 576
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Tidier App activity people list",
+    "type": "improvement",
+    "summary": "Settings > App activity now shows each person's devices in a few clear chips and knows about iPhone 1.3.",
+    "details": [
+      "Xcode and simulator builds fold into one quiet chip with the newest build and a count; hover for the full list.",
+      "The same phone on the same version shows once.",
+      "The web chip names the latest browser and counts the others instead of every browser profile.",
+      "On release day, phones on an older version show as Behind as soon as the App Store lists the new one.",
+      "The Apps page and the Wisconsin Creative app page list version 1.3."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 565
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Creative money for UA gear",
+    "type": "improvement",
+    "summary": "A Budget line can now count toward a year of Under Armour gear, so the UA page shows it without typing the amount twice.",
+    "details": [
+      "Edit a Budget line and pick the UA year under Counts toward UA gear.",
+      "The UA gear Budget card adds it on top of the allotment and lists where it came from.",
+      "Cancelled lines stop counting. The line also gets a UA tag on the Budget page."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 565
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Clearer gear return countdown",
+    "type": "improvement",
+    "summary": "The gear return Live Activity on iPhone now shows a large countdown and a track that drains toward the return time.",
+    "details": [
+      "The lock screen and Dynamic Island show the time left as one large figure, in hours and minutes once it is over an hour.",
+      "A thin track shows how much of the last two hours remains.",
+      "Overdue, returned and not-updating states keep their own colors and wording."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 574
+  },
+  {
+    "date": "2026-10-21",
+    "title": "More widgets, smarter search",
+    "type": "improvement",
+    "summary": "The iPhone app adds Lock Screen and larger widgets, filtered search, a scan history, and easier inbox swipes.",
+    "details": [
+      "Next Shift and My Gear widgets now fit the Lock Screen and come in Medium and Large lists.",
+      "Search has filters for gear, reservations, check-outs and people, with quick jumps to Scan and My gear.",
+      "The scanner keeps a short list of recent scans and hints when it can't see a code.",
+      "Notifications are grouped by day, and you can swipe to mark one read or unread.",
+      "Ask Siri to search gear by name."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 573
+  },
+  {
     "date": "2026-10-21",
     "title": "Post trades from Schedule again",
     "type": "fixes",

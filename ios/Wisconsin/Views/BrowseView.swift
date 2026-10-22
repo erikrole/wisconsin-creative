@@ -29,6 +29,7 @@ struct BrowseView: View {
             Optional.some(BrowseDestination.blasts),
             capabilities.contains("SOFTWARE_VAULT_VIEW") ? .sharedLogins : nil,
             capabilities.contains("GEAR_CATALOG_VIEW") ? .items : nil,
+            capabilities.contains("BRAND_ASSETS_VIEW") ? .brandAssets : nil,
             capabilities.contains("RESERVATION_CREATE") ? .kits : nil,
             capabilities.contains("PEOPLE_DIRECTORY_VIEW") ? .users : nil,
         ].compactMap { $0 }

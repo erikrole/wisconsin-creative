@@ -169,3 +169,168 @@ struct DayTimeChipPicker: View {
         selection = max(moved, QuarterHour.roundedUp(minimum.addingTimeInterval(60)))
     }
 }
+
+/// Inline month calendar plus a 15-minute time row, the way Calendar expands
+/// an event's Ends row. Days outside `minimum...latest` can't be picked, and
+/// the time is clamped into the same window.
+struct ReturnTimeCalendar: View {
+    @Binding var selection: Date
+    let minimum: Date
+    var latest: Date? = nil
+    /// Callers pass the app's tint; the kiosk target has no `brandPrimary`.
+    var tint: Color? = nil
+
+    /// Where the time buttons are centered. Set when the picker appears or
+    /// the day changes, never on a button tap, so buttons don't shift under
+    /// the finger.
+    @State private var anchor: Date?
+
+    private var calendar: Calendar { .current }
+
+    private var dayRange: ClosedRange<Date> {
+        let lower = calendar.startOfDay(for: minimum)
+        // The last day stays fully enabled; the time clamp enforces the limit.
+        // Ending the range mid-day drew that day as disabled-but-picked (black).
+        let upper = latest.map { calendar.date(byAdding: DateComponents(day: 1, second: -1), to: calendar.startOfDay(for: $0)) ?? $0 }
+        return lower...max(upper ?? .distantFuture, lower)
+    }
+
+    private var isSingleDay: Bool {
+        latest.map { calendar.isDate($0, inSameDayAs: minimum) } ?? false
+    }
+
+    private var dayBinding: Binding<Date> {
+        Binding(
+            get: { selection },
+            set: { newDay in
+                let time = calendar.dateComponents([.hour, .minute], from: selection)
+                guard let moved = calendar.date(
+                    bySettingHour: time.hour ?? 0,
+                    minute: time.minute ?? 0,
+                    second: 0,
+                    of: calendar.startOfDay(for: newDay)
+                ) else { return }
+                selection = clamped(moved)
+                anchor = selection
+            }
+        )
+    }
+
+    private var timeBinding: Binding<Date> {
+        Binding(get: { selection }, set: { selection = clamped($0) })
+    }
+
+    private func clamped(_ date: Date) -> Date {
+        let value = QuarterHour.clamped(date, minimum: minimum)
+        guard let latest else { return value }
+        return min(value, latest)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // When the window closes the same day, a month grid only shows
+            // one tappable date, so just the time row is offered.
+            if !isSingleDay {
+                DatePicker("Return day", selection: dayBinding, in: dayRange, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+                    // Set on the picker itself; relying on inheritance drew the
+                    // picked day black in Extend.
+                    .tint(tint)
+                Divider()
+            }
+            HStack {
+                Text("Exact time")
+                Spacer()
+                // Fallback for any quarter hour the shortcuts below don't cover.
+                QuarterHourTimePicker(
+                    selection: timeBinding,
+                    minimumDate: minimum,
+                    tint: tint,
+                    accessibilityLabel: "Return time, 15-minute increments"
+                )
+            }
+            .padding(.top, 6)
+            if !quickTimes.isEmpty {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    ForEach(quickTimes, id: \.self) { time in
+                        quickTimeButton(time)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+        }
+        .tint(tint)
+        .onAppear { if anchor == nil { anchor = selection } }
+    }
+
+    private static let quickHours: [(hour: Int, minute: Int)] = [
+        (9, 0), (12, 0), (15, 0), (17, 0), (20, 0), (22, 0),
+    ]
+
+    /// One-tap times on the picked day, six at most. Later days get the usual
+    /// handoff hours; when the window starts or ends that day, the next
+    /// half hours inside it are offered instead, so a short window still has
+    /// real choices around the current pick. The latest allowed time is
+    /// always one of them.
+    private var quickTimes: [Date] {
+        let day = calendar.startOfDay(for: selection)
+        let center = anchor.flatMap { calendar.isDate($0, inSameDayAs: selection) ? $0 : nil } ?? selection
+        let earliest = QuarterHour.roundedUp(minimum)
+        let isTight = calendar.isDate(earliest, inSameDayAs: day)
+            || latest.map { calendar.isDate($0, inSameDayAs: day) } == true
+        var times: [Date]
+        if isTight {
+            // Centered a little before the current pick, so the times shown
+            // are the ones near what's set rather than the start of the window.
+            let step = TimeInterval(30 * 60)
+            let start = max(earliest, day, center.addingTimeInterval(-3 * step))
+            let firstHalfHour = Date(timeIntervalSinceReferenceDate: ceil(start.timeIntervalSinceReferenceDate / step) * step)
+            times = (0..<12).map { firstHalfHour.addingTimeInterval(Double($0) * step) }
+        } else {
+            times = Self.quickHours.compactMap {
+                calendar.date(bySettingHour: $0.hour, minute: $0.minute, second: 0, of: day)
+            }
+        }
+        times = times.filter { time in
+            calendar.isDate(time, inSameDayAs: day)
+                && time >= earliest
+                && (latest.map { time <= $0 } ?? true)
+        }
+        times = Array(times.prefix(6))
+        if let latest, calendar.isDate(latest, inSameDayAs: day), latest >= earliest, !times.contains(latest) {
+            if times.count == 6 { times.removeLast() }
+            times.append(latest)
+        }
+        return times.sorted()
+    }
+
+    @ViewBuilder
+    private func quickTimeButton(_ time: Date) -> some View {
+        let isSelected = selection == time
+        // Full-width labels so every capsule in the grid is the same size.
+        let label = Text(time.formatted(.dateTime.hour().minute()))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
+        if isSelected {
+            Button { selection = time } label: { label }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.regular)
+                .accessibilityAddTraits(.isSelected)
+        } else {
+            Button {
+                selection = time
+                Haptics.selection()
+            } label: { label }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.regular)
+            // Unpicked times stay neutral so only the choice carries color.
+            .tint(.secondary)
+            .foregroundStyle(.primary)
+        }
+    }
+}

@@ -6,21 +6,16 @@ describe("schedule open work source contracts", () => {
     const tradeBoard = source("src/components/TradeBoard.tsx");
 
     expect(tradeBoard).toContain("OpenWorkShift");
-    expect(tradeBoard).toContain("Open Shifts");
     expect(tradeBoard).toContain("/api/schedule/open-work");
-    expect(tradeBoard).toContain('title="Trade Posts"');
-    expect(tradeBoard).toContain('title="Open Shifts"');
-    expect(tradeBoard).toContain('count={claimableTrades.length}');
-    expect(tradeBoard).toContain('count={claimableOpenShifts.length}');
-    expect(tradeBoard).not.toContain('title="Available Now"');
-    expect(tradeBoard).toContain("My Posts");
-    expect(tradeBoard).toContain("Waiting or Blocked");
-    expect(tradeBoard).toContain("Canceling removes the post; the shift stays assigned to you.");
-    expect(tradeBoard).toContain("An admin reviews this before you're on the schedule.");
-    // The Admin queue and the student's waiting state are both part of the gate.
-    expect(tradeBoard).toContain("Admin Review");
-    expect(tradeBoard).toContain("Waiting on Admin");
-    expect(tradeBoard).toContain("AvailabilityContextNote");
+    // One board, four tabs: the Admin queue, what can be claimed, the viewer's own work, and history.
+    expect(tradeBoard).toContain('label: "Review"');
+    expect(tradeBoard).toContain('label: "Available"');
+    expect(tradeBoard).toContain('label: "Mine"');
+    expect(tradeBoard).toContain('label: "History"');
+    expect(tradeBoard).toContain("Cancel post");
+    expect(tradeBoard).toContain("Waiting on an admin");
+    expect(tradeBoard).toContain("An admin approves every change before it reaches the schedule.");
+    expect(tradeBoard).toContain("availabilityNotice");
     expect(tradeBoard).toContain("viewerAvailabilityContext");
     expect(tradeBoard).toContain("claimedByAvailabilityContext");
     expect(tradeBoard).toContain("viewerCanClaim");
@@ -28,12 +23,9 @@ describe("schedule open work source contracts", () => {
     expect(tradeBoard).toContain("/api/shift-assignments/pickup");
     expect(tradeBoard).toContain("/api/shift-trades/${tradeId}/claim");
     expect(tradeBoard).toContain("/api/shift-trades/${tradeId}/cancel");
-    expect(tradeBoard).toContain("Claim shift");
     expect(tradeBoard).toContain("Request sent for Admin approval");
-    expect(tradeBoard).toContain("const hasAnyLoadError = loadError || openWorkError");
-    expect(tradeBoard).toContain("Trade Board posts are unavailable");
-    expect(tradeBoard).toContain("Open Student slots are unavailable");
-    expect(tradeBoard).toContain("!hasAnyLoadError && totalRows === 0");
+    expect(tradeBoard).toContain("Trade posts did not load");
+    expect(tradeBoard).toContain("Open slots did not load");
   });
 
   it("keeps the Open Work read model published, student-slot, and permission scoped", () => {
@@ -112,15 +104,14 @@ describe("schedule open work source contracts", () => {
     expect(sheet).toContain("func loadMoreTrades()");
     expect(sheet).toContain("shiftTrades(area: areaFilter, limit: pageSize)");
     // One "Available to Pick Up" list holds both kinds, soonest first.
-    expect(sheet).toContain('title: "Available to Pick Up"');
     expect(sheet).toContain("case trade(ShiftTrade)");
     expect(sheet).toContain("case open(OpenWorkShift)");
     expect(sheet).not.toContain('title: "Available Now"');
-    expect(sheet).toContain("My Posts");
-    expect(sheet).toContain("Waiting or Blocked");
+    expect(sheet).toContain('case review, available, mine, history');
+    expect(sheet).toContain('case .mine: "Mine"');
+    expect(sheet).toContain("Waiting on admin");
     expect(sheet).toContain("An admin reviews this before you're on the schedule.");
-    expect(sheet).toContain("Admin Review");
-    expect(sheet).toContain("Waiting on Admin");
+    expect(sheet).toContain('case .review: "Review"');
     expect(sheet).toContain("Canceling removes the post; the shift stays assigned to you.");
     expect(sheet).toContain("trade.viewerCanClaim ?? (!isStaff && trade.viewerAvailabilityContext?.blocking != true)");
     expect(sheet).toContain('var canReview: Bool { currentUserRole == "ADMIN" }');

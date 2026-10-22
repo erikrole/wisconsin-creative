@@ -425,7 +425,7 @@ Indexes and constraints:
 
 ## Model `Asset`
 
-Fields: 43
+Fields: 44
 
 - `id                      String                  @id @default(cuid())`
 - `assetTag                String                  @unique @map("asset_tag")`
@@ -449,6 +449,7 @@ Fields: 43
 - `availableForReservation Boolean                 @default(true) @map("available_for_reservation")`
 - `availableForCheckout    Boolean                 @default(true) @map("available_for_checkout")`
 - `availableForCustody     Boolean                 @default(true) @map("available_for_custody")`
+- `collaboratorVisible     Boolean                 @default(true) @map("collaborator_visible")`
 - `linkUrl                 String?                 @map("link_url")`
 - `imageUrl                String?                 @map("image_url")`
 - `imageRehostAttempts     Int                     @default(0) @map("image_rehost_attempts")`
@@ -3085,7 +3086,7 @@ Values: `MEN`, `WOMEN`
 
 ## Model `GearPickCycle`
 
-Fields: 17
+Fields: 18
 
 - `id              String                @id`
 - `title           String`
@@ -3104,6 +3105,7 @@ Fields: 17
 - `students        GearPickStudent[]`
 - `receipts        GearPickReceipt[]`
 - `handouts        GearPickHandout[]`
+- `budgetLines     BudgetLine[]`
 
 Indexes and constraints:
 
@@ -3312,7 +3314,7 @@ Indexes and constraints:
 
 ## Model `BudgetLine`
 
-Fields: 26
+Fields: 28
 
 - `id              String           @id @default(cuid())`
 - `budgetId        String           @map("budget_id")`
@@ -3334,9 +3336,11 @@ Fields: 26
 - `unplanned       Boolean          @default(false)`
 - `refundCents     Int?             @map("refund_cents")`
 - `recurring       Boolean          @default(false)`
+- `gearPickCycleId String?          @map("gear_pick_cycle_id")`
 - `createdAt       DateTime         @default(now()) @map("created_at")`
 - `updatedAt       DateTime         @updatedAt @map("updated_at")`
 - `budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)`
+- `gearPickCycle   GearPickCycle?   @relation(fields: [gearPickCycleId], references: [id], onDelete: SetNull)`
 - `requester       User?            @relation("BudgetLineRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)`
 - `items           BudgetLineItem[]`
 - `wish            WishItem?`
@@ -3347,6 +3351,7 @@ Indexes and constraints:
 - `@@index([budgetId, status])`
 - `@@index([requesterUserId])`
 - `@@index([poNumber])`
+- `@@index([gearPickCycleId])`
 - `@@map("budget_lines")`
 
 ## Model `BudgetLineItem`

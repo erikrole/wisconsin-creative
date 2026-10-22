@@ -1,6 +1,6 @@
 import { withAuth } from "@/lib/api";
 import { HttpError } from "@/lib/http";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { getResourceAssetVersion } from "@/lib/resource-assets";
 import { getResourceAssetBlob } from "@/lib/resource-assets-storage";
 import { NextResponse } from "next/server";
@@ -26,7 +26,7 @@ function isInlineType(contentType: string): boolean {
 }
 
 export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
-  requirePermission(user.role, "resource", "view");
+  requirePermissionOrCollaboratorCapability(user, "resource", "view", "BRAND_ASSETS_VIEW");
   const searchParams = new URL(req.url).searchParams;
   const versionId = searchParams.get("versionId");
   const forceDownload = searchParams.get("download") === "1";

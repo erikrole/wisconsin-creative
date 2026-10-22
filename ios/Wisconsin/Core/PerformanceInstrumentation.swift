@@ -70,6 +70,19 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Starts a real checkout-return Live Activity in the simulator, in the
+        /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
+        /// overdue, returned), so the lock screen and Dynamic Island can be
+        /// captured without a signed-in session or a push.
+        case liveActivity = "live-activity"
+        /// Writes a canned Home Screen widget snapshot (shifts and gear due)
+        /// into the App Group and reloads the timelines, so placed widgets
+        /// show populated lists instead of their "Open Creative" state.
+        case widgetSeed = "widget-seed"
+        /// The notifications inbox against a canned week of rows, so the
+        /// per-day sections and the read/unread swipe actions can be reviewed
+        /// without a signed-in session.
+        case notificationsInbox = "notifications-inbox"
         case passwordSetup = "password-setup"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request
@@ -103,6 +116,8 @@ enum AppRuntimeMode {
         /// Search with two of its four sources deliberately failing, so the
         /// partial-result notice can be seen rather than reasoned about.
         case searchPartial = "search-partial"
+        /// Search before anything is typed: quick jumps and recents.
+        case searchIdle = "search-idle"
         /// The announcement splash over the real app shell, served canned
         /// announcements: a banner image with another waiting behind it,
         /// a swipeable set of images, and a text-only notice.
@@ -192,8 +207,8 @@ enum AppRuntimeMode {
              .home, .homeAllClear, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
-             .itemsList, .reports, .accountSecurity, .notifications, .login,
+             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
+             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:

@@ -60,6 +60,7 @@ import { ServerPathCopy } from "@/components/resources/ServerPathCopy";
 import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { useFetch } from "@/hooks/use-fetch";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   inferResourceTypeFromCategory,
   RESOURCE_TYPE_LABELS,
@@ -610,7 +611,10 @@ export default function ResourcesPage() {
   const activeFilter = parseResourceFilter(searchParams);
   const sort = parseResourceSort(searchParams.get("sort"));
   const layout = parseResourceLayout(searchParams.get("layout"));
-  const resourceTab = searchParams.get("tab") === "brand-assets" ? "brand-assets" : "guides";
+  const { data: currentUser } = useCurrentUser();
+  // Collaborators only ever get the brand library; guides and contacts stay internal.
+  const isCollaborator = currentUser?.role === "COLLABORATOR";
+  const resourceTab = isCollaborator || searchParams.get("tab") === "brand-assets" ? "brand-assets" : "guides";
   const [contactRoleFilter, setContactRoleFilter] = useState<ContactRoleFilter>("ALL");
   const [contactAreaFilter, setContactAreaFilter] = useState<ContactAreaFilter>("ALL");
   const [contactHygieneFilter, setContactHygieneFilter] = useState<ContactHygieneFilter>("ALL");
@@ -790,7 +794,7 @@ export default function ResourcesPage() {
         className="mb-2"
       >
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <ResourceSectionSwitcher active={resourceTab} />
+          {!isCollaborator && <ResourceSectionSwitcher active={resourceTab} />}
           {resourceTab === "guides" && isStaffOrAdmin && (
             <Button asChild size="sm" className="h-10">
               <Link href="/resources/new">
