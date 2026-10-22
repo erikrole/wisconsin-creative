@@ -314,6 +314,7 @@
 - `/api/gear-picks/admin/export.xlsx` -> `src/app/api/gear-picks/admin/export.xlsx/route.ts`
 - `/api/gear-picks/admin/history` -> `src/app/api/gear-picks/admin/history/route.ts`
 - `/api/gear-picks/admin` -> `src/app/api/gear-picks/admin/route.ts`
+- `/api/gear-picks/me/kit` -> `src/app/api/gear-picks/me/kit/route.ts`
 - `/api/gear-picks/me` -> `src/app/api/gear-picks/me/route.ts`
 - `/api/gear-picks/users/[userId]` -> `src/app/api/gear-picks/users/[userId]/route.ts`
 - `/api/hiring/applications/[id]/documents` -> `src/app/api/hiring/applications/[id]/documents/route.ts`

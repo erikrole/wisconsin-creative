@@ -178,3 +178,23 @@ export type GearPastCycleDto = {
   }[];
   people: { name: string; groupLabel: string; fit: string; topSize: string | null; shoeSize: string | null }[];
 };
+
+/** One piece in the signed-in person's own kit, with whether it has been handed to them. */
+export type GearMyKitPieceDto = {
+  sku: string;
+  itemName: string;
+  colorLabel: string;
+  source: "STANDARD_ISSUE" | "CORE_KIT" | "STUDENT_KIT" | "PICK";
+  size: string;
+  quantity: number;
+  handed: boolean;
+  handedOutAt: string | null;
+};
+
+/** What the signed-in person is getting this year and where it stands. Null when they are not on this year's list. */
+export type GearMyKitDto = {
+  cycleTitle: string;
+  group: "Staff" | "Student";
+  order: GearPickOrderDto;
+  pieces: GearMyKitPieceDto[];
+};
