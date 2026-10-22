@@ -5,6 +5,7 @@ import {
   BookingStatus,
   Prisma,
 } from "@prisma/client";
+import { appTzDateKey } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { normalizePrefs } from "@/lib/services/notification-prefs";
@@ -61,8 +62,14 @@ async function runBadgeTransaction<T>(fn: (tx: TxClient) => Promise<T>): Promise
  *
  * `createManyAndReturn` is what makes this idempotent rather than noisy: it
  * returns only the rows this call actually inserted, so a duplicate event that
- * re-runs the evaluator awards nothing and therefore notifies nothing. The
- * per-award `dedupeKey` is the second guard.
+ * re-runs the evaluator awards nothing and therefore notifies nothing.
+ *
+ * Everything earned in one app-timezone day folds into a single inbox row
+ * (`badge_day_{userId}_{YYYY-MM-DD}`). Badges were the largest notification
+ * type in production, and one nightly shift pass or one return can cross
+ * several thresholds at once, which used to land as a stack of separate
+ * "Badge earned" rows. A later badge the same day rewrites that row, moves it
+ * back to the top, and marks it unread again.
  */
 async function grantBadges(tx: TxClient, args: {
   userId: string;
@@ -97,26 +104,78 @@ async function grantBadges(tx: TxClient, args: {
 
   const nameByDefinitionId = new Map(args.definitions.map((d) => [d.id, d.name]));
   const sentAt = new Date();
+  const dedupeKey = `badge_day_${args.userId}_${appTzDateKey(sentAt)}`;
+  const existing = await tx.notification.findUnique({
+    where: { dedupeKey },
+    select: { payload: true },
+  });
 
-  await tx.notification.createMany({
-    data: created.map((award) => ({
+  const badges = earnedBadgesFromPayload(existing?.payload);
+  const seen = new Set(badges.map((badge) => badge.studentBadgeId));
+  for (const award of created) {
+    if (seen.has(award.id)) continue;
+    badges.push({
+      studentBadgeId: award.id,
+      badgeDefinitionId: award.definitionId,
+      name: nameByDefinitionId.get(award.definitionId) ?? "a new badge",
+    });
+  }
+  const latest = badges[badges.length - 1]!;
+
+  const content = {
+    // "Earned", not "awarded": nobody handed this one over.
+    title: badges.length === 1 ? "Badge earned" : `${badges.length} badges earned`,
+    body: `You earned ${listBadgeNames(badges.map((badge) => badge.name))}.`,
+    payload: {
+      userId: args.userId,
+      // Older clients (shipped iOS builds) decode the single-badge fields.
+      badgeDefinitionId: latest.badgeDefinitionId,
+      studentBadgeId: latest.studentBadgeId,
+      badges,
+      href: `/staff/${args.userId}?tab=badges`,
+    },
+    sentAt,
+    readAt: null,
+    createdAt: sentAt,
+  };
+
+  if (existing) {
+    await tx.notification.update({ where: { dedupeKey }, data: content });
+    return;
+  }
+
+  await tx.notification.create({
+    data: {
+      ...content,
       userId: args.userId,
       type: "badge_awarded",
-      // "Earned", not "awarded": nobody handed this one over.
-      title: "Badge earned",
-      body: `You earned ${nameByDefinitionId.get(award.definitionId) ?? "a new badge"}.`,
-      payload: {
-        userId: args.userId,
-        badgeDefinitionId: award.definitionId,
-        studentBadgeId: award.id,
-        href: `/staff/${args.userId}?tab=badges`,
-      },
-      channel: "IN_APP" as const,
-      sentAt,
-      dedupeKey: `badge_awarded_${award.id}`,
-    })),
-    skipDuplicates: true,
+      channel: "IN_APP",
+      dedupeKey,
+    },
   });
+}
+
+type EarnedBadge = { studentBadgeId: string; badgeDefinitionId: string; name: string };
+
+function earnedBadgesFromPayload(payload: Prisma.JsonValue | undefined): EarnedBadge[] {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
+  const list = (payload as Record<string, Prisma.JsonValue>).badges;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const { studentBadgeId, badgeDefinitionId, name } = entry as Record<string, Prisma.JsonValue>;
+    return typeof studentBadgeId === "string" && typeof badgeDefinitionId === "string" && typeof name === "string"
+      ? [{ studentBadgeId, badgeDefinitionId, name }]
+      : [];
+  });
+}
+
+/** "A", "A and B", "A, B and C", "A, B and 3 more". */
+export function listBadgeNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "a new badge";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;
+  return `${names[0]}, ${names[1]} and ${names.length - 2} more`;
 }
 
 async function awardThresholdBadges(tx: TxClient, args: {

@@ -201,7 +201,8 @@ struct UsersView: View {
                         .font(.subheadline.weight(.medium))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
-                        .background(selected ? Color.accentColor : Color(.secondarySystemFill), in: Capsule())
+                        .background(selected ? StaffPalette.accent : Color.cardSurface, in: Capsule())
+                        .overlay(Capsule().strokeBorder(selected ? Color.clear : Color.hairline, lineWidth: 1))
                         .foregroundStyle(selected ? Color.white : Color.primary)
                     }
                     .buttonStyle(.plain)
@@ -378,8 +379,6 @@ private struct UserListRow: View {
         let tone: StatusTone = user.active == false ? .gray : StatusTone.forRole(user.role)
 
         HStack(spacing: 12) {
-            StatusRail(tone: tone)
-
             UserAvatarView(
                 name: user.name,
                 avatarUrl: user.avatarUrl,
@@ -401,10 +400,18 @@ private struct UserListRow: View {
                     .font(.gothamBold(size: 16))
                     .lineLimit(1)
                 if let secondary = secondaryLine {
-                    Text(secondary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        if user.primaryArea != nil {
+                            Circle()
+                                .fill(StaffPalette.areaColor(user.primaryArea))
+                                .frame(width: 8, height: 8)
+                                .accessibilityHidden(true)
+                        }
+                        Text(secondary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
             }
             .layoutPriority(1)
@@ -423,7 +430,7 @@ private struct UserListRow: View {
                 .foregroundStyle(.tertiary)
                 .accessibilityHidden(true)
         }
-        .brandCard(padding: Brand.Space.md, radius: Brand.Radius.card)
+        .brandCard(padding: Brand.Space.md, radius: Brand.Radius.md)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(rowAccessibilityLabel)
         .accessibilityHint("Double-tap to view profile")
@@ -461,7 +468,6 @@ private struct UserRowSkeleton: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            StatusRail(tone: .gray)
             Circle()
                 .fill(Color.secondary.opacity(0.15))
                 .frame(width: 44, height: 44)

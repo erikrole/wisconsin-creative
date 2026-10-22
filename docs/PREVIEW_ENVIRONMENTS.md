@@ -39,6 +39,10 @@ The same branch keeps its database, fixtures, session secret, and file stores. D
 
 The server prints its actual loopback URL. Its deterministic port changes when necessary to avoid another checkout; an explicitly requested occupied port fails without killing anything. `auth:local` uses that server's port and cookie name. Changing Git branches stops the old server. `.next/dev` and `.next/build` separate local outputs, with process locks preventing two writers to the same output. Vercel uses its standard `.next` directory. Do not bypass these wrappers with raw Next commands.
 
+## Screenshot and scratch branches
+
+Vercel reads `vercel.json` from the pushed commit, not from `main`. A branch with no `vercel.json` (an orphan screenshot branch such as `claude/*-shots` or `scratch/*-shots`, whose history shares nothing with `main`) ignores `git.deploymentEnabled`, so Vercel still creates a (canceled) deployment for every push. The Neon-Vercel integration creates a `preview/<branch>` Neon branch from that deployment, so these branches kept appearing after #556. Every push to such a branch must carry a copy of `main`'s `vercel.json` at the branch root, or the screenshots must go through a branch that descends from `main`. The orphan branches that existed on 2026-10-21 (`claude/ios-picker-shots`, `claude/project-thread-3gqgw3-shots`, `scratch/trade-board-ios-shots`) need the file added once. `preview/*` branches are idle and negligible in cost, but delete them from the integration page when they appear.
+
 ## Resources and limits
 
 - Each Git branch owns a child of the protected `Wisconsin Creative Previews` template in `floral-fog-52897668`, PostgreSQL 17 / AWS us-east-1. Child compute is 0.25–1 CU and suspends after five minutes.

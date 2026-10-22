@@ -55,6 +55,16 @@ describe("auto assign scope", () => {
     expect(scope.area).toBeNull();
     expect(scope.period).toBe("custom");
     expect(scope.requireFullCrew).toBe(false);
+    expect(scope.eventIds).toEqual([]);
+  });
+
+  it("narrows to specific events, deduped and sorted for a stable fingerprint", () => {
+    const scope = bulkAssignmentScopeSchema.parse({
+      eventIds: ["evt-b", " evt-a ", "evt-b"],
+      rangeStartsAt: "2026-10-27T00:00:00.000Z",
+      rangeEndsAt: "2026-10-27T03:00:00.000Z",
+    });
+    expect(scope.eventIds).toEqual(["evt-a", "evt-b"]);
   });
 
   it("rejects an inverted range", () => {

@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-22",
+  "featureParent": "baf9e3a11efa26470bfbc616208d8f1442c5ad86",
+  "mainParent": "931d3ad71deb67a8a14ec8447c508034fe8869ef",
+  "scope": "Native integration after main merge train; source trees are combined without new product behavior.",
+  "unit": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 25189,
+      "counts": {
+        "passed": 258,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T16-31-54-890Z_pid3490_be891de9.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T16-31-54-890Z_pid3490_21c72661.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T16-31-54-890Z_pid3490_1dacec81.xctestproducts"
+    }
+  },
+  "ui": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 123088,
+      "counts": {
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T16-32-41-195Z_pid3490_9bd8ffb8.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T16-32-41-195Z_pid3490_54e618d4.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T16-32-41-195Z_pid3490_447370be.xctestproducts"
+    }
+  },
+  "sourceContracts": {
+    "filesPassed": 151,
+    "testsPassed": 788
+  },
+  "staticGates": {
+    "projectGeneration": "passed",
+    "styleDrift": 0,
+    "auditCovered": 82,
+    "auditTotal": 82,
+    "codemaps": "passed"
+  },
+  "kiosk": {
+    "destination": "generic/platform=iOS Simulator",
+    "status": "BUILD SUCCEEDED",
+    "log": "/private/tmp/pr605-integration-kiosk-build.log"
+  },
+  "review": "Independent read-only native integration review found no actionable defects; both parents' API, fixture, lifecycle, view and target changes preserved.",
+  "limits": [
+    "Fixture simulator evidence does not establish authenticated onboarding rollout or hardware-only behavior.",
+    "Pre-existing Wrapped UIScreen.main deprecation remains.",
+    "Inherited main proof-artifact whitespace is excluded by checking the feature diff against current main."
+  ]
+}

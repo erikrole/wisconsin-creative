@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   NONE_SPORT_VALUE,
   createManualEventDraft,
+  emptyEventEditorDraft,
+  gameTitleIsNotMatchup,
   suggestedEventEditorTitle,
 } from "@/lib/event-editor";
 
@@ -53,5 +55,18 @@ describe("suggestedEventEditorTitle", () => {
       sportCode: NONE_SPORT_VALUE,
       opponent: "Duke",
     })).toBe("");
+  });
+});
+
+describe("gameTitleIsNotMatchup", () => {
+  const base = { ...emptyEventEditorDraft(), eventType: "home" as const };
+  it("flags a game title without vs or at", () => {
+    expect(gameTitleIsNotMatchup({ ...base, title: "Football Official Visit" })).toBe(true);
+  });
+  it("accepts matchups, blanks, and non-game events", () => {
+    expect(gameTitleIsNotMatchup({ ...base, title: "Football vs Iowa" })).toBe(false);
+    expect(gameTitleIsNotMatchup({ ...base, title: "Football at Iowa" })).toBe(false);
+    expect(gameTitleIsNotMatchup({ ...base, title: "" })).toBe(false);
+    expect(gameTitleIsNotMatchup({ ...base, eventType: "non-game", title: "Official Visit" })).toBe(false);
   });
 });

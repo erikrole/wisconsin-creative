@@ -70,6 +70,16 @@
     return altitudeOf(H, RAD * lat, declination(L)) / RAD;
   }
 
+  // Compass bearing of the sun, degrees clockwise from true north.
+  function sunAzimuth(date, lat, lon) {
+    var d = toDays(date), L = eclipticLongitude(solarMeanAnomaly(d));
+    var H = siderealTime(d, RAD * -lon) - rightAscension(L), phi = RAD * lat, dec = declination(L);
+    var fromSouth = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi)) / RAD;
+    return (fromSouth + 180 + 360) % 360;
+  }
+  var COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  function compassPoint(deg) { return COMPASS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16]; }
+
   function julianCycle(d, lw) { return Math.round(d - J0 - lw / (2 * PI)); }
   function approxTransit(Ht, lw, n) { return J0 + (Ht + lw) / (2 * PI) + n; }
   function solarTransitJ(ds, M, L) { return J2000 + ds + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * L); }
@@ -158,11 +168,101 @@
     return sameDay(day, check) ? day : null;
   }
 
+  // A zone name from outside (a link, a weather response) is used only if
+  // this browser knows it.
+  function validTimeZone(tz) {
+    if (typeof tz !== 'string' || !/^[A-Za-z_]+(\/[A-Za-z0-9_+\-]+){0,2}$/.test(tz)) return false;
+    try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch (e) { return false; }
+  }
+
+  /* ---------------- weather (Open-Meteo: free, no key) ----------------
+     Pure helpers only; app.js does the fetch. Cloud decides whether golden
+     light actually shows up, and *which* cloud matters: a low deck blocks
+     the sun, while high and mid cloud catch the color. */
+
+  var WX_FORECAST = 'https://api.open-meteo.com/v1/forecast';
+  var WX_ARCHIVE = 'https://archive-api.open-meteo.com/v1/archive';
+  var WX_FORECAST_BACK_DAYS = 85, WX_FORECAST_AHEAD_DAYS = 15;
+  var WX_HOURLY = 'cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,temperature_2m,weather_code,precipitation_probability';
+
+  function dayOffset(day, today) {
+    return Math.round((Date.UTC(day.y, day.m - 1, day.d) - Date.UTC(today.y, today.m - 1, today.d)) / DAY_MS);
+  }
+  // One request for the civil days [from, to] at a point, or null when the
+  // range is outside what either endpoint serves. Coordinates are rounded to
+  // ~1 km before they leave the page, so a GPS fix is never sent precisely.
+  function weatherUrl(lat, lon, from, to, today) {
+    if (!isFinite(lat) || !isFinite(lon)) return null;
+    var a = dayOffset(from, today), b = dayOffset(to, today);
+    if (b < a || b > WX_FORECAST_AHEAD_DAYS || b - a > 16) return null;
+    var archive = b < -WX_FORECAST_BACK_DAYS;
+    if (!archive && a < -WX_FORECAST_BACK_DAYS) return null;
+    // The archive has no precipitation probability.
+    var hourly = archive ? WX_HOURLY.replace(',precipitation_probability', '') : WX_HOURLY;
+    return (archive ? WX_ARCHIVE : WX_FORECAST) +
+      '?latitude=' + lat.toFixed(2) + '&longitude=' + lon.toFixed(2) +
+      '&start_date=' + dayToValue(from) + '&end_date=' + dayToValue(to) +
+      '&hourly=' + hourly + '&temperature_unit=fahrenheit&timezone=auto';
+  }
+
+  var WX_LABELS = [
+    [[0], 'Clear'], [[1], 'Mostly clear'], [[2], 'Partly cloudy'], [[3], 'Overcast'], [[45, 48], 'Fog'],
+    [[51, 53, 55, 56, 57], 'Drizzle'], [[61, 63, 65, 66, 67, 80, 81, 82], 'Rain'],
+    [[71, 73, 75, 77, 85, 86], 'Snow'], [[95, 96, 99], 'Storms']
+  ];
+  function weatherLabel(code) {
+    for (var i = 0; i < WX_LABELS.length; i++) if (WX_LABELS[i][0].indexOf(code) !== -1) return WX_LABELS[i][1];
+    return null;
+  }
+  // Drizzle, rain and snow codes (storms are 95+ and read separately).
+  function isWet(code) { return code >= 51 && code < 95; }
+
+  // Will the light be worth shooting? Returns a tone (great, good, soft, flat)
+  // and a short line. A rule of thumb, not a promise: it says so on the page.
+  function lightOutlook(wx) {
+    if (!wx) return null;
+    var low = wx.low == null ? wx.cloud : wx.low, upper = Math.max(wx.mid || 0, wx.high || 0);
+    if ((wx.code != null && isWet(wx.code)) || (wx.rain != null && wx.rain >= 60)) {
+      return { tone: 'flat', text: 'Rain likely, flat light' };
+    }
+    if (wx.code != null && wx.code >= 95) return { tone: 'flat', text: 'Storms around' };
+    if (wx.code === 45 || wx.code === 48) return { tone: 'soft', text: 'Fog, soft and moody' };
+    if (low >= 70) return { tone: 'flat', text: 'Low overcast, flat light' };
+    if (wx.cloud <= 15) return { tone: 'good', text: 'Clear, clean light' };
+    if (upper >= 20 && upper <= 80 && low < 40) return { tone: 'great', text: 'Good chance of color in the clouds' };
+    if (wx.cloud >= 85) return { tone: 'flat', text: 'Heavy cloud, flat light' };
+    return { tone: 'soft', text: 'Some cloud, softer light' };
+  }
+
+  // The hourly row nearest the middle of [start, end], read on the point's own
+  // wall clock (timezone=auto returns local times plus the zone name).
+  function weatherAt(json, start, end) {
+    var h = json && json.hourly;
+    if (!h || !h.time || !h.cloud_cover || !start || !end) return null;
+    var tz = validTimeZone(json.timezone) ? json.timezone : 'UTC';
+    var p = zonedParts(new Date((start.getTime() + end.getTime()) / 2), tz);
+    var mid = Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi);
+    var hour = new Date(Math.round(mid / HOUR_MS) * HOUR_MS);
+    var stamp = hour.getUTCFullYear() + '-' + pad(hour.getUTCMonth() + 1) + '-' + pad(hour.getUTCDate()) + 'T' + pad(hour.getUTCHours()) + ':00';
+    var i = h.time.indexOf(stamp);
+    if (i === -1 || h.cloud_cover[i] == null) return null;
+    function at(key) { return h[key] && h[key][i] != null && isFinite(h[key][i]) ? Math.round(h[key][i]) : null; }
+    var wx = {
+      cloud: at('cloud_cover'), low: at('cloud_cover_low'), mid: at('cloud_cover_mid'), high: at('cloud_cover_high'),
+      temp: at('temperature_2m'), code: at('weather_code'), rain: at('precipitation_probability')
+    };
+    wx.label = weatherLabel(wx.code);
+    wx.outlook = lightOutlook(wx);
+    return wx;
+  }
+
   var api = {
     VENUE_GROUPS: VENUE_GROUPS, VENUES: VENUES, DEFAULT_VENUE: DEFAULT_VENUE, HOUR_MS: HOUR_MS,
     sunAltitude: sunAltitude, sunTimes: sunTimes, phaseFor: phaseFor, DEVICE_TZ: DEVICE_TZ,
     zonedParts: zonedParts, offsetMs: offsetMs, zonedInstant: zonedInstant, civilIn: civilIn,
-    addDays: addDays, sameDay: sameDay, dayToValue: dayToValue, valueToDay: valueToDay
+    addDays: addDays, sameDay: sameDay, dayToValue: dayToValue, valueToDay: valueToDay,
+    sunAzimuth: sunAzimuth, compassPoint: compassPoint, validTimeZone: validTimeZone, dayOffset: dayOffset,
+    weatherUrl: weatherUrl, weatherAt: weatherAt, lightOutlook: lightOutlook
   };
   root.GoldenHourCore = api;
   if (typeof module === 'object' && module.exports) module.exports = api;

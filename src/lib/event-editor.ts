@@ -57,6 +57,13 @@ export function suggestedEventEditorTitle(draft: EventEditorDraft): string {
   return `${sport} vs ${opponent}`;
 }
 
+/** A game title with no "vs"/"at" is not a matchup; the schedule would show it as "Sport vs Opponent" instead. */
+export function gameTitleIsNotMatchup(draft: EventEditorDraft): boolean {
+  if (draft.eventType === "non-game") return false;
+  const title = draft.title.trim();
+  return Boolean(title) && !/(^|\s)(vs\.?|v\.|at|@)(\s|$)/i.test(title);
+}
+
 export function eventDraftDate(value: string, allDay: boolean, isEnd: boolean) {
   const date = new Date(value);
   if (!allDay) return date;
