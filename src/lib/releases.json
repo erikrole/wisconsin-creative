@@ -1,5 +1,19 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "Safer calendar and image links",
+    "type": "improvement",
+    "summary": "Links that staff paste for calendar feeds and item photos are now checked more carefully.",
+    "details": [
+      "Feed and photo links that redirect somewhere unexpected are now followed one step at a time and checked at each step.",
+      "Nothing changes for normal links."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",
