@@ -1,6 +1,217 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Report a Problem in the iPhone app",
+    "type": "feature",
+    "summary": "Settings in the iPhone app now has Report a Problem, and crashes in the iPhone app, kiosks and the Mac menu bar app reach the team with what led up to them.",
+    "details": [
+      "Report a Problem in Settings sends your note with the screen you're on, your app version and device, and your last few actions. Contact Support is still there if you'd rather email.",
+      "When the iPhone app, a kiosk or the Mac menu bar app crashes, the report now includes the screens and requests just before it, so problems can be fixed without asking you to retrace your steps.",
+      "Nothing you type, and no passwords, is ever included."
+    ],
+    "platforms": [
+      "iOS",
+      "Kiosk",
+      "macOS"
+    ],
+    "pr": 557
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Safer calendar and image links",
+    "type": "improvement",
+    "summary": "Links that staff paste for calendar feeds and item photos are now checked more carefully.",
+    "details": [
+      "Feed and photo links that redirect somewhere unexpected are now followed one step at a time and checked at each step.",
+      "Nothing changes for normal links."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 598
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Photo Frame, rebuilt",
+    "type": "improvement",
+    "summary": "Photo Frame is redesigned as a calm editor with the photo on the left and every setting on the right, and it now handles a whole set of photos at once.",
+    "details": [
+      "Fixed photos that showed only ISO on the frame: shutter, aperture and focal length now come through from every kind of file, including iPhone HEIC photos in Safari.",
+      "Drop up to 12 photos, give them one look, and export them all. Each keeps its own camera settings and caption.",
+      "On iPhone, Share sends the framed photos straight to Photos or Messages. Copy puts one on the clipboard.",
+      "Saves as JPEG by default (a fraction of the size), with PNG still offered.",
+      "New Border (Slim, Regular, Wide) and Text (Split or Centered) options, a light and dark look that follows the Apps page, and a warning when a long caption gets cut short.",
+      "Everything still happens in your browser. Nothing is uploaded, and location data from the original never carries over."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 597
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Golden Hour forecasts the light",
+    "type": "improvement",
+    "summary": "Golden Hour now forecasts the sky for each golden hour and helps plan the week.",
+    "details": [
+      "Each morning and evening window has a sky outlook, like Good chance of color in the clouds or Low overcast, flat light, with cloud cover and temperature.",
+      "A Next 7 days list shows every evening (or morning) golden hour with its outlook. Tap a day to open it.",
+      "Each window says where the sun rises or sets, like Sets WSW · 255°.",
+      "Hover or drag across the sun path to read the time, light and sun height at any moment.",
+      "A cleaner look on the same full-page sky, with Badger red touches.",
+      "Custom coordinates and My location now show times in that spot's own time zone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 595
+  },
+  {
+    "date": "2026-10-22",
+    "title": "QR Studio, refreshed",
+    "type": "improvement",
+    "summary": "QR Studio has a calmer Badger red look, codes that scan more reliably, calendar event codes, and an optional caption under any code.",
+    "details": [
+      "Every style now scans reliably: rounded corner eyes are redrawn, and there is a new Eye shape choice.",
+      "The scan check is stricter and flags a code that only reads at some sizes.",
+      "New Event type: scan the code to add a game or shoot to your phone's calendar.",
+      "Add an optional caption like \"Scan for tickets\" under the code, in PNG and SVG, without affecting scanning.",
+      "Deleting a saved code, or clearing the library, can now be undone.",
+      "Cleaner logo backings, no hairline seams, and the shared tool header with Apps top right."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 594
+  },
+  {
+    "date": "2026-10-22",
+    "title": "A calmer, shareable Timelapse planner",
+    "type": "improvement",
+    "summary": "The Timelapse planner is redesigned and now lets you share an exact plan with a link.",
+    "details": [
+      "A cleaner layout with light and dark mode, Badger red accents, and the viewfinder readout kept front and center.",
+      "Copy link shares the exact camera, method and settings, and Copy plan includes that link. Reset goes back to the defaults.",
+      "On iPhone, fields no longer zoom in when tapped, and a slim bar keeps the answer in view as you scroll.",
+      "Greyed-out cadences now say why, like 4K Time-lapse needing an HD format past 5 seconds.",
+      "Clearer messages when a clip needs a faster S&Q rate than the camera offers."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 593
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Assign shifts reads by day",
+    "type": "improvement",
+    "summary": "The Assign shifts page now lists events by day with each area's crew beside the event, instead of a wide table.",
+    "details": [
+      "Names are no longer cut off, open slots show as dashed chips, and conflicts stay in amber.",
+      "The review filter shows its counts inline."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 596
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Schedule shows open shifts plainly",
+    "type": "improvement",
+    "summary": "Each event in the Schedule list now says Covered or how many shifts are open, with a color dot for the sport.",
+    "details": [
+      "Replaces the 1/1 badge with Covered or N open.",
+      "Sport color dots match the ones in the new reservation event picker."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 596
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Clearer booking actions",
+    "type": "improvement",
+    "summary": "A booking now has one obvious next step at the top, with everything else under Actions.",
+    "details": [
+      "Checked-out gear shows Extend as the main button, reservations show Edit, and finished bookings show Re-reserve.",
+      "Edit details moves into the Actions menu when Extend is the main step.",
+      "The booking summary and the step bar on a new reservation are larger and easier to read.",
+      "Gear photos on a booking are bigger, and the Kits filters now sit in one quiet row.",
+      "A booking page now leads with the gear list in one centered column; schedule, people and notes sit in a Details section below."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 596
+  },
+  {
+    "date": "2026-10-22",
+    "title": "QR print helper for labels",
+    "type": "improvement",
+    "summary": "Print labels is rebuilt as a print helper: pick gear, choose how many, and download a CSV ready for the Brother label printer.",
+    "details": [
+      "Search everything, or filter to serialized items or families, and add with one tap.",
+      "Serialized items print one label each, with copies if you need spares.",
+      "A family prints one family label, and counted stock can print one label per item on hand.",
+      "Numbered families can print a label for every unit not yet labeled, all of them for a reprint, or just the numbers you type, like 7 or 12-18, then mark them printed.",
+      "Change what a label says before printing without touching the item, and reset it to the item's text any time.",
+      "Each label previews to scale from its real P-touch template, and every CSV comes with its template to download."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 590
+  },
+  {
+    "date": "2026-10-22",
+    "title": "A calmer Schedule, Reports and Notifications",
+    "type": "improvement",
+    "summary": "Schedule, Reports, Notifications, Operations, Blasts, Search, Badges, Signatures and Profile now share the fresh look.",
+    "details": [
+      "Schedule keeps Auto assign up front and tucks Add event into More. Event times are easier to read.",
+      "Notifications moves Refresh, Check overdue and Preferences into a More menu, and Open details is a quiet link.",
+      "Report bar charts use one accent color instead of a rainbow."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 587
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Easier-to-read Bookings",
+    "type": "improvement",
+    "summary": "Booking cards on the Bookings page are larger and clearer, in the fresh look.",
+    "details": [
+      "Dates and places use regular type instead of tiny monospace, and the requester's name is bolder next to their avatar.",
+      "Bookings, Checkouts and Reservations share the same fresh theme as Items."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 587
+  },
+  {
+    "date": "2026-10-22",
+    "title": "A calmer Items and Kits",
+    "type": "improvement",
+    "summary": "Items, Kits, Print labels and Import now use the fresh look, with one main action per page.",
+    "details": [
+      "Items keeps Add item up front and tucks Export, Import, Fill gaps, Cleanup wizard and row density into one More menu.",
+      "Available gear shows a small green dot instead of a filled pill, so checked-out gear and the people holding it stand out.",
+      "Kits shows Ready the same quiet way.",
+      "On a kit, Duplicate stays up front; Archive, Delete and the way back to all kits sit in a More menu.",
+      "On an item, the Info fields read as plain values and only show a box when you hover or click to edit."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 587
+  },
+  {
+    "date": "2026-10-22",
     "title": "Tools in the sidebar",
     "type": "feature",
     "summary": "A new Tools item in the sidebar opens QR Studio, Board Sizes, Golden Hour, Timelapse, and Photo Frame in one click.",
@@ -13,6 +224,23 @@
       "Web"
     ],
     "pr": 589
+  },
+  {
+    "date": "2026-10-21",
+    "title": "My kit for UA gear",
+    "type": "feature",
+    "summary": "Under Armour gear now has a My kit card showing what you are getting and what has been handed to you.",
+    "details": [
+      "Open UA gear to see every piece in your kit with its size.",
+      "Each piece shows Planned, On order with the expected date, In hand with the date, or Add your size.",
+      "Students on the student list see their kit there too.",
+      "Your kit stays hidden until gear picks are opened to everyone.",
+      "Admins see order follow-ups under Needs attention, like late arrivals and people waiting on gear."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 548
   },
   {
     "date": "2026-10-21",
@@ -32,7 +260,41 @@
     ],
     "pr": 586
   },
- {
+  {
+    "date": "2026-10-21",
+    "title": "A more balanced Home",
+    "type": "improvement",
+    "summary": "Home's two columns now end at about the same height, and quiet cards take less room.",
+    "details": [
+      "Recent activity sits under Up next for staff, and Team gear out does for students, so the right column no longer runs long.",
+      "Empty cards show a short one-line note instead of a large centered block.",
+      "On tablets and smaller laptops Home is one column, so cards keep a readable width.",
+      "Rows with a Remind, Approve or Claim button no longer repeat the action as text."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 583
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A calmer Settings",
+    "type": "improvement",
+    "summary": "Settings has a new look and fewer pages. Notifications on the web now match the iPhone app, and your shift calendar link lives on Profile.",
+    "details": [
+      "Related options are grouped into clean rows, with a visible preview for light, dark and system themes.",
+      "Notifications on the web cover every type, with Off, Silent or Alert for each, quiet hours, and a badge awards switch.",
+      "Profile has a Shift calendar section to subscribe to your shifts in Apple or Google Calendar.",
+      "Extend presets moved into Checkout policies, and calendar venue matching moved into Locations with plainer wording.",
+      "The audit log lives only in Reports, now with Record and Action filters.",
+      "Every admin page was rebuilt to be easier to scan, including Sports, which now opens one sport's crew at a time."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 585
+  },
+  {
     "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
@@ -118,6 +380,22 @@
   },
   {
     "date": "2026-10-21",
+    "title": "One badge notification a day",
+    "type": "improvement",
+    "summary": "Badges you earn on the same day now arrive as one notification instead of one each.",
+    "details": [
+      "When a shift, checkout or return earns you several badges at once, they're listed together, like \"3 badges earned\".",
+      "A badge earned later the same day joins that notification and brings it back to the top.",
+      "Badges a staff member gives you still arrive on their own."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 582
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quieter, more accurate notifications",
     "type": "improvement",
     "summary": "Your unread count now shows what still needs you, and the app stops notifying you about things you just did yourself.",
@@ -137,6 +415,20 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Fewer unused preview databases",
+    "type": "improvement",
+    "summary": "Documented why screenshot branches still created preview databases and how to stop it.",
+    "details": [
+      "Screenshot-only branches now carry a copy of the deploy settings file, so pushing to them no longer creates a deployment.",
+      "Stray preview databases from those pushes stop appearing."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 580
+  },
+  {
+    "date": "2026-10-21",
     "title": "Search kits, events and guides",
     "type": "improvement",
     "summary": "Search in the iPhone app now also finds kits, upcoming events and guides, each with its own filter.",
@@ -149,6 +441,25 @@
       "iOS"
     ],
     "pr": 576
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Fairer, clearer crew assignment",
+    "type": "improvement",
+    "summary": "Picking crew and auto assigning shifts now explain each choice in plain words and spread work more evenly.",
+    "details": [
+      "The crew picker suggests the best fits first and shows why each person fits and how busy their week is. Arrow keys and Return assign without the mouse.",
+      "Auto assign favors people with a lighter week and fewer shifts this season, instead of giving every tie to the same person.",
+      "The Auto assign review shows who goes where and why, and lets you leave single slots open when partial crews are allowed.",
+      "Assign shifts has a calmer month grid and a Student workload panel that shows who is busiest, who has no shifts yet, and highlights one person's shifts when you tap them.",
+      "Event pages have a Fill open slots button with the same review, and Crew size sets every area's Staff and Student positions in one step.",
+      "On iPhone, the crew picker matches the web: Suggested, Check first and Unavailable, with each person's week at a glance."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 575
   },
   {
     "date": "2026-10-21",
@@ -216,6 +527,21 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Catch mistyped booking end dates",
+    "type": "fixes",
+    "summary": "Reservations and checkouts can no longer be saved, edited or extended to run longer than a year, which catches a mistyped year before it blocks gear.",
+    "details": [
+      "If an end date is more than a year after the start, you'll see a message asking you to check the end date.",
+      "Bookings of a few weeks or months work as before."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 571
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quicker reviews of upcoming changes",
     "type": "improvement",
     "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",
@@ -230,20 +556,82 @@
   },
   {
     "date": "2026-10-21",
-    "title": "Report a Problem in the iPhone app",
-    "type": "feature",
-    "summary": "Settings in the iPhone app now has Report a Problem, and crashes in the iPhone app, kiosks and the Mac menu bar app reach the team with what led up to them.",
+    "title": "Staff looks right in dark mode",
+    "type": "fixes",
+    "summary": "Staff tiles, notices and the hiring sheet now use dark-friendly colors instead of light pastels.",
     "details": [
-      "Report a Problem in Settings sends your note with the screen you're on, your app version and device, and your last few actions. Contact Support is still there if you'd rather email.",
-      "When the iPhone app, a kiosk or the Mac menu bar app crashes, the report now includes the screens and requests just before it, so problems can be fixed without asking you to retrace your steps.",
-      "Nothing you type, and no passwords, is ever included."
+      "The Right now tiles, Open schedule and See all links use softer tints and brighter text in dark mode.",
+      "The org chart notice and the hiring sheet banners no longer glow against the dark page.",
+      "Light mode looks the same as before."
     ],
     "platforms": [
-      "iOS",
-      "Kiosk",
-      "macOS"
+      "Web"
     ],
-    "pr": 557
+    "pr": 561
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Kiosk checkouts use clean titles",
+    "type": "improvement",
+    "summary": "Checkouts started at the kiosk for a game now get the same title as everywhere else, like \"Men's Soccer vs Evansville\".",
+    "details": [
+      "Kiosk checkouts for a game are titled with the sport name and opponent instead of the calendar's raw event name.",
+      "Reservation and damage or loss alerts show the clean booking title.",
+      "The kiosk's \"needed next\" card no longer cuts typed titles at a dash."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 562
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Simpler Accountability page",
+    "type": "improvement",
+    "summary": "Accountability now leads with what matters: gear still out, your own record, and people who are repeatedly late.",
+    "details": [
+      "Overdue now sits at the top with who has what and how long it is overdue.",
+      "A Your record line shows your late returns and on-time rate.",
+      "The list shows people late 2 or more times; one-time late returns are a click away.",
+      "Location, status and sort options moved into More filters.",
+      "The podium and joke captions are gone."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 563
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Steadier kiosk in the background",
+    "type": "fixes",
+    "summary": "The kiosk does less needless work when you start a checkout, return or pickup, and server errors give clearer advice.",
+    "details": [
+      "Leaving the home screen no longer triggers one extra full refresh of the dashboard.",
+      "A kiosk that was just signed out stops checking in with the server right away.",
+      "If something fails on our side, the kiosk now says to try again in a moment instead of asking for another scan."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 569
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Right now on iPhone staff profiles",
+    "type": "improvement",
+    "summary": "Staff profiles in the iPhone app now open with what someone is doing right now, followed by their week and how they're performing.",
+    "details": [
+      "A new top section shows the next shift or on-shift status, what they are holding, and a badge they're close to earning.",
+      "A This week card lists their shifts with area-colored dots, and a Performance card shows on-time returns, checkouts and badges earned.",
+      "The staff list has blue role tabs, an area dot beside each person, and softer cards."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 558
   },
   {
     "date": "2026-10-21",
@@ -326,6 +714,20 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Get the iPhone app banner",
+    "type": "improvement",
+    "summary": "On iPhone, Safari now offers the Wisconsin Creative app from the App Store.",
+    "details": [
+      "Safari shows its standard App Store banner at the top of signed-in pages. Close it and Safari remembers.",
+      "It doesn't appear on the sign-in page or once the app is installed."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 555
+  },
+  {
+    "date": "2026-10-21",
     "title": "Report a problem, and faster fixes",
     "type": "feature",
     "summary": "Report a problem from the account menu, and crashes and errors now reach the team with what they need to find and fix them.",
@@ -356,6 +758,24 @@
       "macOS"
     ],
     "pr": 546
+  },
+  {
+    "date": "2026-10-20",
+    "title": "Mac app: 1Password sign-in and cleaner glance",
+    "type": "fixes",
+    "summary": "Password managers like 1Password can fill the sign-in form in the Mac menu bar app.",
+    "details": [
+      "The menu bar app now comes to the front when you open it signed out, so 1Password and Apple Passwords can offer your saved login.",
+      "Picking your login fills the email and jumps to the password; the app remembers your email, so signing in again takes one pick and one Touch ID.",
+      "If your password manager's picker closes the menu, choose Sign in in a window to sign in from a window that stays open.",
+      "The message after the server ends your session now just says you were signed out.",
+      "Test, demo and simulator iPads no longer appear in System Health or turn it Critical.",
+      "Long booking titles wrap to two lines, borrower names stay whole, kiosk rows skip a location their name already says, and search waits for Command-F instead of grabbing focus on open."
+    ],
+    "platforms": [
+      "macOS"
+    ],
+    "pr": 543
   },
   {
     "date": "2026-10-20",
@@ -392,6 +812,21 @@
       "Web"
     ],
     "pr": 541
+  },
+  {
+    "date": "2026-10-20",
+    "title": "Schedule stays on the visible week",
+    "type": "fixes",
+    "summary": "The next iPhone update keeps Schedule on the visible day when only a few events are listed.",
+    "details": [
+      "Short schedules keep the first visible day selected, even when several weeks fit on screen.",
+      "Today returns the list and week selection together after scrolling.",
+      "Longer schedules still follow the last visible day when you reach the bottom."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 542
   },
   {
     "date": "2026-10-20",
@@ -475,6 +910,20 @@
   },
   {
     "date": "2026-10-20",
+    "title": "Keep non-game titles when adding an event",
+    "type": "fixes",
+    "summary": "Adding a visit or other non-game now points you to Non-game, so the title stays as you typed it instead of showing as Sport vs Opponent.",
+    "details": [
+      "If a Home, Away, or Neutral event has a title without vs or at, Add event offers a one-tap switch to Non-game.",
+      "Game events still read as sport, vs or at, and opponent."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 537
+  },
+  {
+    "date": "2026-10-20",
     "title": "Less repeated work across devices",
     "type": "improvement",
     "summary": "The web and iPhone apps do less repeated loading and background work while keeping gear counts, schedules, and unfinished work current.",
@@ -537,6 +986,20 @@
   },
   {
     "date": "2026-10-19",
+    "title": "Schedule notices read properly again",
+    "type": "fixes",
+    "summary": "The \"Schedule changes\" notice on an event's crew no longer squeezes its message into a narrow column.",
+    "details": [
+      "Messages in notices with an icon and a title now use the full width.",
+      "Other notices of the same shape are fixed too."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 529
+  },
+  {
+    "date": "2026-10-19",
     "title": "World Series out-of-town scoreboard",
     "type": "feature",
     "summary": "A live scoreboard for World Series Game 2 at wisconsincreative.com/ots, built for the out-of-town strip on Camp Randall's south end zone fascia.",
@@ -566,6 +1029,21 @@
       "iOS"
     ],
     "pr": 523
+  },
+  {
+    "date": "2026-10-19",
+    "title": "Faster audit and resources pages",
+    "type": "improvement",
+    "summary": "The audit report and Resources pages now load noticeably faster, especially on a slow connection.",
+    "details": [
+      "The audit report no longer downloads code it never uses, about a third less than before.",
+      "Resources only loads the file uploader when you start an upload.",
+      "Brand fonts are now kept on your device for a month instead of being rechecked each visit."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 522
   },
   {
     "date": "2026-10-19",

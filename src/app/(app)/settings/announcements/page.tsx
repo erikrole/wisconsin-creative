@@ -33,6 +33,7 @@ import {
 } from "@/lib/announcements";
 import { formatRelativeTime } from "@/lib/format";
 import { releases } from "@/lib/releases";
+import { SettingsGroup } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 
 type Row = {
@@ -117,6 +118,13 @@ async function send(url: string, method: string, body?: unknown) {
   return res.json();
 }
 
+const ANNOUNCEMENT_GROUPS: Array<{ states: Array<Row["state"]>; title: string }> = [
+  { states: ["live"], title: "Live now" },
+  { states: ["scheduled"], title: "Scheduled" },
+  { states: ["draft"], title: "Drafts" },
+  { states: ["ended"], title: "Ended" },
+];
+
 export default function AnnouncementsSettingsPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
@@ -199,7 +207,7 @@ export default function AnnouncementsSettingsPage() {
     <SettingsPageShell
       href="/settings/announcements"
       actions={
-        <Button variant="brand" onClick={() => setDraft({ ...EMPTY })}>
+        <Button onClick={() => setDraft({ ...EMPTY })}>
           <Plus className="size-4" aria-hidden="true" />
           New announcement
         </Button>
@@ -221,81 +229,86 @@ export default function AnnouncementsSettingsPage() {
           onAction={() => setDraft({ ...EMPTY })}
         />
       ) : (
-        <ul className="m-0 flex list-none flex-col divide-y divide-border overflow-hidden rounded-xl border bg-card p-0">
-          {data.map((row) => {
-            const badge = STATE_BADGE[row.state];
-            const audience = ANNOUNCEMENT_AUDIENCES.find((a) => a.id === audienceIdForRoles(row.roles))?.label;
-            const where = [row.showOnWeb ? "Web" : null, row.showOnIos ? "iOS" : null].filter(Boolean).join(" and ");
+        <div className="flex flex-col gap-7">
+          {ANNOUNCEMENT_GROUPS.map(({ states, title }) => {
+            const rows = data.filter((row) => states.includes(row.state));
+            if (rows.length === 0) return null;
             return (
-              <li key={row.id} className="flex items-start gap-4 p-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={badge.variant}>{badge.label}</Badge>
-                    <span className="text-xs font-medium text-muted-foreground">{ANNOUNCEMENT_KIND_LABEL[row.kind]}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => edit(row)}
-                    className="mt-1.5 block max-w-full truncate rounded-sm text-left text-sm font-semibold text-foreground outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/40"
-                  >
-                    {row.title}
-                  </button>
-                  <p className="m-0 mt-0.5 text-xs text-muted-foreground">
-                    {audience} · {where}
-                    {row.state === "live" || row.state === "ended"
-                      ? ` · Seen by ${row.seenCount} of ${row.audienceSize}`
-                      : ""}
-                    {row.publishedAt ? ` · Posted ${formatRelativeTime(row.publishedAt, new Date())}` : ""}
-                  </p>
-                  {row.state === "live" && row.audienceSize > 0 ? (
-                    <div
-                      className="mt-2.5 h-1 w-full max-w-60 overflow-hidden rounded-full bg-muted"
-                      role="img"
-                      aria-label={`Seen by ${row.seenCount} of ${row.audienceSize}`}
-                    >
-                      <div
-                        className="h-full rounded-full bg-[var(--wi-red)]"
-                        style={{ width: `${Math.min(100, Math.round((row.seenCount / row.audienceSize) * 100))}%` }}
-                      />
+              <SettingsGroup key={title} title={title}>
+                {rows.map((row) => {
+                  const badge = STATE_BADGE[row.state];
+                  const audience = ANNOUNCEMENT_AUDIENCES.find((a) => a.id === audienceIdForRoles(row.roles))?.label;
+                  const where = [row.showOnWeb ? "Web" : null, row.showOnIos ? "iOS" : null].filter(Boolean).join(" and ");
+                  return (
+                  <li key={row.id} className="flex items-start gap-4 px-4 py-4">
+                    <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => edit(row)}
+                        className="block max-w-full truncate rounded-sm text-left text-sm font-bold text-foreground outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/40"
+                      >
+                        {row.title}
+                      </button>
+                      <p className="m-0 mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted-foreground">
+                        <Badge variant={badge.variant}>{badge.label}</Badge>
+                        <span>{ANNOUNCEMENT_KIND_LABEL[row.kind]} · {audience} · {where}
+                        {row.state === "live" || row.state === "ended"
+                          ? ` · Seen by ${row.seenCount} of ${row.audienceSize}`
+                          : ""}
+                        {row.publishedAt ? ` · Posted ${formatRelativeTime(row.publishedAt, new Date())}` : ""}</span>
+                      </p>
+                      {row.state === "live" && row.audienceSize > 0 ? (
+                        <div
+                          className="mt-2.5 h-1 w-full max-w-60 overflow-hidden rounded-full bg-muted"
+                          role="img"
+                          aria-label={`Seen by ${row.seenCount} of ${row.audienceSize}`}
+                        >
+                          <div
+                            className="h-full rounded-full bg-[var(--wi-red)]"
+                            style={{ width: `${Math.min(100, Math.round((row.seenCount / row.audienceSize) * 100))}%` }}
+                          />
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label={`Actions for ${row.title}`}>
-                      <MoreHorizontal className="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => edit(row)}>Edit</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => duplicate(row)}>
-                      <Copy className="size-4" aria-hidden="true" />
-                      Duplicate
-                    </DropdownMenuItem>
-                    {row.state === "draft" || row.state === "ended" ? (
-                      <DropdownMenuItem onSelect={() => act.mutate({ id: row.id, body: { state: "live" }, ok: "Published" })}>
-                        {row.state === "ended" ? "Publish again" : "Publish"}
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem onSelect={() => act.mutate({ id: row.id, body: { state: "ended" }, ok: "Announcement ended" })}>
-                        End now
-                      </DropdownMenuItem>
-                    )}
-                    {row.state === "live" ? (
-                      <DropdownMenuItem onSelect={() => act.mutate({ id: row.id, body: { showAgain: true }, ok: "Everyone will see it again" })}>
-                        Show to everyone again
-                      </DropdownMenuItem>
-                    ) : null}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onSelect={() => void remove(row)}>
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </li>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label={`Actions for ${row.title}`}>
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => edit(row)}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => duplicate(row)}>
+                          <Copy className="size-4" aria-hidden="true" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        {row.state === "draft" || row.state === "ended" ? (
+                          <DropdownMenuItem onSelect={() => act.mutate({ id: row.id, body: { state: "live" }, ok: "Published" })}>
+                            {row.state === "ended" ? "Publish again" : "Publish"}
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onSelect={() => act.mutate({ id: row.id, body: { state: "ended" }, ok: "Announcement ended" })}>
+                            End now
+                          </DropdownMenuItem>
+                        )}
+                        {row.state === "live" ? (
+                          <DropdownMenuItem onSelect={() => act.mutate({ id: row.id, body: { showAgain: true }, ok: "Everyone will see it again" })}>
+                            Show to everyone again
+                          </DropdownMenuItem>
+                        ) : null}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => void remove(row)}>
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </li>
+                  );
+                })}
+              </SettingsGroup>
             );
           })}
-        </ul>
+        </div>
       )}
 
       {draft ? (

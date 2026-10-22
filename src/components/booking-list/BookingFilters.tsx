@@ -3,6 +3,7 @@
 import { SPORT_CODES } from "@/lib/sports";
 import { FilterChip } from "@/components/FilterChip";
 import { OperationalActiveFilterChips, OperationalToolbar, type OperationalActiveFilter } from "@/components/OperationalToolbar";
+import { ListToolbar } from "@/components/list-page/ListToolbar";
 import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
@@ -52,11 +53,6 @@ export function BookingFilters({
     : config.kind === "RESERVATION"
       ? "Event day"
       : "Due today";
-  const title = specialFilter
-    ? specialFilterLabel
-    : statusFilter
-      ? config.statusOptions.find((s) => s.value === statusFilter)?.label ?? "Filtered"
-      : config.scopeLabel ?? "All";
   const activeFilters: OperationalActiveFilter[] = [
     ...(specialFilter
       ? [{
@@ -98,11 +94,9 @@ export function BookingFilters({
   return (
     <div className="p-4">
       <OperationalToolbar>
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div className="min-w-0 shrink-0 text-sm font-semibold text-foreground lg:w-[170px]">
-            {title} {config.labelPlural.toLowerCase()}
-          </div>
-          <div className="relative min-w-0 flex-1">
+        <ListToolbar
+          className="mt-0 border-b-0 pb-0"
+          search={(
             <DebouncedSearchInput
               id={`${config.kind.toLowerCase()}-booking-search`}
               name={`${config.kind.toLowerCase()}-booking-search`}
@@ -112,8 +106,9 @@ export function BookingFilters({
               onValueChange={onSearchChange}
               aria-label="Search bookings by title or requester"
             />
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          )}
+          filters={(
+            <>
             {config.kind === "RESERVATION" && !specialFilter && (
               <>
                 <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => onSpecialFilterChange("due-today")}>
@@ -187,8 +182,9 @@ export function BookingFilters({
                 Clear all
               </Button>
             )}
-          </div>
-        </div>
+            </>
+          )}
+        />
         <OperationalActiveFilterChips filters={activeFilters} />
       </OperationalToolbar>
     </div>

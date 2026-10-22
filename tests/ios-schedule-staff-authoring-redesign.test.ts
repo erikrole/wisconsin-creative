@@ -24,8 +24,8 @@ describe("native Schedule staff authoring redesign", () => {
     const view = source("ios/Wisconsin/Views/Schedule/AssignStudentSheet.swift");
 
     expect(view).toContain("APIClient.shared.shiftCandidateScores(shiftId: shiftId)");
-    expect(view).toContain("Section(recommendations.isEmpty ? \"People\" : \"Best Fits\")");
-    expect(view).toContain("Text(\"Review Before Assigning\")");
+    expect(view).toContain("Section(recommendations.isEmpty ? \"People\" : \"Suggested\")");
+    expect(view).toContain("Text(\"Check first\")");
     expect(view).toContain("Button(\"Assign Anyway\")");
     expect(view).toContain("guard recommendation?.blockingConflict != true else { return }");
     expect(view).toContain("guard assigningUserId == nil else { return }");

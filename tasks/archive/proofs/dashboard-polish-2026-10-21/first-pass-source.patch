@@ -1,0 +1,137 @@
+diff --git a/src/app/(app)/_home/HomeView.tsx b/src/app/(app)/_home/HomeView.tsx
+index 816df55bf..c19b6c095 100644
+--- a/src/app/(app)/_home/HomeView.tsx
++++ b/src/app/(app)/_home/HomeView.tsx
+@@ -122,6 +122,7 @@ const ATTENTION_PREVIEW = 5;
+ 
+ export function HomeView(props: HomeViewProps) {
+   const { role, now, pageError, onRetry } = props;
++  const teamSectionCount = [props.coverage, props.teamGear, props.activity].filter(Boolean).length;
+   return (
+     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 pb-8" data-home>
+       <HomeHeader {...props} />
+@@ -178,13 +179,21 @@ export function HomeView(props: HomeViewProps) {
+                 <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
+               )}
+               {props.crew && <CrewSection slot={props.crew} />}
+-              {props.activity && <ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} />}
++            </div>
++          </div>
++          {(props.coverage || props.teamGear || props.activity) && (
++            <div className={cn(
++              "grid items-start gap-5",
++              teamSectionCount > 1 && "md:grid-cols-2",
++              teamSectionCount === 3 && "xl:grid-cols-3",
++            )}>
+               {props.coverage && <CoverageSection slot={props.coverage} />}
+               {props.teamGear && (
+                 <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />
+               )}
++              {props.activity && <ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} />}
+             </div>
+-          </div>
++          )}
+         </>
+       )}
+     </div>
+@@ -283,26 +292,31 @@ function SectionHeader({ id, title, count, href, linkLabel = "View all" }: {
+   );
+ }
+ 
+-function StateBlock({ icon: Icon, title, description, action, tone = "neutral" }: {
++function StateBlock({ icon: Icon, title, description, action, tone = "neutral", compact = false }: {
+   icon: React.ComponentType<{ className?: string }>;
+   title: string;
+   description?: string;
+   action?: ReactNode;
+   tone?: HomeTone | "positive";
++  compact?: boolean;
+ }) {
+   return (
+-    <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
++    <div className={cn("flex", compact ? "items-start gap-3 px-4 pt-3 pb-4" : "flex-col items-center gap-1 px-6 py-8 text-center")}>
+       <span
++        aria-hidden="true"
+         className={cn(
+-          "mb-2 flex size-10 items-center justify-center rounded-full",
++          "flex shrink-0 items-center justify-center rounded-full",
++          compact ? "size-8" : "mb-2 size-10",
+           tone === "positive" ? "bg-[var(--green-bg)] text-[var(--green-text)]" : TONE_TILE[tone],
+         )}
+       >
+-        <Icon className="size-5" />
++        <Icon className={compact ? "size-4" : "size-5"} />
+       </span>
+-      <p className="text-sm font-bold text-foreground">{title}</p>
+-      {description && <p className="max-w-[320px] text-[13px] text-muted-foreground">{description}</p>}
+-      {action && <div className="mt-3">{action}</div>}
++      <div className={cn("flex min-w-0 flex-col gap-1", compact ? "flex-1" : "items-center")}>
++        <p className="text-sm font-bold text-foreground">{title}</p>
++        {description && <p className="max-w-[320px] text-[13px] text-muted-foreground">{description}</p>}
++        {action && <div className="mt-3">{action}</div>}
++      </div>
+     </div>
+   );
+ }
+@@ -430,6 +444,7 @@ function AttentionSection({ slot, onTarget, onQuick, busyTradeId, onRemind, remi
+         <SectionError what="what needs attention" onRetry={slot.onRetry} />
+       ) : rows.length === 0 ? (
+         <StateBlock
++          compact
+           icon={CheckIcon}
+           tone="positive"
+           title="You’re all caught up"
+@@ -630,7 +645,7 @@ function GearSection({ title, href, slot, emptyTitle, emptyDescription, emptyAct
+       ) : slot.state === "error" ? (
+         <SectionError what="your gear" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={PackageCheckIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
++        <StateBlock compact icon={PackageCheckIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
+       ) : (
+         <GearList rows={slot.rows} onSelectBooking={onSelectBooking} />
+       )}
+@@ -680,7 +695,7 @@ function TradesSection({ slot, href, onQuick, busyTradeId }: {
+       ) : slot.state === "error" ? (
+         <SectionError what="trades" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={ArrowLeftRightIcon} title="No open trades" description="Shifts a teammate posts that you can pick up appear here." />
++        <StateBlock compact icon={ArrowLeftRightIcon} title="No open trades" description="Shifts a teammate posts that you can pick up appear here." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => (
+@@ -712,7 +727,7 @@ function CrewSection({ slot }: { slot: Slot<CrewRow[]> }) {
+       ) : slot.state === "error" ? (
+         <SectionError what="today’s crew" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={CalendarDaysIcon} title="No one is on today" description="Published shifts for today show here with who’s working." />
++        <StateBlock compact icon={CalendarDaysIcon} title="No one is on today" description="Published shifts for today show here with who’s working." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => (
+@@ -744,7 +759,7 @@ function ActivitySection({ slot, onSelectBooking }: { slot: Slot<ActivityRow[]>;
+       ) : slot.state === "error" ? (
+         <SectionError what="recent activity" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={ClockIcon} title="Quiet so far" description="Kiosk pickups and returns from the last day show here." />
++        <StateBlock compact icon={ClockIcon} title="Quiet so far" description="Kiosk pickups and returns from the last day show here." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => (
+@@ -790,7 +805,7 @@ function CoverageSection({ slot }: { slot: Slot<CoverageRow[]> }) {
+       ) : slot.state === "error" ? (
+         <SectionError what="events" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={CalendarDaysIcon} title="No events this week" description="Synced games and events land here with crew coverage." />
++        <StateBlock compact icon={CalendarDaysIcon} title="No events this week" description="Synced games and events land here with crew coverage." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => {
+@@ -845,7 +860,7 @@ function TeamGearSection({ slot, onSelectBooking }: {
+       ) : slot.state === "error" ? (
+         <SectionError what="team gear" onRetry={slot.onRetry} />
+       ) : slot.rows.rows.length === 0 ? (
+-        <StateBlock icon={PackageCheckIcon} title="Everything is on the shelf" description="No one has gear checked out." />
++        <StateBlock compact icon={PackageCheckIcon} title="Everything is on the shelf" description="No one has gear checked out." />
+       ) : (
+         <GearList rows={slot.rows.rows} onSelectBooking={onSelectBooking} />
+       )}

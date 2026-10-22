@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/EmptyState";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
+import { ExtendPresetsSection } from "./ExtendPresets";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import type { CheckoutPolicies } from "@/lib/services/checkout-policies";
@@ -164,9 +164,9 @@ export default function CheckoutPoliciesPage() {
   }
 
   return (
-    <SettingsPageShell href="/settings/checkout-policies">
+    <SettingsPageShell href="/settings/checkout-policies" mainClassName="flex flex-col gap-7">
       {error && (
-        <Alert className="mb-4">
+        <Alert>
           <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
             <span>Could not refresh settings. Your values are still shown.</span>
             <Button type="button" variant="outline" className="h-10" onClick={reload}>Retry refresh</Button>
@@ -174,82 +174,82 @@ export default function CheckoutPoliciesPage() {
         </Alert>
       )}
       <form ref={formElement} noValidate onSubmit={(event) => { event.preventDefault(); void handleSave(); }}>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Loan rules</CardTitle>
-            <CardDescription>Loan defaults and checkout limits apply to new checkouts. The grace period also affects when existing checkouts are considered overdue.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {/* Default loan duration */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cp-loan-days">Default loan duration (days)</Label>
-              <Input
-                id="cp-loan-days"
-                name="defaultLoanDays"
-                type="number"
-                min={1}
-                max={365}
-                value={form.defaultLoanDays}
-                onChange={(e) => setField("defaultLoanDays", e.target.value)}
-                aria-invalid={!!errors.defaultLoanDays}
-                aria-describedby="defaultLoanDays-help"
-                className="h-10 max-w-48"
-                disabled={saving}
-              />
-              <p id="defaultLoanDays-help" aria-live="polite" className={errors.defaultLoanDays ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {errors.defaultLoanDays ?? "Used to prefill the due date when creating a checkout with no explicit end date."}
-              </p>
-            </div>
-
-            {/* Grace period */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cp-grace">Overdue grace period (hours)</Label>
-              <Input
-                id="cp-grace"
-                name="gracePeriodHours"
-                type="number"
-                min={0}
-                max={168}
-                step={0.5}
-                value={form.gracePeriodHours}
-                onChange={(e) => setField("gracePeriodHours", e.target.value)}
-                aria-invalid={!!errors.gracePeriodHours}
-                aria-describedby="gracePeriodHours-help"
-                className="h-10 max-w-48"
-                disabled={saving}
-              />
-              <p id="gracePeriodHours-help" aria-live="polite" className={errors.gracePeriodHours ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {errors.gracePeriodHours ?? "A checkout only appears in the Overdue list and triggers escalation notifications after the due date plus this buffer. Set to 0 for immediate overdue."}
-              </p>
-            </div>
-
-            {/* Max items */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cp-max-items">Max active checkouts per user</Label>
-              <Input
-                id="cp-max-items"
-                name="maxItemsPerUser"
-                type="number"
-                min={1}
-                max={100}
-                value={form.maxItemsPerUser}
-                onChange={(e) => setField("maxItemsPerUser", e.target.value)}
-                placeholder="No limit"
-                aria-invalid={!!errors.maxItemsPerUser}
-                aria-describedby="maxItemsPerUser-help"
-                className="h-10 max-w-48"
-                disabled={saving}
-              />
-              <p id="maxItemsPerUser-help" aria-live="polite" className={errors.maxItemsPerUser ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {errors.maxItemsPerUser ?? "Counts both Open and legacy Pending Pickup checkouts. Leave blank for no limit."}
-              </p>
-            </div>
-
-            {saveError && <Alert variant="destructive"><AlertDescription>{saveError}</AlertDescription></Alert>}
-            <SettingsSaveBar dirty={dirty} saving={saving} onReset={resetChanges} />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-4">
+        <SettingsGroup
+          title="Loan rules"
+          description="Defaults and limits apply to new checkouts. The grace period also decides when existing checkouts count as overdue."
+        >
+          <SettingsRow
+            label="Default loan length (days)"
+            htmlFor="cp-loan-days"
+            descriptionId="defaultLoanDays-help"
+            invalid={!!errors.defaultLoanDays}
+            description={errors.defaultLoanDays ?? "Prefills the due date when a checkout has no end date."}
+          >
+            <Input
+              id="cp-loan-days"
+              name="defaultLoanDays"
+              type="number"
+              min={1}
+              max={365}
+              value={form.defaultLoanDays}
+              onChange={(e) => setField("defaultLoanDays", e.target.value)}
+              aria-invalid={!!errors.defaultLoanDays}
+              aria-describedby="defaultLoanDays-help"
+              className="h-10"
+              disabled={saving}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Overdue grace period (hours)"
+            htmlFor="cp-grace"
+            descriptionId="gracePeriodHours-help"
+            invalid={!!errors.gracePeriodHours}
+            description={errors.gracePeriodHours ?? "Overdue lists and escalations start after the due date plus this buffer. 0 means immediately."}
+          >
+            <Input
+              id="cp-grace"
+              name="gracePeriodHours"
+              type="number"
+              min={0}
+              max={168}
+              step={0.5}
+              value={form.gracePeriodHours}
+              onChange={(e) => setField("gracePeriodHours", e.target.value)}
+              aria-invalid={!!errors.gracePeriodHours}
+              aria-describedby="gracePeriodHours-help"
+              className="h-10"
+              disabled={saving}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Max active checkouts per person"
+            htmlFor="cp-max-items"
+            descriptionId="maxItemsPerUser-help"
+            invalid={!!errors.maxItemsPerUser}
+            description={errors.maxItemsPerUser ?? "Counts Open and legacy Pending Pickup checkouts. Leave blank for no limit."}
+          >
+            <Input
+              id="cp-max-items"
+              name="maxItemsPerUser"
+              type="number"
+              min={1}
+              max={100}
+              placeholder="No limit"
+              value={form.maxItemsPerUser}
+              onChange={(e) => setField("maxItemsPerUser", e.target.value)}
+              aria-invalid={!!errors.maxItemsPerUser}
+              aria-describedby="maxItemsPerUser-help"
+              className="h-10"
+              disabled={saving}
+            />
+          </SettingsRow>
+        </SettingsGroup>
+        {saveError && <Alert variant="destructive"><AlertDescription>{saveError}</AlertDescription></Alert>}
+        <SettingsSaveBar dirty={dirty} saving={saving} onReset={resetChanges} />
+        </div>
       </form>
+      <ExtendPresetsSection />
     </SettingsPageShell>
   );
 }

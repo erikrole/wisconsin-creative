@@ -1,0 +1,112 @@
+{
+  "title": "Original layout, better balance",
+  "eyebrow": "Wisconsin Creative · Local review · October 21, 2026",
+  "lede": "Keep the original dashboard hierarchy, compact its quiet states and use the open space beneath Up next for Recent activity.",
+  "stats": [
+    {
+      "k": "Column endpoint difference",
+      "v": "545 → 88 px",
+      "n": "Matched populated Admin fixture; cards retain natural heights.",
+      "tone": "good"
+    },
+    {
+      "k": "Coming up and Team gear",
+      "v": "316 px earlier",
+      "n": "Recent activity uses the left column instead of pushing these cards down the right rail.",
+      "tone": "good"
+    },
+    {
+      "k": "Empty Admin fixture",
+      "v": "1555 → 1100 px",
+      "n": "Document height at the same 1440×1100 viewport.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched dark appearance",
+      "note": "Latest Home baseline f1501f9c6. Both sides use the existing sample-data lab, Admin role, fixed October 21 clock, 1440×1100 CSS viewport, en-US, America/Chicago, default text size and scroll position [0,0]. PNG receipts bind each capture to its declared source and settings. These are presentation fixtures, not authenticated runtime evidence.",
+      "pairs": [
+        {
+          "title": "Quiet Home",
+          "sub": "Same original structure, with compact quiet states.",
+          "before": "before-empty.png",
+          "after": "balanced-after-empty.png",
+          "beforeEvidence": "before-empty-evidence.json",
+          "afterEvidence": "balanced-after-empty-evidence.json",
+          "beforeCap": "Large empty cards push Coming up and Team gear below the viewport.",
+          "afterCap": "The grouped counts and original column hierarchy return. Empty cards take less vertical space.",
+          "wide": true
+        },
+        {
+          "title": "Populated Home",
+          "sub": "Recent activity uses space below Up next, allowing the remaining right-hand cards to move up.",
+          "before": "before-ready.png",
+          "after": "balanced-after-ready.png",
+          "beforeEvidence": "before-ready-evidence.json",
+          "afterEvidence": "balanced-after-ready-evidence.json",
+          "beforeCap": "Team context continues down the right rail.",
+          "afterCap": "Personal priorities stay in their original positions; the columns finish much closer together.",
+          "wide": true
+        }
+      ]
+    },
+    {
+      "heading": "Additional presentation checks",
+      "note": "After-only captures; no matched baseline is claimed for these appearances or widths.",
+      "shots": [
+        {
+          "title": "Light appearance",
+          "image": "balanced-after-light-ready.png",
+          "cap": "1440×1100 viewport, full-page capture. Original counts, primary hierarchy and theme; Recent activity fills the left column.",
+          "wide": true
+        },
+        {
+          "title": "Intermediate desktop",
+          "image": "balanced-after-1100.png",
+          "cap": "1100×1000 viewport. Two columns remain readable without horizontal overflow.",
+          "wide": true
+        },
+        {
+          "title": "Tablet partial failure",
+          "image": "balanced-after-tablet-partial.png",
+          "cap": "1000×1000 viewport. The layout stacks into one column and retains individual Retry controls.",
+          "wide": true
+        },
+        {
+          "title": "Student phone-width web",
+          "image": "balanced-after-phone-student.png",
+          "cap": "390×844 CSS viewport. Personal gear and crew precede secondary Team gear. The fixed bottom navigation appears at its viewport position in this full-page capture. Native iOS is unchanged."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Keep the original hierarchy",
+      "was": "The grouped counts and two-column layout were useful, but the right rail grew much longer than the primary column.",
+      "now": "The original strip and column proportions are retained. Recent activity occupies the unused left-column space below Up next, while gear, crew and upcoming events keep their right-hand locations."
+    },
+    {
+      "h": "Give quiet days less empty space",
+      "was": "Centered empty states used large icons and vertical padding that pushed later cards down.",
+      "now": "Short inline states keep their existing actions. Cards keep natural heights and all original information remains available."
+    }
+  ],
+  "verification": [
+    "PASS — 57 focused Home/dashboard/sync/collaborator tests.",
+    "PASS — npx tsc --noEmit --pretty false and edited-file ESLint.",
+    "PASS — docs verification and git diff --check.",
+    "PASS — all 20 role/state cases: zero horizontal overflow; Staff/Admin activity stays in the left column and coverage stays in the right.",
+    "PASS — 1440, 1100, 1000 and 390px visual inspection, plus light/dark appearance. Phone personal gear remains ahead of secondary team content.",
+    "PASS — attention expansion, keyboard Enter collapse and fixture reminder feedback. No uncaught browser exceptions.",
+    "PASS — npm run build:app completed successfully for the restored column layout (309 static pages).",
+    "UNAVAILABLE — authenticated branch preview: this isolated branch has no managed environment."
+  ],
+  "notes": [
+    "Local implementation on codex/dashboard-polish. Nothing is committed, pushed, merged or deployed.",
+    "Original source baseline is f1501f9c6f60ad54933f841926b41d9d78b66f53. Selected balanced-* captures bind to source.patch; prior exploration assets remain separate and are not selected in this review.",
+    "Fixtures demonstrate presentation and local interaction only. Authenticated authorization, durable booking changes and reminder delivery require separate managed-preview proof.",
+    "The original dirty checkout and Claude’s branch are preserved. Native clients, API contracts, permissions and card visibility are unchanged."
+  ]
+}

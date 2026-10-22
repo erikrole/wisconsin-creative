@@ -99,6 +99,7 @@ Welcome/ProfileCompletionDraft.swift   |                             | exempt-in
 Welcome/ProfileCompletionWelcomeComponents.swift |                   | exempt-shared
 UsersView.swift                        | users                       | audit
 UserDetailView.swift                   | users                       | audit
+StaffRightNow.swift                    |                             | exempt-shared
 AppTabView.swift                       | profile                     | audit
 ProfileView.swift                      | profile                     | audit
 ProfileNextUp.swift                    | profile                     | audit

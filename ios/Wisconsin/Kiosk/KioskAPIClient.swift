@@ -964,7 +964,7 @@ struct KioskAPI {
         case 500...:
             // Raw 5xx bodies ("Internal server error") aren't actionable at
             // the kiosk; staff just needs to know it's our side and retryable.
-            throw APIError.serverError("Something went wrong on our end. Try that scan again.")
+            throw APIError.serverError("Something went wrong on our end. Try again in a moment.")
         default:
             let msg = (try? decoder.decode(ErrorBody.self, from: data))?.error ?? "Server error (\(http.statusCode))"
             if typedClientErrors, (400...499).contains(http.statusCode) {

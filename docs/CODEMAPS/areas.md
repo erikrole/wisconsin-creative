@@ -79,9 +79,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_GEAR_PICKS.md`
 - Pages: _none matched_
-- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin/export.xlsx`, `/api/gear-picks/admin/history`, `/api/gear-picks/admin`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
+- APIs: `/api/gear-picks/admin/export.csv`, `/api/gear-picks/admin/export.xlsx`, `/api/gear-picks/admin/history`, `/api/gear-picks/admin`, `/api/gear-picks/me/kit`, `/api/gear-picks/me`, `/api/gear-picks/users/[userId]`
 - Services: `src/lib/services/gear-picks.ts`
-- Tests: `tests/gear-picks-attention.test.ts`, `tests/gear-picks-budget.test.ts`, `tests/gear-picks-equipment-sheet.test.ts`, `tests/gear-picks-handout.test.ts`, `tests/gear-picks-order.test.ts`, `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-receiving.test.ts`, `tests/gear-picks-routes.test.ts`
+- Tests: `tests/gear-picks-attention.test.ts`, `tests/gear-picks-budget.test.ts`, `tests/gear-picks-equipment-sheet.test.ts`, `tests/gear-picks-handout.test.ts`, `tests/gear-picks-my-kit.test.ts`, `tests/gear-picks-order.test.ts`, `tests/gear-picks-pricing.test.ts`, `tests/gear-picks-receiving.test.ts`
 
 ## importer
 
@@ -193,7 +193,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/allowed-emails`, `/settings/announcements`, `/settings/app-activity`, `/settings/appearance`, `/settings/audit`, `/settings/bookings`, `/settings/calendar-sources`, `/settings/categories`
 - APIs: `/api/settings/app-activity`, `/api/settings/checkout-policies`, `/api/settings/escalation`, `/api/settings/extend-presets`, `/api/settings/non-game-schedule`, `/api/settings/reservation-rules`
 - Services: _none matched_
-- Tests: `tests/ios-settings-detail-menus.test.ts`, `tests/ios-settings-first-class.test.ts`, `tests/settings-allowed-emails-display.test.ts`, `tests/settings-audit-command-surface-source.test.ts`, `tests/settings-audit-filters.test.ts`, `tests/settings-audit-pagination.test.ts`, `tests/settings-calendar-sources-load-state.test.ts`, `tests/settings-kiosk-devices-location-state.test.ts`
+- Tests: `tests/ios-settings-detail-menus.test.ts`, `tests/ios-settings-first-class.test.ts`, `tests/settings-allowed-emails-display.test.ts`, `tests/settings-calendar-sources-load-state.test.ts`, `tests/settings-kiosk-devices-location-state.test.ts`, `tests/settings-locations-accessibility.test.ts`, `tests/settings-route-role-gate.test.ts`, `tests/settings-routes.test.ts`
 
 ## shifts
 

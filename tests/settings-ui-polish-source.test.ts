@@ -7,8 +7,7 @@ describe("Settings UI polish contracts", () => {
 
     expect(page).toContain('aria-label="Find a setting — try allowlist, kiosk, or overdue"');
     expect(page).toContain("Resume {lastSection.label}");
-    expect(page).toContain("active:scale-[0.96]");
-    expect(page).toContain("transition-[background-color,scale]");
+    expect(page).toContain("transition-[background-color]");
     expect(page).toContain("<SettingsGroupList group={group} sections={sections} />");
   });
 
@@ -21,7 +20,7 @@ describe("Settings UI polish contracts", () => {
   });
 
   it("gives blocked-route recovery an explicit desktop target", () => {
-    const layout = source("src/app/(app)/settings/layout.tsx");
+    const layout = source("src/app/(app)/settings/SettingsShell.tsx");
 
     expect(layout).toContain('<Button asChild variant="outline" className="h-10">');
     expect(layout).toContain('<Link href="/settings">Back to Settings</Link>');
@@ -38,16 +37,17 @@ describe("Settings UI polish contracts", () => {
     expect(related).toContain("getRelatedSettingsSections");
   });
 
-  it("exposes Slack handle on Profile and on-page jump nav on long tabs", () => {
+  it("exposes Slack handle on Profile and anchored sections on long tabs", () => {
     const profile = source("src/app/(app)/settings/profile/page.tsx");
     const sports = source("src/app/(app)/settings/sports/page.tsx");
     const security = source("src/app/(app)/settings/security/page.tsx");
 
     expect(profile).toContain("Slack handle");
     expect(profile).toContain('name="slackHandle"');
-    expect(sports).toContain("<SettingsJumpNav");
-    expect(security).toContain("{ href: \"#passkeys\", label: \"Passkeys\" }");
-    expect(security).toContain('{ href: "#account", label: "Account" }');
+    expect(sports).toContain('id="sport-setup"');
+    expect(sports).toContain('id="non-game"');
+    expect(security).toContain('<Card id="passkeys"');
+    expect(security).toContain('<Card id="account"');
   });
 });
 
