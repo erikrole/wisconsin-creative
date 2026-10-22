@@ -4,6 +4,25 @@ import SwiftUI
 /// return with the new one, a short list offers the usual answers, and the
 /// calendar is there for anything else. The latest choice always stops before
 /// the next booking that needs this gear.
+/// The return-time rules shared by this sheet and `ExtendCheckoutIntent`, so
+/// Siri and the sheet can never offer different limits.
+enum ExtendWindow {
+    /// Latest end that leaves a 30-minute grace before another booking needs
+    /// the gear, floored to the quarter hour. Same rule as the kiosk.
+    static func latestEndsAt(nextNeedAt: Date?) -> Date? {
+        guard let nextNeedAt else { return nil }
+        let latest = nextNeedAt.addingTimeInterval(-30 * 60)
+        let step = TimeInterval(QuarterHour.minuteInterval * 60)
+        let floored = floor(latest.timeIntervalSinceReferenceDate / step) * step
+        return Date(timeIntervalSinceReferenceDate: floored)
+    }
+
+    /// Extensions count from now when the booking is already late.
+    static func base(currentEndsAt: Date, now: Date = Date()) -> Date {
+        max(currentEndsAt, now)
+    }
+}
+
 struct ExtendBookingSheet: View {
     let booking: Booking
     let onSuccess: (Booking) -> Void
@@ -30,18 +49,10 @@ struct ExtendBookingSheet: View {
     private var nextNeedAt: Date? { insight?.nextNeedAt }
     private var isCheckingNextNeed: Bool { insight == nil }
 
-    /// Latest end that leaves a 30-minute grace before another booking needs
-    /// the gear, floored to the quarter hour. Same rule as the kiosk.
-    private var latestEndsAt: Date? {
-        guard let nextNeedAt else { return nil }
-        let latest = nextNeedAt.addingTimeInterval(-30 * 60)
-        let step = TimeInterval(QuarterHour.minuteInterval * 60)
-        let floored = floor(latest.timeIntervalSinceReferenceDate / step) * step
-        return Date(timeIntervalSinceReferenceDate: floored)
-    }
+    private var latestEndsAt: Date? { ExtendWindow.latestEndsAt(nextNeedAt: nextNeedAt) }
 
     /// Extensions count from now when the booking is already late.
-    private var base: Date { max(currentEndsAt, Date()) }
+    private var base: Date { ExtendWindow.base(currentEndsAt: currentEndsAt) }
 
     private var earliestCustom: Date { QuarterHour.roundedUp(base.addingTimeInterval(15 * 60)) }
 

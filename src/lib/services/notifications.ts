@@ -189,6 +189,7 @@ export async function sendPushToUser(userId: string, opts: PushMessage): Promise
         threadId: pushThreadId(opts.payload, opts.category),
         badge: unreadCount,
         relevanceScore: entry?.relevance,
+        filterCriteria: entry?.group,
         collapseId: opts.collapseId ?? opts.notificationId,
       }
     );
