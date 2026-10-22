@@ -1,6 +1,6 @@
 # Recent iOS review fixes
 
-Scope: close the 11 findings in `/private/tmp/wc-ios-review-20261022/REVIEW.md` on one isolated local checkout. Original branches and dirty root files stay untouched. The user subsequently authorized a local commit of the fixes and onboarding improvements; push, merge to main, migration deployment, and distribution remain outside scope.
+Scope: close the 11 findings in `/private/tmp/wc-ios-review-20261022/REVIEW.md` on one isolated local checkout. Original feature branches and dirty root files stay untouched. The user subsequently authorized the commit, push, and PR for the fixes and onboarding improvements; merge to main, production migration deployment, and distribution remain outside scope.
 
 Baseline: main `ecc399c3c`, plus existing feature deltas from #564 `8714da249`, #604/#599 `eaa1fdec1`, #600 `8951d72a0`, #601 `5881ac706`. Exact revision/merge-base manifest is under `tasks/archive/proofs/ios-review-fixes-2026-10-22/baseline-sources.json`. Existing changes were composed without staging or committing; API additions were retained in the extracted domain extensions and generated Xcode membership will be rebuilt.
 
@@ -39,3 +39,5 @@ Final result: all 11 fixes and onboarding appearance are source-complete and ind
 Concurrent onboarding updates were reconciled before final proof: required setup retains Sign out in the footer/load-failure recovery, profile refresh flags clear on account/save transitions, and the new required-setup bypass regression joins the native gate (251 tests). The final visual baseline includes these same behavior updates.
 
 The remaining style-drift follow-up is now closed: see `ios-style-drift.md` and `../proofs/ios-style-drift-2026-10-22/review.html`. The unchanged detector and simulator verification wrapper pass.
+
+Delivery: implementation commit `5881c44c` is pushed on `origin/codex/ios-review-fixes` with PR [#605](https://github.com/erikrole/wisconsin-creative/pull/605) targeting main. The required public release entry identifies this PR. CI and the automatic branch-owned managed preview are separate remote gates; production and App Store distribution are unchanged.
