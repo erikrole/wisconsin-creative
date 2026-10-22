@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { CrewSizeDialog } from "@/app/(app)/schedule/_components/CrewSizeDialog";
-import type { WorkingSchedulePayload } from "@/lib/schedule-working-copy";
+import type { WorkingSchedulePayload, WorkingScheduleSportTemplate } from "@/lib/schedule-working-copy";
 
 type Slot = WorkingSchedulePayload["slots"][number];
 
@@ -34,6 +34,16 @@ const SLOTS: Slot[] = [
   slot("g1", "GRAPHICS", "FT"),
 ];
 
+const TEMPLATE: WorkingScheduleSportTemplate = {
+  sportCode: "FB",
+  venue: "home",
+  rows: [
+    { area: "VIDEO", home: { FT: 1, ST: 4 }, away: { FT: 1, ST: 1 } },
+    { area: "PHOTO", home: { FT: 0, ST: 3 }, away: { FT: 0, ST: 1 } },
+    { area: "SOCIAL", home: { FT: 0, ST: 1 }, away: { FT: 0, ST: 0 } },
+  ],
+};
+
 function Lab() {
   const params = useSearchParams();
   useEffect(() => {
@@ -46,6 +56,8 @@ function Lab() {
       slots={SLOTS}
       saving={false}
       onSave={async () => true}
+      template={params.get("template") === "none" ? null : TEMPLATE}
+      canSaveTemplate
     />
   );
 }

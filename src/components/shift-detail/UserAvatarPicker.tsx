@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
+import { CheckIcon, SearchIcon } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
@@ -39,6 +39,17 @@ type Props = {
   slotWorkerType?: string | null;
   /** Short context line above the list, such as "Student slot · Video". */
   heading?: string;
+  /**
+   * Pick several people for several open slots of one area and class. Rows
+   * toggle instead of assigning; the footer confirms the whole set at once.
+   */
+  multiple?: {
+    max: number;
+    selected: string[];
+    onToggle: (userId: string) => void;
+    onConfirm: () => void;
+    confirming?: boolean;
+  };
 };
 
 type Fit = "best" | "check" | "blocked" | "unknown";
@@ -96,7 +107,10 @@ export function UserAvatarPicker({
   scoresLoadError = false,
   slotWorkerType,
   heading,
+  multiple,
 }: Props) {
+  const selectedSet = useMemo(() => new Set(multiple?.selected ?? []), [multiple?.selected]);
+  const atLimit = multiple ? multiple.selected.length >= multiple.max : false;
   const groups = useMemo(() => {
     const query = search.trim().toLowerCase();
     const matching = users.filter((user) => !query || user.name.toLowerCase().includes(query));
@@ -134,7 +148,7 @@ export function UserAvatarPicker({
           name="user-avatar-picker-search"
           value={search}
           onValueChange={onSearchChange}
-          placeholder="Assign to…"
+          placeholder={multiple ? `Pick up to ${multiple.max}…` : "Assign to…"}
           aria-label="Search people"
           autoFocus
           className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-[var(--text-muted)]"
@@ -187,12 +201,14 @@ export function UserAvatarPicker({
                 const fit = fitFor(score);
                 const blocked = fit === "blocked";
                 const status = statusLabel(fit, score);
+                const picked = selectedSet.has(u.id);
                 return (
                   <CommandPrimitive.Item
                     key={u.id}
                     value={u.id}
-                    disabled={disabled || blocked}
-                    onSelect={() => onSelect(u.id)}
+                    disabled={disabled || blocked || (Boolean(multiple) && atLimit && !picked)}
+                    onSelect={() => (multiple ? multiple.onToggle(u.id) : onSelect(u.id))}
+                    aria-selected={multiple ? picked : undefined}
                     className={cn(
                       "group flex min-h-12 cursor-pointer select-none items-center gap-3 rounded-lg px-2 py-1.5 outline-none transition-colors",
                       "data-[selected=true]:bg-[var(--accent-soft)]",
@@ -219,6 +235,19 @@ export function UserAvatarPicker({
                         {status}
                       </span>
                     )}
+                    {multiple && !blocked ? (
+                      <span
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                          picked
+                            ? "border-[var(--btn-primary-bg,var(--blue))] bg-[var(--btn-primary-bg,var(--blue))] text-white"
+                            : "border-[var(--border-strong,var(--border))]",
+                        )}
+                        aria-hidden="true"
+                      >
+                        {picked ? <CheckIcon className="size-3.5" strokeWidth={3} /> : null}
+                      </span>
+                    ) : null}
                   </CommandPrimitive.Item>
                 );
               })}
@@ -227,6 +256,25 @@ export function UserAvatarPicker({
         </CommandPrimitive.List>
       )}
 
+      {multiple ? (
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] px-3.5 py-2">
+          <span className="text-xs tabular-nums text-[var(--text-secondary)]">
+            {multiple.selected.length === 0
+              ? `Pick up to ${multiple.max} ${multiple.max === 1 ? "person" : "people"}`
+              : `${multiple.selected.length} of ${multiple.max} picked`}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            className="h-10"
+            disabled={disabled || multiple.selected.length === 0}
+            loading={multiple.confirming}
+            onClick={multiple.onConfirm}
+          >
+            {multiple.selected.length > 0 ? `Assign ${multiple.selected.length}` : "Assign"}
+          </Button>
+        </div>
+      ) : (
       <div className="hidden items-center justify-between gap-3 border-t border-[var(--border)] px-3.5 py-2 text-xs text-[var(--text-muted)] sm:flex">
         <span>
           {scoresLoadError ? "Availability unavailable, sorted by name" : candidateScores ? "Sorted by fit" : "Sorted by name"}
@@ -238,6 +286,7 @@ export function UserAvatarPicker({
           <span>assign</span>
         </span>
       </div>
+      )}
     </CommandPrimitive>
   );
 }

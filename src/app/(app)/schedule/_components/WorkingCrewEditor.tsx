@@ -43,7 +43,11 @@ import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
 import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { claimsForWorkingSlot, tradeForWorkingSlot, type PendingCrewClaim, type PendingCrewTrade } from "@/lib/crew-pending-review";
-import type { WorkingScheduleCommand, WorkingSchedulePayload } from "@/lib/schedule-working-copy";
+import type {
+  WorkingScheduleCommand,
+  WorkingSchedulePayload,
+  WorkingScheduleSportTemplate,
+} from "@/lib/schedule-working-copy";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { cn } from "@/lib/utils";
 import {
@@ -92,6 +96,8 @@ type EditorData = {
   pendingTrades?: PendingCrewTrade[];
   autoReleaseAt: string | null;
   autoReleaseError: string | null;
+  /** Older responses omit it; treat missing as no template. */
+  sportTemplate?: WorkingScheduleSportTemplate | null;
   schedule: WorkingSchedulePayload;
 };
 
@@ -395,6 +401,8 @@ export function WorkingCrewEditor({
   const studentCallDialogOpen = studentCallOpen ?? internalStudentCallOpen;
   const setStudentCallDialogOpen = onStudentCallOpenChange ?? setInternalStudentCallOpen;
   const [crewSizeOpen, setCrewSizeOpen] = useState(false);
+  /** Multi-assign picks, in pick order; they fill open slots top to bottom. */
+  const [fillPicks, setFillPicks] = useState<string[]>([]);
   const [usersLoadError, setUsersLoadError] = useState<LoadError>(false);
   const [revertOpen, setRevertOpen] = useState(false);
   const [publishNowOpen, setPublishNowOpen] = useState(false);
@@ -461,6 +469,7 @@ export function WorkingCrewEditor({
   const closePicker = useCallback(() => {
     setUserSearch("");
     setActivePickerKey(null);
+    setFillPicks([]);
   }, []);
 
   const loadEditor = useCallback(async (): Promise<EditorData | null> => {
@@ -908,14 +917,82 @@ export function WorkingCrewEditor({
                 filled={slots.filter((slot) => slot.assignment).length}
                 total={slots.length}
                 action={canManageSchedule ? (
-                  <AddSlotMenu
-                    area={area}
-                    disabled={actionsDisabled}
-                    onAdd={(workerType) => void mutate(
-                      { type: "adjustSlots", area, workerType, delta: 1 },
-                      `${area}-${workerType}-add`,
-                    )}
-                  />
+                  <div className="flex items-center gap-0.5">
+                    {(["ST", "FT"] as const).map((workerType) => {
+                      const openSlots = slots.filter((slot) => slot.workerType === workerType && !slot.assignment);
+                      if (openSlots.length < 2) return null;
+                      const fillKey = `${area}-${workerType}-fill`;
+                      const classLabel = workerType === "FT" ? "Staff" : "Student";
+                      return (
+                        <Popover
+                          key={workerType}
+                          open={activePickerKey === fillKey}
+                          onOpenChange={(open) => {
+                            if (open) {
+                              setActivePickerKey(fillKey);
+                              setFillPicks([]);
+                              openPicker();
+                              void loadCandidateScores(openSlots[0]!.key);
+                            } else {
+                              closePicker();
+                            }
+                          }}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-10 gap-1.5 px-2 text-xs text-muted-foreground"
+                              disabled={actionsDisabled}
+                            >
+                              <UsersRoundIcon className="size-3.5" />
+                              Fill {openSlots.length} {classLabel}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[25rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-0" align="end">
+                            <UserAvatarPicker
+                              heading={`${openSlots.length} open ${classLabel} slots · ${AREA_LABELS[area] ?? area}`}
+                              users={availableUsersForSlot(workerType)}
+                              loading={usersLoading}
+                              loadError={usersLoadError}
+                              onRetry={retryUsers}
+                              search={userSearch}
+                              onSearchChange={setUserSearch}
+                              onSelect={() => {}}
+                              disabled={actionsDisabled}
+                              slotWorkerType={workerType}
+                              candidateScores={candidateScoreState?.slotKey === openSlots[0]!.key ? candidateScoreState.scores : undefined}
+                              scoresLoading={scoresLoadingKey === openSlots[0]!.key}
+                              scoresLoadError={scoresErrorKey === openSlots[0]!.key}
+                              multiple={{
+                                max: openSlots.length,
+                                selected: fillPicks,
+                                onToggle: (userId) => setFillPicks((current) => current.includes(userId)
+                                  ? current.filter((id) => id !== userId)
+                                  : current.length < openSlots.length ? [...current, userId] : current),
+                                confirming: actingKey === fillKey,
+                                onConfirm: () => {
+                                  const assignments = fillPicks.map((userId, index) => ({ slotKey: openSlots[index]!.key, userId }));
+                                  void mutate({ type: "assignMany", assignments }, fillKey).then((succeeded) => {
+                                    if (succeeded) closePicker();
+                                  });
+                                },
+                              }}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      );
+                    })}
+                    <AddSlotMenu
+                      area={area}
+                      disabled={actionsDisabled}
+                      onAdd={(workerType) => void mutate(
+                        { type: "adjustSlots", area, workerType, delta: 1 },
+                        `${area}-${workerType}-add`,
+                      )}
+                    />
+                  </div>
                 ) : undefined}
               />
               <div className="space-y-0.5">
@@ -1264,6 +1341,8 @@ export function WorkingCrewEditor({
           slots={data.schedule.slots}
           saving={actingKey === "crew-size"}
           onSave={(counts) => mutate({ type: "setSlotCounts", counts }, "crew-size")}
+          template={data.sportTemplate ?? null}
+          canSaveTemplate={canManageSchedule}
         />
       )}
 

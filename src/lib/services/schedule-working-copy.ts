@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
 import { sportDefaultShiftWindow } from "@/lib/schedule-defaults";
+import { sportTemplateCounts } from "@/lib/services/shift-generation";
 import {
   applyWorkingScheduleCommand,
   reconcileWorkingAssignmentSources,
@@ -17,6 +18,7 @@ import {
   WORKING_SCHEDULE_HISTORY_LIMIT,
   type WorkingScheduleCommand,
   type WorkingScheduleDefaultWindow,
+  type WorkingScheduleSportTemplate,
   type WorkingScheduleHistoryEntry,
   type WorkingSchedulePayload,
   workingSchedulePayloadSchema,
@@ -101,7 +103,7 @@ const groupEditorSelect = {
   id: true,
   publishedAt: true,
   publishedVersion: true,
-  event: { select: { startsAt: true, endsAt: true, allDay: true, sportCode: true } },
+  event: { select: { startsAt: true, endsAt: true, allDay: true, sportCode: true, isHome: true } },
   shifts: {
     orderBy: [{ startsAt: "asc" }, { area: "asc" }, { workerType: "asc" }, { createdAt: "asc" }],
     select: {
@@ -256,6 +258,69 @@ function refreshLiveAssignmentMetadata(
   };
 }
 
+/**
+ * Server checks for staging one person into one open slot: an active person
+ * of the slot's class, not already in this draft, free at that time, and (for
+ * Students) not blocked by their availability.
+ */
+async function assertAssignable(
+  tx: Prisma.TransactionClient,
+  payload: WorkingSchedulePayload,
+  slotKey: string,
+  userId: string,
+) {
+  const slot = payload.slots.find((candidate) => candidate.key === slotKey);
+  if (!slot) throw new HttpError(404, "Working slot not found");
+  if (slot.assignment) throw new HttpError(409, "This slot is already assigned");
+  const assignee = await tx.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      active: true,
+      role: true,
+      staffingType: true,
+      collaboratorPolicy: {
+        select: {
+          status: true,
+          grants: { select: { capabilityKey: true } },
+        },
+      },
+      availabilityBlocks: {
+        select: {
+          kind: true,
+          intent: true,
+          status: true,
+          dayOfWeek: true,
+          date: true,
+          dateEndsOn: true,
+          allDay: true,
+          startsAt: true,
+          endsAt: true,
+          label: true,
+          semesterLabel: true,
+          semesterStartsOn: true,
+          semesterEndsOn: true,
+        },
+      },
+    },
+  });
+  if (!assignee) throw new HttpError(404, "User not found");
+  if (!assignee.active) throw new HttpError(400, "Cannot assign an inactive user");
+  if (scheduleAssigneeWorkerType(assignee) !== slot.workerType) {
+    throw new HttpError(409, `Choose a ${slot.workerType === "FT" ? "Staff" : "Student"} worker for this slot.`);
+  }
+  if (payload.slots.some((candidate) => candidate.assignment?.userId === assignee.id)) {
+    throw new HttpError(409, "This person is already assigned within this event draft.");
+  }
+  const startsAt = new Date(slot.callStartsAt ?? slot.startsAt);
+  const endsAt = new Date(slot.callEndsAt ?? slot.endsAt);
+  await checkTimeConflict(tx, assignee.id, startsAt, endsAt);
+  if (slot.workerType === "ST") {
+    const availability = evaluateAvailabilityPreferences(assignee.availabilityBlocks, { startsAt, endsAt });
+    if (availability.blocking) throw new HttpError(409, availability.blocking.note);
+  }
+}
+
 async function resolveWorkingScheduleDefaultWindow(
   group: EditorGroup,
   tx: Prisma.TransactionClient = db,
@@ -272,6 +337,46 @@ async function resolveWorkingScheduleDefaultWindow(
   return {
     startsAt: window.startsAt.toISOString(),
     endsAt: window.endsAt.toISOString(),
+  };
+}
+
+/**
+ * The event's sport template (Settings, Sports) for the crew editor's Crew
+ * size dialog. Venue follows shift generation: only an explicit home game uses
+ * the home counts. Rows carry both venues so saving one venue back can keep
+ * the other unchanged.
+ */
+async function resolveWorkingScheduleSportTemplate(
+  group: EditorGroup,
+  tx: Prisma.TransactionClient = db,
+): Promise<WorkingScheduleSportTemplate | null> {
+  if (!group.event.sportCode) return null;
+  const config = await tx.sportConfig.findUnique({
+    where: { sportCode: group.event.sportCode },
+    select: {
+      shiftConfigs: {
+        orderBy: { area: "asc" },
+        select: {
+          area: true,
+          homeCount: true,
+          awayCount: true,
+          homeStaffCount: true,
+          homeStudentCount: true,
+          awayStaffCount: true,
+          awayStudentCount: true,
+        },
+      },
+    },
+  });
+  if (!config) return null;
+  return {
+    sportCode: group.event.sportCode,
+    venue: group.event.isHome === true ? "home" : "away",
+    rows: config.shiftConfigs.map((row) => ({
+      area: row.area,
+      home: sportTemplateCounts(row, true),
+      away: sportTemplateCounts(row, false),
+    })),
   };
 }
 
@@ -332,6 +437,7 @@ async function editorResponse(
     )
     : published;
   const defaultWindow = await resolveWorkingScheduleDefaultWindow(group, tx);
+  const sportTemplate = await resolveWorkingScheduleSportTemplate(group, tx);
   const assignedUserIds = unique(
     working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : []),
   );
@@ -416,6 +522,7 @@ async function editorResponse(
     pendingClaims,
     pendingTrades,
     defaultWindow,
+    sportTemplate,
     schedule: working,
   };
 }
@@ -555,55 +662,15 @@ export async function mutateWorkingSchedule(
     }
 
     if (command.type === "assign") {
-      const slot = beforePayload.slots.find((candidate) => candidate.key === command.slotKey);
-      if (!slot) throw new HttpError(404, "Working slot not found");
-      if (slot.assignment) throw new HttpError(409, "This slot is already assigned");
-      const assignee = await tx.user.findUnique({
-        where: { id: command.userId },
-        select: {
-          id: true,
-          active: true,
-          role: true,
-          staffingType: true,
-          collaboratorPolicy: {
-            select: {
-              status: true,
-              grants: { select: { capabilityKey: true } },
-            },
-          },
-          availabilityBlocks: {
-            select: {
-              kind: true,
-              intent: true,
-              status: true,
-              dayOfWeek: true,
-              date: true,
-              dateEndsOn: true,
-              allDay: true,
-              startsAt: true,
-              endsAt: true,
-              label: true,
-              semesterLabel: true,
-              semesterStartsOn: true,
-              semesterEndsOn: true,
-            },
-          },
-        },
-      });
-      if (!assignee) throw new HttpError(404, "User not found");
-      if (!assignee.active) throw new HttpError(400, "Cannot assign an inactive user");
-      if (scheduleAssigneeWorkerType(assignee) !== slot.workerType) {
-        throw new HttpError(409, `Choose a ${slot.workerType === "FT" ? "Staff" : "Student"} worker for this slot.`);
-      }
-      if (beforePayload.slots.some((candidate) => candidate.assignment?.userId === assignee.id)) {
-        throw new HttpError(409, "This person is already assigned within this event draft.");
-      }
-      const startsAt = new Date(slot.callStartsAt ?? slot.startsAt);
-      const endsAt = new Date(slot.callEndsAt ?? slot.endsAt);
-      await checkTimeConflict(tx, assignee.id, startsAt, endsAt);
-      if (slot.workerType === "ST") {
-        const availability = evaluateAvailabilityPreferences(assignee.availabilityBlocks, { startsAt, endsAt });
-        if (availability.blocking) throw new HttpError(409, availability.blocking.note);
+      await assertAssignable(tx, beforePayload, command.slotKey, command.userId);
+    }
+    if (command.type === "assignMany") {
+      // Check each pick against the draft as it will be after the earlier
+      // picks, so the same person can't land in two slots of one batch.
+      let staged = beforePayload;
+      for (const pick of command.assignments) {
+        await assertAssignable(tx, staged, pick.slotKey, pick.userId);
+        staged = applyWorkingScheduleCommand(staged, { type: "assign", ...pick }, () => "unused");
       }
     }
 
