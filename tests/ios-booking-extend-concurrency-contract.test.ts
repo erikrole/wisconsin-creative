@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native booking extend concurrency contract", () => {
   it("sends the visible booking snapshot and decodes the authoritative response", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const extendMethod = apiClient.slice(
       apiClient.indexOf("func extendBooking("),
       apiClient.indexOf("func createReservation("),

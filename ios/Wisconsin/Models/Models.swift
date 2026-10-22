@@ -62,6 +62,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
     let staffingType: String?
     let avatarUrl: String?
     let forcePasswordChange: Bool
+    let onboardingRequired: Bool
     let preview: RolePreviewInfo?
 
     enum CodingKeys: String, CodingKey {
@@ -76,6 +77,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         case staffingType
         case avatarUrl
         case forcePasswordChange
+        case onboardingRequired
         case preview
     }
 
@@ -91,6 +93,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         staffingType: String? = nil,
         avatarUrl: String?,
         forcePasswordChange: Bool = false,
+        onboardingRequired: Bool = false,
         preview: RolePreviewInfo? = nil
     ) {
         self.id = id
@@ -104,6 +107,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         self.staffingType = staffingType
         self.avatarUrl = avatarUrl
         self.forcePasswordChange = forcePasswordChange
+        self.onboardingRequired = onboardingRequired
         self.preview = preview
     }
 
@@ -120,6 +124,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         staffingType = try container.decodeIfPresent(String.self, forKey: .staffingType)
         avatarUrl = try container.decodeIfPresent(String.self, forKey: .avatarUrl)
         forcePasswordChange = try container.decodeIfPresent(Bool.self, forKey: .forcePasswordChange) ?? false
+        onboardingRequired = try container.decodeIfPresent(Bool.self, forKey: .onboardingRequired) ?? false
         preview = try container.decodeIfPresent(RolePreviewInfo.self, forKey: .preview)
     }
 

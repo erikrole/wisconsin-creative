@@ -93,6 +93,7 @@
 | `/staff/workforce/planning` | `src/app/(app)/staff/workforce/planning/page.tsx` |
 | `/welcome` | `src/app/(app)/welcome/page.tsx` |
 | `/wishlist` | `src/app/(app)/wishlist/page.tsx` |
+| `/wrapped` | `src/app/(app)/wrapped/page.tsx` |
 | `/youtube` | `src/app/(app)/youtube/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
@@ -121,11 +122,13 @@
 | `/` | `src/app/(app)/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
 | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
+| `/scoreboard` | `src/app/(app)/scoreboard/layout.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
 | `/staff` | `src/app/(app)/staff/layout.tsx` |
 | `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
 | `/wishlist` | `src/app/(app)/wishlist/layout.tsx` |
+| `/wrapped` | `src/app/(app)/wrapped/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
 | `/releases` | `src/app/(public)/releases/layout.tsx` |
 | `/` | `src/app/layout.tsx` |

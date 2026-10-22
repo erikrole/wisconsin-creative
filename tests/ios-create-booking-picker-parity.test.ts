@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function createBookingSource() {
   return [
@@ -66,7 +67,7 @@ describe("iOS create booking picker parity", () => {
 
   it("submits selected bulk quantities through the shared API client", () => {
     const createSheet = createBookingSource();
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
 
     expect(createSheet).toContain("bulkItems: selectedBulkRequests");
     expect(createSheet).toContain(".map { BulkReservationRequest(bulkSkuId: $0.key, quantity: $0.value) }");
@@ -77,7 +78,7 @@ describe("iOS create booking picker parity", () => {
 
   it("sorts the available equipment picker by the displayed product name", () => {
     const assetsRoute = source("src/app/api/assets/route.ts");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const createSheet = createBookingSource();
 
     expect(assetsRoute).toMatch(/name:\s*\[\{\s*brand:\s*"asc"\s*\},\s*\{\s*model:\s*"asc"\s*\},\s*\{\s*assetTag:\s*"asc"\s*\}\]/);
@@ -93,7 +94,7 @@ describe("iOS create booking picker parity", () => {
   });
 
   it("loads a bounded cross-location picker and makes pickup mismatches explicit", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const createSheet = createBookingSource();
     const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
     const loadAvailableAssets = sliceBetween(
@@ -166,7 +167,7 @@ describe("iOS create booking picker parity", () => {
   it("lets native reservation creation link upcoming events", () => {
     const createSheet = createBookingSource();
     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const scheduleModels = source("ios/Wisconsin/Models/ScheduleModels.swift");
     const details = sliceBetween(
       sheet,
@@ -477,7 +478,7 @@ describe("iOS create booking picker parity", () => {
 
   it("surfaces needed-next and turnaround advisories before reservation review", () => {
     const models = source("ios/Wisconsin/Models/Models.swift");
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
     const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
     const rows = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift");
@@ -526,7 +527,7 @@ describe("iOS create booking picker parity", () => {
   });
 
   it("returns create-time conflicts to gear without dropping the selection", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
     const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");

@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const browse = () => source("ios/Wisconsin/Views/BrowseView.swift");
 const list = () => source("ios/Wisconsin/Views/AccountabilityView.swift");
 const person = () => source("ios/Wisconsin/Views/AccountabilityPersonView.swift");
 const models = () => source("ios/Wisconsin/Models/AccountabilityModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 
 describe("iOS Accountability browse", () => {
   it("adds a read-only row for internal roles and keeps collaborators off it", () => {

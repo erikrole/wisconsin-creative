@@ -11,6 +11,7 @@ struct ProfileCompletionWelcomeView: View {
     @Environment(SessionStore.self) private var session
     @Environment(ProfileCompletionStore.self) private var completionStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var currentStep: ProfileCompletionStep = .unknown
     @State private var direction = 1.0
@@ -42,7 +43,9 @@ struct ProfileCompletionWelcomeView: View {
                     WelcomeFailureView(
                         message: error,
                         onRetry: retryLoad,
-                        onContinue: continuePastLoadFailure
+                        onContinue: continuePastLoadFailure,
+                        allowsContinue: user?.onboardingRequired != true,
+                        onSignOut: { Task { await session.logout() } }
                     )
                 } else {
                     WelcomeLoadingView()
@@ -98,11 +101,32 @@ struct ProfileCompletionWelcomeView: View {
             )
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 24) {
+                    if isStudent && !data.profile.email.lowercased().hasSuffix("@wisc.edu") {
+                        Label("Ask an administrator to change your login to your @wisc.edu address. You can save your other details now.", systemImage: "info.circle")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    VStack(alignment: .leading, spacing: 14) {
+                        if !dynamicTypeSize.isAccessibilitySize {
+                            HStack(spacing: 10) {
+                                Image(systemName: stepSymbol)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(Color.brandPrimary)
+                                    .frame(width: 44, height: 44)
+                                    .background(Color.brandPrimary.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                                    .accessibilityHidden(true)
+                                Text(currentStep == .photo ? "MAKE IT YOU" : "YOUR PROFILE")
+                                    .font(.gothamBold(size: 11, relativeTo: .caption2))
+                                    .tracking(1.6)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                         Text(stepTitle)
-                            .font(.title2.weight(.bold))
+                            .font(.gothamBlack(size: 30, relativeTo: .largeTitle))
+                            .tracking(-0.6)
                             .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
                         Text(stepDescription)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -123,8 +147,15 @@ struct ProfileCompletionWelcomeView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
+                    if completionStore.photoRefreshNeeded {
+                        Button("Refresh setup", action: retryLoad)
+                            .buttonStyle(.bordered)
+                            .disabled(completionStore.isLoading || completionStore.isSaving)
+                    }
                 }
-                .padding(24)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 28)
                 .frame(maxWidth: 680)
                 .frame(maxWidth: .infinity)
                 .animation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.22), value: currentStep)
@@ -178,14 +209,15 @@ struct ProfileCompletionWelcomeView: View {
 
     private var footer: some View {
         WelcomeFooter(
-            showsReminder: currentStep != .photo,
+            showsReminder: currentStep != .photo && !requiresSetup,
             showsBack: stepIndex > 0,
             primaryTitle: primaryFooterTitle,
             primaryEnabled: canUsePrimaryFooterAction,
             isSaving: completionStore.isSaving,
             onReminder: snooze,
             onBack: moveBack,
-            onPrimary: performPrimaryFooterAction
+            onPrimary: performPrimaryFooterAction,
+            onSignOut: requiresSetup ? { Task { await session.logout() } } : nil
         )
     }
 
@@ -197,7 +229,19 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private var canUsePrimaryFooterAction: Bool {
-        canContinue || isOptionalStep
+        (canContinue || isOptionalStep) && !(currentStep == .photo && requiresSetup)
+    }
+
+    private var stepSymbol: String {
+        switch currentStep {
+        case .email: "envelope"
+        case .phones: "phone"
+        case .wiscard: "person.text.rectangle"
+        case .student: "graduationcap"
+        case .apparel: "tshirt"
+        case .photo: "person.crop.circle"
+        case .unknown: "person"
+        }
     }
 
     private var stepTitle: String {
@@ -212,7 +256,7 @@ struct ProfileCompletionWelcomeView: View {
         case .phones: "Identify any number already on your account, then add the other contact number."
         case .wiscard: "Type the card number and issue code printed on your card. This is used for kiosk identification."
         case .student: "Tell us your current year and when you expect to graduate."
-        case .apparel: "Choose the sizing systems that make clothing and shoe orders unambiguous."
+        case .apparel: "Choose your clothing and shoe sizes for team orders."
         case .photo: "A clear photo helps teammates recognize you across the roster, schedule, and kiosk."
         case .unknown: ""
         }
@@ -226,7 +270,8 @@ struct ProfileCompletionWelcomeView: View {
         )
     }
 
-    private var isOptionalStep: Bool { currentStep == .apparel || currentStep == .photo }
+    private var requiresSetup: Bool { data?.completion.requiresSetup == true || (user?.onboardingRequired == true && data?.completion.requiredComplete != true) }
+    private var isOptionalStep: Bool { currentStep == .photo || (currentStep == .apparel && !requiresSetup) }
 
     private var canContinue: Bool {
         guard let profile else { return false }
@@ -236,7 +281,7 @@ struct ProfileCompletionWelcomeView: View {
     private func hydrateIfNeeded() {
         guard !didHydrate, let data else { return }
         draft.hydrate(from: data.profile)
-        currentStep = data.completion.firstIncompleteStep.flatMap { $0 == .unknown ? nil : $0 }
+        currentStep = data.completion.firstIncompleteStep.flatMap { visibleSteps.contains($0) ? $0 : nil }
             ?? visibleSteps.first
             ?? .photo
         didHydrate = true
@@ -259,7 +304,7 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private func continueFromCurrentStep() {
-        guard canContinue, let user, let profile else { return }
+        guard !completionStore.isSaving, canContinue, let user, let profile else { return }
         if currentStep == .photo {
             completionStore.continueForSession(for: user.id)
             Haptics.success()
@@ -275,9 +320,7 @@ struct ProfileCompletionWelcomeView: View {
             }
             Haptics.success()
             if next.completion.profileComplete { return }
-            let nextStep = next.completion.firstIncompleteStep
-                ?? visibleSteps[safe: stepIndex + 1]
-                ?? currentStep
+            let nextStep = visibleSteps[safe: stepIndex + 1] ?? currentStep
             if nextStep != currentStep { move(to: nextStep, direction: 1) }
         }
     }
@@ -291,7 +334,7 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private func skipOptionalStep() {
-        guard isOptionalStep else { return }
+        guard isOptionalStep, !(currentStep == .photo && requiresSetup) else { return }
         if currentStep == .photo {
             guard let user else { return }
             completionStore.continueForSession(for: user.id)
@@ -321,7 +364,7 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private func continuePastLoadFailure() {
-        guard let user else { return }
+        guard let user, !user.onboardingRequired else { return }
         completionStore.continueForSession(for: user.id)
     }
 

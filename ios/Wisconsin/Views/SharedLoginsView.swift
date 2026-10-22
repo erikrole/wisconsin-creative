@@ -87,7 +87,7 @@ final class SharedLoginsViewModel {
     func clearSecrets() {
         for task in hideTasks.values { task.cancel() }
         hideTasks.removeAll()
-        for id in Set(revealed.keys).union(revealGeneration.keys) {
+        for id in Set(revealed.keys).union(revealGeneration.keys).union(pendingSecretIds) {
             revealGeneration[id, default: 0] += 1
         }
         revealed.removeAll()

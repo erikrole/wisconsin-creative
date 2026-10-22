@@ -93,11 +93,11 @@ describe("gameRecordEventWhere", () => {
     expect(record.NOT).toEqual(scoreboard.NOT);
   });
 
-  it("excludes cancelled, hidden, and archived events", () => {
+  it("excludes cancelled and hidden events but keeps archived games in the season", () => {
     const where = gameRecordEventWhere("user-1");
     expect(where.status).toEqual({ not: "CANCELLED" });
     expect(where.isHidden).toBe(false);
-    expect(where.archivedAt).toBeNull();
+    expect(where.archivedAt).toBeUndefined();
   });
 
   it("keeps exhibitions and alumni matches out of the official record", () => {

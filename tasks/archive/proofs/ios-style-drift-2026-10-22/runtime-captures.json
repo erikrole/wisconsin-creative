@@ -1,0 +1,22 @@
+[
+  {
+    "image": "trade-light-before.png",
+    "binarySha256": "bd686c402b8ccc49383c50f8a5a1f3538b39667140261a0036ada5b155d16a32",
+    "appPath": "/private/tmp/wc-ios-style-drift-20261022/before.app"
+  },
+  {
+    "image": "trade-dark-before.png",
+    "binarySha256": "bd686c402b8ccc49383c50f8a5a1f3538b39667140261a0036ada5b155d16a32",
+    "appPath": "/private/tmp/wc-ios-style-drift-20261022/before.app"
+  },
+  {
+    "image": "trade-light-after.png",
+    "binarySha256": "8e1fef82b6c9d412da9df39066e03671fdd57f073b7a5b749c8c9a7365e61a7d",
+    "appPath": "/private/tmp/wc-ios-fixes-20261022/derived-fixed/Build/Products/Debug-iphonesimulator/Wisconsin Creative.app"
+  },
+  {
+    "image": "trade-dark-after.png",
+    "binarySha256": "8e1fef82b6c9d412da9df39066e03671fdd57f073b7a5b749c8c9a7365e61a7d",
+    "appPath": "/private/tmp/wc-ios-fixes-20261022/derived-fixed/Build/Products/Debug-iphonesimulator/Wisconsin Creative.app"
+  }
+]

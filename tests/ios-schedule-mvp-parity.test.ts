@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native Schedule MVP parity", () => {
   it("does not crash when one person has two shifts on the same event", () => {
@@ -23,7 +24,7 @@ describe("native Schedule MVP parity", () => {
   });
 
   it("lets staff publish now or apply an ended-event correction", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const eventDetail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
     expect(apiClient).toContain("func publishWorkingSchedule");
     expect(apiClient).toContain("/api/shift-groups/\\(shiftGroupId)/publish");

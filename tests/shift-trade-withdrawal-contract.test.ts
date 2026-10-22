@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("shift trade and request withdrawal contract", () => {
   it("exposes authenticated PATCH routes with the correct permissions", () => {
@@ -17,7 +18,7 @@ describe("shift trade and request withdrawal contract", () => {
   });
 
   it("keeps both native clients on the same server endpoints", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const sheet = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
     const web = source("src/components/TradeBoard.tsx");
 

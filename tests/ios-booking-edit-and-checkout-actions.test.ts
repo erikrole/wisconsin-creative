@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const detail = readFileSync("ios/Wisconsin/Views/BookingDetailView.swift", "utf8");
 const bookings = readFileSync("ios/Wisconsin/Views/BookingsView.swift", "utf8");
 const reservationEdit = readFileSync("ios/Wisconsin/Views/Booking/ReservationEditFlow.swift", "utf8");
 const actionSheets = readFileSync("ios/Wisconsin/Views/Booking/BookingActionSheets.swift", "utf8");
-const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+const api = apiClientSource();
 
 function sliceBetween(source: string, start: string, end: string) {
   const startIndex = source.indexOf(start);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function methodBody(text: string, name: string, nextName: string) {
   const start = text.indexOf(`func ${name}`);
@@ -19,7 +20,7 @@ describe("iOS APNs device token honesty", () => {
   });
 
   it("native token register/revoke use the shared API handler", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const register = methodBody(apiClient, "registerDeviceToken", "revokeAllDeviceTokens");
     const revoke = methodBody(apiClient, "revokeAllDeviceTokens", "me");
 
@@ -45,11 +46,11 @@ describe("iOS APNs device token honesty", () => {
   });
 
   it("shared perform remains the central 401 session-expiry path", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
-    const perform = apiClient.slice(apiClient.indexOf("private func perform"));
+    const apiClient = apiClientSource();
+    const perform = apiClient.slice(apiClient.indexOf("func perform"));
     const broadcaster = apiClient.slice(
-      apiClient.indexOf("private func broadcastSessionExpiry"),
-      apiClient.indexOf("private func perform"),
+      apiClient.indexOf("func broadcastSessionExpiry"),
+      apiClient.indexOf("func perform"),
     );
 
     expect(perform).toContain("case 401:");
@@ -60,6 +61,6 @@ describe("iOS APNs device token honesty", () => {
     expect(broadcaster).toContain("name: .sessionDidExpire");
     expect(broadcaster).toContain("object: requestBoundary");
     expect(broadcaster).not.toContain("object: nil");
-    expect(apiClient).toContain("private struct SuccessResponse: Decodable");
+    expect(apiClient).toContain("struct SuccessResponse: Decodable");
   });
 });
