@@ -7,7 +7,8 @@
     "details": [
       "Checked-out gear shows Extend as the main button, reservations show Edit, and finished bookings show Re-reserve.",
       "Edit details moves into the Actions menu when Extend is the main step.",
-      "The booking summary and the step bar on a new reservation are larger and easier to read."
+      "The booking summary and the step bar on a new reservation are larger and easier to read.",
+      "Gear photos on a booking are bigger, and the Kits filters now sit in one quiet row."
     ],
     "platforms": [
       "Web"
