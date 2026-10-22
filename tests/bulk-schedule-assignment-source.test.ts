@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { serviceModuleSource } from "./_helpers/source";
 
 const root = process.cwd();
 const read = (file: string) => readFileSync(resolve(root, file), "utf8");
@@ -34,7 +35,7 @@ describe("bulk schedule assignment contracts", () => {
   });
 
   it("consolidates worker notifications and gives them a My Shifts deep link", () => {
-    const notifications = read("src/lib/services/notifications.ts");
+    const notifications = serviceModuleSource("notifications");
     const policy = read("src/lib/services/schedule-notification-policy.ts");
     const workflow = read("src/workflows/pending-schedule-release.ts");
 

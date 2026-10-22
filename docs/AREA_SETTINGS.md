@@ -56,7 +56,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Channel toggles: Email and Push (master switches per channel). Disabled while a pause is active.
 - Notification type toggles (slice 7): Checkout due reminders, Checkout overdue alerts, Reservation updates, License expiry reminders. All on by default; null/missing prefs treated as all-on (no change for existing users). In-app notifications always fire regardless.
 - Persisted server-side in `users.notification_prefs` JSONB (added in migration `0046_user_notification_prefs`). Null = receive everything (matches pre-feature behavior).
-- Enforced in `sendPushToUser` / `sendEmailToUser` wrappers in `src/lib/services/notifications.ts` and `src/lib/services/licenses.ts` via `category` param. Other dispatch sites (shift trades, password reset, low-stock, item reports, system mails) intentionally bypass -- system / operational mails always send.
+- Enforced in `sendPushToUser` / `sendEmailToUser` wrappers in `src/lib/services/notification-delivery.ts` and `src/lib/services/licenses.ts` via `category` param. Other dispatch sites (shift trades, password reset, low-stock, item reports, system mails) intentionally bypass -- system / operational mails always send.
 - Category assignment: `checkout_due_*` escalation rules use `checkoutDue`; `checkout_overdue_*` rules use `checkoutOverdue`; reservation lifecycle uses `reservation`; license nag uses `licenseExpiry`.
 - API: `GET/PUT /api/me/notification-preferences` (rate-limited at the standard settings budget). `categories` field added to PUT schema; missing keys default to true.
 

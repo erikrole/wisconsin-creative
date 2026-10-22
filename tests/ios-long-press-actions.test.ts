@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 /** Swift line comments removed, so `not.toContain` asserts on code, not prose. */
 function code(swift: string) {
@@ -13,7 +13,7 @@ describe("iOS notification long-press actions", () => {
   const actions = source("ios/Wisconsin/App/NotificationActions.swift");
   const delegate = source("ios/Wisconsin/App/AppDelegate.swift");
   const apns = source("src/lib/push/apns.ts");
-  const notifications = source("src/lib/services/notifications.ts");
+  const notifications = serviceModuleSource("notifications");
   const catalog = source("src/lib/notification-catalog.ts");
   const blasts = source("src/lib/services/blasts.ts");
 
