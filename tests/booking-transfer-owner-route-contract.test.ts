@@ -15,6 +15,13 @@ vi.mock("@/lib/services/booking-rules", () => ({
   requireBookingAction: vi.fn(),
 }));
 
+const notify = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/services/gear-handover-notify", () => ({ notifyGearHandover: notify }));
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: (task: () => unknown) => { void task(); },
+}));
+
 vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
@@ -163,5 +170,29 @@ describe("booking transfer-owner route contract", () => {
 
     expect(res.status).toBe(400);
     expect(transferBookingOwner).not.toHaveBeenCalled();
+  });
+
+  it("tells both people when the owner actually changed, and nobody on a no-op", async () => {
+    const oldOwner = { id: "cm000000000000000000000002", name: "Old Owner" };
+    const newOwner = { id: "cm000000000000000000000004", name: "New Owner" };
+    vi.mocked(getBookingDetail)
+      .mockResolvedValueOnce(bookingDetail({ ...baseDetail, requester: oldOwner }))
+      .mockResolvedValueOnce(bookingDetail({ ...baseDetail, requester: newOwner, requesterUserId: newOwner.id }));
+    const res = await POST(
+      request({ targetUserId: newOwner.id }, { "if-unmodified-since": "Thu, 09 Jul 2026 16:00:00 GMT" }),
+      { params: Promise.resolve({ id: baseDetail.id }) },
+    );
+    expect(res.status).toBe(200);
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({
+      actor: { id: "staff-1", name: "Staff One" }, from: oldOwner, to: newOwner, itemCount: 0, isCheckout: false,
+    }));
+
+    notify.mockClear();
+    vi.mocked(getBookingDetail).mockResolvedValue(bookingDetail({ ...baseDetail, requester: oldOwner }));
+    await POST(
+      request({ targetUserId: oldOwner.id }, { "if-unmodified-since": "Thu, 09 Jul 2026 16:00:00 GMT" }),
+      { params: Promise.resolve({ id: baseDetail.id }) },
+    );
+    expect(notify).not.toHaveBeenCalled();
   });
 });

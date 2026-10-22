@@ -135,6 +135,50 @@ describe("required checks stay reportable", () => {
 });
 
 describe("preview gate", () => {
+  it("confirms the PR named by CI when GitHub's commit association lookup fails", async () => {
+    const seen = [];
+    const fetcher = async (url) => {
+      seen.push(url);
+      if (url.includes("/commits/")) return { ok: false, status: 500 };
+      return { ok: true, json: async () => pr() };
+    };
+    const found = await findValidatedPullRequest(run({ pull_requests: [{ number: 12 }] }), { repository, token: "t", fetcher });
+    expect(found.number).toBe(12);
+    expect(seen).toEqual([`https://api.github.com/repos/${repository}/pulls/12`]);
+  });
+
+  it.each([
+    ["closed", { state: "closed" }],
+    ["moved head", { head: { ...pr().head, sha: "b".repeat(40) } }],
+    ["other branch", { head: { ...pr().head, ref: "feat/other" } }],
+    ["fork", { head: { ...pr().head, repo: { full_name: "outside/fork" } } }],
+    ["non-main base", { base: { ref: "develop" } }],
+    ["different PR number", { number: 13 }],
+  ])("does not deploy a hinted PR with %s", async (_name, changed) => {
+    const candidate = { ...pr(), ...changed };
+    const fetcher = async (url) => ({ ok: true, json: async () => url.includes("/commits/") ? [candidate] : candidate });
+    await expect(findValidatedPullRequest(run({ pull_requests: [{ number: 12 }] }), { repository, token: "t", fetcher })).rejects.toThrow(/nothing deployed/);
+  });
+
+  it.each([401, 403, 404, 500])("blocks deployment when the live hinted PR lookup returns %s", async (status) => {
+    let calls = 0;
+    const fetcher = async () => { calls++; return { ok: false, status }; };
+    await expect(findValidatedPullRequest(run({ pull_requests: [{ number: 12 }] }), { repository, token: "t", fetcher })).rejects.toThrow(/Could not confirm current PR/);
+    expect(calls).toBe(1);
+  });
+
+  it.each([
+    ["negative number", [{ number: -1 }]],
+    ["string number", [{ number: "12" }]],
+    ["excessive PR count", Array.from({ length: 21 }, (_, number) => ({ number: number + 1 }))],
+    ["invalid hint collection", { number: 12 }],
+  ])("rejects %s workflow PR hints before any lookup", async (_name, hints) => {
+    let calls = 0;
+    const fetcher = async () => { calls++; return { ok: true, json: async () => [pr()] }; };
+    await expect(findValidatedPullRequest(run({ pull_requests: hints }), { repository, token: "t", fetcher })).rejects.toThrow(/Could not confirm current PR/);
+    expect(calls).toBe(0);
+  });
+
   it("confirms the open same-repository pull request before listing files", async () => {
     const seen = [];
     const fetcher = async (url) => {

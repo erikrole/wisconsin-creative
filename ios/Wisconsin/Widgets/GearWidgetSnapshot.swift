@@ -196,6 +196,35 @@ struct GearWidgetSnapshot: Codable, Equatable, Sendable {
     )
 }
 
+/// Which question a widget answers, so the Smart Stack can rotate the right
+/// card to the top: the shift card before a shift, the gear card near a return.
+enum GearWidgetFocus: Sendable {
+    case shift
+    case gear
+}
+
+extension GearWidgetSnapshot {
+    /// Smart Stack relevance, 0 (nothing pressing) to 100 (act now). Pure, so
+    /// the scoring is testable without WidgetKit. Expects a snapshot already
+    /// `resolved(at:)` the same date.
+    func relevanceScore(for focus: GearWidgetFocus, at date: Date) -> Float {
+        switch focus {
+        case .gear:
+            if overdueCount > 0 { return 100 }
+            guard let next = dueBookings.first(where: { $0.endsAt > date }) else { return 0 }
+            let hoursAway = next.endsAt.timeIntervalSince(date) / 3600
+            if hoursAway <= 2 { return 90 - Float(hoursAway) * 15 }
+            return Calendar.current.isDate(next.endsAt, inSameDayAs: date) ? 20 : 0
+        case .shift:
+            guard let shift = nextShift else { return 0 }
+            if shift.startsAt <= date { return 70 }
+            let hoursAway = shift.startsAt.timeIntervalSince(date) / 3600
+            if hoursAway <= 2 { return 80 }
+            return hoursAway <= 6 ? 30 : 0
+        }
+    }
+}
+
 /// Shared App Group container for the app → widget handoff.
 enum GearWidgetStore {
     /// Must match `com.apple.security.application-groups` on both the app and

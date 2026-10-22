@@ -1,3 +1,4 @@
+import AppIntents
 import CoreSpotlight
 import Foundation
 import UniformTypeIdentifiers
@@ -74,6 +75,9 @@ enum SpotlightIndexer {
         // is a dead search result. Expire a week past the due date as a
         // backstop for the case where the app is never opened again.
         item.expirationDate = booking.endsAt.addingTimeInterval(7 * 24 * 60 * 60)
+        // Ties the row to the Shortcuts entity, so Siri and Spotlight
+        // actions ("Open", "Extend") can act on the same booking.
+        item.associateAppEntity(BookingEntity(summary: booking), priority: booking.isOverdue ? 10 : 0)
         return item
     }
 

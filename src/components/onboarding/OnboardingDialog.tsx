@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle2, FileUp, ShieldCheck, UserPlus } from "lucide
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -46,6 +47,8 @@ type ServerPreviewStatus = "ready" | "duplicate" | "existing_user" | "pending_in
 
 type InviteResponse = {
   skipped?: boolean | number;
+  /** Single adds only: what happened to the invite email, when one was asked for. */
+  emailStatus?: "sent" | "failed" | "not_configured";
   created?: number;
   failed?: number;
   failedRows?: FailedInviteRow[];
@@ -311,6 +314,7 @@ export default function OnboardingDialog({
   const [singleEmail, setSingleEmail] = useState("");
   const [singleName, setSingleName] = useState("");
   const [singleArea, setSingleArea] = useState<(typeof AREAS)[number] | "">("");
+  const [emailInviteNow, setEmailInviteNow] = useState(true);
   const [bulkEmails, setBulkEmails] = useState("");
   const [bulkFileName, setBulkFileName] = useState("");
   const [inviteError, setInviteError] = useState("");
@@ -392,6 +396,7 @@ export default function OnboardingDialog({
     setSingleEmail("");
     setSingleName("");
     setSingleArea("");
+    setEmailInviteNow(true);
     setBulkEmails("");
     setBulkFileName("");
     setInviteError("");
@@ -609,6 +614,7 @@ export default function OnboardingDialog({
             // Only student invitations can carry a preloaded name and area.
             ...(inviteRole === "STUDENT" && singleName.trim() ? { preloadedName: singleName.trim() } : {}),
             ...(inviteRole === "STUDENT" && singleArea ? { preloadedPrimaryArea: singleArea } : {}),
+            ...(inviteRole !== "COLLABORATOR" && emailInviteNow ? { sendInvite: true } : {}),
           }
         : {
             emails: finalReadyPreviewRows.map((row) => ({
@@ -648,6 +654,12 @@ export default function OnboardingDialog({
       if (inviteMode === "single") {
         if (result?.skipped === true) {
           toast.message("No new invitation was created. This address is already allowlisted or registered.");
+        } else if (result.emailStatus === "sent") {
+          toast.success("Invitation added and emailed");
+        } else if (result.emailStatus === "failed") {
+          toast.warning("Invitation added, but the email didn’t send. Use Resend in Allowed Emails.");
+        } else if (result.emailStatus === "not_configured") {
+          toast.warning("Invitation added. Email isn’t set up, so share the sign-in link instead.");
         } else {
           toast.success("Invitation added");
         }
@@ -968,6 +980,21 @@ export default function OnboardingDialog({
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                  {inviteRole !== "COLLABORATOR" && (
+                    <div className="flex items-start gap-2.5">
+                      <Checkbox
+                        id="onboard-single-email-now"
+                        checked={emailInviteNow}
+                        onCheckedChange={(checked) => setEmailInviteNow(checked === true)}
+                        disabled={inviting}
+                        className="mt-0.5"
+                      />
+                      <div className="grid gap-0.5">
+                        <Label htmlFor="onboard-single-email-now" className="font-normal">Email the invite now</Label>
+                        <p className="text-xs text-muted-foreground">Sends the sign-in link once. You can resend it later from Allowed Emails.</p>
+                      </div>
                     </div>
                   )}
                 </TabsContent>

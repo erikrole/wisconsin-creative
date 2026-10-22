@@ -112,19 +112,42 @@ export function versionLabel(appVersion?: string | null, appBuild?: string | nul
   return appVersion ?? appBuild ?? null;
 }
 
+const JWT = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
+const BEARER = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi;
+const SECRET_PAIR = /\b(password|passwd|pwd|token|secret|api[_-]?key|authorization|session)(["']?\s*[:=]\s*["']?)[^\s"'&,;}]+/gi;
+const URL_QUERY = /(\bhttps?:\/\/[^\s?#'"]+)\?[^\s#'"]*/gi;
+
+/**
+ * Removes credentials and personal details a thrown error can carry before it
+ * is stored: tokens, `password=…` style pairs, URL query strings, and email
+ * addresses. Runs on everything a client sends except a problem report's own
+ * message, which the person wrote on purpose.
+ */
+export function scrubSecrets(text: string): string;
+export function scrubSecrets(text: string | null | undefined): string | null | undefined;
+export function scrubSecrets(text: string | null | undefined): string | null | undefined {
+  if (!text) return text;
+  return text
+    .replace(JWT, "<token>")
+    .replace(BEARER, "$1 <token>")
+    .replace(SECRET_PAIR, "$1$2<redacted>")
+    .replace(URL_QUERY, "$1?<query>")
+    .replace(EMAIL, "<email>");
+}
+
 /** Bounded copy of client breadcrumbs: last 30, short strings, flat data. */
 export function boundBreadcrumbs(crumbs: Breadcrumb[] | undefined): Breadcrumb[] | undefined {
   if (!crumbs?.length) return undefined;
   return crumbs.slice(-30).map((crumb) => ({
     at: crumb.at.slice(0, 40),
     type: crumb.type,
-    message: crumb.message.slice(0, 200),
+    message: scrubSecrets(crumb.message.slice(0, 200)),
     ...(crumb.data
       ? {
           data: Object.fromEntries(
             Object.entries(crumb.data)
               .slice(0, 8)
-              .map(([key, value]) => [key.slice(0, 40), typeof value === "string" ? value.slice(0, 120) : value]),
+              .map(([key, value]) => [key.slice(0, 40), typeof value === "string" ? scrubSecrets(value.slice(0, 120)) : value]),
           ),
         }
       : {}),

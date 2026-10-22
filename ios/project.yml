@@ -56,10 +56,19 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
           - UIInterfaceOrientationPortraitUpsideDown
-        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes and to take photos of damaged gear."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSSupportsLiveActivities: true
+        # One app-refresh task keeps the Home Screen widgets, Spotlight and
+        # their relevance current between launches (GearBackgroundRefresh).
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.erikrole.Wisconsin.refresh
+        # Handoff of an open booking (BookingHandoff in BookingEntity.swift).
+        NSUserActivityTypes:
+          - com.erikrole.Wisconsin.booking
         ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleURLSchemes:
@@ -74,6 +83,10 @@ targets:
         com.apple.developer.associated-domains:
           - webcredentials:wisconsincreative.com
           - applinks:wisconsincreative.com
+        # Overdue alerts are sent as `interruption-level: time-sensitive`
+        # (src/lib/notification-catalog.ts). Without this entitlement iOS
+        # delivers them as ordinary alerts that Focus and Scheduled Summary hold.
+        com.apple.developer.usernotifications.time-sensitive: true
         # Shared container the Home Screen widgets read their snapshot from.
         com.apple.security.application-groups:
           - group.com.erikrole.Wisconsin
@@ -129,7 +142,7 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes and to take photos of damaged gear."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
     settings:

@@ -29,7 +29,7 @@ describe("native Schedule edit times and post trade redesign", () => {
     expect(detail).toContain("PostTradeSheet(candidate: candidate, wrapsInNavigationStack: false)");
     expect(detail).toContain("TradePostCandidate(");
     expect(detail).not.toContain("postTradeDialogTitle");
-    expect(tradeBoard).toContain("PostTradeSheet(myShifts: myShifts, wrapsInNavigationStack: false)");
+    expect(tradeBoard).toMatch(/PostTradeSheet\(\s*myShifts: myShifts,[\s\S]*?wrapsInNavigationStack: false\s*\)/);
     expect(postTrade).toContain("struct TradePostCandidate: Identifiable");
     expect(postTrade).toContain("myShifts: [MyShift]");
     expect(postTrade).toContain("candidate: TradePostCandidate");

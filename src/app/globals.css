@@ -2349,36 +2349,12 @@ a[data-slot="button"]:hover {
   .text-orange { color: var(--orange); }
   .text-purple { color: var(--purple); }
   .login-bg {
-    background:
-      radial-gradient(120% 90% at 15% 0%, rgba(196, 18, 48, 0.55) 0%, transparent 55%),
-      radial-gradient(110% 80% at 90% 100%, rgba(160, 0, 0, 0.65) 0%, transparent 60%),
-      radial-gradient(60% 50% at 50% 45%, rgba(196, 18, 48, 0.18) 0%, transparent 100%),
-      linear-gradient(160deg, #140b10 0%, #22090d 50%, #3a0509 100%);
+    /* Flat ink, the same base as the native sign-in. */
+    background: #0b0b0d;
   }
 }
 
 /* ===== Login scene ===== */
-
-/* The card is a light material floating over the dark scene: translucent,
-   blurred backdrop, bright top edge where light catches it. */
-.login-card {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-top-color: rgba(255, 255, 255, 0.65);
-  box-shadow:
-    0 24px 64px rgba(10, 2, 4, 0.45),
-    0 8px 24px rgba(10, 2, 4, 0.3);
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .login-card {
-    background: #ffffff;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
 
 /* Materialize: the surface arrives as a material — blur and scale settle
    together — rather than a plain opacity fade. Curve approximates a
@@ -2409,6 +2385,8 @@ a[data-slot="button"]:hover {
 }
 
 .login-materialize {
+  /* The subtree is forced dark; color inherits from the page, so set it here. */
+  color: #f2f2f4;
   animation: login-materialize 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -2445,51 +2423,51 @@ a[data-slot="button"]:hover {
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #ffffff;
-  text-shadow: 0 2px 12px rgba(10, 2, 4, 0.5);
 }
 
-/* Form fields are solid white wells on the translucent card — defined
-   resting border, crimson focus. Overrides the app's token-driven input
-   chrome, which reads as gray-on-gray over this material. */
+/* Fields are quiet wells on the ink surface; focus brightens the stroke, as
+   it does in the native app. */
 .login-field {
-  background: #ffffff;
-  border-color: rgba(20, 11, 16, 0.14);
+  background: #18181d;
+  border-color: #2a2a31;
+  border-radius: 12px;
+  color: #f2f2f4;
+}
+.login-field::placeholder {
+  color: #8a8a93;
 }
 .login-field:focus-visible {
-  border-color: #c41230;
-  box-shadow: 0 0 0 3px rgba(196, 18, 48, 0.18);
+  border-color: #f2f2f4;
+  box-shadow: 0 0 0 3px rgba(242, 242, 244, 0.16);
 }
 
 .login-checkbox[data-state="unchecked"] {
-  border-color: rgba(20, 11, 16, 0.3);
-  background: #ffffff;
+  border-color: #2e2e36;
+  background: #18181d;
 }
 .login-checkbox[data-state="checked"] {
-  border-color: #c41230;
-  background: #c41230;
+  border-color: #f2f2f4;
+  background: #f2f2f4;
+  color: #0b0b0d;
 }
 
-/* The one saturated moment on the page: Badger crimson CTA. Bright top
-   edge + shadow give it physical depth; hover lifts, press compresses. */
+/* The one action: a solid light pill with a dark label, 52pt like the app. */
 .login-cta {
-  background: linear-gradient(180deg, #d31b3b 0%, #c41230 45%, #a80e29 100%);
-  color: #ffffff;
+  background: #f2f2f4;
+  color: #0b0b0d;
   border: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 2px 8px rgba(168, 14, 41, 0.45),
-    0 1px 2px rgba(10, 2, 4, 0.3);
+  border-radius: 9999px;
+  min-height: 52px;
 }
 .login-cta:hover {
-  background: linear-gradient(180deg, #e02246 0%, #d31b3b 45%, #b31732 100%);
+  background: #ffffff;
 }
 .login-cta:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(196, 18, 48, 0.4);
 }
 .login-cta:disabled {
-  opacity: 0.75;
+  opacity: 0.6;
 }
 
 /* ===== Touch Target Audit ===== */

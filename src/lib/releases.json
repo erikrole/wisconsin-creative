@@ -1,6 +1,92 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Extend gear with Siri",
+    "type": "feature",
+    "summary": "On iPhone, overdue alerts now come through Focus, and you can extend a checkout by asking Siri.",
+    "details": [
+      "Overdue gear alerts are now Time Sensitive, so Focus and Scheduled Summary no longer hold them.",
+      "Say \"Extend my checkout in Creative\" to add 1 or 2 hours. Siri tells you the new return time and asks before changing anything, and it never goes past the next booking that needs the gear.",
+      "Widgets in a Smart Stack move to the top when gear is due soon or a shift is about to start, and they stay up to date even when you haven't opened the app.",
+      "An open booking can continue on your iPad or Mac with Handoff.",
+      "Choose which Creative alerts come through during a Focus in Settings > Focus > Focus Filters."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 603
+  },
+  {
+    "date": "2026-10-22",
+    "title": "A cleaner Board Sizes",
+    "type": "improvement",
+    "summary": "Board Sizes makes it easier to find what a piece needs, has a calmer look with the Badger red kept, lets you preview your art on any board, and builds After Effects comps for a whole board.",
+    "details": [
+      "The venue page starts with What are you making?, which leads to every board and size a piece needs, and Board terms explains venue words like FG/BG, GIP, fascia and scrim.",
+      "Search understands venue words like ribbon and ticker, and suggests matching content such as Touchdown.",
+      "Preview your exports: drop an export folder (or files) and each render lands on its board and zone by size and by name, the way exports are named (Short Wing Left, SEZ Upper, Main 1920x1080). Videos play together with sound from the main, files for other boards say where they go, and Mockup PNG saves the result. A What are you making? page shows which canvases are covered and which are missing. Files stay in your browser until you remove them.",
+      "More on a board downloads an After Effects script with a comp for the whole board and each zone size.",
+      "A calmer look in Lato with Badger red kept and the shared tool header with Apps at the top right. Ids and canvas keys hide until you turn on Technical details.",
+      "Phones get a tidier layout, copying works in browsers that block the clipboard, More menus work from the keyboard, and a broken link no longer leaves the page blank."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 592
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Report a Problem in the iPhone app",
+    "type": "feature",
+    "summary": "Settings in the iPhone app now has Report a Problem, and crashes in the iPhone app, kiosks and the Mac menu bar app reach the team with what led up to them.",
+    "details": [
+      "Report a Problem in Settings sends your note with the screen you're on, your app version and device, and your last few actions. Contact Support is still there if you'd rather email.",
+      "When the iPhone app, a kiosk or the Mac menu bar app crashes, the report now includes the screens and requests just before it, so problems can be fixed without asking you to retrace your steps.",
+      "Nothing you type, and no passwords, is ever included."
+    ],
+    "platforms": [
+      "iOS",
+      "Kiosk",
+      "macOS"
+    ],
+    "pr": 557
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Everyone hears about gear transfers",
+    "type": "improvement",
+    "summary": "When gear changes hands, both people now get told, whoever made the change.",
+    "details": [
+      "The new holder gets a notification with the due time.",
+      "The old holder sees it come off their record, and gets a notification if staff moved it.",
+      "Transferring a checkout is held while a return is in progress.",
+      "The transfer windows on the web are redesigned: a searchable list of people, a clear from and to, and a note of what each person will see."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 588
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Smarter low-battery alerts",
+    "type": "fixes",
+    "summary": "Battery stock and low-battery alerts are now more accurate, and big battery pools get an inbox alert when they run low.",
+    "details": [
+      "Low stock is now relative: a family is low below 20% of the batteries we own, so small groups with just a few batteries no longer show as low.",
+      "Large battery pools, like Sony, send staff and admins an inbox notice when they run low, at most once a week.",
+      "Force-completing a checkout no longer puts a battery that was reported missing back into stock.",
+      "Battery suggestions for cameras no longer mix up similar models like the R5 and R50.",
+      "Adding battery units to an archived item is now blocked."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 591
+  },
+  {
+    "date": "2026-10-22",
     "title": "Safer calendar and image links",
     "type": "improvement",
     "summary": "Links that staff paste for calendar feeds and item photos are now checked more carefully.",
@@ -224,6 +310,25 @@
       "Web"
     ],
     "pr": 548
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A friendlier first-day setup",
+    "type": "improvement",
+    "summary": "New students get a calmer setup after they accept their invite, and a clear place to start when it's done.",
+    "details": [
+      "The sign-in and create-password pages now match the iPhone app: a calm dark surface with a single light button.",
+      "The Welcome setup now shows a simple step bar, one question at a time, and works comfortably on a phone.",
+      "When setup ends, a short list points to where to start. Onboarding Status now flags anyone who hasn't signed in or finished setup after three days, and students who haven't said when they can't work, so staff know who to nudge.",
+      "The invite email now spells out what happens next, including installing the app, and how to reset a forgotten password. Adding one student or staff member can send it right away.",
+      "New students and staff see a Getting started card on Home for their first two weeks, on the web and the iPhone app, and what they check off carries across both.",
+      "Students can add when they can't work, like classes, another job or days out of town, so they aren't scheduled then. It's optional, offered on the Getting started card, and always one tap away from Home and Schedule. If you're already on a shift then, you can post it to the Trade Board right there."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 584
   },
   {
     "date": "2026-10-21",
@@ -510,6 +615,23 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Post trades from Schedule again",
+    "type": "fixes",
+    "summary": "On iPhone, posting a shift to the Trade Board works again, and Schedule recovers cleanly when a load fails.",
+    "details": [
+      "Swipe a shift in Schedule, or tap Post on the Trade Board, to post it. Both were hidden by a status mix-up.",
+      "Shifts you already posted no longer show up to post twice.",
+      "If later or earlier weeks can't load, Schedule says so and offers Try Again instead of spinning.",
+      "Claiming a shift now says it was requested, since an Admin approves it, and Schedule updates when you close the Trade Board.",
+      "Larger text sizes keep event names, dates, and filters readable."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 567
+  },
+  {
+    "date": "2026-10-21",
     "title": "Catch mistyped booking end dates",
     "type": "fixes",
     "summary": "Reservations and checkouts can no longer be saved, edited or extended to run longer than a year, which catches a mistyped year before it blocks gear.",
@@ -525,6 +647,22 @@
   },
   {
     "date": "2026-10-21",
+    "title": "My kit for UA gear on iPhone",
+    "type": "feature",
+    "summary": "UA gear in the iPhone app now shows your kit and where each piece stands.",
+    "details": [
+      "Each piece lists its size and whether it is planned, on order with a due date, or in your hands.",
+      "A piece with no size says Add your size and takes you to your profile.",
+      "Students on the student list see their kit there too.",
+      "Your kit stays hidden until gear picks are opened to everyone."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 579
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quicker reviews of upcoming changes",
     "type": "improvement",
     "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",
@@ -536,6 +674,25 @@
       "Web"
     ],
     "pr": 566
+  },
+  {
+    "date": "2026-10-21",
+    "title": "A Scoreboard you can play with",
+    "type": "feature",
+    "summary": "The Scoreboard is redesigned on the web and iPhone to be fun to explore: the team record up top, facts you can tap, and a leaderboard you can dig into.",
+    "details": [
+      "Did you know cards surface stories in the season, like who has worked the most events, the team's record when someone is on crew, home versus away, and your own spot. Tap one to jump to that person or view.",
+      "Switch the leaderboard between events, wins and win rate and watch people move to their new places. Tap anyone to see their sports and record without leaving the page.",
+      "Head to head compares any two people, starting with you and the leader.",
+      "Explore lets you tap a sport, venue, opponent or site to zoom the whole Scoreboard into it. Sport chips sit at the top, and the other filters are under More filters.",
+      "Games that ended more than four months ago now stay in the season record instead of dropping out.",
+      "Every finished game is now saved with its result and crew, so the season can be replayed and recapped later even if a schedule changes."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 564
   },
   {
     "date": "2026-10-21",
@@ -634,6 +791,41 @@
       "iOS"
     ],
     "pr": 568
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Damage and loss, tracked",
+    "type": "feature",
+    "summary": "Report a problem with any item, any time, and staff get one page to follow every damaged or missing item through to an outcome.",
+    "details": [
+      "Report a problem on any item page, on the web or iPhone: say it's damaged or can't be found, with a note and a photo.",
+      "A new Damage and loss page lists every open case with the photo, the note, who had the item, and the checkout, including lost batteries and supplies. Closed cases stay on file. Staff get the same queue on iPhone under Browse, Equipment.",
+      "Staff close a case as repaired, replaced, written off, found, or no issue. Repaired, found and no issue put the item back in service. Replaced and written off retire it.",
+      "An item reported missing, or reported damaged while idle, is held right away so it can't be booked again, and shows as Missing in the catalog. A checked-out or reserved item stays in service until staff review it.",
+      "The dashboard flags stay until a case is closed and link to the new page, and the sidebar shows how many cases are open.",
+      "A checkout now shows what was reported at return and where it stands, to the person it's for and to staff."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 560
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Sidebar fixes, and pins that follow you",
+    "type": "fixes",
+    "summary": "Sidebar page names show the full tails of letters like g, y and p.",
+    "details": [
+      "Fixed the bottom of letters such as the g in Badges and Signatures being clipped in the sidebar.",
+      "The workspace name and your name in the account menu get the same extra room.",
+      "Pinned and hidden sidebar pages are saved to your account, so they follow you to other browsers and computers.",
+      "YouTube Studio Lite and issue pages use the shared page title, and issue pages show their title in the top bar."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 559
   },
   {
     "date": "2026-10-21",
@@ -743,6 +935,21 @@
       "Web"
     ],
     "pr": 547
+  },
+  {
+    "date": "2026-10-21",
+    "title": "Badge celebrations show once",
+    "type": "fixes",
+    "summary": "A badge you earn is now celebrated one time, no matter how many phones, browsers or kiosks you use.",
+    "details": [
+      "Before, each device remembered on its own what it had shown you, so a phone or browser you hadn't opened in a while could pop up badges you'd already seen, and two open devices could show the same one.",
+      "Now the app remembers it once for your account, and badges you've already earned won't come back."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 554
   },
   {
     "date": "2026-10-21",

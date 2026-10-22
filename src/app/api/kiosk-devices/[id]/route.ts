@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { kioskDeviceUpdateBody } from "@/lib/schemas/kiosk";
+import { clearKioskBeat, forgetKioskHeartbeat } from "@/lib/kiosk-heartbeat-cache";
 import type { Prisma } from "@prisma/client";
 
 /** Toggle active status or update a kiosk device (ADMIN only) */
@@ -34,6 +35,10 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   if (body.name !== undefined) {
     updates.name = body.name;
+  }
+
+  if (body.active === false) {
+    await forgetKioskHeartbeat(device.sessionToken);
   }
 
   const updated = await db.kioskDevice.update({
@@ -84,6 +89,7 @@ export const DELETE = withAuth<{ id: string }>(async (req, { user, params }) => 
   }
 
   await db.kioskDevice.delete({ where: { id: params.id } });
+  await Promise.all([forgetKioskHeartbeat(device.sessionToken), clearKioskBeat(device.id)]);
 
   await createAuditEntry({
     actorId: user.id,

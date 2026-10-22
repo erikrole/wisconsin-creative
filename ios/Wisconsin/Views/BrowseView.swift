@@ -4,6 +4,7 @@ struct BrowseView: View {
     @State private var navigationPath = NavigationPath()
     @Environment(AppState.self) private var appState
     @Environment(SessionStore.self) private var session
+    @State private var openDamageCases = 0
 
     private var isStaffOrAdmin: Bool {
         let role = session.currentUser?.role ?? ""
@@ -21,6 +22,7 @@ struct BrowseView: View {
                 rows.insert(.batteries, at: 5)
                 rows.append(.badges)
                 rows.append(.reports)
+                rows.insert(.damage, at: 6)
             }
             return rows
         }
@@ -49,7 +51,17 @@ struct BrowseView: View {
                                         subtitle: destination.subtitle,
                                         systemImage: destination.systemImage,
                                         tint: destination.tint
-                                    ) { EmptyView() }
+                                    ) {
+                                        if destination == .damage, openDamageCases > 0 {
+                                            Text("\(openDamageCases)")
+                                                .font(.caption.weight(.semibold).monospacedDigit())
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 2)
+                                                .background(Color.statusBackground(.orange), in: Capsule())
+                                                .foregroundStyle(Color.statusText(.orange))
+                                                .accessibilityLabel("\(openDamageCases) open")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -63,6 +75,10 @@ struct BrowseView: View {
             }
             .onAppear {
                 consumePendingDestination()
+            }
+            .task(id: isStaffOrAdmin) {
+                guard isStaffOrAdmin else { return }
+                openDamageCases = (try? await APIClient.shared.damageCases(view: .open))?.counts.open ?? 0
             }
             .onChange(of: appState.pendingBrowseDestination) { _, _ in
                 consumePendingDestination()
@@ -113,6 +129,8 @@ struct BrowseView: View {
             TeamBadgesView(wrapsInNavigationStack: false)
         case .reports:
             ReportsView()
+        case .damage:
+            DamageCasesView(wrapsInNavigationStack: false)
         case .blasts:
             BlastsView(wrapsInNavigationStack: false)
         case .whatsNew:
@@ -147,13 +165,14 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case gearPicks
     case badges
     case reports
+    case damage
 
     var id: String { rawValue }
 
     var group: BrowseGroup {
         switch self {
         case .blasts, .whatsNew: .work
-        case .items, .kits, .batteries, .accountability, .reports: .equipment
+        case .items, .kits, .batteries, .accountability, .reports, .damage: .equipment
         case .guides, .brandAssets, .licenses, .sharedLogins: .resources
         case .scoreboard, .users, .gearPicks, .badges: .team
         }
@@ -176,6 +195,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .gearPicks: "UA Gear"
         case .badges: "Badges"
         case .reports: "Reports"
+        case .damage: "Damage and loss"
         }
     }
 
@@ -211,6 +231,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Recognition and staff awards"
         case .reports:
             "Usage, activity, and inventory"
+        case .damage:
+            "Close out damaged and missing gear"
         }
     }
 
@@ -231,6 +253,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .gearPicks: "tshirt"
         case .badges: "medal"
         case .reports: "chart.bar.xaxis"
+        case .damage: "exclamationmark.triangle"
         }
     }
 
@@ -251,6 +274,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .gearPicks: Color.statusText(.purple)
         case .badges: Color.statusText(.purple)
         case .reports: Color.statusText(.red)
+        case .damage: Color.statusText(.orange)
         }
     }
 }

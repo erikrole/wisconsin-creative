@@ -35,6 +35,7 @@ describe("invite email", () => {
     expect(html).toContain("Hi &lt;b&gt;Maya&lt;/b&gt;,");
     expect(html).not.toContain("<b>Maya");
     expect(html).toContain("Sign in with maya@wisc.edu.");
+    expect(html).toContain("Choose Forgot password on the sign-in page");
     expect(html).toContain("https://creative.example.test/login?email=maya%40wisc.edu");
   });
 
