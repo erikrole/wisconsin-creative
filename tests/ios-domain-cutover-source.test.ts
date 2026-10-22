@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { scheduleSurfaceSource, source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function swiftFiles(dir = path.join(process.cwd(), "ios/Wisconsin")): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -43,14 +44,14 @@ describe("iOS production domain cutover", () => {
   });
 
   it("keeps app, kiosk, recovery, profile, licenses, and calendar URLs on the shared host config", () => {
-    expect(source("ios/Wisconsin/Core/APIClient.swift")).toContain("private var baseURL: URL { AppEnvironment.activeAPIBaseURL }");
-    expect(source("ios/Wisconsin/Core/APIClient.swift")).toContain(
+    expect(apiClientSource()).toContain("var baseURL: URL { AppEnvironment.activeAPIBaseURL }");
+    expect(apiClientSource()).toContain(
       'req.setValue(AppEnvironment.activeAPIOrigin, forHTTPHeaderField: "Origin")',
     );
-    expect(source("ios/Wisconsin/Core/APIClient.swift")).toContain(
+    expect(apiClientSource()).toContain(
       "let nextHost = AppEnvironment.apiHost(forLoginEmail: email)",
     );
-    expect(source("ios/Wisconsin/Core/APIClient.swift")).toContain(
+    expect(apiClientSource()).toContain(
       "AppEnvironment.resetActiveAPIHost()",
     );
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("kiosk handoff completion", () => {
   it("throws APIError instead of force-unwrapping the saved request", () => {
@@ -27,7 +28,7 @@ describe("native Blasts list", () => {
   it("reaches a read-only list and detail from Browse with the existing me/blasts client", () => {
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
     const view = source("ios/Wisconsin/Views/BlastsView.swift");
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const home = source("ios/Wisconsin/Views/HomeView.swift");
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
     const history = source("ios/WisconsinTests/BlastHistoryTests.swift");

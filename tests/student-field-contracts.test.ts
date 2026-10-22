@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 /** The text between two markers, so an assertion can be scoped to one member. */
 function sliceBetween(haystack: string, start: string, end: string) {
@@ -20,14 +21,14 @@ function createBookingSource() {
 
 describe("student field mobile contracts", () => {
   it("keeps iOS active checkouts scoped to open and pending-pickup work", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
 
     expect(apiClient).toContain("statusList: status == nil && activeOnly ? [.open, .pendingPickup] : nil");
     expect(apiClient).toContain(".init(name: \"status_in\", value: statusList.map(\\.rawValue).joined(separator: \",\"))");
   });
 
   it("keeps iOS Home on the lean dashboard payload", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const route = source("src/app/api/dashboard/route.ts");
 
     expect(apiClient).toContain(".init(name: \"scope\", value: \"ios-home\")");
@@ -40,7 +41,7 @@ describe("student field mobile contracts", () => {
   it("keeps a personal-scope dashboard reporting only the caller's own work", () => {
     const route = source("src/app/api/dashboard/route.ts");
     const statsRoute = source("src/app/api/dashboard/stats/route.ts");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
 
     // The row queries are already filtered to this user, so the counts beside
     // them must be too -- an org-wide "12 overdue" over an empty list reads as
@@ -81,7 +82,7 @@ describe("student field mobile contracts", () => {
   });
 
   it("keeps iOS booking edits on the optimistic-lock contract", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const models = source("ios/Wisconsin/Models/Models.swift");
     const detail = source("ios/Wisconsin/Views/BookingDetailView.swift");
 
@@ -117,7 +118,7 @@ describe("student field mobile contracts", () => {
 
   it("keeps iOS Bookings tab from flashing stale cache rows", () => {
     const bookingsView = source("ios/Wisconsin/Views/BookingsView.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
 
     expect(bookingsView).toContain("load(reset: Bool = false, clearExistingRows: Bool = false)");
     expect(bookingsView).toContain("clearExistingRows");
@@ -288,7 +289,7 @@ describe("student field mobile contracts", () => {
 
   it("keeps iOS Items controls self-describing", () => {
     const itemsView = source("ios/Wisconsin/Views/ItemsView.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
 
     expect(itemsView).toContain(".searchable(");
     expect(itemsView).toContain("text: $vm.searchText");
@@ -309,7 +310,7 @@ describe("student field mobile contracts", () => {
 
   it("keeps iOS Booking Detail edit state self-describing", () => {
     const detail = source("ios/Wisconsin/Views/BookingDetailView.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const extendSheet = source("ios/Wisconsin/Views/ExtendBookingSheet.swift");
     const editor = detail.slice(
       detail.indexOf("struct EditBookingSheet"),
@@ -346,7 +347,7 @@ describe("student field mobile contracts", () => {
     const availability = source("ios/Wisconsin/Views/AvailabilityView.swift");
     const models = source("ios/Wisconsin/Models/Models.swift");
     const scheduleModels = source("ios/Wisconsin/Models/ScheduleModels.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const webAvailability = source("src/app/(app)/staff/[id]/UserAvailabilityTab.tsx");
     const meRoute = source("src/app/api/me/route.ts");
     const auth = source("src/lib/auth.ts");

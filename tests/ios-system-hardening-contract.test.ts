@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS system hardening contracts", () => {
   it("requires local device authentication before private App Intents run", () => {
@@ -274,7 +275,7 @@ describe("iOS system hardening contracts", () => {
   it("requests only open checkout custody for private intent and Live Activity surfaces", () => {
     const intent = source("ios/Wisconsin/App/AppIntentsData.swift");
     const activities = source("ios/Wisconsin/LiveActivities/CheckoutReturnLiveActivityManager.swift");
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
 
     expect(api).toContain("status: BookingStatus? = nil");
     expect(intent).toContain(".checkouts(activeOnly: false, status: .open");

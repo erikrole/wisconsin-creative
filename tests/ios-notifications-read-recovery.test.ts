@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS notifications read recovery", () => {
   it("reconciles the icon even when the cached unread count is unchanged", () => {
@@ -23,12 +24,12 @@ describe("iOS notifications read recovery", () => {
   });
 
   it("treats notification read API failures as real errors", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
 
     expect(apiClient).toContain("func markNotificationRead(id: String) async throws");
     expect(apiClient).toContain("let _: SuccessResponse = try await perform(req)");
     expect(apiClient).not.toContain("func markNotificationRead(id: String) async throws {\n        struct Body: Encodable { let action: String; let id: String }\n        var req = request(path: \"/api/notifications\", method: \"PATCH\")\n        req.httpBody = try JSONEncoder().encode(Body(action: \"mark_read\", id: id))\n        let (_, _) = try await session.data(for: req)\n    }");
-    expect(apiClient).toContain("private struct SuccessResponse: Decodable");
+    expect(apiClient).toContain("struct SuccessResponse: Decodable");
   });
 
   it("serializes read actions and reconciles uncertain responses", () => {
