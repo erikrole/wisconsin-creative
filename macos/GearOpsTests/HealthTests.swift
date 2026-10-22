@@ -67,6 +67,18 @@ final class HealthTests: XCTestCase {
         XCTAssertFalse(device(name: "sim ipad", lastSeenAt: nil).isIncludedInMonitoring)
     }
 
+    func testTestDevicesAreExcludedButLookalikeNamesCount() {
+        let counts = KioskFleetCounts(devices: [
+            device(id: "real", name: "Kohl Center Kiosk", lastSeenAt: now.addingTimeInterval(-60)),
+            device(id: "test", name: "Test iPad", lastSeenAt: now.addingTimeInterval(-21 * 24 * 60 * 60)),
+            device(id: "demo", name: "Demo-iPad", lastSeenAt: nil),
+        ], at: now)
+
+        XCTAssertEqual(counts.summary, "1 online")
+        XCTAssertTrue(device(name: "Testa Hall Kiosk", lastSeenAt: nil).isIncludedInMonitoring)
+        XCTAssertTrue(device(name: "Simmons Lobby", lastSeenAt: nil).isIncludedInMonitoring)
+    }
+
     private func device(
         id: String = "kiosk-1",
         name: String = "Video Office iPad",

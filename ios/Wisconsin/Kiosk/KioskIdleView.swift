@@ -117,6 +117,9 @@ struct KioskIdleView: View {
         .task(id: "refresh") {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(refreshInterval * 1_000_000_000))
+                // A cancelled sleep returns at once; without this, leaving Home
+                // for any flow fired one more full dashboard reload.
+                guard !Task.isCancelled else { break }
                 guard !store.isDeviceIdle else { continue }
                 await loadAll()
             }

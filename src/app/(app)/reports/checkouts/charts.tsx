@@ -8,7 +8,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
-  REPORT_CHART_COLORS,
+  REPORT_BAR_COLOR,
   REPORT_SEMANTIC_CHART_COLORS,
   ReportChartCard,
   formatDateLabel,
@@ -86,7 +86,7 @@ export function TopRequestersChart({ topRequesters, days }: { topRequesters: { n
             <ChartTooltip content={<ChartTooltipContent />} />
             <Bar dataKey="count" name="Checkouts" radius={[0, 4, 4, 0]}>
               {topRequesters.map((_, i) => (
-                <Cell key={i} fill={REPORT_CHART_COLORS[i % REPORT_CHART_COLORS.length]} />
+                <Cell key={i} fill={REPORT_BAR_COLOR} />
               ))}
             </Bar>
           </BarChart>

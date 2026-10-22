@@ -33,6 +33,7 @@ import {
   isAbortError,
   parseErrorMessage,
 } from "@/lib/errors";
+import { VenueMappingsSection } from "./VenueMappings";
 import { SettingsPageShell } from "../SettingsPageShell";
 
 type LocationCounts = {
@@ -58,7 +59,7 @@ function describeUsage(c?: LocationCounts): string {
   if (c.assets) parts.push(`${c.assets} item${c.assets === 1 ? "" : "s"}`);
   if (c.bookings) parts.push(`${c.bookings} booking${c.bookings === 1 ? "" : "s"}`);
   if (c.kioskDevices) parts.push(`${c.kioskDevices} kiosk${c.kioskDevices === 1 ? "" : "s"}`);
-  if (c.locationMappings) parts.push(`${c.locationMappings} venue map${c.locationMappings === 1 ? "" : "s"}`);
+  if (c.locationMappings) parts.push(`${c.locationMappings} venue match${c.locationMappings === 1 ? "" : "es"}`);
   if (c.users) parts.push(`${c.users} user${c.users === 1 ? "" : "s"}`);
   return parts.join(" · ");
 }
@@ -207,7 +208,7 @@ export default function LocationsSettingsPage() {
     setBusy(null);
   }
 
-  const description = "Catalog of physical locations referenced by items, kiosks, calendar events, and venue mappings. Mark a location as a home venue to flag events held there as home games for shift coverage.";
+  const description = "Places gear lives and games happen. Turn on Home venue so games there count as home games for shift coverage.";
 
   if (loading) {
     return (
@@ -331,7 +332,7 @@ export default function LocationsSettingsPage() {
                 inline
                 icon="folder"
                 title="No locations yet"
-                description="Add one to support item forms, kiosks, calendar events, and venue mappings."
+                description="Add one to support item forms, kiosks, and calendar events."
               />
             </CardContent>
           ) : (
@@ -456,6 +457,7 @@ export default function LocationsSettingsPage() {
             </Table>
           </Card>
         )}
+      <VenueMappingsSection />
     </SettingsPageShell>
   );
 }

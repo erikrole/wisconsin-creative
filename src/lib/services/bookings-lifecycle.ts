@@ -64,6 +64,7 @@ import {
 import { assertBookingSnapshot } from "@/lib/booking-concurrency";
 import { isBookingAllocationConstraintError } from "@/lib/prisma-errors";
 import { unique } from "@/lib/utils";
+import { assertBookingDuration } from "@/lib/time";
 
 type CreateBookingInput = {
   /** Internal kiosk completion receipt, committed atomically with custody. */
@@ -158,6 +159,7 @@ function assertValidBookingWindow(startsAt: Date, endsAt: Date) {
   if (endsAt <= startsAt) {
     throw new HttpError(400, "endsAt must be later than startsAt");
   }
+  assertBookingDuration(startsAt, endsAt);
 }
 
 function assertValidCreateEventLinks(input: CreateBookingInput) {
@@ -3168,6 +3170,7 @@ export async function extendBooking(
       if (newEndsAt.getTime() < Date.now()) {
         throw new HttpError(400, "New end date must be in the future");
       }
+      assertBookingDuration(existing.startsAt, newEndsAt);
 
       const serializedAssetIds = existing.serializedItems.map((i) => i.assetId);
       const bulkItems = existing.bulkItems.map((i) => ({

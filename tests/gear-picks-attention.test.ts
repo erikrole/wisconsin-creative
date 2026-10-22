@@ -36,3 +36,44 @@ describe("gearAttentionItems", () => {
     expect(gearAttentionItems({ ...base, students: [] }).map((item) => item.key)).toEqual(["students"]);
   });
 });
+
+describe("gearAttentionItems order follow-ups", () => {
+  const NOW = new Date("2027-07-10T12:00:00Z");
+  const closed = { ...base.cycle, isOpen: false };
+  const person = {
+    id: "p1",
+    fit: "MEN" as const,
+    allowanceCents: 18500,
+    user: { id: "u9", name: "Pat", email: "p@x.com", active: true, topSize: "L", shoeSize: "10" },
+    status: "SUBMITTED" as const,
+    submission: null,
+    ...{},
+  };
+  const full = { ...base, cycle: closed, participants: [person], students: [], order: { placedAt: null, poNumber: null, orderNumber: null, expectedAt: null }, receipts: [], handouts: [] };
+
+  it("asks for the order to be recorded once picks are closed", () => {
+    expect(gearAttentionItems(full, NOW).map((item) => item.key)).toContain("order-not-placed");
+  });
+
+  it("flags pieces past the expected date, red", () => {
+    const items = gearAttentionItems({ ...full, order: { placedAt: "2026-10-14T00:00:00Z", poNumber: null, orderNumber: null, expectedAt: "2027-07-02T00:00:00Z" } }, NOW);
+    const late = items.find((item) => item.key === "order-late");
+    expect(late?.tone).toBe("red");
+    expect(late?.href).toBe("#receiving");
+  });
+
+  it("flags people waiting on handout once gear has arrived", () => {
+    const order = { placedAt: "2026-10-14T00:00:00Z", poNumber: null, orderNumber: null, expectedAt: "2027-07-02T00:00:00Z" };
+    const planned = gearAttentionItems({ ...full, order }, NOW);
+    expect(planned.map((item) => item.key)).not.toContain("handout");
+    const received = gearAttentionItems(
+      { ...full, order, receipts: [{ id: "r1", sku: "6021649-005", size: "L", quantity: 1, receivedAt: "2027-07-03T00:00:00Z", note: null } as never] },
+      NOW,
+    );
+    expect(received.map((item) => item.key)).toContain("handout");
+  });
+
+  it("stays quiet about the order before launch data exists", () => {
+    expect(gearAttentionItems(base, NOW)).toEqual([]);
+  });
+});

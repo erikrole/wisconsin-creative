@@ -6,10 +6,8 @@ import {
   ChevronDownIcon,
   ChevronsUpDown,
   RefreshCw,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -37,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
@@ -60,6 +59,8 @@ import {
 import type { SportRosterPreviewResponse } from "@/lib/services/sport-roster-preview";
 import { AREAS, AREA_LABELS, type Area } from "@/types/areas";
 import { sportColumnLabel, sportsGroupedByProgram } from "@/lib/sports";
+import { UserAvatar } from "@/components/UserAvatar";
+import { FRESH_SCOPE_CLASS } from "@/lib/fonts/fresh";
 import { cn } from "@/lib/utils";
 import { SportRosterPreview } from "./SportRosterPreview";
 import { PendingAssignmentBatches, usePendingAssignmentBatches } from "./PendingAssignmentBatches";
@@ -72,6 +73,14 @@ export type AutoAssignCustomWindow = {
   label: string;
 };
 
+/** Event detail's Auto assign: the scope is pinned to this one event. */
+export type AutoAssignEvent = {
+  id: string;
+  summary: string;
+  startsAt: string;
+  endsAt: string;
+};
+
 export type AutoAssignDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -80,6 +89,7 @@ export type AutoAssignDialogProps = {
   initialArea?: Area | null;
   initialPeriod?: AssignmentPeriodValue;
   customWindow?: AutoAssignCustomWindow | null;
+  event?: AutoAssignEvent | null;
 };
 
 type Step = "scope" | "review";
@@ -149,6 +159,33 @@ function eventSelectionLabel(event: BulkAssignmentPreviewEvent) {
   return `${count} assignment${count === 1 ? "" : "s"}`;
 }
 
+function ScopeRow({ label, hint, children }: { label: string; hint?: string | null; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-2 px-4 py-3 sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start sm:gap-4">
+      <div className="pt-2.5 text-sm font-bold">{label}</div>
+      <div className="min-w-0">
+        <div className="flex min-h-10 items-center">{children}</div>
+        {hint ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{hint}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+/** The one line that says why this person got this slot. */
+function proposalReason(proposal: BulkAssignmentPreviewProposal) {
+  if (proposal.advisoryConflictNote) return { tone: "warning" as const, text: proposal.advisoryConflictNote };
+  if (proposal.warnings[0]) return { tone: "warning" as const, text: proposal.warnings[0].label };
+  const reasons = proposal.reasons
+    .filter((reason) => reason.code !== "role_fit")
+    .slice(0, 2)
+    .map((reason) => reason.label);
+  return { tone: "neutral" as const, text: reasons.join(" · ") || (proposal.workerType === "ST" ? "Student" : "Staff") };
+}
+
+function firstName(name: string) {
+  return name.split(" ")[0] ?? name;
+}
+
 function sportSummary(codes: string[]) {
   if (codes.length === 0) return "All sports";
   const groups = sportsGroupedByProgram(new Set(codes));
@@ -214,22 +251,26 @@ export function AutoAssignDialog({
   initialArea,
   initialPeriod,
   customWindow,
+  event,
 }: AutoAssignDialogProps) {
+  // One event is usually filled partway (a slot nobody fits stays open), so
+  // the single-event default lets the rest stage instead of holding it all.
+  const defaultRequireFullCrew = !event;
   const [step, setStep] = useState<Step>("scope");
   const [sportCodes, setSportCodes] = useState<string[]>(initialSportCodes ?? []);
   const [area, setArea] = useState<Area | null>(initialArea ?? null);
   const [workerScope, setWorkerScope] = useState<BulkAssignmentWorkerScope>("ALL");
-  const [requireFullCrew, setRequireFullCrew] = useState(true);
+  const [requireFullCrew, setRequireFullCrew] = useState(defaultRequireFullCrew);
   const [period, setPeriod] = useState<AssignmentPeriodValue>(
     initialPeriod ?? (customWindow ? "custom" : "week"),
   );
   const [sportPickerOpen, setSportPickerOpen] = useState(false);
   const [wizardSportCode, setWizardSportCode] = useState<string | null>(null);
-  const [expandedPersonId, setExpandedPersonId] = useState<string | null>(null);
+  const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
   const [showBlockedEvents, setShowBlockedEvents] = useState(false);
 
   const [preview, setPreview] = useState<BulkAssignmentPreviewResponse | null>(null);
-  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+  const [selectedProposalIds, setSelectedProposalIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -251,11 +292,11 @@ export function AutoAssignDialog({
     setSportCodes(initialSportCodes ?? []);
     setArea(initialArea ?? null);
     setWorkerScope("ALL");
-    setRequireFullCrew(true);
+    setRequireFullCrew(defaultRequireFullCrew);
     setPeriod(initialPeriod ?? (customWindow ? "custom" : "week"));
     setPreview(null);
-    setSelectedEventIds(new Set());
-    setExpandedPersonId(null);
+    setSelectedProposalIds(new Set());
+    setFocusPersonId(null);
     setShowBlockedEvents(false);
     setError(null);
     // Only the open transition should reseed; later prop churn must not wipe
@@ -271,6 +312,15 @@ export function AutoAssignDialog({
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeWindow = useMemo(() => {
+    if (event) {
+      const startsAt = new Date(event.startsAt);
+      const endsAt = new Date(Math.max(new Date(event.endsAt).getTime(), startsAt.getTime() + 60_000));
+      return {
+        rangeStartsAt: startsAt.toISOString(),
+        rangeEndsAt: endsAt.toISOString(),
+        detail: formatEventDate(event.startsAt),
+      };
+    }
     if (period === "custom" && customWindow) {
       return {
         rangeStartsAt: customWindow.rangeStartsAt,
@@ -284,17 +334,18 @@ export function AutoAssignDialog({
       rangeEndsAt: resolved.rangeEndsAt,
       detail: resolved.detail,
     };
-  }, [customWindow, period, windows]);
+  }, [customWindow, event, period, windows]);
 
   const scope = useMemo<BulkAssignmentScope>(() => ({
-    sportCodes: [...sportCodes].sort(),
+    sportCodes: event ? [] : [...sportCodes].sort(),
+    eventIds: event ? [event.id] : [],
     rangeStartsAt: activeWindow.rangeStartsAt,
     rangeEndsAt: activeWindow.rangeEndsAt,
     area,
     workerScope,
     requireFullCrew,
-    period,
-  }), [activeWindow, area, period, requireFullCrew, sportCodes, workerScope]);
+    period: event ? "custom" : period,
+  }), [activeWindow, area, event, period, requireFullCrew, sportCodes, workerScope]);
 
   useEffect(() => {
     if (skipScopeResetRef.current) {
@@ -302,15 +353,15 @@ export function AutoAssignDialog({
       return;
     }
     setPreview(null);
-    setSelectedEventIds(new Set());
-    setExpandedPersonId(null);
+    setSelectedProposalIds(new Set());
+    setFocusPersonId(null);
     setShowBlockedEvents(false);
     setError(null);
     if (step === "review") setStep("scope");
   }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!open || sportCodes.length === 0) {
+    if (!open || event || sportCodes.length === 0) {
       setRoster(null);
       setRosterError(null);
       return;
@@ -342,14 +393,14 @@ export function AutoAssignDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, sportCodes, rosterToken]);
+  }, [open, event, sportCodes, rosterToken]);
 
   const buildPreview = useCallback(async (nextScope: BulkAssignmentScope = scope) => {
     setLoading(true);
     setError(null);
     setPreview(null);
-    setSelectedEventIds(new Set());
-    setExpandedPersonId(null);
+    setSelectedProposalIds(new Set());
+    setFocusPersonId(null);
     setShowBlockedEvents(false);
     setStep("review");
     try {
@@ -369,10 +420,10 @@ export function AutoAssignDialog({
         return;
       }
       setPreview(json.data);
-      setSelectedEventIds(new Set(
+      setSelectedProposalIds(new Set(
         json.data.events
-          .filter((event) => event.status === "ready" && event.proposals.length > 0)
-          .map((event) => event.eventId),
+          .filter((event) => event.status === "ready")
+          .flatMap((event) => event.proposals.map((proposal) => proposal.proposalId)),
       ));
     } catch {
       setError("Could not reach the server. No assignments were changed.");
@@ -390,25 +441,24 @@ export function AutoAssignDialog({
 
   const selectedProposals = useMemo(
     () => preview?.events
-      .filter((event) => selectedEventIds.has(event.eventId))
-      .flatMap((event) => event.proposals) ?? [],
-    [preview, selectedEventIds],
+      .filter((event) => event.status === "ready")
+      .flatMap((event) => event.proposals)
+      .filter((proposal) => selectedProposalIds.has(proposal.proposalId)) ?? [],
+    [preview, selectedProposalIds],
   );
+  const selectedEventCount = useMemo(
+    () => new Set(selectedProposals.map((proposal) => proposal.eventId)).size,
+    [selectedProposals],
+  );
+  // Full crews only means an event is staged whole or not at all, so single
+  // slots can be dropped only when partial crews are allowed.
+  const canDropSingleSlots = preview ? !preview.scope.requireFullCrew : false;
 
   const selectedPeople = useMemo(
     () => summarizeAssignmentPeople(selectedProposals),
     [selectedProposals],
   );
 
-  const proposalsByPerson = useMemo(() => {
-    const map = new Map<string, BulkAssignmentPreviewProposal[]>();
-    for (const proposal of selectedProposals) {
-      const list = map.get(proposal.userId) ?? [];
-      list.push(proposal);
-      map.set(proposal.userId, list);
-    }
-    return map;
-  }, [selectedProposals]);
 
   const readyEvents = useMemo(
     () => preview?.events.filter((event) => event.status === "ready" && event.proposals.length > 0) ?? [],
@@ -433,11 +483,22 @@ export function AutoAssignDialog({
     });
   }
 
-  function toggleEvent(eventId: string, checked: boolean) {
-    setSelectedEventIds((current) => {
+  function toggleEvent(event: BulkAssignmentPreviewEvent, checked: boolean) {
+    setSelectedProposalIds((current) => {
       const next = new Set(current);
-      if (checked) next.add(eventId);
-      else next.delete(eventId);
+      for (const proposal of event.proposals) {
+        if (checked) next.add(proposal.proposalId);
+        else next.delete(proposal.proposalId);
+      }
+      return next;
+    });
+  }
+
+  function toggleProposal(proposalId: string, checked: boolean) {
+    setSelectedProposalIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(proposalId);
+      else next.delete(proposalId);
       return next;
     });
   }
@@ -501,13 +562,15 @@ export function AutoAssignDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-3xl">
+      <DialogContent className={cn(FRESH_SCOPE_CLASS, "grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-[var(--background)] sm:max-w-3xl")}>
         <DialogHeader className="pr-16">
           <div>
-            <DialogTitle>Auto assign crew</DialogTitle>
+            <DialogTitle>{event ? "Fill open slots" : "Auto assign crew"}</DialogTitle>
             <DialogDescription className="mt-1">
               {step === "scope"
-                ? "Pick the window, then preview who gets staged. Workers are notified after a ten-minute cancel window."
+                ? event
+                  ? "Suggest people for this event's open slots, then review before anything is staged."
+                  : "Pick the window, then preview who gets staged. Workers are notified after a ten-minute cancel window."
                 : loading
                   ? "Building a preview of who can be staged."
                   : readyEvents.length > 0
@@ -527,9 +590,15 @@ export function AutoAssignDialog({
             <div className="flex flex-col gap-4">
               <PendingAssignmentBatches batches={pendingBatches} onChanged={() => { void refreshBatches(); onApplied(); }} />
 
-              <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Sports</span>
+              <div className="divide-y divide-[var(--border)] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)]">
+                {event ? (
+                  <ScopeRow label="Event" hint={activeWindow.detail}>
+                    <span className="truncate text-sm font-bold">{event.summary}</span>
+                  </ScopeRow>
+                ) : null}
+                {event ? null : (
+                <ScopeRow label="Sports" hint={sportCodes.length > 0 ? null : "Every sport in the window is included."}>
+                  <div className="flex flex-wrap items-center gap-2">
                   <Popover open={sportPickerOpen} onOpenChange={setSportPickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -572,19 +641,33 @@ export function AutoAssignDialog({
                       </Command>
                     </PopoverContent>
                   </Popover>
+                    {sportCodes.length > 0 ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-10 text-xs text-[var(--text-secondary)] hover:text-[var(--text)]"
+                        onClick={() => setSportCodes([])}
+                      >
+                        Clear
+                      </Button>
+                    ) : null}
+                  </div>
                   {sportCodes.length > 0 ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-10 text-xs text-muted-foreground hover:text-foreground"
-                      onClick={() => setSportCodes([])}
-                    >
-                      Clear
-                    </Button>
+                    <div className="mt-3">
+                      <SportRosterPreview
+                        roster={roster}
+                        loading={rosterLoading}
+                        error={rosterError}
+                        onEditSport={setWizardSportCode}
+                      />
+                    </div>
                   ) : null}
+                </ScopeRow>
+                )}
 
+                <ScopeRow label="Area">
                   <Select value={area ?? "_all"} onValueChange={(value) => setArea(value === "_all" ? null : value as Area)}>
-                    <SelectTrigger size="sm" className="ml-auto h-10 w-36" aria-label="Auto assign area filter">
+                    <SelectTrigger size="sm" className="h-10 w-44" aria-label="Auto assign area filter">
                       <SelectValue placeholder="All areas" />
                     </SelectTrigger>
                     <SelectContent>
@@ -594,86 +677,65 @@ export function AutoAssignDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </ScopeRow>
 
-                {sportCodes.length > 0 ? (
-                  <SportRosterPreview
-                    roster={roster}
-                    loading={rosterLoading}
-                    error={rosterError}
-                    onEditSport={setWizardSportCode}
-                  />
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Every sport in the window is included. Pick specific sports to see who is on their rosters.
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Period</span>
+                {event ? null : (
+                <ScopeRow label="Period" hint={activeWindow.detail}>
                   <ToggleGroup
                     type="single"
                     value={period}
                     onValueChange={(value) => {
                       if (value) setPeriod(value as AssignmentPeriodValue);
                     }}
-                    className="gap-1"
+                    className="flex-wrap justify-start"
                     aria-label="Auto assign period"
                   >
                     {ASSIGNMENT_PERIODS.map((value) => (
-                      <ToggleGroupItem key={value} value={value} className="h-10 px-2.5 text-xs">
+                      <ToggleGroupItem key={value} value={value} className="h-10 px-3 text-sm">
                         {windows[value].label}
                       </ToggleGroupItem>
                     ))}
                     {customWindow ? (
-                      <ToggleGroupItem value="custom" className="h-10 px-2.5 text-xs">
+                      <ToggleGroupItem value="custom" className="h-10 px-3 text-sm">
                         {customWindow.label}
                       </ToggleGroupItem>
                     ) : null}
                   </ToggleGroup>
-                  <span className="text-xs text-muted-foreground">{activeWindow.detail}</span>
-                </div>
+                </ScopeRow>
+                )}
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Assign</span>
+                <ScopeRow label="Assign">
                   <ToggleGroup
                     type="single"
                     value={workerScope}
                     onValueChange={(value) => {
                       if (value) setWorkerScope(value as BulkAssignmentWorkerScope);
                     }}
-                    className="gap-1"
+                    className="flex-wrap justify-start"
                     aria-label="Which slots to fill"
                   >
                     {BULK_ASSIGNMENT_WORKER_SCOPES.map((value) => (
-                      <ToggleGroupItem key={value} value={value} className="h-10 px-2.5 text-xs">
+                      <ToggleGroupItem key={value} value={value} className="h-10 px-3 text-sm">
                         {BULK_ASSIGNMENT_WORKER_SCOPE_LABELS[value]}
                       </ToggleGroupItem>
                     ))}
                   </ToggleGroup>
-                  <Button
-                    variant={requireFullCrew ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-10 text-xs"
-                    aria-pressed={requireFullCrew}
-                    onClick={() => setRequireFullCrew((current) => !current)}
-                  >
-                    <Check className={cn("size-3.5", requireFullCrew ? "opacity-100" : "opacity-30")} />
-                    Full crews only
-                  </Button>
-                  <span className="text-xs text-muted-foreground max-lg:hidden">
-                    {requireFullCrew
-                      ? "Events that cannot be filled completely are held back."
-                      : "Events may be filled partway."}
-                  </span>
-                </div>
+                </ScopeRow>
+
+                <ScopeRow
+                  label="Full crews only"
+                  hint={requireFullCrew
+                    ? "Events that cannot be filled completely are held back."
+                    : "Events may be filled partway. You can drop single slots in review."}
+                >
+                  <Switch
+                    checked={requireFullCrew}
+                    onCheckedChange={setRequireFullCrew}
+                    aria-label="Full crews only"
+                  />
+                </ScopeRow>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                {sportSummary(sportCodes)} · {activeWindow.detail} · {BULK_ASSIGNMENT_WORKER_SCOPE_LABELS[workerScope]}
-                {" · "}
-                {requireFullCrew ? "Full crews only" : "Partial crews allowed"}
-              </p>
             </div>
           ) : loading ? (
             <div className="flex min-h-56 items-center justify-center text-sm text-muted-foreground" aria-live="polite">
@@ -693,124 +755,153 @@ export function AutoAssignDialog({
             <div className="flex flex-col gap-4">
               {readyEvents.length > 0 ? (
                 <>
-                  <p className="text-sm text-foreground">
-                    {selectedProposals.length > 0 ? (
-                      <>
-                        Ready to stage{" "}
-                        <strong className="font-semibold tabular-nums">{selectedProposals.length}</strong>{" "}
-                        assignment{selectedProposals.length === 1 ? "" : "s"} for{" "}
-                        <strong className="font-semibold tabular-nums">{selectedPeople.length}</strong>{" "}
-                        {selectedPeople.length === 1 ? "person" : "people"}
-                        {" "}across{" "}
-                        <strong className="font-semibold tabular-nums">{selectedEventIds.size}</strong>{" "}
-                        event{selectedEventIds.size === 1 ? "" : "s"}
-                        .
-                      </>
-                    ) : (
-                      <>Select events below to stage assignments.</>
-                    )}
+                  <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+                    {[
+                      { value: selectedProposals.length, label: selectedProposals.length === 1 ? "shift" : "shifts" },
+                      { value: selectedPeople.length, label: selectedPeople.length === 1 ? "person" : "people" },
+                      { value: selectedEventCount, label: selectedEventCount === 1 ? "event" : "events" },
+                    ].map((stat) => (
+                      <div key={stat.label} className="flex items-baseline gap-1.5">
+                        <span className="text-3xl font-black tabular-nums tracking-tight">{stat.value}</span>
+                        <span className="text-sm text-[var(--text-secondary)]">{stat.label}</span>
+                      </div>
+                    ))}
                     {blockedEvents.length > 0 ? (
-                      <span className="text-muted-foreground">
-                        {" "}
-                        {blockedEvents.length} other event{blockedEvents.length === 1 ? "" : "s"} stayed out.
+                      <span className="pb-1 text-sm text-[var(--text-muted)]">
+                        {blockedEvents.length} other event{blockedEvents.length === 1 ? "" : "s"} stayed out
                       </span>
                     ) : null}
-                  </p>
+                  </div>
+                  {selectedProposals.length === 0 ? (
+                    <p className="text-sm text-[var(--text-secondary)]">Select events below to stage assignments.</p>
+                  ) : null}
 
                   {preview.summary.eventsPendingChanges > 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      <strong className="text-foreground">{preview.summary.eventsPendingChanges}</strong>{" "}
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      <strong className="text-[var(--text)]">{preview.summary.eventsPendingChanges}</strong>{" "}
                       skipped for unreleased staff changes.{" "}
                       <a className="underline underline-offset-2" href="/schedule/assign">Review them</a>, then build again.
                     </p>
                   ) : null}
 
                   {selectedPeople.length > 0 ? (
-                    <div className="rounded-md border border-border/60 bg-card">
-                      <div className="border-b border-border/50 px-3 py-2 text-xs font-medium text-muted-foreground">
-                        Who is getting added
+                    <section className="flex flex-col gap-2" aria-label="Who is getting added">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h3 className="text-sm font-bold">Who is getting added</h3>
+                        <span className="text-xs text-[var(--text-muted)] max-sm:hidden">
+                          {focusPersonId ? "Showing one person's shifts" : "Tap someone to see their shifts"}
+                        </span>
                       </div>
-                      <ul className="flex flex-col">
-                        {selectedPeople.map((person) => {
-                          const openPerson = expandedPersonId === person.userId;
-                          const proposals = proposalsByPerson.get(person.userId) ?? [];
+                      <div className="flex flex-wrap gap-1.5">
+                        {[...selectedPeople].sort((a, b) => b.shiftCount - a.shiftCount || a.userName.localeCompare(b.userName)).map((person) => {
+                          const focused = focusPersonId === person.userId;
                           return (
-                            <li key={person.userId} className="border-b border-border/40 last:border-b-0">
-                              <button
-                                type="button"
-                                className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left transition-[background-color] hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                aria-expanded={openPerson}
-                                onClick={() => setExpandedPersonId(openPerson ? null : person.userId)}
-                              >
-                                <Users className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                                <span className="min-w-0 flex-1 truncate text-sm font-medium">{person.userName}</span>
-                                <Badge variant="gray" size="sm">
-                                  {person.workerType === "ST" ? "Student" : "Staff"}
-                                </Badge>
-                                {person.warningCount > 0 ? (
-                                  <Badge variant="orange" size="sm">
-                                    {person.warningCount} warning{person.warningCount === 1 ? "" : "s"}
-                                  </Badge>
-                                ) : null}
-                                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                                  {person.shiftCount} shift{person.shiftCount === 1 ? "" : "s"}
-                                </span>
-                                <ChevronDownIcon
-                                  className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", openPerson && "rotate-180")}
-                                  aria-hidden="true"
-                                />
-                              </button>
-                              {openPerson ? (
-                                <div className="flex flex-col gap-1 px-3 pb-3">
-                                  {proposals.map((proposal) => (
-                                    <div key={proposal.proposalId} className="flex flex-wrap items-baseline justify-between gap-2 px-1 py-1 text-xs">
-                                      <span className="min-w-0 truncate font-medium text-foreground">
-                                        {proposal.eventSummary}
-                                        <span className="font-normal text-muted-foreground">
-                                          {" · "}{AREA_LABELS[proposal.area] ?? proposal.area}
-                                        </span>
-                                      </span>
-                                      <span className="shrink-0 text-muted-foreground">{formatEventDate(proposal.eventStartsAt)}</span>
-                                    </div>
-                                  ))}
-                                </div>
+                            <button
+                              key={person.userId}
+                              type="button"
+                              aria-pressed={focused}
+                              onClick={() => setFocusPersonId(focused ? null : person.userId)}
+                              className={cn(
+                                "flex h-9 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] py-1 pl-1 pr-3 text-sm transition-colors hover:bg-[var(--bg-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+                                focused && "border-[var(--accent)] bg-[var(--accent-soft)] hover:bg-[var(--accent-soft)]",
+                              )}
+                            >
+                              <UserAvatar name={person.userName} size="xs" />
+                              <span className="font-bold">{firstName(person.userName)}</span>
+                              <span className="tabular-nums text-[var(--text-secondary)]">{person.shiftCount}</span>
+                              {person.warningCount > 0 ? (
+                                <span className="size-1.5 rounded-full bg-[#f76b15]" aria-label={`${person.warningCount} to check`} />
                               ) : null}
-                            </li>
+                            </button>
                           );
                         })}
-                      </ul>
-                    </div>
+                      </div>
+                    </section>
                   ) : null}
 
-                  <div className="rounded-md border border-border/60 bg-card">
-                    <div className="border-b border-border/50 px-3 py-2 text-xs font-medium text-muted-foreground">
-                      Include events
+                  <section className="flex flex-col gap-2" aria-label="Include events">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="text-sm font-bold">Include events</h3>
+                      <span className="text-xs text-[var(--text-muted)] max-sm:hidden">
+                        {canDropSingleSlots ? "Uncheck any slot to leave it open" : "Full crews only: events go in whole"}
+                      </span>
                     </div>
-                    <ul className="flex flex-col">
+                    <ul className="flex flex-col gap-2">
                       {readyEvents.map((event) => {
-                        const selected = selectedEventIds.has(event.eventId);
+                        const selectedCount = event.proposals.filter((proposal) => selectedProposalIds.has(proposal.proposalId)).length;
+                        const eventChecked = selectedCount === event.proposals.length
+                          ? true
+                          : selectedCount === 0 ? false : "indeterminate" as const;
+                        const proposals = focusPersonId
+                          ? event.proposals.filter((proposal) => proposal.userId === focusPersonId)
+                          : event.proposals;
+                        if (focusPersonId && proposals.length === 0) return null;
                         return (
-                          <li key={event.eventId} className="flex min-h-10 items-center gap-3 border-b border-border/40 px-3 last:border-b-0">
-                            <Checkbox
-                              checked={selected}
-                              disabled={applying}
-                              onCheckedChange={(checked) => toggleEvent(event.eventId, checked === true)}
-                              aria-label={`Include ${event.summary}`}
-                              className="size-5"
-                            />
-                            <div className="min-w-0 flex-1 truncate text-sm">
-                              <span className="font-medium">{event.summary}</span>
-                              <span className="text-muted-foreground"> · {formatEventDate(event.startsAt)}</span>
+                          <li key={event.eventId} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)]">
+                            <div className="flex min-h-12 items-center gap-3 bg-[var(--bg-surface)] px-3">
+                              <Checkbox
+                                checked={eventChecked}
+                                disabled={applying}
+                                onCheckedChange={(checked) => toggleEvent(event, checked === true)}
+                                aria-label={`Include ${event.summary}`}
+                                className="size-5"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-bold">{event.summary}</div>
+                                <div className="text-xs text-[var(--text-secondary)]">{formatEventDate(event.startsAt)}</div>
+                              </div>
+                              <span className="shrink-0 text-xs tabular-nums text-[var(--text-secondary)]">
+                                {eventSelectionLabel(event)}
+                                {!event.fullyCrewed ? ` · ${event.unfilledSlots} left open` : ""}
+                              </span>
                             </div>
-                            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                              {eventSelectionLabel(event)}
-                              {!event.fullyCrewed ? ` · short ${event.unfilledSlots}` : ""}
-                            </span>
+                            <ul className="divide-y divide-[var(--border)]">
+                              {proposals.map((proposal) => {
+                                const reason = proposalReason(proposal);
+                                const included = selectedProposalIds.has(proposal.proposalId);
+                                return (
+                                  <li
+                                    key={proposal.proposalId}
+                                    className={cn(
+                                      "grid min-h-12 grid-cols-[3.75rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto] sm:gap-3",
+                                      !included && "opacity-50",
+                                    )}
+                                  >
+                                    <span className="truncate text-xs font-bold text-[var(--text-muted)]">
+                                      {AREA_LABELS[proposal.area] ?? proposal.area}
+                                    </span>
+                                    <span className="flex min-w-0 items-center gap-2.5">
+                                      <UserAvatar name={proposal.userName} size="sm" />
+                                      <span className="min-w-0">
+                                        <span className="block truncate text-sm font-bold">{proposal.userName}</span>
+                                        <span
+                                          className={cn(
+                                            "block truncate text-xs",
+                                            reason.tone === "warning" ? "text-[var(--orange-text)]" : "text-[var(--text-secondary)]",
+                                          )}
+                                        >
+                                          {reason.text}
+                                        </span>
+                                      </span>
+                                    </span>
+                                    {canDropSingleSlots ? (
+                                      <Checkbox
+                                        checked={included}
+                                        disabled={applying}
+                                        onCheckedChange={(checked) => toggleProposal(proposal.proposalId, checked === true)}
+                                        aria-label={`Assign ${proposal.userName} to ${AREA_LABELS[proposal.area] ?? proposal.area} for ${event.summary}`}
+                                        className="size-5"
+                                      />
+                                    ) : <span aria-hidden="true" />}
+                                  </li>
+                                );
+                              })}
+                            </ul>
                           </li>
                         );
                       })}
                     </ul>
-                  </div>
+                  </section>
 
                   {blockedEvents.length > 0 ? (
                     <div>
@@ -956,7 +1047,7 @@ export function AutoAssignDialog({
         onCompleted={() => {
           setRosterToken((current) => current + 1);
           setPreview(null);
-          setSelectedEventIds(new Set());
+          setSelectedProposalIds(new Set());
           setStep("scope");
         }}
       />
