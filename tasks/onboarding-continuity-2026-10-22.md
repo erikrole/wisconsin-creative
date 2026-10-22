@@ -56,3 +56,5 @@ No commit, push, PR, hosted database mutation, deployment, external email or dis
 ## Authorized shipping follow-up
 
 2026-10-22: The user authorized scoped commit, push and a draft PR, authenticated handoff tests both ways, and a physical iPhone photo upload check, with the intent to release an app update today. The physical iPhone 16 Pro is currently unavailable in Xcode; a connection request is pending. No merge or production release has occurred.
+
+Draft PR: [#606](https://github.com/erikrole/wisconsin-creative/pull/606). Source commit `b706b774`; first main integration `978d1f63`. Full suite after obsolete source-check reconciliation: 6,326 passing tests, one existing skip. Replaced slider/call-shape checks with the actual browser gesture cases, QueryClient avatar-consumer behavior and retained route audit-failure/old-blob coverage. Native managed-preview origin and exact-origin token checks pass in XCTest. The user explicitly selected the physical iPhone 18 Pro Max (`00008160-000A7C610C100036`), now paired and available; actual photo upload is pending the branch preview.

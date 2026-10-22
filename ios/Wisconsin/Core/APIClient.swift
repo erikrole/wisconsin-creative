@@ -200,7 +200,7 @@ final class APIClient {
             config.protocolClasses = [FixtureAPIProtocol.self] + (config.protocolClasses ?? [])
         }
 #endif
-        return URLSession(configuration: config)
+        return AppEnvironment.apiSession(configuration: config)
     }()
 
     /// Brand asset files can be a large PDF on venue wifi. The shared session
@@ -219,7 +219,7 @@ final class APIClient {
             config.protocolClasses = [FixtureAPIProtocol.self] + (config.protocolClasses ?? [])
         }
 #endif
-        return URLSession(configuration: config)
+        return AppEnvironment.apiSession(configuration: config)
     }()
 
     private let decoder: JSONDecoder = {
@@ -3016,6 +3016,9 @@ final class APIClient {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("WisconsinApp/1.0 iOS", forHTTPHeaderField: "User-Agent")
         req.setValue(AppEnvironment.activeAPIOrigin, forHTTPHeaderField: "Origin")
+#if DEBUG
+        AppEnvironment.authorizeManagedPreview(&req)
+#endif
         return req
     }
 

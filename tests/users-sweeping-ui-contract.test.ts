@@ -94,15 +94,4 @@ describe("Users sweeping ownership contracts", () => {
     expect(orgChart).toContain("<RoleBadge role={user.role} />");
   });
 
-  it("makes avatar replacement and removal database-first", () => {
-    const avatar = source("src/app/api/users/[id]/avatar/route.ts");
-    const firstUpdate = avatar.indexOf("updated = await db.user.update");
-    const firstDelete = avatar.indexOf("await deleteImage(target.avatarUrl)");
-    const removeUpdate = avatar.lastIndexOf("await db.user.update");
-    const removeDelete = avatar.lastIndexOf("await deleteImage(target.avatarUrl)");
-
-    expect(firstUpdate).toBeGreaterThan(-1);
-    expect(firstUpdate).toBeLessThan(firstDelete);
-    expect(removeUpdate).toBeLessThan(removeDelete);
-  });
 });

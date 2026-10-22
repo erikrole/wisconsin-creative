@@ -39,6 +39,10 @@ The same branch keeps its database, fixtures, session secret, and file stores. D
 
 The server prints its actual loopback URL. Its deterministic port changes when necessary to avoid another checkout; an explicitly requested occupied port fails without killing anything. `auth:local` uses that server's port and cookie name. Changing Git branches stops the old server. `.next/dev` and `.next/build` separate local outputs, with process locks preventing two writers to the same output. Vercel uses its standard `.next` directory. Do not bypass these wrappers with raw Next commands.
 
+## Native verification against a managed preview
+
+For a Debug build of Wisconsin, `WC_PREVIEW_ORIGIN` selects an explicitly verified HTTPS `*.vercel.app` origin at launch. An invalid supplied origin stops the launch rather than routing to production. `WC_PREVIEW_ACCESS_TOKEN` accepts the short-lived, project-specific OIDC token minted by `previewOidcToken`; it is sent only to that exact HTTPS origin (including port), and the preview sessions refuse redirects. Neither value is persisted. Release builds exclude both launch overrides and preview access headers. Use the branch's attested hosted URL and its synthetic student accounts; never supply another branch's environment or production credentials. Keep launch configuration and student credentials out of evidence/logs.
+
 ## Resources and limits
 
 - Each Git branch owns a child of the protected `Wisconsin Creative Previews` template in `floral-fog-52897668`, PostgreSQL 17 / AWS us-east-1. Child compute is 0.25–1 CU and suspends after five minutes.

@@ -38,7 +38,8 @@ describe("iOS production domain cutover", () => {
   it("routes only explicit review identities to the isolated review host", () => {
     const environment = source("ios/Wisconsin/Shared/AppEnvironment.swift");
 
-    expect(environment).not.toContain("hasSuffix");
+    const emailRouting = environment.slice(environment.indexOf("static func apiHost(forLoginEmail"), environment.indexOf("static func setActiveAPIHost"));
+    expect(emailRouting).not.toContain("hasSuffix");
     expect(environment).not.toContain("@wisc.edu\") ? appReviewHost");
   });
 
