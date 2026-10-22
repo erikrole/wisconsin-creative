@@ -51,6 +51,7 @@
     phone: '<path d="M5.5 2.5h-2a1 1 0 0 0-1 1.1A10.5 10.5 0 0 0 12.4 13.5a1 1 0 0 0 1.1-1v-2l-2.6-1-1.3 1.3a7 7 0 0 1-3.4-3.4L7.5 6 6.5 2.5z"/>',
     sms: '<path d="M2.5 3.5h11v7.5H7l-3 2.5v-2.5H2.5z"/>',
     contact: '<circle cx="8" cy="6" r="2.6"/><path d="M3 13.5a5 5 0 0 1 10 0"/>',
+    event: '<rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/>',
     text: '<path d="M3 4h10M3 7h10M3 10h7M3 13h5"/>'
   };
 
@@ -95,12 +96,23 @@
   }
 
   var toastTimer = null;
-  function toast(message, tone) {
+  // `action` ({ label, run }) adds one button, used for Undo.
+  function toast(message, tone, action) {
     var el = $('toast');
-    el.textContent = message;
+    el.textContent = '';
+    el.appendChild(h('span', { text: message }));
+    if (action) {
+      var button = h('button', { type: 'button', className: 'toast-action', text: action.label });
+      button.addEventListener('click', function () {
+        el.className = 'toast';
+        clearTimeout(toastTimer);
+        action.run();
+      });
+      el.appendChild(button);
+    }
     el.className = 'toast is-shown' + (tone === 'error' ? ' is-error' : '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.className = 'toast'; }, tone === 'error' ? 5200 : 2600);
+    toastTimer = setTimeout(function () { el.className = 'toast'; }, tone === 'error' ? 5200 : action ? 6000 : 2600);
   }
 
   function setStatus(message, tone) {
@@ -236,7 +248,7 @@
       control.value = value || '';
       control.addEventListener('input', onInput);
     } else {
-      var type = { url: 'url', email: 'email', tel: 'tel', password: 'password' }[field.kind] || 'text';
+      var type = { url: 'url', email: 'email', tel: 'tel', password: 'password', datetime: 'datetime-local' }[field.kind] || 'text';
       control = h('input', {
         className: 'input' + (field.key === 'url' ? ' input-lg' : ''), id: id, type: type,
         maxlength: field.maxLength, placeholder: field.placeholder || '',
@@ -532,6 +544,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('input[name="ec"]'), function (input) { input.checked = input.value === state.design.ec; });
     $('quiet-zone').value = String(state.design.quietZone);
     $('quiet-zone-out').value = state.design.quietZone + (state.design.quietZone === 1 ? ' module' : ' modules');
+    if (document.activeElement !== $('caption')) $('caption').value = state.design.caption || '';
     syncColourRows();
     syncLogoOptions();
   }
@@ -559,6 +572,7 @@
     verdict.appendChild(h('b', { text: colour.ratio.toFixed(1) + ':1' }));
     verdict.appendChild(h('span', { text: colour.message }));
     $('sheet').classList.toggle('is-transparent', design.background === 'transparent');
+    renderCaption(design);
 
     var advanced = [];
     if (design.ec !== 'auto') advanced.push('EC ' + design.ec);
@@ -608,6 +622,31 @@
     updateChips();
     updateExportState();
     saveSessionSoon();
+  }
+
+  /* ================= caption ================= */
+
+  var measureCtx = null;
+  // Type size for the caption at `size` px, shrunk until the text fits the band.
+  function captionFontSize(text, size) {
+    var layout = core.captionLayout(size);
+    if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+    measureCtx.font = '700 ' + layout.fontSize + 'px Lato, Helvetica, Arial, sans-serif';
+    var width = measureCtx.measureText(text).width;
+    return width > layout.maxWidth ? Math.floor(layout.fontSize * layout.maxWidth / width) : layout.fontSize;
+  }
+
+  function renderCaption(design) {
+    var el = $('sheet-caption');
+    var text = design.caption;
+    $('sheet').classList.toggle('has-caption', Boolean(text));
+    el.hidden = !text;
+    if (!text) return;
+    el.textContent = text;
+    var ratio = captionFontSize(text, 1000) / 1000;
+    el.style.fontSize = (ratio * 100).toFixed(2) + 'cqw';
+    el.style.color = design.fill;
+    el.style.background = design.background === 'transparent' ? 'transparent' : design.background;
   }
 
   function hasAnyInput() {
@@ -779,12 +818,46 @@
   }
 
   function renderFile(format, size) {
-    var instance = makeInstance(view.payload.value, currentDesign, size, view.moduleCount, view.logoUrl);
+    var design = currentDesign;
+    var instance = makeInstance(view.payload.value, design, size, view.moduleCount, view.logoUrl);
     return instance.getRawData(format).then(function (blob) {
       if (!blob) throw new Error('empty');
+      if (design.caption) return withCaption(blob, format, design, size);
+      return blob;
+    }).then(function (blob) {
       if (format === 'svg') return blob;
       return blob.arrayBuffer().then(function (buffer) {
         return new Blob([core.setPngDpi(new Uint8Array(buffer), EXPORT_DPI)], { type: 'image/png' });
+      });
+    });
+  }
+
+  // Adds the caption band under an exported code. The code itself is untouched,
+  // so the scan check on the bare code still holds for the captioned file.
+  function withCaption(blob, format, design, size) {
+    var fontSize = captionFontSize(design.caption, size);
+    if (format === 'svg') {
+      return blob.text().then(function (text) {
+        return new Blob([core.captionedSvg(text, design, size, fontSize)], { type: 'image/svg+xml' });
+      });
+    }
+    var layout = core.captionLayout(size);
+    return createImageBitmap(blob).then(function (bitmap) {
+      var canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size + layout.band;
+      var ctx = canvas.getContext('2d');
+      if (design.background !== 'transparent') {
+        ctx.fillStyle = design.background;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(bitmap, 0, 0, size, size);
+      ctx.fillStyle = design.fill;
+      ctx.font = '700 ' + fontSize + 'px Lato, Helvetica, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(design.caption, size / 2, size + layout.baseline);
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (out) { if (out) resolve(out); else reject(new Error('empty')); }, 'image/png');
       });
     });
   }
@@ -833,11 +906,13 @@
 
   function copyCli() {
     if (exportBlockReason()) { toast(exportBlockReason(), 'error'); return; }
+    if (state.type === 'event') { toast('The command-line tool does not make Event codes yet.', 'error'); return; }
     var cmd = core.cliCommand(state.type, state.contents[state.type], currentDesign, {
       size: state.size !== 1200 ? state.size : null,
       output: currentFileBase() + '.' + state.format
     });
-    copyText(cmd, currentDesign.logo === 'custom' ? 'Command copied — replace the logo path with your file.' : 'Command copied.');
+    copyText(cmd, currentDesign.logo === 'custom' ? 'Command copied. Replace the logo path with your file.'
+      : currentDesign.caption ? 'Command copied. Captions are web-only, so add it in your layout.' : 'Command copied.');
   }
 
   /* ================= custom logo ================= */
@@ -1029,7 +1104,7 @@
   function signature(entry) {
     var d = entry.design;
     return [entry.type, entry.payload, entry.name, d.style, d.fill, d.background, d.eye, d.logo,
-      d.logo === 'custom' ? hashString(d.logoData || '') : '', d.logoScale, d.plate, d.plateColor, d.ec, d.quietZone].join('|');
+      d.logo === 'custom' ? hashString(d.logoData || '') : '', d.logoScale, d.plate, d.plateColor, d.ec, d.quietZone, d.caption || ''].join('|');
   }
 
   function addToLibrary(silent) {
@@ -1097,6 +1172,7 @@
     if (entry.name) return entry.name;
     if (entry.type === 'url') return entry.payload.replace(/^https?:\/\//, '');
     if (entry.type === 'wifi') return 'Wi-Fi · ' + entry.content.ssid;
+    if (entry.type === 'event') return entry.content.title;
     if (entry.type === 'contact') return ((entry.content.firstName || '') + ' ' + (entry.content.lastName || '')).trim() || entry.content.org;
     return core.TYPES[entry.type].label + ' · ' + entry.payload.slice(0, 40);
   }
@@ -1121,9 +1197,13 @@
       var remove = h('button', { type: 'button', className: 'lib-remove', 'aria-label': 'Delete ' + entryTitle(entry), text: '×' });
       remove.addEventListener('click', function (event) {
         event.stopPropagation();
+        var before = library.slice();
         writeLibrary(library.filter(function (other) { return other.id !== entry.id; }));
         renderLibrary();
-        toast('Deleted from the library.');
+        toast('Deleted “' + entryTitle(entry).slice(0, 40) + '”.', '', {
+          label: 'Undo',
+          run: function () { writeLibrary(before); renderLibrary(); }
+        });
       });
       var img = h('img', { alt: '', src: entry.thumb || 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><rect width="1" height="1" fill="#eee"/></svg>') });
       grid.appendChild(h('div', { className: 'lib-card' }, [
@@ -1242,13 +1322,17 @@
   /* ================= theme ================= */
 
   var THEMES = ['system', 'light', 'dark'];
-  function applyTheme(value) {
+  function applyTheme(value, persist) {
     if (value === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', value);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-theme-icon]'), function (svg) {
+      if (svg.getAttribute('data-theme-icon') === value) svg.removeAttribute('hidden');
+      else svg.setAttribute('hidden', '');
+    });
     var label = 'Theme: ' + { system: 'automatic', light: 'light', dark: 'dark' }[value];
     $('theme-toggle').setAttribute('aria-label', label);
     $('theme-toggle').title = label + ' (click to change)';
-    storageSet(KEYS.theme, value);
+    if (persist !== false) storageSet(KEYS.theme, value);
   }
 
   /* ================= wiring ================= */
@@ -1260,8 +1344,14 @@
       if (view.payload && view.payload.ok) copyText(view.payload.value, 'Encoded text copied.');
     });
 
+    $('caption').addEventListener('input', function () {
+      state.design.caption = core.normalizeDesign({ caption: $('caption').value }).design.caption;
+      scheduleRender();
+    });
+
     $('reset-design').addEventListener('click', function () {
-      state.design = core.normalizeDesign({}).design;
+      // The caption is wording, not styling, so a reset keeps it.
+      state.design = Object.assign(core.normalizeDesign({}).design, { caption: state.design.caption });
       syncDesignControls();
       render();
       toast('Look reset to defaults.');
@@ -1354,12 +1444,26 @@
     $('library-export').addEventListener('click', exportLibrary);
     $('library-import').addEventListener('click', function () { $('library-file').click(); });
     $('library-file').addEventListener('change', function () { importLibrary($('library-file').files && $('library-file').files[0]); });
+    // Two-step clear: the first click arms the button, the second deletes, and Undo restores.
+    var clearTimer = null;
+    function disarmClear() {
+      clearTimeout(clearTimer);
+      $('library-clear').classList.remove('is-confirm');
+      $('library-clear').textContent = 'Clear all';
+    }
     $('library-clear').addEventListener('click', function () {
-      if (!window.confirm('Delete all ' + library.length + ' saved codes from this browser? Export first if you want a backup.')) return;
+      var button = $('library-clear');
+      if (!button.classList.contains('is-confirm')) {
+        button.classList.add('is-confirm');
+        button.textContent = 'Delete all ' + library.length + '?';
+        clearTimer = setTimeout(disarmClear, 4000);
+        return;
+      }
+      disarmClear();
+      var before = library.slice();
       writeLibrary([]);
-      storageSet(KEYS.logos, '{}');
       renderLibrary();
-      toast('Library cleared.');
+      toast('Library cleared.', '', { label: 'Undo', run: function () { writeLibrary(before); renderLibrary(); } });
     });
 
     document.addEventListener('keydown', function (event) {
@@ -1434,7 +1538,11 @@
 
   loadSession();
   var savedTheme = storageGet(KEYS.theme);
-  if (THEMES.indexOf(savedTheme) !== -1) applyTheme(savedTheme);
+  applyTheme(THEMES.indexOf(savedTheme) !== -1 ? savedTheme : 'system', false);
+  // Canvas text needs Lato loaded before the caption is measured or drawn.
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('700 20px Lato').then(function () { if (state.design.caption) render(); }, function () {});
+  }
 
   buildTypes();
   buildFields();
