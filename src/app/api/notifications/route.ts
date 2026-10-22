@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { createAuditEntry } from "@/lib/audit";
+import { resolveSettledNotificationsForUser } from "@/lib/services/notification-resolution";
 
 const patchNotificationSchema = z.object({
   action: z.enum(["mark_all_read", "mark_read", "mark_unread"]),
@@ -26,6 +27,8 @@ export const GET = withAuth(async (req, { user }) => {
     ...(unreadOnly ? { readAt: null } : {})
   };
 
+  // Settle first so the rows, the Unread filter, and the count agree.
+  await resolveSettledNotificationsForUser(user.id);
   const [data, total, inboxTotal, unreadCount] = await Promise.all([
     db.notification.findMany({
       where,

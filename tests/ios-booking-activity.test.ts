@@ -16,8 +16,7 @@ describe("iOS booking activity", () => {
 
     expect(booking).toContain("BookingActivityAccess.canRead(role: session.currentUser?.role)");
     expect(booking).toContain("BookingActivityView(bookingId: booking.id)");
-    expect(booking).toContain('Text("Activity")');
-    expect(booking).toContain("What changed on this booking.");
+    expect(booking).toContain('Label("Activity", systemImage: "clock.arrow.circlepath")');
     expect(booking).toContain("if canExtendBooking");
     expect(booking).toContain("BookingExtendBar(");
 

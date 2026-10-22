@@ -48,6 +48,6 @@ describe("schedule queue source contract", () => {
     // Claim review is Admin-only, so the CLAIMED preset is gated on that too.
     expect(page).toContain('initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}');
     expect(tradeBoard).toContain("initialStatusFilter");
-    expect(tradeBoard).toContain("setStatusFilter(initialStatusFilter)");
+    expect(tradeBoard).toContain('initialStatusFilter === "CLAIMED"');
   });
 });

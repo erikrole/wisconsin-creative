@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("kiosk-only web affordance contract", () => {
   it("routes remote booking creation to reservations instead of checkout creation", () => {
-    const dashboard = source("src/app/(app)/page.tsx");
+    const dashboard = source("src/app/(app)/_home/HomePage.tsx") + source("src/app/(app)/_home/HomeView.tsx");
     const list = source("src/components/BookingListPage.tsx");
     const newCheckout = source("src/app/(app)/checkouts/new/page.tsx");
     const eventDetail = source("src/app/(app)/events/[id]/page.tsx");
@@ -25,7 +25,7 @@ describe("kiosk-only web affordance contract", () => {
   });
 
   it("keeps reservation conversion and web return controls out of active UI surfaces", () => {
-    const dashboardColumn = source("src/app/(app)/dashboard/my-gear-column.tsx");
+    const dashboardColumn = source("src/app/(app)/_home/HomeView.tsx");
     const bookingsPage = source("src/app/(app)/bookings/page.tsx");
     const detail = source("src/app/(app)/bookings/BookingDetailPage.tsx");
     const sheet = source("src/components/BookingDetailsSheet.tsx");

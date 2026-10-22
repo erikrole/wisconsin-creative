@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/api";
 import { createAuditEntry } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
+import { seesTeamGear } from "@/lib/collaborator-access";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { buildDerivedStatusWhere, enrichAssetsWithStatusFromLoaded } from "@/lib/services/status";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
@@ -42,6 +43,7 @@ const createAssetSchema = z.object({
   uwAssetTag: z.string().max(200).optional(),
   parentAssetId: z.string().cuid().optional(),
   availableForReservation: z.boolean().optional(),
+  collaboratorVisible: z.boolean().optional(),
   availableForCheckout: z.boolean().optional(),
   availableForCustody: z.boolean().optional(),
   status: z.enum(["AVAILABLE", "MAINTENANCE", "RETIRED"]).default("AVAILABLE"),
@@ -487,7 +489,7 @@ export const GET = withAuth(async (req, { user }) => {
   const baseWhere: Prisma.AssetWhereInput = {
     ...(qr || includeAccessories ? {} : showAccessories ? { parentAssetId: { not: null } } : { parentAssetId: null }),
     ...(favoritesOnly ? { favoritedBy: { some: { userId: user.id } } } : {}),
-    ...(user.role === "COLLABORATOR" ? { availableForReservation: true } : {}),
+    ...(user.role === "COLLABORATOR" ? { availableForReservation: true, collaboratorVisible: true } : {}),
     ...(locationIds.length === 1 ? { locationId: locationIds[0] } : {}),
     ...(locationIds.length > 1 ? { locationId: { in: locationIds } } : {}),
     ...(missingField === "category" ? { categoryId: null } : categoryIds.length === 1 ? { categoryId: categoryIds[0] } : categoryIds.length > 1 ? { categoryId: { in: categoryIds } } : {}),
@@ -962,7 +964,7 @@ export const GET = withAuth(async (req, { user }) => {
   const data = await enrichAssetsWithStatusFromLoaded(rawData);
 
   const [enrichedWithBookings, favoriteItems, favoriteItemFamilies] = await Promise.all([
-    user.role === "COLLABORATOR"
+    user.role === "COLLABORATOR" && !seesTeamGear(user)
       ? Promise.resolve(data.map((asset) => ({ ...asset, activeBooking: null })))
       : attachActiveBookings(data),
     db.favoriteItem.findMany({
@@ -1258,6 +1260,7 @@ export const POST = withAuth(async (req, { user }) => {
         uwAssetTag: body.uwAssetTag ?? null,
         parentAssetId: body.parentAssetId ?? null,
         availableForReservation: body.availableForReservation ?? true,
+        collaboratorVisible: body.collaboratorVisible ?? true,
         availableForCheckout: body.availableForCheckout ?? true,
         availableForCustody: body.availableForCustody ?? true,
         status: body.status,

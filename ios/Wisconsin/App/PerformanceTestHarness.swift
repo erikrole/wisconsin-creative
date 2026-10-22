@@ -1,5 +1,7 @@
 #if DEBUG
+import ActivityKit
 import SwiftUI
+import WidgetKit
 import UserNotifications
 
 @MainActor
@@ -87,7 +89,7 @@ struct PerformanceTestRootView: View {
             ItemDetailHarnessView()
         case .createBookingScanner, .createBookingEvents:
             CreateBookingScannerHarnessView()
-        case .search, .searchPartial:
+        case .search, .searchPartial, .searchIdle:
             GlobalSearchHarnessView()
         case .itemsList:
             ItemsListHarnessView()
@@ -97,6 +99,12 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .liveActivity:
+            LiveActivityHarnessView()
+        case .widgetSeed:
+            WidgetSeedHarnessView()
+        case .notificationsInbox:
+            NotificationsInboxHarnessView()
         case .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
@@ -169,7 +177,153 @@ struct NotificationSettingsHarnessView: View {
     }
 }
 
+/// Requests the real activity locally (no push token) and leaves a calm
+/// backdrop so the island and lock screen are the subject of the capture.
+struct LiveActivityHarnessView: View {
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            Text("Live Activity running")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .task { await Self.start() }
+    }
+
+    @MainActor
+    private static func start() async {
+        for activity in Activity<CheckoutReturnActivityAttributes>.activities {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+        let name = ProcessInfo.processInfo.environment["GT_LIVE_ACTIVITY"] ?? "normal"
+        let now = Date()
+        let (urgency, offset, needed): (CheckoutReturnActivityAttributes.ContentState.Urgency, TimeInterval, TimeInterval?) = {
+            switch name {
+            case "warning": return (.warning, 24 * 60, 50 * 60)
+            case "critical": return (.critical, 6 * 60 + 30, nil)
+            case "overdue": return (.overdue, -12 * 60, nil)
+            case "returned": return (.returned, -90, nil)
+            case "long": return (.normal, 95 * 60, nil)
+            default: return (.normal, 70 * 60, nil)
+            }
+        }()
+        let attributes = CheckoutReturnActivityAttributes(
+            bookingId: "fixture-booking",
+            bookingTitle: "Sony FX6 kit",
+            requesterName: "Jordan Lee",
+            requesterInitials: "JL",
+            requesterAvatarUrl: nil,
+            returnTimeText: "Return"
+        )
+        let state = CheckoutReturnActivityAttributes.ContentState(
+            endsAt: now.addingTimeInterval(offset),
+            now: now,
+            nextNeedAt: needed.map { now.addingTimeInterval($0) },
+            allowsExtend: false,
+            urgency: urgency
+        )
+        do {
+            let activity = try Activity.request(
+                attributes: attributes,
+                content: ActivityContent(state: state, staleDate: now.addingTimeInterval(6 * 3600)),
+                pushType: nil
+            )
+            NSLog("LA-HARNESS started %@ enabled=%d", activity.id, ActivityAuthorizationInfo().areActivitiesEnabled)
+        } catch {
+            NSLog("LA-HARNESS failed %@ enabled=%d", String(describing: error), ActivityAuthorizationInfo().areActivitiesEnabled)
+        }
+    }
+}
+
+/// The real inbox sheet against `NotificationFixtureAPI.inbox`.
+struct NotificationsInboxHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        NotificationsSheet()
+            .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// Seeds the widget snapshot with a believable week so the placed widgets can
+/// be captured populated. Never shipped: the whole file is DEBUG-only.
+struct WidgetSeedHarnessView: View {
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            Text("Widget data seeded")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .task { Self.seed() }
+    }
+
+    @MainActor
+    private static func seed() {
+        let now = Date()
+        func shift(_ id: String, _ title: String, _ area: String, _ startMin: Int, _ lenMin: Int, _ place: String, _ gear: String?) -> GearWidgetSnapshot.Shift {
+            GearWidgetSnapshot.Shift(
+                id: id,
+                title: title,
+                area: area,
+                startsAt: now.addingTimeInterval(TimeInterval(startMin * 60)),
+                endsAt: now.addingTimeInterval(TimeInterval((startMin + lenMin) * 60)),
+                locationName: place,
+                gearLabel: gear
+            )
+        }
+        let shifts = [
+            shift("s1", "Volleyball vs. Nebraska", "Video", 95, 240, "UW Field House", "Gear ready"),
+            shift("s2", "Men's Hockey vs. Michigan", "Photo", 26 * 60, 200, "Kohl Center", "Gear not picked up"),
+            shift("s3", "Football vs. Iowa", "Video", 3 * 24 * 60, 300, "Camp Randall", nil),
+            shift("s4", "Women's Basketball vs. Iowa", "Graphics", 4 * 24 * 60, 180, "Kohl Center", nil),
+        ]
+        let due = [
+            GearWidgetSnapshot.DueBooking(id: "b1", title: "Sideline kit", endsAt: now.addingTimeInterval(-40 * 60), itemCount: 4, isOverdue: true),
+            GearWidgetSnapshot.DueBooking(id: "b2", title: "Sony FX6 package", endsAt: now.addingTimeInterval(3 * 3600), itemCount: 6, isOverdue: false),
+            GearWidgetSnapshot.DueBooking(id: "b3", title: "Audio recorder set", endsAt: now.addingTimeInterval(26 * 3600), itemCount: 3, isOverdue: false),
+        ]
+        GearWidgetStore.write(GearWidgetSnapshot(
+            generatedAt: now,
+            nextShift: shifts.first,
+            dueBookings: due,
+            overdueCount: 1,
+            dueTodayCount: 1,
+            upcomingShifts: shifts
+        ))
+        WidgetCenter.shared.reloadAllTimelines()
+        NSLog("WIDGET-SEED written")
+    }
+}
+
 enum NotificationFixtureAPI {
+    /// Rows spread over several days, mixed read and unread, so every section
+    /// style (Today, Yesterday, weekday, dated) and both swipe states appear.
+    static var inbox: Data {
+        func iso(_ daysAgo: Int, _ hour: Int, _ minute: Int = 0) -> String {
+            let calendar = Calendar.current
+            let day = calendar.date(byAdding: .day, value: -daysAgo, to: .now) ?? .now
+            let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.string(from: min(date, Date.now.addingTimeInterval(-600)))
+        }
+        func row(_ id: String, _ type: String, _ title: String, _ body: String, _ daysAgo: Int, _ hour: Int, unread: Bool) -> String {
+            let when = iso(daysAgo, hour)
+            let readAt = unread ? "null" : "\"" + when + "\""
+            return #"{"id":"\#(id)","type":"\#(type)","title":"\#(title)","body":"\#(body)","readAt":\#(readAt),"createdAt":"\#(when)","payload":null}"#
+        }
+        let rows = [
+            row("n1", "checkout_overdue", "Sideline kit is overdue", "Due back yesterday at 6:00 PM.", 0, 9, unread: true),
+            row("n2", "shift_gear_up", "Gear is ready for Volleyball", "Your shift starts tomorrow at 5:30 PM.", 0, 8, unread: true),
+            row("n3", "trade_approved", "Your shift trade was approved", "Jordan Lee will cover Saturday's football shift.", 1, 15, unread: false),
+            row("n4", "shift_assigned", "New shift: Women's Hockey", "Video · Kohl Center · Friday 7:00 PM.", 3, 11, unread: true),
+            row("n5", "reservation_pickup_ready", "Reservation ready for pickup", "Studio camera package is at the desk.", 3, 9, unread: false),
+            row("n6", "badge_awarded", "You earned a badge", "Early Bird: five on-time pickups.", 9, 14, unread: false),
+        ]
+        return Data(#"{"data":[\#(rows.joined(separator: ","))],"total":\#(rows.count),"limit":20,"offset":0,"unreadCount":3}"#.utf8)
+    }
+
     static var pausedPreferences: NotificationPreferences {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -513,6 +667,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         if AppRuntimeMode.performanceScenario == .latestBrowse,
            let body = LatestBrowseFixtureAPI.body(path: path) { return body }
         switch path {
+        case "/api/notifications":
+            guard AppRuntimeMode.performanceScenario == .notificationsInbox else { return nil }
+            if request.httpMethod == "PATCH" { return Data(#"{"success":true,"ids":[]}"#.utf8) }
+            return NotificationFixtureAPI.inbox
         case "/api/resources": return FixtureAPI.guides
         case let path where path.hasPrefix("/api/resources/"):
             let slug = String(path.dropFirst("/api/resources/".count))
@@ -912,7 +1070,7 @@ enum BookingFixtureAPI {
         {"data":{
           "id":"\(bookingId)","kind":"CHECKOUT","title":"Volleyball vs Nebraska","status":"OPEN",
           "startsAt":"\(iso(-120))","endsAt":"\(iso(180))",
-          "notes":"Two bodies on the baseline, one roaming. Return through the gear room, not the loading dock.",
+          "notes":null,
           "refNumber":"CO-2418",
           "requester":{"id":"u-avery","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","avatarUrl":null},
           "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
@@ -978,16 +1136,23 @@ enum BookingFixtureAPI {
         // Server-owned row actions. Defaults to none so team rows keep showing
         // a student what they may not do; the student's own OPEN checkout gets
         // the pair the checkout matrix in `booking-rules.ts` actually grants.
-        allowedActions: [String] = []
+        allowedActions: [String] = [],
+        gear: [(tag: String, name: String)] = []
     ) -> String {
         let sportJSON = sportCode.map { "\"\($0)\"" } ?? "null"
+        let gearJSON = gear.enumerated().map { index, item in
+            """
+            {"id":"si-\(id)-\(index)","assetId":"a-\(id)-\(index)","allocationStatus":null,
+             "asset":{"id":"a-\(id)-\(index)","assetTag":"\(item.tag)","name":"\(item.name)","brand":null,"model":null,"serialNumber":null,"imageUrl":null}}
+            """
+        }.joined(separator: ",")
         let actionsJSON = allowedActions.map { "\"\($0)\"" }.joined(separator: ",")
         return """
         {"id":"\(id)","kind":"\(kind)","title":"\(title)","status":"\(status)",
          "startsAt":"\(studentISO(startsIn))","endsAt":"\(studentISO(endsIn))","notes":null,"refNumber":null,
          "requester":{"id":"\(requesterId)","name":"\(requesterName)","email":null,"avatarUrl":null},
          "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
-         "serializedItems":[],"bulkItems":[],
+         "serializedItems":[\(gearJSON)],"bulkItems":[],
          "event":{"id":"event-\(id)","summary":"\(title)","sportCode":\(sportJSON),"opponent":null,"isHome":null},
          "allowedActions":[\(actionsJSON)],"updatedAt":"\(studentISO(-15))","pickupKioskDevice":null}
         """
@@ -1003,12 +1168,14 @@ enum BookingFixtureAPI {
                 // OPEN checkout, owned by the caller: edit and extend, no
                 // cancel. Matches the checkout state x action matrix in
                 // `src/lib/services/booking-rules.ts`.
-                allowedActions: ["edit", "extend"]
+                allowedActions: ["edit", "extend"],
+                gear: [("CAM-014", "Sony FX3"), ("AUD-007", "Sennheiser MKE 600")]
             ),
             listBooking(
                 id: "bk-team-reservation", kind: "RESERVATION", title: "Volleyball photo package", status: "BOOKED",
                 requesterId: "u-avery", requesterName: "Avery Nakamura", startsIn: 120, endsIn: 420,
-                sportCode: "VB"
+                sportCode: "VB",
+                gear: [("CAM-021", "Canon R5"), ("LEN-040", "Canon RF 70-200mm"), ("LEN-012", "Canon RF 24-70mm")]
             ),
             listBooking(
                 id: "bk-team-pickup", kind: "CHECKOUT", title: "Field audio pickup", status: "PENDING_PICKUP",
@@ -1016,7 +1183,30 @@ enum BookingFixtureAPI {
                 sportCode: "SOC"
             ),
         ]
-        let visibleRows = ownOnly ? [rows[0]] : rows
+        // Capture-only variety so the day grouping has something to group:
+        // late gear, a missed pickup, and a day further out.
+        let extraRows = [
+            listBooking(
+                id: "bk-team-overdue", kind: "CHECKOUT", title: "Hockey road audio kit", status: "OPEN",
+                requesterId: "u-jordan", requesterName: "Jordan Lee", startsIn: -26 * 60, endsIn: -90,
+                sportCode: "MHKY",
+                gear: [("AUD-019", "Zoom F6 recorder"), ("AUD-020", "Sennheiser AVX kit")]
+            ),
+            listBooking(
+                id: "bk-team-missed", kind: "RESERVATION", title: "Women's soccer portraits", status: "BOOKED",
+                requesterId: "u-avery", requesterName: "Avery Nakamura", startsIn: -50, endsIn: 200,
+                sportCode: "WSOC"
+            ),
+            listBooking(
+                id: "bk-team-tomorrow", kind: "RESERVATION", title: "Football vs Ohio State", status: "BOOKED",
+                requesterId: "u-jordan", requesterName: "Jordan Lee", startsIn: 28 * 60, endsIn: 36 * 60,
+                sportCode: "FB"
+            ),
+        ]
+        if ProcessInfo.processInfo.environment["GT_BOOKINGS_FIXTURE"] == "empty" {
+            return Data("{\"data\":[],\"total\":0,\"limit\":30,\"offset\":0}".utf8)
+        }
+        let visibleRows = ownOnly ? [rows[0]] : rows + extraRows
         return Data("{\"data\":[\(visibleRows.joined(separator: ","))],\"total\":\(visibleRows.count),\"limit\":30,\"offset\":0}".utf8)
     }
 }
@@ -3579,19 +3769,30 @@ enum ScheduleFixtureAPI {
 /// Both scenarios render the same real sheet; only the fixture role differs.
 struct TradeBoardHarnessView: View {
     @Environment(SessionStore.self) private var session
+    /// The sheet loads as soon as it appears. Signing the fixture user in
+    /// afterwards cancelled that first load as "a previous sign-in", so the
+    /// board opened on an error instead of rows.
+    @State private var isSignedIn = false
 
     private var isStaff: Bool { AppRuntimeMode.performanceScenario == .tradeBoardStaff }
 
     var body: some View {
-        TradeBoardSheet(
-            myShifts: [],
-            currentUserId: isStaff ? TradeBoardFixtures.staff.id : TradeBoardFixtures.student.id,
-            // Claim review is Admin-only, so the review-queue scenario signs
-            // in as an Admin.
-            currentUserRole: isStaff ? "ADMIN" : "STUDENT"
-        )
+        Group {
+            if isSignedIn {
+                TradeBoardSheet(
+                    myShifts: [],
+                    currentUserId: isStaff ? TradeBoardFixtures.staff.id : TradeBoardFixtures.student.id,
+                    // Claim review is Admin-only, so the review-queue scenario signs
+                    // in as an Admin.
+                    currentUserRole: isStaff ? "ADMIN" : "STUDENT"
+                )
+            } else {
+                Color.clear
+            }
+        }
         .onAppear {
             session.currentUser = isStaff ? TradeBoardFixtures.staff : TradeBoardFixtures.student
+            isSignedIn = true
         }
     }
 }

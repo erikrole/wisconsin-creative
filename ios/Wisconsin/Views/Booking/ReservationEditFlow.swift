@@ -158,16 +158,6 @@ struct ReservationEditFlow: View {
                     }
                 }
 
-                Section("Notes") {
-                    TextField("Add a note", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
-                    if let notesProblem {
-                        Text(notesProblem)
-                            .font(.footnote)
-                            .foregroundStyle(Color.statusText(.red))
-                    }
-                }
-
                 Section("Pickup location") {
                     if locationChoices.isEmpty {
                         Text(locationName)

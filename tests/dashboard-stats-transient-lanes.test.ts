@@ -111,7 +111,7 @@ describe("dashboard My Shifts date contract", () => {
   it("preserves an event's all-day calendar date for staff shift rows", () => {
     const route = source("src/app/api/dashboard/route.ts");
     const types = source("src/app/(app)/dashboard-types.ts");
-    const column = source("src/app/(app)/dashboard/my-gear-column.tsx");
+    const column = source("src/app/(app)/_home/home-model.ts");
     const myShiftType = types.slice(
       types.indexOf("export type MyShift ="),
       types.indexOf("export type MyEventWork ="),
@@ -126,7 +126,7 @@ describe("dashboard My Shifts date contract", () => {
     // The event's own flag decides the all-day treatment, so a stray call
     // window on an all-day event cannot restore a clock time to the row.
     expect(column).toContain("const isAllDayDisplay = s.event.allDay || isFullDayDefault;");
-    expect(column).toContain("formatDayLabel(displayDate, now, isAllDayDisplay)");
+    expect(column).toContain('time: isAllDayDisplay ? "All day" : formatClock(displayDate)');
     // ...and the same flag suppresses the call window itself.
     expect(column).toContain('s.workerType === "ST" && !s.event.allDay');
     // The payload never sends a call window for an all-day event to begin with.

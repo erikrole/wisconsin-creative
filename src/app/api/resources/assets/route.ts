@@ -1,6 +1,6 @@
 import { withAuth } from "@/lib/api";
 import { ok } from "@/lib/http";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import {
   listResourceAssets,
   prepareResourceAssetUpload,
@@ -9,7 +9,7 @@ import {
 import { ResourceAssetKind } from "@prisma/client";
 
 export const GET = withAuth(async (req, { user }) => {
-  requirePermission(user.role, "resource", "view");
+  requirePermissionOrCollaboratorCapability(user, "resource", "view", "BRAND_ASSETS_VIEW");
   const searchParams = new URL(req.url).searchParams;
   const kindValue = searchParams.get("kind");
   const kind = kindValue && Object.values(ResourceAssetKind).includes(kindValue as ResourceAssetKind)

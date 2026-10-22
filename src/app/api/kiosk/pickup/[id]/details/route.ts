@@ -95,7 +95,7 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { params }) => {
     if (isReservation) await updateReservation(booking.id, actor.id, updates, expectedUpdatedAt, ...linkEvents);
     else await updateCheckout(booking.id, actor.id, updates, expectedUpdatedAt, ...linkEvents);
     for (const assignmentId of scheduleNotificationAssignmentIds) {
-      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned", { actorUserId: actor.id });
     }
   } else if (body.eventId !== undefined) {
     await updateBookingEvents(booking.id, actor.id, eventIds, expectedUpdatedAt);

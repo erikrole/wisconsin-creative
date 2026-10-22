@@ -32,6 +32,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - [x] Open shift pickup: students claim open Student shifts, released or not, creating a `REQUESTED` assignment that an Admin approves or declines
 - [x] Trade board: students post shifts for trade, area-filtered visibility
 - [x] Trade claims: a same-area student claim holds the post as `CLAIMED` for Admin review; approval executes the swap
+- [x] Trade Board layout (2026-10-21): one board in the wc-fresh theme with Review (Admin), Available, Mine, and History tabs; rows group by day, soonest first, with a date tile, who is involved, one sentence on what is happening, and inline actions. Open Student slots and trade posts share the list. A new trade post notifies eligible same-area Students (Trade updates category, inbox plus push, deep link `/schedule?tradeBoard=1`).
 - [x] Claim eligibility: active Student-class workers may claim work in their primary area only; Photo and Graphics are the sole symmetric cross-area exception, and missing primary-area membership fails closed
 - [x] Approval revalidation: both approval paths re-check active state, scheduling class, availability, conflicts, and current slot ownership immediately before changing the schedule; trade approval also re-checks area membership
 - [x] Claim review queues: Admins see waiting trade claims and open-slot requests as one Trade Board review section on web and native; Staff do not receive reviewer payloads or actions, and claimants see only what they are waiting on

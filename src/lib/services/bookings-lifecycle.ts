@@ -645,6 +645,7 @@ export async function createBooking(input: CreateBookingInput) {
               bulkItems: combinedBulkItems,
               excludeBookingId: consolidationTarget.id,
               bookingKind: input.kind,
+              forCollaborator: requester.role === Role.COLLABORATOR,
             });
             if (
               availability.conflicts.length > 0
@@ -771,6 +772,7 @@ export async function createBooking(input: CreateBookingInput) {
             bulkItems: resolvedBulkItems,
             excludeBookingId: input.sourceReservationId,
             bookingKind: input.kind,
+            forCollaborator: requester.role === Role.COLLABORATOR,
           });
 
           if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
@@ -1368,7 +1370,7 @@ export async function createBooking(input: CreateBookingInput) {
       && result.kind === BookingKind.RESERVATION
       && result.shiftAssignment?.source === "RESERVATION"
     ) {
-      await dispatchScheduleAssignmentNotifications(result.shiftAssignment.id, "assigned");
+      await dispatchScheduleAssignmentNotifications(result.shiftAssignment.id, "assigned", { actorUserId: input.createdBy });
     }
 
     return Object.defineProperty(result, "creationDisposition", {
@@ -2074,6 +2076,7 @@ export async function updateReservation(
           bulkItems: remainingBulkItems,
           excludeBookingId: bookingId,
           bookingKind: "RESERVATION",
+          forCollaborator: nextRequester?.role === Role.COLLABORATOR,
         });
 
         if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
@@ -2296,7 +2299,7 @@ export async function updateReservation(
   }
 
   for (const assignmentId of scheduleNotificationAssignmentIds) {
-    await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+    await dispatchScheduleAssignmentNotifications(assignmentId, "assigned", { actorUserId });
   }
   return updated;
 }
@@ -2329,7 +2332,7 @@ export async function updateBookingEvents(
     );
 
     for (const assignmentId of scheduleNotificationAssignmentIds) {
-      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned", { actorUserId });
     }
     return updated;
   } catch (error) {
@@ -3108,7 +3111,7 @@ export async function transferBookingOwner(
     );
 
     for (const assignmentId of scheduleNotificationAssignmentIds) {
-      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned", { actorUserId });
     }
     return updated;
   } catch (error) {
