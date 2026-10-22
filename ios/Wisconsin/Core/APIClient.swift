@@ -2423,6 +2423,67 @@ final class APIClient {
         BlastArchive.markAcknowledged(id)
     }
 
+    /// Staff and admins: the team's sent blasts, newest first, with how many
+    /// people have acknowledged each one.
+    func sentBlasts(limit: Int = 30) async throws -> [SentBlast] {
+        let resp: DataWrapper<[SentBlast]> = try await perform(
+            request(path: "/api/blasts", queryItems: [URLQueryItem(name: "limit", value: "\(limit)")])
+        )
+        return resp.data
+    }
+
+    func sentBlastDetail(id: String) async throws -> SentBlastDetail {
+        let resp: DataWrapper<SentBlastDetail> = try await perform(request(path: "/api/blasts/\(id)"))
+        return resp.data
+    }
+
+    /// Dry run: who a target reaches right now. Nothing is written.
+    func previewBlast(target: BlastTarget) async throws -> BlastPreview {
+        struct Body: Encodable { let target: BlastTarget }
+        var req = request(path: "/api/blasts/preview", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(target: target))
+        let resp: DataWrapper<BlastPreview> = try await perform(req)
+        return resp.data
+    }
+
+    /// Sends a blast. Every recipient gets a push and a banner to acknowledge,
+    /// and delivered pushes cannot be recalled, so callers confirm first.
+    func sendBlast(
+        title: String,
+        body: String,
+        severity: BlastSeverity,
+        expiresAt: Date?,
+        target: BlastTarget
+    ) async throws -> SentBlastReceipt {
+        struct Body: Encodable {
+            let title: String
+            let body: String
+            let severity: String
+            let requiresAck: Bool
+            let expiresAt: String?
+            let target: BlastTarget
+        }
+        var req = request(path: "/api/blasts", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            title: title,
+            body: body,
+            severity: severity == .unknown ? BlastSeverity.info.rawValue : severity.rawValue,
+            requiresAck: true,
+            expiresAt: expiresAt.map { ISO8601DateFormatter().string(from: $0) },
+            target: target
+        ))
+        let resp: DataWrapper<SentBlastReceipt> = try await perform(req)
+        return resp.data
+    }
+
+    /// Clears the banner on every recipient's next fetch. Pushes already
+    /// delivered stay delivered.
+    func cancelBlast(id: String) async throws {
+        var req = request(path: "/api/blasts/\(id)/cancel", method: "POST")
+        req.httpBody = Data()
+        let _: SuccessResponse = try await perform(req)
+    }
+
     // MARK: - Notification preferences
 
     func notificationPreferences() async throws -> NotificationPreferences {
