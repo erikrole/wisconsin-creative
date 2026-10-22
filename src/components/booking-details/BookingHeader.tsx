@@ -96,10 +96,10 @@ function SummaryFact({
     <div className="flex min-w-0 items-start gap-2.5 py-1">
       <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="text-xs font-medium text-muted-foreground">
           {label}
         </div>
-        <div className="mt-0.5 truncate text-sm font-medium text-foreground" title={value}>
+        <div className="mt-0.5 truncate text-[15px] font-semibold text-foreground" title={value}>
           {value}
         </div>
       </div>
@@ -141,8 +141,17 @@ export function BookingHeader({
   onToggleCustody,
   onEditEvents,
 }: Props) {
-  const hasSecondaryActions = (canDuplicate && canEdit) || canCancel || canNudge || canForceComplete || canForceCheckout || canCloseRemaining || canTransferOwner || canManageCustody || canEditEvents;
-  const hasPrimaryActions = canEdit || canExtend || (canDuplicate && !canEdit);
+  // One primary action per state: Extend while gear is out, otherwise Edit, otherwise Re-reserve.
+  const primaryAction: "extend" | "edit" | "rereserve" | null = canExtend
+    ? "extend"
+    : canEdit
+      ? "edit"
+      : canDuplicate
+        ? "rereserve"
+        : null;
+  const editInMenu = canEdit && primaryAction !== "edit";
+  const hasSecondaryActions = editInMenu || (canDuplicate && canEdit) || canCancel || canNudge || canForceComplete || canForceCheckout || canCloseRemaining || canTransferOwner || canManageCustody || canEditEvents;
+  const hasPrimaryActions = primaryAction !== null;
   const displayStatus = operationalBookingStatus(booking);
 
   const eventLabel =
@@ -300,6 +309,11 @@ export function BookingHeader({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuGroup>
+                      {editInMenu && (
+                        <DropdownMenuItem onSelect={onEdit} disabled={!!actionLoading}>
+                          Edit details
+                        </DropdownMenuItem>
+                      )}
                       {canNudge && (
                         <PendingDropdownMenuItem
                           active={actionLoading === "nudge"}
@@ -389,30 +403,25 @@ export function BookingHeader({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {canDuplicate && !canEdit && (
-                <Button
-                  variant="brand"
-                  className="h-10"
-                  onClick={onDuplicate}
-                  disabled={!!actionLoading}
-                >
+              {primaryAction === "rereserve" && (
+                <Button className="h-10" onClick={onDuplicate} disabled={!!actionLoading}>
                   Re-reserve
                 </Button>
               )}
-              {canEdit && (
-                <Button variant="outline" className="h-10" onClick={onEdit}>
+              {primaryAction === "edit" && (
+                <Button className="h-10" onClick={onEdit}>
                   Edit
                 </Button>
               )}
-              {canExtend && (
-                <Button variant="outline" className="h-10" onClick={onToggleExtend}>
+              {primaryAction === "extend" && (
+                <Button className="h-10" onClick={onToggleExtend}>
                   Extend
                 </Button>
               )}
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 text-[10px] leading-none text-muted-foreground/40 lg:justify-end">
+          <div className="flex flex-wrap items-center gap-2 text-xs leading-none text-muted-foreground lg:justify-end">
             {syncStatus && (
               <StatusIndicator
                 state={syncStatus.state}
@@ -433,7 +442,6 @@ export function BookingHeader({
                     type="button"
                     onClick={onReload}
                     className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
-                    style={{ fontFamily: "var(--font-mono)" }}
                   >
                     <RefreshCw className="size-3" />
                     {updatedLabel ?? "Refresh"}
@@ -447,9 +455,23 @@ export function BookingHeader({
       }
       footer={
         <div
-          className={`grid gap-x-5 gap-y-3 sm:grid-cols-2 ${context ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+          className={`grid gap-x-5 gap-y-3 sm:grid-cols-2 ${context ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}
           aria-label="Booking summary"
         >
+          <div className="flex min-w-0 items-start gap-2.5 py-1">
+            <UserAvatar
+              name={booking.requester?.name ?? "Unknown"}
+              avatarUrl={booking.requester?.avatarUrl}
+              size="sm"
+              className="mt-0.5"
+            />
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-muted-foreground">Who</div>
+              <div className="mt-0.5 truncate text-[15px] font-semibold text-foreground">
+                {booking.custodyScope === "SHARED" ? "Shared" : booking.requester?.name ?? "Unknown"}
+              </div>
+            </div>
+          </div>
           <SummaryFact icon={CalendarClock} label={schedule.label} value={schedule.value} />
           <SummaryFact
             icon={MapPin}

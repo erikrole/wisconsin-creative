@@ -1,5 +1,6 @@
 "use client";
 
+import { sportDotColor } from "@/lib/sport-color";
 import { useState, useCallback, useRef, useMemo, useEffect, useLayoutEffect, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, LoaderCircleIcon, UserIcon, UsersRoundIcon, XIcon } from "lucide-react";
@@ -1897,6 +1898,13 @@ function EventRows({
                     {titleParts.title}
                   </Link>
                   <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                    {entry.sportCode && (
+                      <span
+                        aria-hidden="true"
+                        className="inline-block size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: sportDotColor(entry.sportCode) ?? undefined }}
+                      />
+                    )}
                     <span className="shrink-0">{venueTone.label}</span>
                     {(entry.combinedEventCount ?? 0) > 1 && (
                       <Badge variant="secondary" size="sm">{entry.combinedEventCount} events · shared crew</Badge>

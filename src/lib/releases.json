@@ -1,6 +1,51 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Assign shifts reads by day",
+    "type": "improvement",
+    "summary": "The Assign shifts page now lists events by day with each area's crew beside the event, instead of a wide table.",
+    "details": [
+      "Names are no longer cut off, open slots show as dashed chips, and conflicts stay in amber.",
+      "The review filter shows its counts inline."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 596
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Schedule shows open shifts plainly",
+    "type": "improvement",
+    "summary": "Each event in the Schedule list now says Covered or how many shifts are open, with a color dot for the sport.",
+    "details": [
+      "Replaces the 1/1 badge with Covered or N open.",
+      "Sport color dots match the ones in the new reservation event picker."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 596
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Clearer booking actions",
+    "type": "improvement",
+    "summary": "A booking now has one obvious next step at the top, with everything else under Actions.",
+    "details": [
+      "Checked-out gear shows Extend as the main button, reservations show Edit, and finished bookings show Re-reserve.",
+      "Edit details moves into the Actions menu when Extend is the main step.",
+      "The booking summary and the step bar on a new reservation are larger and easier to read.",
+      "Gear photos on a booking are bigger, and the Kits filters now sit in one quiet row.",
+      "A booking page now leads with the gear list in one centered column; schedule, people and notes sit in a Details section below."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 596
+  },
+  {
+    "date": "2026-10-22",
     "title": "QR print helper for labels",
     "type": "improvement",
     "summary": "Print labels is rebuilt as a print helper: pick gear, choose how many, and download a CSV ready for the Brother label printer.",

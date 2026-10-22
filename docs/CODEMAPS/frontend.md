@@ -102,6 +102,7 @@
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
 | `/dev-home` | `src/app/dev-home/page.tsx` |
+| `/dev-labels` | `src/app/dev-labels/page.tsx` |
 | `/dev-settings` | `src/app/dev-settings/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
@@ -166,9 +167,9 @@
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/Sidebar.tsx` | 645 |
-| `src/components/booking-wizard/WizardStep1.tsx` | 599 |
+| `src/components/booking-wizard/WizardStep1.tsx` | 630 |
 | `src/components/CommandPalette.tsx` | 588 |
-| `src/components/booking-details/BookingHeader.tsx` | 472 |
+| `src/components/booking-details/BookingHeader.tsx` | 494 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
 | `src/components/AppShell.tsx` | 438 |
 | `src/components/ui/heatmap.tsx` | 434 |

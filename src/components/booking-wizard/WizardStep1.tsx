@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch } from "react";
+import { useState, type Dispatch } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import { minimumBookingEndDate } from "@/lib/quarter-hour";
 import { eventSummaryLabel } from "./flow-summary";
+import { sportDotColor } from "@/lib/sport-color";
 import { VENUE_TONES, venueBadgeVariant, venueToneFromIsHome } from "@/lib/venue-tone";
 import {
   toLocalDateTimeValue,
@@ -130,6 +131,10 @@ export function WizardStep1({
 }: Props) {
   const startsAt = form.startsAt ? new Date(form.startsAt) : new Date();
   const minimumEndDate = minimumBookingEndDate(startsAt);
+  const [adjusting, setAdjusting] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const eventLinked = form.tieToEvent && form.selectedEvents.length > 0 && !!form.title && !!form.startsAt && !!form.endsAt;
+  const showWhenFields = !eventLinked || adjusting;
   const selectedEventIds = new Set(form.selectedEvents.map((e) => e.id));
   const atCap = form.selectedEvents.length >= MAX_LINKED_EVENTS_PER_BOOKING;
   const contextBadgeLabel = form.tieToEvent
@@ -325,6 +330,11 @@ export function WizardStep1({
                                   "text-muted-foreground",
                                 )}
                               >
+                                <span
+                                  aria-hidden="true"
+                                  className="mr-1.5 inline-block size-2 rounded-full align-middle"
+                                  style={{ backgroundColor: sportDotColor(ev.sportCode) ?? undefined }}
+                                />
                                 {sportLabel(ev.sportCode)}
                                 {ev.opponent ? " \u00b7 " : ""}
                               </span>
@@ -411,7 +421,21 @@ export function WizardStep1({
         <h2 className="text-lg font-semibold tracking-tight">Details</h2>
 
         <div className="flex flex-col gap-4 rounded-xl border border-border/50 bg-background/90 p-4 shadow-xs">
-          {/* Title */}
+          {/* Name and times: auto-filled from the event, so summarised until adjusted */}
+          {eventLinked && !adjusting && (
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2.5">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold">{form.title}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {formatDateTime(form.startsAt)} {"\u2192"} {formatDateTime(form.endsAt)}
+                </div>
+              </div>
+              <Button type="button" variant="ghost" className="h-9 shrink-0" onClick={() => setAdjusting(true)}>
+                Adjust
+              </Button>
+            </div>
+          )}
+          {showWhenFields && (
           <Field label="Booking name" required htmlFor="booking-title">
             <Input
               id="booking-title"
@@ -422,6 +446,7 @@ export function WizardStep1({
               required
             />
           </Field>
+          )}
 
           {/* Sport (when not tied to event) */}
           {!form.tieToEvent && (
@@ -557,7 +582,7 @@ export function WizardStep1({
             </Field>
           )}
 
-          {/* Dates (2-col) */}
+          {showWhenFields && (
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={config.startLabel} required htmlFor="booking-starts-at">
               <DateTimePicker
@@ -577,8 +602,13 @@ export function WizardStep1({
               />
             </Field>
           </div>
+          )}
 
-          {/* Notes (optional) */}
+          {!noteOpen && !form.notes ? (
+            <Button type="button" variant="ghost" className="h-9 self-start px-2 text-muted-foreground" onClick={() => setNoteOpen(true)}>
+              Add a note
+            </Button>
+          ) : (
           <Field label="Notes" htmlFor="booking-notes">
             <Textarea
               id="booking-notes"
@@ -590,6 +620,7 @@ export function WizardStep1({
               maxLength={10000}
             />
           </Field>
+          )}
         </div>
       </section>
 
