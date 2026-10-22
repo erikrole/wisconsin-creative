@@ -53,10 +53,8 @@ describe("onboarding status page source wiring", () => {
     expect(users).toContain("Onboarding");
     expect(allowedEmails).toContain('href="/staff/onboarding-status"');
     expect(allowedEmails).toContain("Status");
-    expect(allowedEmails).toContain('name="allowedEmailStatusFilter"');
-    expect(allowedEmails).toContain('id="allowed-email-status-filter"');
     expect(allowedEmails).toContain('aria-label="Allowed email status filter"');
-    expect(allowedEmails).toContain('className="flex flex-wrap items-center gap-2"');
+    expect(allowedEmails).toContain('role="radiogroup"');
     expect(dialog).toContain('href="/staff/onboarding-status"');
     expect(dialog).toContain("View status");
   });

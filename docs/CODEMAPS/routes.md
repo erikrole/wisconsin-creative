@@ -100,6 +100,7 @@
 - `/releases` -> `src/app/(public)/releases/page.tsx`
 - `/change-password` -> `src/app/change-password/page.tsx`
 - `/dev-home` -> `src/app/dev-home/page.tsx`
+- `/dev-settings` -> `src/app/dev-settings/page.tsx`
 - `/dev-sidebar` -> `src/app/dev-sidebar/page.tsx`
 - `/dev-trade-board` -> `src/app/dev-trade-board/page.tsx`
 - `/forgot-password` -> `src/app/forgot-password/page.tsx`

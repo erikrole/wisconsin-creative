@@ -71,7 +71,7 @@ describe("settings calendar sources load state", () => {
     expect(source).toContain("if (sourceActionRef.current) return;");
     expect(source).toContain("const toastCopy = calendarSourceSyncToast(source.name, json.data)");
     expect(source).toContain("calendarSourceHealthErrorFromSync(json.data)");
-    expect(source).toContain("Automatic sync runs daily in morning refresh");
+    expect(source).toContain("They sync every morning");
     expect(source).toContain("disabled={Boolean(syncing || toggling) || !source.enabled}");
     expect(source).toContain("addBusyRef.current = true");
     expect(source).toContain("testingRef.current = true");

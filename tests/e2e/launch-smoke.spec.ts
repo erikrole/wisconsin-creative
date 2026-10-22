@@ -133,8 +133,8 @@ test("Settings overview matches the authenticated role", async ({ page }) => {
 test("a direct role-restricted Settings URL fails closed", async ({ page }) => {
   test.skip(role === "ADMIN", "An admin identity has no role-restricted Settings section.");
   const errors = watchRuntimeErrors(page);
-  const path = role === "STUDENT" ? "/settings/allowed-emails" : "/settings/audit";
-  const restrictedLabel = role === "STUDENT" ? "Allowed Emails" : "Audit Log";
+  const path = role === "STUDENT" ? "/settings/allowed-emails" : "/settings/data-export";
+  const restrictedLabel = role === "STUDENT" ? "Allowed Emails" : "Data exports";
 
   await page.goto(path);
 

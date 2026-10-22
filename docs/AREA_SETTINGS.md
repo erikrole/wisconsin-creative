@@ -73,6 +73,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - **Overdue grace period** (`gracePeriodHours`, default 0): items become overdue and the first overdue notification becomes eligible at `endsAt + gracePeriodHours`. Due-time, +4h, and +24h notification offsets remain exact relative to `endsAt`; manual nudges use the same grace boundary.
 - **Max active checkouts per user** (`maxItemsPerUser`, default null = no limit): enforced at checkout POST time; counts OPEN + PENDING_PICKUP bookings for the requester. Rejects with 409 when at/over cap.
 - `GET/PUT /api/settings/checkout-policies` (ADMIN, rate-limited at `SETTINGS_MUTATION_LIMIT`). Stored in `SystemConfig.checkout_policies`. Missing/null key falls back to defaults -- no behavior change for existing data.
+- Extend presets (`/settings/checkout-policies#extend-presets`): the extend-due-date preset buttons, up to 10, each a free-text label plus a duration from a fixed list (15m to 1 month). Own save bar and `beforeunload` guard; persisted to `system_config.extend_presets` (ADMIN-only PUT). Folded in from the former Booking extensions page on 2026-10-21; `/settings/bookings` redirects here.
 
 ### Reservation rules (`/settings/reservation-rules`) -- Booking, ADMIN
 - **Advance booking window** (`advanceWindowDays`, default null = no limit): reservations whose `startsAt` is further out than the window are rejected with 409.
@@ -120,32 +121,24 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Related Settings destinations: Checkout policies and Reservation rules.
 - Migration `0111_checkout_overdue_notification_policy` and authenticated production rollout proof remain pending.
 
-### Audit log (`/settings/audit`) — System, ADMIN
-- Admin-only live feed of every create, update, and delete action across the system.
-- Related Settings destinations: Data exports and Database diagnostics.
-- First page loads on mount; "Load older entries" button fetches the next keyset-paginated page via `?cursor=<nextCursor>`.
-- Older-page failures preserve the loaded entries and show persistent inline recovery copy plus a retry-labeled pagination action so partial history is not mistaken for complete history.
-- **Auto-refresh** toggle: when on, polls `GET /api/audit?after=<newestCursor>` every 30 seconds while the browser is visible, online, recently active, and outside overnight quiet hours (10 PM–6 AM Central), then prepends new rows with a dismissible new-count banner. Polling pauses after two minutes without activity, while the tab is hidden, and overnight. It checks immediately when the user returns during the day, and resumes on its own after quiet hours.
-- Auto-refresh failures preserve the loaded entries, show an inline stale-data warning, and expose `Retry now` so admins do not mistake a failed live-tail check for a current audit feed.
-- Filters: entity type (exact), action (substring), from date, to date. The filter row uses the shared operational toolbar and removable active-filter chips. Apply validates invalid or inverted dates inline before a fresh first-page load; "Clear filters" resets to unfiltered.
-- Retention banner shows the configured retention window (90 days) from the API response.
-- Each row: timestamp, entity type + entity ID (8-char prefix), action badge, actor name (or "System" for server-generated events).
-- `GET /api/audit` (ADMIN, 60/min): keyset pagination on `(createdAt DESC, id DESC)`; supports `?cursor`, `?after`, `?entityType`, `?actor`, `?action`, `?from`, `?to`, `?limit` (default 50, max 100). Returns `{ data, nextCursor, hasMore, retentionDays }`.
+### Audit log (moved to Reports)
+- `/settings/audit` redirects to `/reports/audit` (2026-10-21). Reports > Audit is the one audit view: period presets, record-type and action filters (`?entityType=`, `?action=`, synced to the URL), breakdown charts, timeline, and CSV export of the filtered rows.
+- The Settings overview's System group links to it. `GET /api/audit` (keyset feed) is unchanged and still used by other clients.
 
 ### Data exports (`/settings/data-export`) — System, ADMIN
 - Admin-only hub for exporting data as CSV.
 - Five exports: Items (assets), Users, Licenses, Bookings (checkouts + reservations), Audit Log.
 - Bookings and Audit Log are new -- the other three surface existing endpoints in one place.
 - All exports capped at 5,000 rows; `X-Truncated` + `X-Total-Count` response headers surface truncation; the UI shows a warning toast when capped.
-- Related Settings destinations: Audit log and Database diagnostics.
+- Related Settings destinations: Database diagnostics (owner only).
 - `GET /api/bookings/export` (ADMIN, 5/min, optional `?from=&to=&kind=`).
 - `GET /api/audit/export` (ADMIN, 5/min, optional `?from=&to=&entity_type=`).
 
-### Database diagnostics (`/settings/database`) — System, ADMIN
-- On-demand schema health diagnostics.
+### Database diagnostics (`/settings/database`) — System, configured product owner only
+- On-demand schema health diagnostics. Owner-only since 2026-10-21 (`ownerOnly`, listed after App activity); other admins no longer see it.
 - Checks: migration table, tables, enums, extensions, column drift.
 - Shows remediation steps when issues detected.
-- Related Settings destinations: Audit log and Data exports. This is a bounded baseline check, not complete schema-health proof.
+- Related Settings destination: Data exports. This is a bounded baseline check, not complete schema-health proof.
 
 ### App activity (`/settings/app-activity`) — System, configured product owner only
 - Read-only dashboard of every active or inactive user that is visible in the roster, with whether the app has reported an app-open event and the last launch time.
@@ -162,6 +155,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Deactivate (soft-delete) hides a location from new pickers but keeps existing references intact. Deactivated locations show in their own card with the count of references that still point at them, and can be reactivated.
 - Hard delete is intentionally not exposed — locations are referenced by many models (FK constraints would block it anyway).
 - This tab also owns Home Venue toggling, which previously lived under Venue Mappings.
+- Calendar venue names (`#venues`): the venue-matching section folded in from the former Venue mappings page on 2026-10-21 (`/settings/venue-mappings` redirects here). See Venue matching below.
 
 ### Calendar sources (`/settings/calendar-sources`) — Schedule, STAFF+
 - Enable/disable ICS calendar sources for event sync.
@@ -169,25 +163,18 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Manual "Sync Now" button. Add/delete sources.
 - Manual sync reports returned feed errors, event add/refresh/cancel/skip counts, and shift-generation outcome instead of treating every 200 response as success.
 - Manual sync, test, add, enable/disable, and delete actions use immediate duplicate-action guards before React disabled state renders.
-- Related Settings destinations: Sports (visible to STAFF), plus Locations and Venue mappings for ADMIN.
+- Related Settings destinations: Sports (visible to STAFF), plus Locations for ADMIN.
 - Per D-026 and D-035: daily calendar sync runs through `/api/cron/morning-refresh` at 08:00 UTC, with manual refresh for changes that cannot wait for the next run.
 - Morning refresh records per-source consecutive hard sync failures in `SystemConfig`, resets the count after a hard-error-free cron sync, creates in-app notifications for active admins starting at 3 consecutive hard failures, and Admin Fix Today shows the repeated-failure count next to the latest source error.
 
-### Venue mappings (`/settings/venue-mappings`) — Schedule, ADMIN
+### Venue matching (`/settings/locations#venues`) — Schedule, ADMIN
+- Section of Locations, titled "Calendar venue names". User-facing copy says "venue match" and "text to look for"; the data model and API stay `venue mapping` / `pattern`.
 - Admin-only regex-to-location mapping table.
 - Pattern validation on create/update (rejects invalid regex).
 - Priority + longest-match tie-breaking.
 - Per D-027: ADMIN-only, STAFF cannot access.
 - Home venue toggling moved to the Locations tab as of 2026-04-25.
-- Read-only Mapping Audit surfaces home venues without mappings, mappings to inactive or missing locations, and home-looking mappings pointed at non-home locations. Missing-home-venue rows can prefill Add mapping with the location name and ID.
-
-### Booking extensions (`/settings/bookings`) -- Booking, ADMIN
-- Configure the extend-due-date presets shown when extending a booking.
-- Up to 10 presets, each with a free-text label and a duration picked from a fixed list (15m → 1 month).
-- Save button is always rendered (disabled when clean → "Saved", enabled when dirty → "Save changes").
-- Browser `beforeunload` guard warns before navigating away with unsaved presets.
-- Persisted to `system_config.extend_presets` (ADMIN-only PUT).
-- Route URL stays `/settings/bookings` for compatibility; nav label is Booking extensions.
+- A "Needs attention" card appears only while the read-only mapping audit finds issues (or fails to load). It surfaces home venues without mappings, mappings to inactive or missing locations, and home-looking mappings pointed at non-home locations. Missing-home-venue rows can prefill Add mapping with the location name and ID.
 
 ### Kiosks (`/settings/kiosk-devices`) — Devices, ADMIN
 - Manage iPad kiosk stations for self-serve checkout (admin-only).
@@ -241,6 +228,8 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+- 2026-10-21: **Settings redesign and tidy-up (PR #585).** Settings runs in the shared `wc-fresh` theme with grouped-row primitives (`_components/SettingsGroup.tsx`). Web Notifications now renders the role-filtered catalog with Off/Silent/Alert levels, quiet hours, and the badge-awards switch, matching iOS. Profile gains the shift calendar link. Booking extensions moved onto Checkout policies, Venue mappings onto Locations, the Settings audit log was retired in favor of Reports > Audit (now with record and action filters), and Database diagnostics became owner-only. Old URLs redirect. No migrations. DB-free review lab: `/dev-settings?page=` (dev only).
+- 2026-10-22: **Remaining Settings pages rebuilt (PR #585).** Departments, Categories, Overdue escalation, Sports, Calendar sources, Registration access, Data exports, and Database diagnostics now use grouped rows instead of tables in cards. Sports lists every sport as a row with a switch and expands a crew grid on demand (Sports jump nav and `SettingsJumpNav` removed). Registration access filters with an All/Pending/Joined segmented control instead of the status rail. Escalation recipients are checkboxes under each reminder's switch.
 - 2026-10-17: **Calendar source list follows the view permission.** `GET /api/calendar-sources` now requires `calendar_source` view. Staff and students can still read sources; a collaborator cannot read feed URLs by calling the route directly.
 - 2026-10-15: **Audit auto-refresh pauses overnight.** The live tail still polls every 30 seconds while an admin is active, and it also stops from 10 PM to 6 AM Central, including while a tab sits open. Bringing the tab back during the day checks immediately. Filters, pagination, and stale-feed recovery are unchanged.
 - 2026-10-11: **Web Security can delete an account.** `/settings/security` adds a Delete account section with current-password reauthentication, typed `DELETE` confirmation, and a second destructive confirm before calling existing `DELETE /api/me/account`. Copy matches the native retention and open-checkout rules; success routes to `/login`. API behavior unchanged. Proof: focused Security source contract, `tests/me-account-deletion.test.ts`, and `tsc --noEmit`. Authenticated browser destructive completion intentionally not run against a real account.
