@@ -131,3 +131,22 @@ export function buildBrotherCsv(kind: LabelKind, rows: LabelRow[]): string {
     });
   return "﻿" + [LABEL_KINDS[kind].headers.join(","), ...lines].join("\r\n") + "\r\n";
 }
+
+/**
+ * One Number Tags row per unit of a numbered item family. The QR is the derived
+ * `{familyQr}-{unitNumber}` value the scanner resolves to that exact unit.
+ */
+export function unitTagRows(binQrCodeValue: string, unitNumbers: number[], copies = 1): LabelRow[] {
+  const qr = binQrCodeValue.trim();
+  if (!qr) return [];
+  return [...unitNumbers]
+    .sort((a, b) => a - b)
+    .map((unitNumber) => ({
+      kind: "numberTag" as const,
+      dept: "",
+      model: "",
+      number: String(unitNumber),
+      qrCodeValue: `${qr}-${unitNumber}`,
+      copies,
+    }));
+}

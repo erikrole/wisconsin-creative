@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-22",
+    "title": "QR print helper for labels",
+    "type": "improvement",
+    "summary": "Print labels is rebuilt as a print helper: pick gear, choose how many, and download a CSV ready for the Brother label printer.",
+    "details": [
+      "Search everything, or filter to serialized items or families, and add with one tap.",
+      "Serialized items print one label each, with copies if you need spares.",
+      "A family prints one family label, and counted stock can print one label per item on hand.",
+      "Numbered families can print a label for every unit not yet labeled, or all of them for a reprint, then mark them printed.",
+      "The print sheet shows a preview of each label and gives one CSV per P-touch template."
+    ],
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-22",
     "title": "A calmer Schedule, Reports and Notifications",
     "type": "improvement",
     "summary": "Schedule, Reports, Notifications, Operations, Blasts, Search, Badges, Signatures and Profile now share the fresh look.",
