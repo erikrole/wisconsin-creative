@@ -257,7 +257,8 @@ struct ReturnTimeCalendar: View {
     /// One-tap times on the picked day, six at most. Later days get the usual
     /// handoff hours; when the window starts or ends that day, the next
     /// half hours inside it are offered instead, so a short window still has
-    /// real choices. The latest allowed time is always one of them.
+    /// real choices around the current pick. The latest allowed time is
+    /// always one of them.
     private var quickTimes: [Date] {
         let day = calendar.startOfDay(for: selection)
         let earliest = QuarterHour.roundedUp(minimum)
@@ -265,8 +266,10 @@ struct ReturnTimeCalendar: View {
             || latest.map { calendar.isDate($0, inSameDayAs: day) } == true
         var times: [Date]
         if isTight {
-            let start = max(earliest, day)
+            // Centered a little before the current pick, so the times shown
+            // are the ones near what's set rather than the start of the window.
             let step = TimeInterval(30 * 60)
+            let start = max(earliest, day, selection.addingTimeInterval(-3 * step))
             let firstHalfHour = Date(timeIntervalSinceReferenceDate: ceil(start.timeIntervalSinceReferenceDate / step) * step)
             times = (0..<12).map { firstHalfHour.addingTimeInterval(Double($0) * step) }
         } else {
