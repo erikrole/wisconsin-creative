@@ -122,6 +122,12 @@ describe("Board Sizes art preview and board comps", () => {
     expect(html).toContain("media-src blob:;");
   });
 
+  it("checks exports against every canvas a content type needs", () => {
+    expect(app).toContain("el.view.appendChild(exportsTray(rows));");
+    expect(app).toContain("' of ' + rows.length + ' canvases covered'");
+    expect(app).toContain("function artView() { return !!((state.display || state.content) && !state.query && !state.page); }");
+  });
+
   it("downloads an After Effects comps script for a whole board", () => {
     expect(app).toContain("aeScript({ name: v.name + ' ' + d.name, board: true }, rows)");
     expect(app).toContain("one for the whole board and one per distinct zone size");

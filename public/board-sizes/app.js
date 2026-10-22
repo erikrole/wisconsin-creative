@@ -1157,14 +1157,16 @@
     ]);
 
     el.view.textContent = '';
-    var box = node('div', 'targets');
+    el.view.appendChild(exportsTray(rows));
+    var box = node('div', 'targets art-target');
+    box.setAttribute('data-drop', 'Drop exports to check them against every canvas');
     unique(rows.map(function (r) { return r.v.id; })).forEach(function (vid) {
       var mine = rows.filter(function (r) { return r.v.id === vid; });
       var h = node('h2', '', venueById[vid].name);
       h.appendChild(node('small', '', mine.length + ' canvas' + (mine.length === 1 ? '' : 'es')));
       box.appendChild(h);
       mine.forEach(function (r) {
-        var row = node('div', 't-row');
+        var row = node('div', 't-row' + (arts.length ? ' has-art' : ''));
         row.appendChild(miniMap(r.d, r.z.at ? r.z : null, r.w, r.h));
         var nm = node('span', 't-name');
         var a = node('a', '', r.label);
@@ -1178,12 +1180,14 @@
         if (tags.childNodes.length) nm.appendChild(tags);
         row.appendChild(nm);
         row.appendChild(sizeButton(r.w, r.h, r.label, specText(r.v, r.d, r.names && r.names.length ? r.z : null)));
+        if (arts.length) row.appendChild(exportStatus(r));
         var open = node('a', 'mini');
         open.href = a.href;
-        open.title = 'Open ' + r.d.name;
+        open.title = arts.length ? 'Preview on ' + r.d.name : 'Open ' + r.d.name;
         open.setAttribute('aria-label', 'Open ' + r.d.name + ' at ' + r.v.name);
         open.appendChild(icon(ICONS.arrow));
-        open.addEventListener('click', function (e) { e.preventDefault(); goTo(target); });
+        // With exports loaded, the arrow opens the board itself with them on it.
+        open.addEventListener('click', function (e) { e.preventDefault(); if (arts.length) openBoard(r.d.id); else goTo(target); });
         row.appendChild(open);
         box.appendChild(row);
       });
@@ -1590,6 +1594,8 @@
   artInput.addEventListener('change', function () { if (artInput.files) addArt(artInput.files); artInput.value = ''; });
   document.body.appendChild(artInput);
   function pickArt() { artInput.click(); }
+  // Art goes on a board view, or is checked against a content type's canvases.
+  function artView() { return !!((state.display || state.content) && !state.query && !state.page); }
   function isVideo(file) { return /^video\//.test(file.type || '') || /\.(mp4|m4v|webm|mov)$/i.test(file.name || ''); }
   // Adds files in the order given; pin (optional) is a zone row on the open
   // board, for a piece dropped onto that zone.
@@ -1611,7 +1617,7 @@
       // A piece pinned to a zone replaces whatever was pinned there before.
       if (pin) arts.filter(function (a) { return a.pin && a.pin.d === pin.d && a.pin.row === pin.row; }).forEach(function (a) { dropArt(a, true); });
       arts.push({ id: ++artSeq, url: url, name: name, w: w, h: h, video: video, media: media, pin: pin || null });
-      if (state.display) render(false);
+      if (artView()) render(false);
     }
     if (video) {
       var v = document.createElement('video');
@@ -1629,12 +1635,12 @@
   function dropArt(a, quiet) {
     URL.revokeObjectURL(a.url);
     arts = arts.filter(function (x) { return x !== a; });
-    if (!quiet && state.display) render(false);
+    if (!quiet && artView()) render(false);
   }
   function clearArt() {
     arts.forEach(function (a) { URL.revokeObjectURL(a.url); });
     arts = [];
-    if (state.display) render(false);
+    if (artView()) render(false);
   }
   function sameShape(aw, ah, bw, bh) { return aw * bh === ah * bw; }
   function artRows(d) { return groupZones(d.zones).filter(function (r) { return !(r.w === d.w && r.h === d.h); }); }
@@ -1778,6 +1784,91 @@
     });
     box.appendChild(list);
     return box;
+  }
+  // On a content type's page the same pieces become an exports check: each
+  // canvas is covered by a piece at its exact size or still missing, and a
+  // piece that fits nothing here says so.
+  function exportFor(r) { return arts.filter(function (a) { return a.w === r.w && a.h === r.h; }).pop() || null; }
+  function exportsTray(rows) {
+    if (!arts.length) {
+      var hint = node('button', 'art-empty');
+      hint.type = 'button';
+      hint.appendChild(icon(ICONS.image));
+      var t = node('span');
+      t.appendChild(node('b', '', 'Check your exports'));
+      t.appendChild(node('span', '', 'Drop or pick your renders to see which canvases are covered and which are still missing. They stay on this device.'));
+      hint.appendChild(t);
+      hint.addEventListener('click', pickArt);
+      return hint;
+    }
+    var covered = rows.filter(exportFor).length;
+    var stray = arts.filter(function (a) { return !rows.some(function (r) { return r.w === a.w && r.h === a.h; }); }).length;
+    var box = node('section', 'art-tray');
+    box.setAttribute('aria-label', 'Your exports');
+    var head = node('div', 'art-head');
+    var title = node('span', 'art-title');
+    title.appendChild(node('b', '', 'Your exports'));
+    title.appendChild(node('span', 'art-sum', covered + ' of ' + rows.length + ' canvases covered' + (stray ? ' · ' + stray + ' to check' : '')));
+    head.appendChild(title);
+    var tools = node('span', 'art-tools');
+    var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
+    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); tools.appendChild(xb);
+    head.appendChild(tools);
+    box.appendChild(head);
+    var meter = node('div', 'art-meter' + (covered === rows.length ? ' is-done' : ''));
+    meter.setAttribute('role', 'progressbar');
+    meter.setAttribute('aria-label', 'Canvases covered');
+    meter.setAttribute('aria-valuemin', '0');
+    meter.setAttribute('aria-valuemax', String(rows.length));
+    meter.setAttribute('aria-valuenow', String(covered));
+    var fill = node('span');
+    fill.style.width = (rows.length ? covered / rows.length * 100 : 0) + '%';
+    meter.appendChild(fill);
+    box.appendChild(meter);
+    var list = node('ul', 'art-list');
+    arts.forEach(function (a) {
+      var fits = rows.filter(function (r) { return exportFor(r) === a; });
+      var same = rows.filter(function (r) { return r.w === a.w && r.h === a.h; });
+      var shape = rows.filter(function (r) { return sameShape(a.w, a.h, r.w, r.h); })[0];
+      var note = fits.length ? 'Covers ' + fits[0].label + (fits.length > 1 ? ' and ' + (fits.length - 1) + ' more' : '') + '.'
+        : same.length ? 'Same size as a later piece, which is used instead.'
+        : shape ? 'No canvas here is this size. Same shape as ' + shape.label + ': build at ' + pretty(shape.w, shape.h) + '.'
+        : 'No canvas here is this size.';
+      var li = node('li', 'art-item is-compact' + (fits.length ? '' : ' is-off'));
+      li.appendChild(artThumb(a));
+      var text = node('span', 'art-text');
+      var nm = node('b', '', a.name);
+      nm.title = a.name;
+      text.appendChild(nm);
+      text.appendChild(node('i', '', pretty(a.w, a.h)));
+      text.appendChild(node('span', 'art-note', note));
+      li.appendChild(text);
+      var rm = node('button', 'btn icon-only ghost art-rm');
+      rm.type = 'button';
+      rm.setAttribute('aria-label', 'Remove ' + a.name);
+      rm.title = 'Remove';
+      rm.appendChild(icon(ICONS.close));
+      rm.addEventListener('click', function () { dropArt(a); });
+      li.appendChild(rm);
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    return box;
+  }
+  function exportStatus(r) {
+    var a = exportFor(r);
+    var s = node('span', 't-art' + (a ? ' is-ok' : ' is-missing'));
+    if (a) {
+      var th = artThumb(a);
+      th.classList.add('is-tiny');
+      s.appendChild(th);
+      var nm = node('span', 't-art-name', a.name);
+      s.title = a.name;
+      s.appendChild(nm);
+    } else {
+      s.appendChild(node('span', '', 'Missing'));
+    }
+    return s;
   }
   // The board with every piece on it, as the board shows it (crops and
   // scrims blacked out), for sending round before a render. Videos give the
@@ -2104,12 +2195,12 @@
   // letting the browser navigate away to it.
   function hasFiles(e) { return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1); }
   var dragDepth = 0;
-  document.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; dragDepth++; if (state.display && !state.query) document.body.classList.add('is-dragging'); });
+  document.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; dragDepth++; if (artView()) document.body.classList.add('is-dragging'); });
   document.addEventListener('dragleave', function (e) { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) { document.body.classList.remove('is-dragging'); clearDropZone(); } });
   document.addEventListener('dragover', function (e) {
     if (!hasFiles(e)) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = state.display && !state.query ? 'copy' : 'none';
+    e.dataTransfer.dropEffect = artView() ? 'copy' : 'none';
     var hit = e.target.closest && e.target.closest('.is-board-view .zone-hit');
     if (hit && hit.classList.contains('is-drop')) return;
     clearDropZone();
@@ -2121,14 +2212,14 @@
     dragDepth = 0;
     document.body.classList.remove('is-dragging');
     clearDropZone();
-    if (!state.display || state.query || !e.dataTransfer.files.length) return;
+    if (!artView() || !e.dataTransfer.files.length) return;
     var hit = e.target.closest && e.target.closest('.is-board-view .zone-hit');
-    addArt(e.dataTransfer.files, hit ? { d: state.display, row: hit.getAttribute('data-row') } : null);
+    addArt(e.dataTransfer.files, hit && state.display ? { d: state.display, row: hit.getAttribute('data-row') } : null);
   });
   // While dragging, light up the zone a drop would pin to.
   function clearDropZone() { var o = document.querySelector('.zone-hit.is-drop'); if (o) o.classList.remove('is-drop'); }
   document.addEventListener('paste', function (e) {
-    if (!state.display || state.query || /^(input|textarea)$/i.test(e.target.tagName || '')) return;
+    if (!artView() || /^(input|textarea)$/i.test(e.target.tagName || '')) return;
     var items = Array.prototype.slice.call((e.clipboardData && e.clipboardData.files) || []).filter(function (f) { return /^image\//.test(f.type) || isVideo(f); });
     if (items.length) { e.preventDefault(); addArt(items); }
   });
