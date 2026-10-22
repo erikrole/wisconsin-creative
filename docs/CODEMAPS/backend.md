@@ -83,7 +83,7 @@
 | `src/lib/services/kit-list-availability.ts` | 35 |
 | `src/lib/services/kit-member-availability.ts` | 97 |
 | `src/lib/services/kits.ts` | 836 |
-| `src/lib/services/label-print-jobs.ts` | 89 |
+| `src/lib/services/label-print-jobs.ts` | 102 |
 | `src/lib/services/licenses.ts` | 684 |
 | `src/lib/services/live-activities.ts` | 630 |
 | `src/lib/services/manual-event-time.ts` | 304 |
@@ -250,7 +250,7 @@
 | `src/lib/kiosk-staff-token.ts` | 79 |
 | `src/lib/label-print-client.ts` | 20 |
 | `src/lib/label-print-controller.ts` | 199 |
-| `src/lib/label-print-job.ts` | 183 |
+| `src/lib/label-print-job.ts` | 188 |
 | `src/lib/label-print-storage.ts` | 53 |
 | `src/lib/license-dates.ts` | 56 |
 | `src/lib/live-activity-workflow.ts` | 34 |

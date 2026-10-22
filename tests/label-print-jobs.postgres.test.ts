@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { PrismaClient, Role } from "@prisma/client";
+import { Prisma, PrismaClient, Role } from "@prisma/client";
 import type { AuthUser } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
-import { checkpointSchema, createPrintJobSchema, remainingLabels } from "@/lib/label-print-job";
+import { checkpointSchema, createPrintJobSchema, printJobSchema, remainingLabels } from "@/lib/label-print-job";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown as PrismaClient }));
 vi.mock("@/lib/db", () => ({ get db() { return holder.db; } }));
@@ -141,6 +141,33 @@ suite("print job service on disposable PostgreSQL", () => {
     job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "resolve", index: 1, printed: false }), user);
     expect(job.outcomes[0]).toMatchObject({ evidence: "physical-review", resolvedBy: { id: user.id } });
     expect(job.actor.id).toBe(student.id); expect(remainingLabels(job).map(l => l.copyId)).toEqual(["copy-1", "copy-2"]);
+  });
+  it("bounds UTF-8 history pages while preserving a large active receipt and every paginated batch", async () => {
+    const ids: string[] = []; let activeBrowser = "";
+    for (let batch = 0; batch < 3; batch++) {
+      const input = createPrintJobSchema.parse({ ...createInput(), labels: Array.from({ length: 500 }, (_, index) => ({
+        copyId: `${index}-${"\u0001".repeat(230)}`,
+        row: { kind: "text", dept: "\u0001".repeat(180), model: "\u0001".repeat(200), number: "1", qrCodeValue: "", copies: 1 },
+      })) });
+      const initial = await createLabelPrintJob(input, user), now = new Date().toISOString();
+      const job = printJobSchema.parse({ ...initial, state: "completed", revision: 1,
+        outcomes: initial.labels.map(() => ({ status: "printed", attemptedAt: now, recordedAt: now, evidence: "physical-review", resolvedBy: { id: user.id, name: "\u0001".repeat(200) } })),
+      });
+      await holder.db.labelPrintJob.update({ where: { id: job.id }, data: { revision: 1, job: job as unknown as Prisma.InputJsonValue } });
+      ids.push(job.id); if (!batch) activeBrowser = job.browserId;
+    }
+    let page = await listLabelPrintJobs(user, activeBrowser);
+    expect(page.active?.id).toBe(ids[0]); expect(page.jobs).toHaveLength(0); expect(page.nextCursor).toBe("history-start");
+    const seen: string[] = []; let requests = 0;
+    while (true) {
+      expect(Buffer.byteLength(JSON.stringify({ data: page }), "utf8")).toBeLessThanOrEqual(3_500_000);
+      seen.push(...page.jobs.map(job => job.id));
+      const cursor = page.nextCursor; if (!cursor) break;
+      expect(requests++).toBeLessThan(5);
+      page = await listLabelPrintJobs(user, activeBrowser, cursor);
+      expect(page.active).toBeNull(); expect(page.nextCursor).not.toBe(cursor);
+    }
+    expect(seen).toHaveLength(3); expect(new Set(seen)).toEqual(new Set(ids));
   });
   it("keeps print history and actor snapshot after account removal", async () => {
     const operator = { ...student, id: "student-2" }, job = await createLabelPrintJob(createInput(), operator);

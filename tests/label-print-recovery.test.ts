@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { applyPrintCommand, newPrintJob, printJobSchema, remainingLabels, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
+import { applyPrintCommand, createPrintJobSchema, newPrintJob, printJobSchema, remainingLabels, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
 import { LabelPrintController } from "@/lib/label-print-controller";
 import { archiveUnreadableJournal, PRINT_JOURNAL_KEY, readPrintJournal, savePrintJournal, type PrintEnvelope } from "@/lib/label-print-storage";
 import type { PrintJobApi } from "@/lib/label-print-client";
@@ -207,4 +207,12 @@ describe("chained journal recovery", () => {
     await expect(h.controller.runChain(h.printer, h.bitmaps, actor, () => stop, () => {})).rejects.toThrow("finish checkpoint changed");
     expect(h.printer.finishHeldChain).not.toHaveBeenCalled(); expect(h.printer.printChainPage).toHaveBeenCalledTimes(1);
   });
+});
+
+it("rejects a serialized sheet that cannot leave room for durable outcome history", () => {
+  const oversized = { ...input(), labels: Array.from({ length: 500 }, (_, i) => ({
+    copyId: `${i}-${"\u0001".repeat(390)}`,
+    row: { kind: "text", dept: "\u0001".repeat(200), model: "\u0001".repeat(200), number: "\u0001".repeat(200), qrCodeValue: "", copies: 1 },
+  })) };
+  expect(() => createPrintJobSchema.parse(oversized)).toThrow("too large");
 });

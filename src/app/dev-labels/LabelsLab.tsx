@@ -125,7 +125,7 @@ export default function LabelsLab() {
     <QueryClientProvider client={client}>
       <div className="min-h-screen bg-background px-4 py-6 sm:px-8">
         <div className="mx-auto max-w-6xl">
-          {deviceCheck && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 text-xs"><span className="mr-auto">Local printer check · Four QR samples open FB FX3 1 · SD and text have no QR</span><Button variant="outline" size="sm" onClick={() => loadDeviceCheck()}>Load six-layout device check</Button><Button variant="outline" size="sm" onClick={() => loadDeviceCheck(false, true)}>Load A/B/C Stop check</Button><Button variant="outline" size="sm" onClick={() => loadDeviceCheck(true)}>Restore previous sheet</Button>{checkMessage && <p role="alert" className="w-full text-destructive">{checkMessage}</p>}</div>}
+          {deviceCheck && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 text-xs"><span className="mr-auto">Local printer check · Four QR samples open FB FX3 1 · SD and text have no QR</span><Button variant="outline" size="sm" className="h-10" onClick={() => loadDeviceCheck()}>Load six-layout device check</Button><Button variant="outline" size="sm" className="h-10" onClick={() => loadDeviceCheck(false, true)}>Load A/B/C Stop check</Button><Button variant="outline" size="sm" className="h-10" onClick={() => loadDeviceCheck(true)}>Restore previous sheet</Button>{checkMessage && <p role="alert" className="w-full text-destructive">{checkMessage}</p>}</div>}
           <UsbSimulationControls />
           <Suspense>
             <LabelsHelper />
