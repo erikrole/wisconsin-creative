@@ -3,13 +3,15 @@
     "date": "2026-10-22",
     "title": "QR Studio, refreshed",
     "type": "improvement",
-    "summary": "QR Studio has a calmer look, makes calendar event codes, and can print a short caption under any code.",
+    "summary": "QR Studio has a calmer Badger red look, codes that scan more reliably, calendar event codes, and an optional caption under any code.",
     "details": [
       "New Event type: scan the code to add a game or shoot to your phone's calendar.",
       "Add an optional caption like \"Scan for tickets\" under the code, in both PNG and SVG downloads, without affecting scanning.",
       "Deleting a saved code, or clearing the whole library, can now be undone.",
-      "The theme button shows whether it is following your device, light or dark.",
-      "Badger red is still the accent, with a cleaner layout and Lato type."
+      "Rounded corner eyes are redrawn so every style scans reliably, with a new Eye shape choice.",
+      "The scan check is stricter: a code that only reads at some sizes is flagged.",
+      "Cleaner logo backings and no more hairline seams between joined modules.",
+      "A Wisconsin Creative badge at the top left links back to all the apps."
     ],
     "platforms": [
       "Web"

@@ -20,7 +20,7 @@ describe("QR Studio static tool at /qrcode", () => {
 
   it("ships its own strict CSP with no inline script", () => {
     expect(html).toContain(
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data: blob:; connect-src 'none';`,
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'none';`,
     );
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>/i);
     expect(html).not.toMatch(/\son[a-z]+=/i);
@@ -56,6 +56,21 @@ describe("QR Studio static tool at /qrcode", () => {
   it("is stamped by the shared static-tool hash script", () => {
     expect(readFileSync("scripts/hash-static-tools.mjs", "utf8")).toContain('"public/qrcode/index.html"');
     expect(html).toContain("Canonical source: edit here.");
+  });
+
+  it("opens the top bar with the shared Wisconsin Creative badge", () => {
+    const bar = html.slice(html.indexOf('<header class="topbar">'), html.indexOf("</header>"));
+    expect(bar.trim().split("\n")[1].trim()).toBe(
+      '<a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>',
+    );
+    expect(html).toContain('mask: url("/brand/wc-badge.svg")');
+    expect(existsSync("public/brand/wc-badge.svg")).toBe(true);
+  });
+
+  it("only calls a code scannable when every test size decodes", () => {
+    const app = readFileSync(join(root, "app.js"), "utf8");
+    expect(app).toContain("result.passed < sizes.length ? 'marginal'");
+    expect(app).toContain("marginal: 'Scans unreliably'");
   });
 
   it("uses the shared self-hosted Lato files", () => {
@@ -119,5 +134,24 @@ describe("QR Studio core rules", () => {
   it("leaves the caption out of the CLI command", () => {
     const design = core.normalizeDesign({ caption: "Scan me" }).design;
     expect(core.cliCommand("url", { url: "https://uwbadgers.com" }, design, {})).not.toContain("Scan me");
+  });
+
+  it("never asks the library for its round corner eyes, which decoders miss", () => {
+    for (const style of Object.keys(core.STYLES)) {
+      for (const eyeShape of Object.keys(core.EYE_SHAPES)) {
+        const design = core.normalizeDesign({ style, eyeShape }).design;
+        const options = core.qrOptions("https://uwbadgers.com", design, { size: 600, moduleCount: 25 });
+        expect(options.cornersSquareOptions.type, `${style}/${eyeShape}`).toBe("square");
+        expect(options.cornersDotOptions.type, `${style}/${eyeShape}`).toBe("square");
+      }
+    }
+  });
+
+  it("gives older saves the eye shape their module style used to draw", () => {
+    expect(core.normalizeDesign({ style: "dots" }).design.eyeShape).toBe("rounded");
+    expect(core.normalizeDesign({ style: "rounded" }).design.eyeShape).toBe("rounded");
+    expect(core.normalizeDesign({ style: "square" }).design.eyeShape).toBe("square");
+    expect(core.normalizeDesign({ style: "dots", eyeShape: "square" }).design.eyeShape).toBe("square");
+    expect(core.normalizeDesign({ eyeShape: "__proto__" }).design.eyeShape).toBe("square");
   });
 });

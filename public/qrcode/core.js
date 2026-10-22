@@ -25,12 +25,20 @@
   // A circle backing is shrunk so it covers about as much of the code as the square one.
   var CIRCLE_IMAGE_FACTOR = 0.85;
 
+  // Corner eyes are always drawn square by the library and reshaped by eyeExtension:
+  // the library's own round eyes ("extra-rounded" / "dot") fail finder detection in
+  // common decoders, so they are never used.
   var STYLES = {
-    square: { label: 'Classic', dots: 'square', corner: 'square', cornerDot: 'square' },
-    dots: { label: 'Dots', dots: 'dots', corner: 'extra-rounded', cornerDot: 'dot' },
-    soft: { label: 'Soft', dots: 'extra-rounded', corner: 'extra-rounded', cornerDot: 'dot' },
-    cut: { label: 'Cut', dots: 'classy', corner: 'square', cornerDot: 'square' }
+    square: { label: 'Classic', dots: 'square', eyeShape: 'square' },
+    dots: { label: 'Dots', dots: 'dots', eyeShape: 'rounded' },
+    soft: { label: 'Soft', dots: 'extra-rounded', eyeShape: 'rounded' },
+    cut: { label: 'Cut', dots: 'classy', eyeShape: 'square' }
   };
+
+  var EYE_SHAPES = { square: 'Square', rounded: 'Rounded' };
+  // Corner radii in modules. A one-module outer radius keeps the 1:1:3:1:1 finder
+  // ratio readable; rounder eyes were measured failing OpenCV and jsQR.
+  var EYE_RADIUS = { outer: 1, inner: 0.4, dot: 0.6 };
 
   // Names used by QR Studio 1.x, kept so old library entries and settings still load.
   var STYLE_ALIASES = { rounded: 'dots', 'extra-rounded': 'soft', classy: 'cut', classic: 'square' };
@@ -49,6 +57,7 @@
     plateColor: '#FFFFFF',
     ec: 'auto',
     quietZone: 4,
+    eyeShape: 'square',
     caption: ''             // printed under the code, outside the quiet zone
   };
 
@@ -497,6 +506,8 @@
     var ec = str(input.ec).toUpperCase();
     d.ec = EC_LEVELS.indexOf(ec) === -1 ? 'auto' : ec;
     d.quietZone = clampInt(input.quietZone, QUIET_ZONE.min, QUIET_ZONE.max, DESIGN_DEFAULTS.quietZone);
+    // Older saves have no eye shape; they get the shape their module style used to draw.
+    d.eyeShape = has(EYE_SHAPES, input.eyeShape) ? input.eyeShape : STYLES[d.style].eyeShape;
     d.caption = cleanCaption(input.caption);
     return { design: d, warnings: warnings };
   }
@@ -616,8 +627,8 @@
       image: hasLogo ? opts.logoUrl : undefined,
       qrOptions: { errorCorrectionLevel: resolveEc(design), mode: 'Byte', typeNumber: 0 },
       dotsOptions: { color: design.fill, type: style.dots, roundSize: true },
-      cornersSquareOptions: { color: eye, type: style.corner },
-      cornersDotOptions: { color: eye, type: style.cornerDot },
+      cornersSquareOptions: { color: eye, type: 'square' },
+      cornersDotOptions: { color: eye, type: 'square' },
       backgroundOptions: { color: design.background === 'transparent' ? 'transparent' : design.background },
       imageOptions: {
         // saveAsBlob re-fetches the logo over XHR with no error handler, which hangs
@@ -647,7 +658,9 @@
         if (fixed !== ref) clipped[c].setAttribute('clip-path', fixed);
       }
       // Square modules are separate rects; without this, scaled copies show hairline seams.
-      if (design.style === 'square') svg.setAttribute('shape-rendering', 'crispEdges');
+      if (design.style === 'square' && design.eyeShape !== 'rounded') svg.setAttribute('shape-rendering', 'crispEdges');
+      if (design.eyeShape === 'rounded') roundEyes(svg);
+      if (design.style !== 'dots') closeSeams(svg);
       if (design.plate === 'none' || design.logo === 'none') return;
       var image = svg.querySelector('image');
       if (!image) return;
@@ -677,7 +690,119 @@
       }
       plate.setAttribute('fill', design.plateColor);
       image.parentNode.insertBefore(plate, image);
+      clearUnderPlate(svg, design.plate === 'circle'
+        ? { circle: true, cx: x + w / 2, cy: y + h / 2, r: span * 0.72 }
+        : { x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2 });
     };
+  }
+
+  // The library only hides modules under the logo's square box, so a backing plate
+  // leaves half-covered modules around its edge. Drop every module the plate touches;
+  // error correction H (Auto with a logo) covers them and the scan check confirms it.
+  function moduleGrid(svg) {
+    var corner = svg.querySelector('rect[clip-path*="clip-path-corners-square-color-0-0"]');
+    var dotsClip = svg.querySelector('clipPath[id^="clip-path-dot-color"]');
+    if (!corner || !dotsClip) return null;
+    var grid = {
+      clip: dotsClip,
+      x: parseFloat(corner.getAttribute('x')),
+      y: parseFloat(corner.getAttribute('y')),
+      unit: parseFloat(corner.getAttribute('width')) / 7
+    };
+    return isFinite(grid.x) && isFinite(grid.y) && grid.unit > 0 ? grid : null;
+  }
+
+  // The top-left corner of the module cell a drawn shape belongs to, from the point
+  // the library starts drawing it at (a circle centre, a rect corner or a path's first move).
+  function moduleCell(node, grid) {
+    var name = String(node.localName || node.nodeName).toLowerCase();
+    var px;
+    var py;
+    if (name === 'circle') { px = parseFloat(node.getAttribute('cx')); py = parseFloat(node.getAttribute('cy')); }
+    else if (name === 'rect') { px = parseFloat(node.getAttribute('x')); py = parseFloat(node.getAttribute('y')); }
+    else if (name === 'path') {
+      var start = /^\s*M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/i.exec(node.getAttribute('d') || '');
+      if (start) { px = parseFloat(start[1]); py = parseFloat(start[2]); }
+    }
+    if (!isFinite(px) || !isFinite(py)) return null;
+    return {
+      left: grid.x + Math.floor((px - grid.x) / grid.unit + 1e-6) * grid.unit,
+      top: grid.y + Math.floor((py - grid.y) / grid.unit + 1e-6) * grid.unit
+    };
+  }
+
+  // Touching modules are separate shapes, so anti-aliasing leaves hairline seams
+  // between them. Growing each shape by a sliver about its cell centre closes them.
+  function closeSeams(svg) {
+    var grid = moduleGrid(svg);
+    if (!grid) return;
+    var bleed = 1.04;
+    Array.prototype.slice.call(grid.clip.childNodes).forEach(function (node) {
+      var cell = moduleCell(node, grid);
+      if (!cell) return;
+      var cx = cell.left + grid.unit / 2;
+      var cy = cell.top + grid.unit / 2;
+      var grow = 'translate(' + cx + ',' + cy + ') scale(' + bleed + ') translate(' + (-cx) + ',' + (-cy) + ')';
+      var current = node.getAttribute('transform');
+      node.setAttribute('transform', current ? grow + ' ' + current : grow);
+    });
+  }
+
+  // The library only hides modules under the logo's square box, so a backing plate
+  // leaves half-covered modules around its edge. Drop every module the plate touches;
+  // error correction H (Auto with a logo) covers them and the scan check confirms it.
+  function clearUnderPlate(svg, shape) {
+    var grid = moduleGrid(svg);
+    if (!grid) return;
+    Array.prototype.slice.call(grid.clip.childNodes).forEach(function (node) {
+      var cell = moduleCell(node, grid);
+      if (!cell) return;
+      var left = cell.left;
+      var top = cell.top;
+      var unit = grid.unit;
+      var hit;
+      if (shape.circle) {
+        var nx = Math.max(left, Math.min(shape.cx, left + unit));
+        var ny = Math.max(top, Math.min(shape.cy, top + unit));
+        hit = (nx - shape.cx) * (nx - shape.cx) + (ny - shape.cy) * (ny - shape.cy) < shape.r * shape.r;
+      } else {
+        hit = left < shape.x + shape.w && left + unit > shape.x && top < shape.y + shape.h && top + unit > shape.y;
+      }
+      if (hit) grid.clip.removeChild(node);
+    });
+  }
+
+  function roundedRectPath(x, y, w, r) {
+    var side = w - 2 * r;
+    return 'M' + (x + r) + ',' + y + 'h' + side + 'a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r + 'v' + side +
+      'a' + r + ',' + r + ' 0 0 1 ' + (-r) + ',' + r + 'h' + (-side) + 'a' + r + ',' + r + ' 0 0 1 ' + (-r) + ',' + (-r) +
+      'v' + (-side) + 'a' + r + ',' + r + ' 0 0 1 ' + r + ',' + (-r) + 'z';
+  }
+
+  // Replaces the clip shapes behind each corner eye with softly rounded ones. The
+  // coloured rect that uses each clip gives the eye's exact box, so no geometry is guessed.
+  function roundEyes(svg) {
+    var rects = svg.querySelectorAll('rect[clip-path]');
+    for (var i = 0; i < rects.length; i += 1) {
+      var ref = rects[i].getAttribute('clip-path');
+      var kind = /clip-path-corners-(square|dot)-color/.exec(ref);
+      var id = /#([^'")\s]+)/.exec(ref);
+      if (!kind || !id) continue;
+      var clip = svg.querySelector('[id="' + id[1] + '"]');
+      var x = parseFloat(rects[i].getAttribute('x'));
+      var y = parseFloat(rects[i].getAttribute('y'));
+      var w = parseFloat(rects[i].getAttribute('width'));
+      if (!clip || !isFinite(x) || !isFinite(y) || !(w > 0)) continue;
+      var unit = w / (kind[1] === 'square' ? 7 : 3);
+      var d = kind[1] === 'square'
+        ? roundedRectPath(x, y, w, EYE_RADIUS.outer * unit) + roundedRectPath(x + unit, y + unit, w - 2 * unit, EYE_RADIUS.inner * unit)
+        : roundedRectPath(x, y, w, EYE_RADIUS.dot * unit);
+      while (clip.firstChild) clip.removeChild(clip.firstChild);
+      var path = svg.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('clip-rule', 'evenodd');
+      clip.appendChild(path);
+    }
   }
 
   // Checks that must pass before anything is exported. `moduleCount` is optional.
@@ -977,6 +1102,7 @@
     EC_RECOVERY: EC_RECOVERY,
     STYLES: STYLES,
     STYLE_ALIASES: STYLE_ALIASES,
+    EYE_SHAPES: EYE_SHAPES,
     PLATES: PLATES,
     DESIGN_DEFAULTS: DESIGN_DEFAULTS,
     LOGO_SCALE: LOGO_SCALE,

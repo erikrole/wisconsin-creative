@@ -36,12 +36,12 @@
 
   var SAMPLE = 'https://uwbadgers.com';
   var LOOKS = [
-    { id: 'ink', label: 'Ink', design: { style: 'square', fill: '#171717', background: '#FFFFFF', eye: null, logo: 'none', plate: 'none' } },
-    { id: 'motion', label: 'Motion W', design: { style: 'square', fill: '#171717', background: '#FFFFFF', eye: null, logo: 'brand:motion-w', plate: 'none', logoScale: 24 } },
-    { id: 'badger', label: 'Badger red', design: { style: 'dots', fill: '#A00000', background: '#FFFFFF', eye: null, logo: 'brand:motion-w-mono', plate: 'circle', plateColor: '#FFFFFF', logoScale: 26 } },
-    { id: 'eyes', label: 'Red eyes', design: { style: 'soft', fill: '#171717', background: '#FFFFFF', eye: '#A00000', logo: 'brand:motion-w', plate: 'none', logoScale: 24 } },
-    { id: 'cut', label: 'Charcoal', design: { style: 'cut', fill: '#282728', background: '#F7F4ED', eye: null, logo: 'none', plate: 'none' } },
-    { id: 'clear', label: 'Transparent', design: { style: 'square', fill: '#171717', background: 'transparent', eye: null, logo: 'none', plate: 'none' } }
+    { id: 'ink', label: 'Ink', design: { style: 'square', eyeShape: 'square', fill: '#171717', background: '#FFFFFF', eye: null, logo: 'none', plate: 'none' } },
+    { id: 'motion', label: 'Motion W', design: { style: 'square', eyeShape: 'rounded', fill: '#171717', background: '#FFFFFF', eye: null, logo: 'brand:motion-w', plate: 'none', logoScale: 24 } },
+    { id: 'badger', label: 'Badger red', design: { style: 'dots', eyeShape: 'rounded', fill: '#A00000', background: '#FFFFFF', eye: null, logo: 'brand:motion-w-mono', plate: 'circle', plateColor: '#FFFFFF', logoScale: 24 } },
+    { id: 'eyes', label: 'Red eyes', design: { style: 'soft', eyeShape: 'rounded', fill: '#171717', background: '#FFFFFF', eye: '#A00000', logo: 'brand:motion-w', plate: 'none', logoScale: 24 } },
+    { id: 'cut', label: 'Charcoal', design: { style: 'cut', eyeShape: 'square', fill: '#282728', background: '#F7F4ED', eye: null, logo: 'none', plate: 'none' } },
+    { id: 'clear', label: 'Transparent', design: { style: 'square', eyeShape: 'square', fill: '#171717', background: 'transparent', eye: null, logo: 'none', plate: 'none' } }
   ];
 
   var TYPE_ICONS = {
@@ -439,10 +439,24 @@
       input.addEventListener('change', function () {
         if (!input.checked) return;
         state.design.style = key;
+        // Each module style suggests its eye shape; the Eyes control can still override it.
+        state.design.eyeShape = core.STYLES[key].eyeShape;
+        syncDesignControls();
         render();
       });
       wrap.appendChild(input);
       wrap.appendChild(h('label', { className: 'tile', for: 'style-' + key, 'data-shape': key }, [art, h('span', { text: core.STYLES[key].label })]));
+    });
+    var eyes = $('eye-seg');
+    Object.keys(core.EYE_SHAPES).forEach(function (key) {
+      var input = h('input', { type: 'radio', name: 'eye-shape', id: 'eye-' + key, value: key });
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        state.design.eyeShape = key;
+        render();
+      });
+      eyes.appendChild(input);
+      eyes.appendChild(h('label', { for: 'eye-' + key, text: core.EYE_SHAPES[key] }));
     });
   }
 
@@ -542,6 +556,7 @@
   function syncDesignControls() {
     Array.prototype.forEach.call(document.querySelectorAll('input[name="style"]'), function (input) { input.checked = input.value === state.design.style; });
     Array.prototype.forEach.call(document.querySelectorAll('input[name="ec"]'), function (input) { input.checked = input.value === state.design.ec; });
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="eye-shape"]'), function (input) { input.checked = input.value === state.design.eyeShape; });
     $('quiet-zone').value = String(state.design.quietZone);
     $('quiet-zone-out').value = state.design.quietZone + (state.design.quietZone === 1 ? ' module' : ' modules');
     if (document.activeElement !== $('caption')) $('caption').value = state.design.caption || '';
@@ -667,6 +682,9 @@
     var list = $('notes');
     list.textContent = '';
     if (!assessment) return;
+    if (view.scan === 'marginal') {
+      list.appendChild(h('li', { text: 'Only some test sizes decode. Make the logo smaller, raise error correction, or use square eyes.' }));
+    }
     var payloadOk = view.payload && view.payload.ok;
     // Field errors are already shown next to the field; only list design-level blockers.
     (payloadOk ? assessment.blockers : []).forEach(function (message) { list.appendChild(h('li', { className: 'is-bad', text: message })); });
@@ -695,9 +713,10 @@
       ok: 'Scans',
       small: 'Scans — keep it over 25 mm',
       fail: 'Does not scan',
+      marginal: 'Scans unreliably',
       unavailable: 'Scan check unavailable'
     }[view.scan];
-    var scanTone = { ok: 'ok', small: 'warn', fail: 'bad' }[view.scan] || '';
+    var scanTone = { ok: 'ok', small: 'warn', marginal: 'warn', fail: 'bad' }[view.scan] || '';
     setChip('chip-scan', scanText, scanTone, view.scan === 'busy' || (view.scan === 'idle' && ready));
     if (!ready) { setChip('chip-size', ''); setChip('chip-print', ''); return; }
     var guide = core.printGuide(count, currentDesign.quietZone);
@@ -781,17 +800,20 @@
     // Camera-like resolutions, matching the CLI check.
     var sizes = [8, 12, 5].map(function (px) { return Math.max(160, Math.min(1600, Math.round(span * px))); });
 
-    function tryFull(i) {
-      if (i >= sizes.length) return Promise.resolve(false);
-      return decodeAt(payload, design, sizes[i], count, logoUrl).then(function (ok) { return ok || tryFull(i + 1); });
+    // Every camera-like size has to decode. A code that only reads at some of them
+    // is flagged as marginal, because a phone at a different distance may miss it.
+    function tryAll(i, passed) {
+      if (i >= sizes.length) return Promise.resolve(passed);
+      return decodeAt(payload, design, sizes[i], count, logoUrl).then(function (ok) { return tryAll(i + 1, passed + (ok ? 1 : 0)); });
     }
 
-    tryFull(0).then(function (full) {
-      if (!full) return { full: false, small: false };
-      return decodeAt(payload, design, SMALL_CHECK_PX, count, logoUrl).then(function (small) { return { full: true, small: small }; });
+    tryAll(0, 0).then(function (passed) {
+      if (passed < sizes.length) return { passed: passed, small: false };
+      return decodeAt(payload, design, SMALL_CHECK_PX, count, logoUrl).then(function (small) { return { passed: passed, small: small }; });
     }).then(function (result) {
       if (token !== view.scanToken) return;
-      view.scan = !result.full ? 'fail' : result.small ? 'ok' : 'small';
+      view.scan = result.passed === 0 ? 'fail' : result.passed < sizes.length ? 'marginal' : result.small ? 'ok' : 'small';
+      renderNotes(view.assessment);
       updateChips();
       updateExportState();
     }).catch(function () {
@@ -1104,7 +1126,7 @@
   function signature(entry) {
     var d = entry.design;
     return [entry.type, entry.payload, entry.name, d.style, d.fill, d.background, d.eye, d.logo,
-      d.logo === 'custom' ? hashString(d.logoData || '') : '', d.logoScale, d.plate, d.plateColor, d.ec, d.quietZone, d.caption || ''].join('|');
+      d.logo === 'custom' ? hashString(d.logoData || '') : '', d.logoScale, d.plate, d.plateColor, d.ec, d.quietZone, d.eyeShape, d.caption || ''].join('|');
   }
 
   function addToLibrary(silent) {
