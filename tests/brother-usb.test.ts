@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { brotherChainPage, brotherChainFeed } from "@/lib/brother-chain";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BrotherUsbPrinter, type BrotherUsbDevice } from "@/lib/brother-usb";
+import { BrotherUsbPrinter, isBrotherUsb, type BrotherUsbDevice } from "@/lib/brother-usb";
 import type { LabelBitmap } from "@/lib/brother-label-render";
 
 const status = (type = 0, patch: Record<number, number> = {}) => {
@@ -191,5 +191,14 @@ describe("SDK chained output", () => {
     expect(usb.writes[2]).toEqual([...brotherChainFeed(3)]);
     await expect(printer.finishHeldChain(3)).rejects.toThrow("no held labels");
     await printer.close(); expect(usb.writes.at(-1)).toEqual([27, 105, 97, 255]);
+  });
+});
+
+describe("isBrotherUsb", () => {
+  it("recognizes only the PT-D610BT, so a scanner or keyboard disconnect never drops the printer", () => {
+    expect(isBrotherUsb({ vendorId: 0x04f9, productId: 0x20e1 })).toBe(true);
+    expect(isBrotherUsb({ vendorId: 0x04f9, productId: 0x2085 })).toBe(false);
+    expect(isBrotherUsb({ vendorId: 0x05e0, productId: 0x1200 })).toBe(false);
+    expect(isBrotherUsb(undefined)).toBe(false);
   });
 });

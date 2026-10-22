@@ -111,7 +111,7 @@ export default function LabelsLab() {
       const rows = (letters ? ["A", "B", "C"].map(letter => ["body", "TEST", "CHAIN", letter, "c62a82d7"]) : [
         ["body", "TEST", "FX3", "1", "c62a82d7"], ["lens", "TEST", "100-400", "1", "c62a82d7"],
         ["sd", "TEST", "FX3", "1A", ""], ["text", "", "USB TEST", "", ""],
-        ["numberTag", "", "", "1", "c62a82d7"], ["battery", "", "", "1", "c62a82d7"],
+        ["numberTag", "", "", "1", "c62a82d7"], ["battery", "", "", "12", "c62a82d7"], // "12" shows which way the rotated number reads; "1" looks the same both ways.
       ]).map(([kind, dept, model, number, qrCodeValue], i) => ({ id: `device-check-${i}`, name: kind, title: `Device check · ${kind}`, kind, dept, model, number, qrCodeValue, copies: 1 }));
       localStorage.setItem(key, JSON.stringify(rows));
     }
