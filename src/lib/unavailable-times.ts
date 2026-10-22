@@ -39,6 +39,9 @@ export type AwayItem = {
   endsAt: string;
 };
 
+/** Fired on window after a "can't work" entry is saved, so other cards on the page recheck. */
+export const UNAVAILABLE_CHANGED_EVENT = "wc:unavailable-changed";
+
 /** Monday-first, the way a week reads. */
 export const WEEK_DAYS = [
   { day: 1, short: "M", name: "Monday" },

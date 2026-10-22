@@ -5,7 +5,7 @@ import { CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
-import { blockedWindow, formatClockTime, shiftsDuring, type BlockedRange, type ShiftLite } from "@/lib/unavailable-times";
+import { UNAVAILABLE_CHANGED_EVENT, blockedWindow, formatClockTime, shiftsDuring, type BlockedRange, type ShiftLite } from "@/lib/unavailable-times";
 import { AwayForm } from "./cant-work-forms";
 
 type Props = {
@@ -39,6 +39,7 @@ export function CantWorkDialog({ userId, open, onOpenChange, initialFrom, onSave
 
   async function saved(range: BlockedRange) {
     onSaved?.();
+    window.dispatchEvent(new Event(UNAVAILABLE_CHANGED_EVENT));
     const found = await findClashes(range);
     if (found.length === 0) close(false);
     else setClashes(found);

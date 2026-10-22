@@ -7,7 +7,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
 import { useFetch } from "@/hooks/use-fetch";
 import { openProfileCompletion } from "@/lib/profile-completion-events";
-import { isUnavailableBlock, type AvailabilityBlockLite } from "@/lib/unavailable-times";
+import { UNAVAILABLE_CHANGED_EVENT, isUnavailableBlock, type AvailabilityBlockLite } from "@/lib/unavailable-times";
 import { APP_STORE_URL } from "../welcome/WelcomeDone";
 
 const STORAGE_KEY = "wc-getting-started";
@@ -51,12 +51,17 @@ export function GettingStartedCard() {
   useEffect(() => setSaved(load()), []);
   const isStudent = user?.role === "STUDENT";
   // "When can't you work" counts as done once anything is saved, on any device.
-  const { data: blocks } = useFetch<AvailabilityBlockLite[]>({
+  const { data: blocks, reload: reloadBlocks } = useFetch<AvailabilityBlockLite[]>({
     url: `/api/users/${user?.id ?? ""}/availability`,
     transform: (json) => ((json as { data?: AvailabilityBlockLite[] }).data ?? []),
     enabled: Boolean(isStudent && user?.id && saved && !saved.dismissed),
     refetchOnFocus: false,
   });
+  // A day off added from Home's Can't work card checks this row off right away.
+  useEffect(() => {
+    window.addEventListener(UNAVAILABLE_CHANGED_EVENT, reloadBlocks);
+    return () => window.removeEventListener(UNAVAILABLE_CHANGED_EVENT, reloadBlocks);
+  }, [reloadBlocks]);
 
   if (!saved || saved.dismissed || user?.role !== "STUDENT" || !user.accountCreatedAt) return null;
   const ageDays = (Date.now() - new Date(user.accountCreatedAt).getTime()) / 86_400_000;
