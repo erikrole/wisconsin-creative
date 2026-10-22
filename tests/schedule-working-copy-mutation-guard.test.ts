@@ -111,7 +111,10 @@ describe("working-copy mutation guard", () => {
     expect(route).toContain('body.command.type === "adjustSlots" && body.command.delta === 1');
     expect(editor).toContain('const canManageSchedule = currentUser?.role === "ADMIN" || currentUser?.role === "STAFF"');
     expect(editor).toContain("action={canManageSchedule ? (");
-    expect(editor).toContain("canManageSchedule && emptyAreas.length > 0");
+    // Crew size and Add another area sit in one manager-only row.
+    expect(editor).toContain("{emptyAreas.length > 0 && (");
+    expect(editor).toContain('mutate({ type: "setSlotCounts", counts }, "crew-size")');
+    expect(route).toContain('body.command.type === "setSlotCounts"');
     expect(editor).toContain("Apply correction now");
     expect(editor).toContain("canManageSchedule && data.hasWorkingCopy");
     expect(editor).toContain("canManageSchedule && showStudentCallButton && !data.allDay && data.schedule.slots.some");

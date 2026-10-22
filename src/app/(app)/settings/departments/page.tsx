@@ -2,26 +2,15 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Plus, Power, PowerOff, WifiOff } from "lucide-react";
+import { AlertTriangle, Pencil, Plus, Power, PowerOff, WifiOff } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useFetch } from "@/hooks/use-fetch";
 import { useLastAudit, type LastAuditMap } from "@/hooks/use-last-audit";
 import { LastEditedHint } from "@/components/LastEditedHint";
@@ -31,6 +20,8 @@ import {
   isAbortError,
   parseErrorMessage,
 } from "@/lib/errors";
+import { cn } from "@/lib/utils";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 
 type DepartmentCounts = {
@@ -187,14 +178,20 @@ export default function DepartmentsSettingsPage() {
     setBusy(null);
   }
 
-  const description = "Manage the inventory ownership groups used by item forms, filters, item families, and utilization reports.";
+  const description = "Who owns each piece of gear. Item forms, filters, and utilization reports group by department.";
+  const addButton = !showAdd ? (
+    <Button className="h-10" onClick={() => setShowAdd(true)}>
+      <Plus className="size-4 mr-1.5" />
+      Add department
+    </Button>
+  ) : null;
 
   if (loading) {
     return (
       <SettingsPageShell href="/settings/departments" description={description} mainClassName="flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-md" />
-            ))}
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-md" />
+        ))}
       </SettingsPageShell>
     );
   }
@@ -203,108 +200,85 @@ export default function DepartmentsSettingsPage() {
     const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
       <SettingsPageShell href="/settings/departments" description={description}>
-            <Card>
-              <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-                <Icon className="size-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  {error === "network" ? "Could not connect to the server." : "Failed to load departments."}
-                </p>
-                <Button variant="outline" onClick={reload}>Retry</Button>
-              </CardContent>
-            </Card>
+        <SettingsGroup>
+          <div className="flex flex-col items-center gap-4 px-4 py-12 text-center">
+            <Icon className="size-8 text-muted-foreground" />
+            <p className="m-0 text-sm text-muted-foreground">
+              {error === "network" ? "Could not connect to the server." : "Failed to load departments."}
+            </p>
+            <Button variant="outline" onClick={reload}>Retry</Button>
+          </div>
+        </SettingsGroup>
       </SettingsPageShell>
     );
   }
 
   const active = items.filter((department) => department.active);
   const inactive = items.filter((department) => !department.active);
+  const listProps = {
+    lastEdited,
+    busy,
+    renamingId,
+    renameValue,
+    onRenameValueChange: setRenameValue,
+    onStartRename: startRename,
+    onCommitRename: commitRename,
+    onCancelRename: () => setRenamingId(null),
+    onToggleActive: toggleActive,
+  };
 
   return (
-    <SettingsPageShell href="/settings/departments" description={description} mainClassName="flex flex-col gap-4">
-          <div className="flex justify-end">
-            {!showAdd && (
-              <Button className="h-10" onClick={() => setShowAdd(true)}>
-                <Plus className="size-4 mr-1.5" />
-                Add department
+    <SettingsPageShell href="/settings/departments" description={description} actions={addButton} mainClassName="flex flex-col gap-7">
+      {showAdd && (
+        <form onSubmit={addDepartment}>
+          <SettingsGroup title="New department">
+            <SettingsRow
+              label="Name"
+              htmlFor="department-name"
+              description={addError || undefined}
+              invalid={Boolean(addError)}
+            >
+              <Input
+                id="department-name"
+                value={newName}
+                onChange={(e) => { setNewName(e.target.value); setAddError(""); }}
+                placeholder="e.g. Video"
+                required
+                autoFocus
+                disabled={adding}
+              />
+            </SettingsRow>
+            <div className="flex justify-end gap-2 bg-muted/40 px-4 py-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => { setShowAdd(false); setNewName(""); setAddError(""); }}
+                disabled={adding}
+              >
+                Cancel
               </Button>
-            )}
-          </div>
+              <Button type="submit" disabled={adding || !newName.trim()}>
+                {adding ? <><Spinner data-icon="inline-start" />Adding...</> : "Add department"}
+              </Button>
+            </div>
+          </SettingsGroup>
+        </form>
+      )}
 
-          {showAdd && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">New department</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {addError && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertDescription>{addError}</AlertDescription>
-                  </Alert>
-                )}
-                <form onSubmit={addDepartment} className="flex items-end gap-3 max-sm:flex-col max-sm:items-stretch">
-                  <div className="flex-1 flex flex-col gap-1.5">
-                    <Label htmlFor="department-name">Name</Label>
-                    <Input
-                      id="department-name"
-                      value={newName}
-                      onChange={(e) => { setNewName(e.target.value); setAddError(""); }}
-                      placeholder="e.g. Video"
-                      required
-                      autoFocus
-                      disabled={adding}
-                    />
-                  </div>
-                  <Button className="h-10" type="submit" disabled={adding || !newName.trim()}>
-                    {adding ? <><Spinner data-icon="inline-start" />Adding...</> : "Add department"}
-                  </Button>
-                  <Button className="h-10"
-                    type="button"
-                    variant="outline"
-                    onClick={() => { setShowAdd(false); setNewName(""); setAddError(""); }}
-                    disabled={adding}
-                  >
-                    Cancel
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
+      <DepartmentList
+        title={inactive.length > 0 ? "Active" : undefined}
+        departments={active}
+        {...listProps}
+      />
 
-          <DepartmentTable
-            title={`Active departments (${active.length})`}
-            departments={active}
-            lastEdited={lastEdited}
-            busy={busy}
-            renamingId={renamingId}
-            renameValue={renameValue}
-            onRenameValueChange={setRenameValue}
-            onStartRename={startRename}
-            onCommitRename={commitRename}
-            onCancelRename={() => setRenamingId(null)}
-            onToggleActive={toggleActive}
-          />
-
-          {inactive.length > 0 && (
-            <DepartmentTable
-              title={`Deactivated (${inactive.length})`}
-              departments={inactive}
-              lastEdited={lastEdited}
-              busy={busy}
-              renamingId={renamingId}
-              renameValue={renameValue}
-              muted
-              onRenameValueChange={setRenameValue}
-              onStartRename={startRename}
-              onCommitRename={commitRename}
-              onCancelRename={() => setRenamingId(null)}
-              onToggleActive={toggleActive}
-            />
-          )}
+      {inactive.length > 0 && (
+        <DepartmentList title="Deactivated" departments={inactive} muted {...listProps} />
+      )}
     </SettingsPageShell>
   );
 }
 
-function DepartmentTable({
+function DepartmentList({
   title,
   departments,
   lastEdited,
@@ -318,7 +292,7 @@ function DepartmentTable({
   onCancelRename,
   onToggleActive,
 }: {
-  title: string;
+  title?: string;
   departments: Department[];
   lastEdited: LastAuditMap;
   busy: string | null;
@@ -332,85 +306,70 @@ function DepartmentTable({
   onToggleActive: (department: Department) => void;
 }) {
   return (
-    <Card className={muted ? "opacity-75" : ""}>
-      <CardHeader className="pb-0">
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
+    <SettingsGroup title={title}>
       {departments.length === 0 ? (
-        <CardContent className="py-0">
-          <EmptyState
-            inline
-            icon="folder"
-            title="No departments yet"
-            description="Add one to make item ownership and reports easier to scan."
-          />
-        </CardContent>
+        <EmptyState
+          inline
+          icon="folder"
+          title="No departments yet"
+          description="Add one to make item ownership and reports easier to scan."
+        />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Used by</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {departments.map((department) => (
-              <TableRow key={department.id}>
-                <TableCell>
-                  {renamingId === department.id ? (
-                    <Input
-                      value={renameValue}
-                      onChange={(e) => onRenameValueChange(e.target.value)}
-                      onBlur={() => onCommitRename(department)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") onCommitRename(department);
-                        if (e.key === "Escape") {
-                          onRenameValueChange(department.name);
-                          onCancelRename();
-                        }
-                      }}
-                      disabled={busy === `rename-${department.id}`}
-                      autoFocus
-                      className="h-8 max-w-[280px]"
-                    />
-                  ) : (
-                    <div className="flex flex-col gap-0.5">
-                      <button
-                        type="button"
-                        className="text-left font-medium hover:text-[var(--wi-red)] transition-colors"
-                        onClick={() => onStartRename(department)}
-                        title="Click to rename"
-                      >
-                        {department.name}
-                      </button>
-                      <LastEditedHint info={lastEdited[department.id]} />
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {usageLabel(department._count)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <OperationalRowActions
-                    label={`Actions for ${department.name}`}
-                    icon={busy === `active-${department.id}` ? <Spinner /> : undefined}
-                  >
-                    <DropdownMenuItem
-                      onSelect={() => onToggleActive(department)}
-                      disabled={busy === `active-${department.id}`}
-                      variant={department.active ? "destructive" : "default"}
-                    >
-                      {department.active ? <PowerOff className="size-4" /> : <Power className="size-4" />}
-                      {department.active ? "Deactivate" : "Reactivate"}
-                    </DropdownMenuItem>
-                  </OperationalRowActions>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        departments.map((department) => (
+          <div key={department.id} className="flex items-center gap-3 px-4 py-2.5">
+            <div className={cn("min-w-0 flex-1", muted && "opacity-70")}>
+              {renamingId === department.id ? (
+                <Input
+                  aria-label={`Rename ${department.name}`}
+                  value={renameValue}
+                  onChange={(e) => onRenameValueChange(e.target.value)}
+                  onBlur={() => onCommitRename(department)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onCommitRename(department);
+                    if (e.key === "Escape") {
+                      onRenameValueChange(department.name);
+                      onCancelRename();
+                    }
+                  }}
+                  disabled={busy === `rename-${department.id}`}
+                  autoFocus
+                  className="h-9 max-w-[280px]"
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="text-left text-sm font-bold text-foreground hover:text-[var(--wi-red)] transition-colors"
+                  onClick={() => onStartRename(department)}
+                  title="Click to rename"
+                >
+                  {department.name}
+                </button>
+              )}
+              <p className="m-0 mt-0.5 text-[13px] text-muted-foreground">
+                {usageLabel(department._count)}
+                {lastEdited[department.id] ? <> · <LastEditedHint info={lastEdited[department.id]} className="text-[13px]" /></> : null}
+              </p>
+            </div>
+            <OperationalRowActions
+              label={`Actions for ${department.name}`}
+              icon={busy === `active-${department.id}` ? <Spinner /> : undefined}
+            >
+              <DropdownMenuItem onSelect={() => onStartRename(department)}>
+                <Pencil className="size-4" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => onToggleActive(department)}
+                disabled={busy === `active-${department.id}`}
+                variant={department.active ? "destructive" : "default"}
+              >
+                {department.active ? <PowerOff className="size-4" /> : <Power className="size-4" />}
+                {department.active ? "Deactivate" : "Reactivate"}
+              </DropdownMenuItem>
+            </OperationalRowActions>
+          </div>
+        ))
       )}
-    </Card>
+    </SettingsGroup>
   );
 }

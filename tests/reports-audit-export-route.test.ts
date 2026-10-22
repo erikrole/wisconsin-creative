@@ -104,13 +104,14 @@ describe("audit report CSV export route", () => {
       "2026-06-01T00:00:00.000Z",
       null,
       null,
+      null,
     );
     expect(getAuditReportExport).not.toHaveBeenCalled();
   });
 
   it("exports all matching audit report rows as bounded CSV", async () => {
     const res = await getAuditReportRoute(
-      authedGet("/api/reports/audit?format=csv&startDate=2026-06-01T00:00:00.000Z&endDate=2026-06-02T23:59:59.999Z&action=asset_updated"),
+      authedGet("/api/reports/audit?format=csv&startDate=2026-06-01T00:00:00.000Z&endDate=2026-06-02T23:59:59.999Z&action=asset_updated&entityType=asset"),
       { params: Promise.resolve({}) },
     );
     const body = await res.text();
@@ -124,6 +125,7 @@ describe("audit report CSV export route", () => {
       "2026-06-01T00:00:00.000Z",
       "2026-06-02T23:59:59.999Z",
       "asset_updated",
+      "asset",
     );
     expect(body).toContain("Timestamp,Actor,Action,Entity Type,Entity ID");
     expect(body).toContain("2026-06-02T12:00:00.000Z,Creative Admin,asset_updated,Asset,asset-1");

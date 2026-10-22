@@ -3,6 +3,7 @@ import {
   applyWorkingScheduleCommand,
   reconcileWorkingAssignmentSources,
   summarizeWorkingScheduleChanges,
+  workingScheduleCommandSchema,
   workingSchedulePayloadSchema,
   type WorkingSchedulePayload,
 } from "@/lib/schedule-working-copy";
@@ -31,6 +32,53 @@ function payload(overrides: Partial<WorkingSchedulePayload> = {}): WorkingSchedu
 }
 
 describe("working schedule commands", () => {
+  it("sets crew size for several areas in one command, reusing the single-slot rules", () => {
+    let n = 0;
+    const next = applyWorkingScheduleCommand(payload(), {
+      type: "setSlotCounts",
+      counts: [
+        { area: "VIDEO", workerType: "ST", count: 3 },
+        { area: "PHOTO", workerType: "FT", count: 1 },
+      ],
+    }, () => `new-${n++}`);
+
+    const video = next.slots.filter((slot) => slot.area === "VIDEO" && slot.workerType === "ST");
+    expect(video).toHaveLength(3);
+    // New Student slots inherit the peer's call window, like a single add.
+    expect(video.every((slot) => slot.callStartsAt === "2026-10-06T17:00:00.000Z")).toBe(true);
+    const photo = next.slots.filter((slot) => slot.area === "PHOTO");
+    expect(photo).toMatchObject([{ workerType: "FT", callStartsAt: null }]);
+  });
+
+  it("lowers crew size only through open, never-assigned slots", () => {
+    const filled = payload({
+      slots: [
+        { ...payload().slots[0]!, key: "a", assignmentHistoryCount: 1 },
+        { ...payload().slots[0]!, key: "b" },
+      ],
+    });
+    const lowered = applyWorkingScheduleCommand(filled, {
+      type: "setSlotCounts",
+      counts: [{ area: "VIDEO", workerType: "ST", count: 1 }],
+    }, () => "x");
+    expect(lowered.slots.map((slot) => slot.key)).toEqual(["a"]);
+    expect(() => applyWorkingScheduleCommand(filled, {
+      type: "setSlotCounts",
+      counts: [{ area: "VIDEO", workerType: "ST", count: 0 }],
+    }, () => "x")).toThrow("UNASSIGN_BEFORE_REDUCING");
+  });
+
+  it("rejects a crew-size command that names an area and class twice", () => {
+    const parsed = workingScheduleCommandSchema.safeParse({
+      type: "setSlotCounts",
+      counts: [
+        { area: "VIDEO", workerType: "ST", count: 2 },
+        { area: "VIDEO", workerType: "ST", count: 3 },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("reconnects a same-person staged assignment to its live row", () => {
     const staged = payload({
       slots: [{

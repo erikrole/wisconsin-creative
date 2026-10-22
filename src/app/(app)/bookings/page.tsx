@@ -356,19 +356,19 @@ export default function BookingsPage() {
           <TabsList className="min-w-0 flex-1 overflow-x-auto scrollbar-hide" aria-label="Booking type">
             <TabsTrigger
               value="all"
-              className="relative shrink-0 gap-1.5 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--wi-red)] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
+              className="relative shrink-0 gap-1.5 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--accent,var(--wi-red))] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
             >
               <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>All</span>
             </TabsTrigger>
             <TabsTrigger
               value="checkouts"
-              className="relative shrink-0 gap-1.5 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--wi-red)] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
+              className="relative shrink-0 gap-1.5 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--accent,var(--wi-red))] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
             >
               <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>Checkouts</span>
             </TabsTrigger>
             <TabsTrigger
               value="reservations"
-              className="relative shrink-0 gap-1.5 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--wi-red)] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
+              className="relative shrink-0 gap-1.5 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--accent,var(--wi-red))] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
             >
               <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>Reservations</span>
             </TabsTrigger>

@@ -8,18 +8,15 @@ import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { formatDateTime } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, classifyError, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import StatusIndicator from "@/components/ui/status-indicator";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
-import { RefreshCw, Trash2, Power, PowerOff } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Power, PowerOff } from "lucide-react";
 import {
   calendarSourceHealthErrorFromSync,
   calendarSourceSyncToast,
@@ -268,204 +265,189 @@ export default function CalendarSourcesPage() {
     return <StatusIndicator state="active" label={label} size="sm" />;
   }
 
+  function cancelAdd() {
+    setShowAdd(false);
+    setNewName("");
+    setNewUrl("");
+    setTestResult(null);
+  }
+
   return (
     <SettingsPageShell
       href="/settings/calendar-sources"
-      description="ICS calendar feeds for event sync. Automatic sync runs daily in morning refresh."
-      mainClassName="flex flex-col gap-4"
+      description="Calendar feeds that bring games and events into Schedule. They sync every morning; use Sync now when a change can't wait."
+      mainClassName="flex flex-col gap-7"
       actions={
         !showAdd ? (
           <Button className="h-10" onClick={() => setShowAdd(true)}>
-            Add source
+            <Plus className="size-4 mr-1.5" />
+            Add calendar
           </Button>
         ) : undefined
       }
     >
-
-        <Alert>
-          <RefreshCw className="size-4" />
-          <AlertDescription>
-            Automatic sync runs daily in morning refresh. Use Sync now for schedule changes that cannot wait for the next run.
-          </AlertDescription>
-        </Alert>
-
-        {showAdd && (
-          <Card className="p-4 mb-4">
-            <form onSubmit={handleAdd}>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="calendar-source-name">Name</Label>
-                  <Input
-                    id="calendar-source-name"
-                    name="calendarSourceName"
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="e.g. UW Badgers Football"
-                    required
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="calendar-source-url">ICS URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="calendar-source-url"
-                      name="calendarSourceUrl"
-                      type="url"
-                      value={newUrl}
-                      onChange={(e) => { setNewUrl(e.target.value); setTestResult(null); }}
-                      placeholder="https://example.com/calendar.ics"
-                      required
-                      className="flex-1"
-                    />
-                    <Button className="h-10" type="button" variant="outline" onClick={handleTest} disabled={testing || !newUrl.trim()}>
-                      {testing ? "Testing…" : "Test"}
-                    </Button>
-                  </div>
-                  {testResult && (
-                    <div
-                      className={`mt-1 rounded-md border p-2.5 text-xs ${testResult.ok ? "border-[var(--green)]/30 bg-[var(--green-bg)]" : "border-destructive/40 bg-destructive/5"}`}
-                    >
-                      {testResult.ok ? (
-                        <>
-                          <div className="font-medium text-foreground">
-                            ✓ Reachable — {testResult.eventCount} event{testResult.eventCount === 1 ? "" : "s"} in feed ({Math.round(testResult.byteSize / 1024)} KB)
-                          </div>
-                          {testResult.sampleSummaries.length > 0 && (
-                            <ul className="mt-1.5 list-disc pl-4 flex flex-col gap-0.5 text-muted-foreground">
-                              {testResult.sampleSummaries.slice(0, 3).map((s, i) => (
-                                <li key={i}>
-                                  <TruncatedText text={s} />
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </>
-                      ) : (
-                        <div className="font-medium text-destructive">
-                          ✗ {testResult.error ?? "Probe failed"}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+      {showAdd && (
+        <form onSubmit={handleAdd}>
+          <SettingsGroup title="New calendar">
+            <SettingsRow label="Name" htmlFor="calendar-source-name" description="Shown on events that come from this feed.">
+              <Input
+                id="calendar-source-name"
+                name="calendarSourceName"
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. UW Badgers Football"
+                required
+              />
+            </SettingsRow>
+            <SettingsRow
+              stacked
+              label="Calendar link"
+              htmlFor="calendar-source-url"
+              description="The .ics address. Test it to see a few events before adding."
+            >
+              <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
-                  <Button className="h-10" type="submit" disabled={addBusy}>
-                    {addBusy ? "Adding..." : "Add"}
-                  </Button>
-                  <Button className="h-10" type="button" variant="outline" onClick={() => { setShowAdd(false); setNewName(""); setNewUrl(""); setTestResult(null); }}>
-                    Cancel
+                  <Input
+                    id="calendar-source-url"
+                    name="calendarSourceUrl"
+                    type="url"
+                    value={newUrl}
+                    onChange={(e) => { setNewUrl(e.target.value); setTestResult(null); }}
+                    placeholder="https://example.com/calendar.ics"
+                    required
+                    className="flex-1"
+                  />
+                  <Button className="h-10" type="button" variant="outline" onClick={handleTest} disabled={testing || !newUrl.trim()}>
+                    {testing ? "Testing…" : "Test"}
                   </Button>
                 </div>
-              </div>
-            </form>
-          </Card>
-        )}
-
-        {loading ? (
-          <Card className="p-10">
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 3 }, (_, i) => (
-                <div key={i} className="flex items-center justify-between py-3">
-                  <div className="flex flex-col gap-1.5">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-56" />
+                {testResult && (
+                  <div
+                    role="status"
+                    className={`rounded-lg border px-3 py-2.5 text-[13px] ${testResult.ok ? "border-[var(--green)]/30 bg-[var(--green-bg)]" : "border-destructive/40 bg-destructive/5"}`}
+                  >
+                    {testResult.ok ? (
+                      <>
+                        <div className="font-bold text-foreground">
+                          Found {testResult.eventCount} event{testResult.eventCount === 1 ? "" : "s"} ({Math.round(testResult.byteSize / 1024)} KB)
+                        </div>
+                        {testResult.sampleSummaries.length > 0 && (
+                          <ul className="mt-1 flex list-disc flex-col gap-0.5 pl-4 text-muted-foreground">
+                            {testResult.sampleSummaries.slice(0, 3).map((s, i) => (
+                              <li key={i}>
+                                <TruncatedText text={s} />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    ) : (
+                      <div className="font-bold text-destructive">
+                        {testResult.error ?? "Couldn't read that calendar"}
+                      </div>
+                    )}
                   </div>
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                </div>
-              ))}
-            </div>
-          </Card>
-        ) : hasInitialLoadError ? (
-          <Alert variant="destructive">
-            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>Calendar sources could not load. Existing feeds may still be syncing, but this page cannot show them yet.</span>
-              <Button className="h-10" type="button" variant="outline" onClick={reload}>
-                Retry sources
+                )}
+              </div>
+            </SettingsRow>
+            <div className="flex justify-end gap-2 bg-muted/40 px-4 py-3">
+              <Button type="button" variant="ghost" onClick={cancelAdd} disabled={addBusy}>
+                Cancel
               </Button>
-            </AlertDescription>
-          </Alert>
-        ) : sources.length === 0 ? (
-          <Card>
-            <EmptyState
-              inline
-              icon="calendar"
-              title="No calendar sources configured"
-              description="Add an ICS feed to start syncing events for shift scheduling."
-            />
-          </Card>
-        ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Health</TableHead>
-                  <TableHead className="hidden md:table-cell">Events</TableHead>
-                  <TableHead className="hidden md:table-cell">Last synced</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sources.map((source) => (
-                  <TableRow key={source.id}>
-                    <TableCell>
-                      <div className="font-semibold">{source.name}</div>
-                      <div className="text-xs text-muted-foreground break-all max-w-[300px]">
-                        {source.url}
-                      </div>
-                    </TableCell>
-                    <TableCell>{healthBadge(source)}</TableCell>
-                    <TableCell className="hidden md:table-cell">{source._count?.events ?? 0}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {source.lastFetchedAt ? formatDateTime(source.lastFetchedAt) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <OperationalRowActions
-                          label={`Actions for ${source.name}`}
-                          icon={syncing === source.id || toggling === source.id ? <RefreshCw className="size-4 animate-spin" /> : undefined}
-                        >
-                          <DropdownMenuItem
-                            onSelect={() => handleToggle(source)}
-                            disabled={Boolean(syncing || toggling)}
-                          >
-                            {source.enabled ? <PowerOff className="size-4" /> : <Power className="size-4" />}
-                            {source.enabled ? "Disable source" : "Enable source"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => handleSync(source)}
-                            disabled={Boolean(syncing || toggling) || !source.enabled}
-                          >
-                            <RefreshCw className="size-4" />
-                            {syncing === source.id ? "Syncing" : "Sync now"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => handleDelete(source)}
-                            variant="destructive"
-                          >
-                            <Trash2 className="size-4" />
-                            Delete source
-                          </DropdownMenuItem>
-                        </OperationalRowActions>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {sources.some((s) => s.lastError) && (
-              <div className="px-4 py-3 border-t text-sm">
-                <strong>Errors:</strong>
-                {sources.filter((s) => s.lastError).map((s) => (
-                  <div key={s.id} className="text-destructive mt-1">
-                    {s.name}: {s.lastError}
-                  </div>
-                ))}
+              <Button type="submit" disabled={addBusy || !newName.trim() || !newUrl.trim()}>
+                {addBusy ? "Adding..." : "Add calendar"}
+              </Button>
+            </div>
+          </SettingsGroup>
+        </form>
+      )}
+
+      {loading ? (
+        <SettingsGroup>
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3.5">
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-56" />
               </div>
-            )}
-          </Card>
-        )}
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+          ))}
+        </SettingsGroup>
+      ) : hasInitialLoadError ? (
+        <SettingsGroup>
+          <div className="flex flex-col gap-3 px-4 py-3.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-destructive">Calendar sources could not load. Existing feeds may still be syncing, but this page cannot show them yet.</span>
+            <Button className="h-10" type="button" variant="outline" onClick={reload}>
+              Retry sources
+            </Button>
+          </div>
+        </SettingsGroup>
+      ) : sources.length === 0 ? (
+        <SettingsGroup>
+          <EmptyState
+            inline
+            icon="calendar"
+            title="No calendar sources configured"
+            description="Add a calendar feed to start bringing events into Schedule."
+          />
+        </SettingsGroup>
+      ) : (
+        <SettingsGroup>
+          {sources.map((source) => {
+            const events = source._count?.events ?? 0;
+            return (
+              <div key={source.id} className={`flex items-start gap-3 px-4 py-3.5 ${source.enabled ? "" : "bg-muted/20"}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <span className="text-sm font-bold text-foreground">{source.name}</span>
+                    {healthBadge(source)}
+                  </div>
+                  <p className="m-0 mt-0.5 text-[13px] text-muted-foreground">
+                    {events} event{events === 1 ? "" : "s"}
+                    {" · "}
+                    {source.lastFetchedAt ? `Synced ${formatDateTime(source.lastFetchedAt)}` : "Not synced yet"}
+                  </p>
+                  <p className="m-0 mt-0.5 truncate text-xs text-muted-foreground/80" title={source.url}>
+                    {source.url}
+                  </p>
+                  {source.lastError ? (
+                    <p className="m-0 mt-1.5 text-[13px] text-destructive">{source.lastError}</p>
+                  ) : null}
+                </div>
+                <OperationalRowActions
+                  label={`Actions for ${source.name}`}
+                  icon={syncing === source.id || toggling === source.id ? <RefreshCw className="size-4 animate-spin" /> : undefined}
+                >
+                  <DropdownMenuItem
+                    onSelect={() => handleSync(source)}
+                    disabled={Boolean(syncing || toggling) || !source.enabled}
+                  >
+                    <RefreshCw className="size-4" />
+                    {syncing === source.id ? "Syncing" : "Sync now"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => handleToggle(source)}
+                    disabled={Boolean(syncing || toggling)}
+                  >
+                    {source.enabled ? <PowerOff className="size-4" /> : <Power className="size-4" />}
+                    {source.enabled ? "Disable source" : "Enable source"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => handleDelete(source)}
+                    variant="destructive"
+                  >
+                    <Trash2 className="size-4" />
+                    Delete source
+                  </DropdownMenuItem>
+                </OperationalRowActions>
+              </div>
+            );
+          })}
+        </SettingsGroup>
+      )}
     </SettingsPageShell>
   );
 }

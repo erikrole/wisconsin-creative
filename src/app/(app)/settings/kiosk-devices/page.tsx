@@ -5,11 +5,10 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import StatusIndicator from "@/components/ui/status-indicator";
@@ -30,10 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertTriangle,
-  CheckCircle2,
-  Circle,
   Copy,
-  Monitor,
   Plus,
   Power,
   PowerOff,
@@ -49,6 +45,7 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { useFetch } from "@/hooks/use-fetch";
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 
 type PendingPickup = {
@@ -390,7 +387,7 @@ export default function KioskDevicesPage() {
     <SettingsPageShell
       href="/settings/kiosk-devices"
       description="Manage iPad kiosk stations for self-serve gear checkout."
-      mainClassName="flex flex-col gap-4"
+      mainClassName="flex flex-col gap-6"
       actions={
         !showAdd ? (
           <Button ref={addKioskRef} onClick={() => setShowAdd(true)} className="min-h-10">
@@ -403,62 +400,48 @@ export default function KioskDevicesPage() {
 
       {/* Add form */}
       {showAdd && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">New Kiosk Device</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <form onSubmit={handleAdd}>
+          <SettingsGroup title="New kiosk">
             {formOptionsError ? (
-              <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-destructive">Locations could not load, so new kiosk devices cannot be assigned yet.</span>
-                  <Button className="h-10" type="button" variant="outline" onClick={reloadFormOptions}>
-                    Retry locations
-                  </Button>
-                </div>
+              <div className="flex flex-col gap-3 px-4 py-3.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-destructive">Locations could not load, so new kiosk devices cannot be assigned yet.</span>
+                <Button className="h-10" type="button" variant="outline" onClick={reloadFormOptions}>
+                  Retry locations
+                </Button>
               </div>
             ) : locations.length === 0 && !formOptionsLoading ? (
-              <div className="mb-4 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-                Add a location before creating kiosk devices.
-              </div>
+              <p className="m-0 px-4 py-3.5 text-sm text-muted-foreground">Add a location before creating kiosks.</p>
             ) : null}
-
-            <form onSubmit={handleAdd} className="flex items-end gap-3">
-              <div className="flex-1 flex flex-col gap-1.5">
-                <Label htmlFor="kiosk-name">Name</Label>
-                <Input
-                  id="kiosk-name"
-                  name="kioskName"
-                  placeholder="e.g. Video Office iPad"
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  disabled={adding}
-                />
-              </div>
-              <div className="flex-1 flex flex-col gap-1.5">
-                <Label htmlFor="kiosk-location">Location</Label>
-                <Select
-                  name="kioskLocationId"
-                  value={addLocationId}
-                  onValueChange={setAddLocationId}
-                  disabled={adding || locationsUnavailable}
-                >
-                  <SelectTrigger id="kiosk-location" disabled={locationsUnavailable}>
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" disabled={adding || locationsUnavailable || !addName.trim() || !addLocationId}>
-                {adding && <Spinner data-icon="inline-start" />}
-                Create
-              </Button>
+            <SettingsRow label="Name" htmlFor="kiosk-name" description="What staff will see, like the room it lives in.">
+              <Input
+                id="kiosk-name"
+                name="kioskName"
+                placeholder="e.g. Video Office iPad"
+                value={addName}
+                onChange={(e) => setAddName(e.target.value)}
+                disabled={adding}
+              />
+            </SettingsRow>
+            <SettingsRow label="Location" htmlFor="kiosk-location">
+              <Select
+                name="kioskLocationId"
+                value={addLocationId}
+                onValueChange={setAddLocationId}
+                disabled={adding || locationsUnavailable}
+              >
+                <SelectTrigger id="kiosk-location" disabled={locationsUnavailable}>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SettingsRow>
+            <div className="flex justify-end gap-2 bg-muted/40 px-4 py-3">
               <Button
                 type="button"
                 variant="ghost"
@@ -471,9 +454,13 @@ export default function KioskDevicesPage() {
               >
                 Cancel
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <Button type="submit" disabled={adding || locationsUnavailable || !addName.trim() || !addLocationId}>
+                {adding && <Spinner data-icon="inline-start" />}
+                Create kiosk
+              </Button>
+            </div>
+          </SettingsGroup>
+        </form>
       )}
 
       {/* Error state */}
@@ -509,169 +496,126 @@ export default function KioskDevicesPage() {
 
       {/* Loading state */}
       {loading && !error && (
-        <div className="flex flex-col gap-3">
+        <SettingsGroup>
           {[1, 2].map((i) => (
-            <Card key={i}>
-              <CardContent className="py-4">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="size-10 rounded" />
-                  <div className="flex-1 flex flex-col gap-2">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              </CardContent>
-            </Card>
+            <div key={i} className="flex items-center gap-4 px-4 py-4">
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="size-9 rounded-md" />
+            </div>
           ))}
-        </div>
+        </SettingsGroup>
       )}
 
       {/* Empty state */}
       {!loading && !error && (devices ?? []).length === 0 && (
-        <Card>
-          <CardContent className="py-0">
-            <EmptyState
-              inline
-              icon="clipboard"
-              title="No kiosk devices yet"
-              description="Add a kiosk device to enable self-serve checkout on an iPad."
-            />
-          </CardContent>
-        </Card>
+        <SettingsGroup>
+          <EmptyState
+            inline
+            icon="clipboard"
+            title="No kiosks yet"
+            description="Add a kiosk to enable self-serve checkout on an iPad."
+          />
+        </SettingsGroup>
       )}
 
       {/* Device list */}
       {!loading && !error && (devices ?? []).length > 0 && (
-        <div className="flex flex-col gap-3">
+        <SettingsGroup>
           {(devices ?? []).map((device) => {
             const health = kioskHealth(device);
+            const pickups = device.pendingPickupCount;
             return (
-              <Card key={device.id} className={cn(!device.active && "opacity-60")}>
-                <CardContent className="py-4 flex flex-col gap-3">
-                  {/* Main row */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex size-10 items-center justify-center rounded bg-muted shrink-0">
-                      <Monitor className="size-5 text-muted-foreground" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium truncate">{device.name}</span>
-                        <StatusIndicator
-                          state={health.state}
-                          label={health.label}
-                          size="sm"
-                          title={health.description}
-                        />
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        <span>{device.location.name}</span>
-                        {device.activated && (
-                          <>
-                            <span>·</span>
-                            <span>Last seen: {formatRelative(device.lastSeenAt)}</span>
-                            {/* Build identity answers "is this iPad on the new
-                                build?" without a database query. Devices on an
-                                older build never report it, so say so plainly
-                                rather than rendering an empty gap. */}
-                            <span>
-                              Build:{" "}
-                              {device.appVersion
-                                ? `${device.appVersion} (${device.appBuild ?? "?"})`
-                                : "Unknown — pre-reporting build"}
-                            </span>
-                            {device.osVersion ? (
-                              <span>
-                                iPadOS {device.osVersion}
-                                {device.deviceModel ? ` · ${device.deviceModel}` : ""}
-                              </span>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="shrink-0">
-                      <OperationalRowActions
-                        label={`Actions for ${device.name}`}
-                        icon={
-                          togglingId === device.id || deletingId === device.id || regeneratingId === device.id
-                            ? <Spinner />
-                            : undefined
-                        }
-                      >
-                        {device.active && (
-                          <DropdownMenuItem
-                            onSelect={() => handleRegenerate(device)}
-                            disabled={regeneratingId === device.id}
-                          >
-                            <RefreshCw className="size-4" />
-                            {device.activated ? "Reset activation code" : "Regenerate code"}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          onSelect={() => handleToggle(device)}
-                          disabled={togglingId === device.id}
-                          variant={device.active ? "destructive" : "default"}
-                        >
-                          {device.active ? <PowerOff className="size-4" /> : <Power className="size-4" />}
-                          {device.active ? "Deactivate kiosk" : "Activate kiosk"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => handleDelete(device)}
-                          disabled={deletingId === device.id}
-                          variant="destructive"
-                        >
-                          <Trash2 className="size-4" />
-                          Delete device
-                        </DropdownMenuItem>
-                      </OperationalRowActions>
-                    </div>
+              <div key={device.id} className={cn("flex items-start gap-3 px-4 py-4", !device.active && "opacity-60")}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="truncate text-sm font-bold">{device.name}</span>
+                    <StatusIndicator state={health.state} label={health.label} size="sm" title={health.description} />
                   </div>
-
-                  {/* Health stats strip — only when activated */}
+                  <p className="m-0 mt-0.5 text-[13px] text-muted-foreground">
+                    {device.location.name}
+                    {device.activated ? ` · Last seen ${formatRelative(device.lastSeenAt)}` : ""}
+                  </p>
                   {device.activated && (
-                    <div className="flex items-center gap-3 px-1 pt-1 border-t">
-                      {/* Pending pickups */}
-                      <button
-                        type="button"
-                        onClick={() => device.pendingPickupCount > 0 && setPickupDialog(device)}
-                        className={cn(
-                          "flex min-h-10 items-center gap-1.5 rounded-md px-3 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          device.pendingPickupCount > 0
-                            ? "text-[var(--orange-text)] hover:bg-[var(--orange-bg)] cursor-pointer"
-                            : "text-muted-foreground cursor-default"
-                        )}
-                        aria-label={
-                          device.pendingPickupCount > 0
-                            ? `View pending pickups for ${device.name}`
-                            : `No pending pickups for ${device.name}`
-                        }
-                        title={device.pendingPickupCount > 0 ? "View and clear pending pickups" : "No pending pickups"}
-                        disabled={device.pendingPickupCount === 0}
-                      >
-                        <ShoppingBag className="size-3.5" />
-                        <span>{device.pendingPickupCount} pending pickup{device.pendingPickupCount !== 1 ? "s" : ""}</span>
-                      </button>
-
-                      <span className="w-px h-3 bg-border" />
-
-                      {/* Open checkouts */}
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 py-1">
-                        {device.openCheckoutCount > 0
-                          ? <CheckCircle2 className="size-3.5 text-[var(--green-text)]" />
-                          : <Circle className="size-3.5" />
-                        }
-                        <span>{device.openCheckoutCount} active checkout{device.openCheckoutCount !== 1 ? "s" : ""}</span>
-                      </div>
-                    </div>
+                    <>
+                      {/* Build identity answers "is this iPad on the new build?" without
+                          a database query. Older builds never report it, so say so plainly. */}
+                      <p className="m-0 mt-0.5 text-xs text-muted-foreground">
+                        {device.appVersion
+                          ? `App ${device.appVersion} (${device.appBuild ?? "?"})`
+                          : "App version unknown (older build)"}
+                        {device.osVersion ? ` · iPadOS ${device.osVersion}` : ""}
+                        {device.deviceModel ? ` · ${device.deviceModel}` : ""}
+                      </p>
+                      <p className="m-0 mt-2 flex flex-wrap items-center gap-x-1 text-[13px]">
+                        <button
+                          type="button"
+                          onClick={() => pickups > 0 && setPickupDialog(device)}
+                          disabled={pickups === 0}
+                          className={cn(
+                            "-mx-1 inline-flex min-h-8 items-center rounded-md px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            pickups > 0
+                              ? "cursor-pointer font-bold text-[var(--orange-text)] hover:bg-[var(--orange-bg)]"
+                              : "cursor-default text-muted-foreground",
+                          )}
+                          aria-label={
+                            pickups > 0
+                              ? `View pending pickups for ${device.name}`
+                              : `No pending pickups for ${device.name}`
+                          }
+                          title={pickups > 0 ? "View and clear pending pickups" : "No pending pickups"}
+                        >
+                          {pickups} pending pickup{pickups !== 1 ? "s" : ""}
+                        </button>
+                        <span className="text-muted-foreground">
+                          · {device.openCheckoutCount} active checkout{device.openCheckoutCount !== 1 ? "s" : ""}
+                        </span>
+                      </p>
+                    </>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+                <div className="shrink-0">
+                  <OperationalRowActions
+                    label={`Actions for ${device.name}`}
+                    icon={
+                      togglingId === device.id || deletingId === device.id || regeneratingId === device.id
+                        ? <Spinner />
+                        : undefined
+                    }
+                  >
+                    {device.active && (
+                      <DropdownMenuItem
+                        onSelect={() => handleRegenerate(device)}
+                        disabled={regeneratingId === device.id}
+                      >
+                        <RefreshCw className="size-4" />
+                        {device.activated ? "Reset activation code" : "Regenerate code"}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      onSelect={() => handleToggle(device)}
+                      disabled={togglingId === device.id}
+                      variant={device.active ? "destructive" : "default"}
+                    >
+                      {device.active ? <PowerOff className="size-4" /> : <Power className="size-4" />}
+                      {device.active ? "Deactivate kiosk" : "Activate kiosk"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => handleDelete(device)}
+                      disabled={deletingId === device.id}
+                      variant="destructive"
+                    >
+                      <Trash2 className="size-4" />
+                      Delete device
+                    </DropdownMenuItem>
+                  </OperationalRowActions>
+                </div>
+              </div>
             );
           })}
-        </div>
+        </SettingsGroup>
       )}
 
       {/* Activation code dialog — shown after creating a device */}

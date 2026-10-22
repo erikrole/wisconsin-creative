@@ -26,10 +26,16 @@ enum KioskConnectionState: String, Equatable, Sendable {
 }
 
 extension KioskDevice {
+    /// Test and simulator devices ("Test iPad", "Sim iPad") stay out of the
+    /// fleet counts, the glance rows, and Critical, matched by a whole word so
+    /// "Testa Hall Kiosk" or "Simmons" still count.
     var isIncludedInMonitoring: Bool {
-        name.trimmingCharacters(in: .whitespacesAndNewlines)
-            .caseInsensitiveCompare("Sim iPad") != .orderedSame
+        let words = name.lowercased()
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+        return !words.contains(where: { Self.testDeviceWords.contains(String($0)) })
     }
+
+    private static let testDeviceWords: Set<String> = ["test", "testing", "sim", "simulator", "demo"]
 
     func connectionState(at now: Date = .now) -> KioskConnectionState {
         guard active, activated else { return .inactive }

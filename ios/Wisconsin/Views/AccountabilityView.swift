@@ -214,9 +214,6 @@ struct AccountabilityView: View {
 
             Section {
                 Text(report.methodology.graceSentence)
-                ForEach(Array(report.notes.enumerated()), id: \.offset) { _, line in
-                    Text(line)
-                }
                 if session.currentUser?.role == "ADMIN" {
                     Text("Export and taking a checkout off this list stay on the website.")
                 }

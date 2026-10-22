@@ -1,0 +1,48 @@
+{
+  "status": "Local fix verified; next distributed build pending",
+  "branch": "codex/schedule-week-selection",
+  "baseCommit": "576058716e17649fb34650a61e000e13caf477ae",
+  "nativeTests": {
+    "passed": 235,
+    "failed": 0,
+    "skipped": 0
+  },
+  "sourceContracts": {
+    "files": 13,
+    "passed": 59,
+    "failed": 0
+  },
+  "builds": [
+    "iOS Simulator Debug",
+    "generic iOS Debug"
+  ],
+  "projectDrift": "passed",
+  "iosPatternDrift": "passed",
+  "auditCoverage": "79/79",
+  "uiTests": {
+    "baselineSparse": "passed",
+    "fixedSparse": "passed",
+    "fixedLongScheduleTodayReturn": "passed"
+  },
+  "regressionNegativeControl": {
+    "failedOnPreFix": true,
+    "failures": [
+      "Expectation failed: tracker.topDay == today\ntracker.topDay \u2192 2026-10-27 00:00:00 +0000\ntoday \u2192 2026-10-20 00:00:00 +0000",
+      "Expectation failed: tracker.topDay == today\ntracker.topDay \u2192 2026-10-27 00:00:00 +0000\ntoday \u2192 2026-10-20 00:00:00 +0000"
+    ]
+  },
+  "captureLogicalViewport": [
+    440,
+    956
+  ],
+  "capturePixelDimensions": [
+    1320,
+    2868
+  ],
+  "captureClockBoundary": "Wall clock advanced between runs. Compared Volleyball times and calendar day were held constant; rolling fromNow events were excluded by the same sport filter. Status bar 9:41 is an override.",
+  "captureSetupRecovery": "Temporary long-list test initially supplied an invalid saved Sport value; corrected to the actual All Sports menu action. Interrupted/invalid-argument runs are excluded from pass counts.",
+  "boundaries": [
+    "Local fixture presentation and navigation; no new authenticated server or physical-device claim.",
+    "Verification was captured before publishing the branch; no archive upload or App Review change is part of this fix."
+  ]
+}

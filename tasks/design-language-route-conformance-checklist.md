@@ -65,14 +65,14 @@ This is a working checklist, not a redesign brief. Use it before future page-spe
 
 ### `/`
 
-- **Header**: pass. `src/app/(app)/page.tsx` uses `PageHeader`.
-- **Toolbar and filters**: route-specific pass. Dashboard filter chips sit in a compact refresh/filter command group because the home surface is a queue, not a searchable table.
+- **Header**: current Home direction uses a semantic greeting header in `_home/HomeView.tsx`, with the date, today's summary and named freshness/refresh controls in the shared `wc-fresh` theme.
+- **Toolbar and layout**: route-specific pass. Home keeps refresh and permitted reservation entry beside the greeting. The original grouped count strip and wider primary column remain. Recent activity fills space below Up next while gear, crew and coverage keep the right rail. Quiet cards have compact inline states; cards retain natural heights.
 - **Rows and actions**: pass. Existing action handlers are role-aware and route through shared booking detail or wizard flows.
-- **Empty, loading, error**: pass. Uses `DashboardSkeleton`, shared `EmptyState`, and cached stat-first rendering.
-- **Targets and focus**: pass. Filter options, saved-view controls, queue footer links, section-title links, collaborator actions, draft actions, event venue toggles, exception links, and row-open surfaces meet the 40px target baseline with visible focus. First-run links use the shared 0.96 press treatment, and overdue nudge icons transition without replaying on initial render.
+- **Empty, loading, error**: local presentation pass. `HomeSkeleton` and per-section slots retain loading, error and Retry behavior. All quiet card states use compact inline content and preserve existing actions.
+- **Targets and focus**: local presentation pass. Summary tiles, row-open surfaces, section links and actions retain the 40px target baseline. Keyboard attention expansion/collapse keeps visible focus; the fixture reminder updates its disabled feedback state.
 - **Status and color**: pass. Pending pickup is documented as orange, not green.
 - **Copy**: pass. Queue labels use operational language such as Due today, Checked out, Reserved, and draft recovery.
-- **Evidence**: `src/app/(app)/page.tsx`, `src/app/(app)/dashboard/`, `tests/dashboard-accessibility.test.ts`; authenticated screenshot `tasks/design-language-proof-dashboard.png` predates the 2026-07-16 interaction-detail pass.
+- **Evidence**: `src/app/(app)/_home/HomeView.tsx`, `tests/home-redesign.test.ts` and `tasks/archive/proofs/dashboard-polish-2026-10-21/review.html`. Balanced-layout fixtures cover all four roles across five states, with column placement, narrow reading-order and overflow checks, plus 1440/1100/1000/390px visual evidence. Authenticated branch-preview and production proof remain pending.
 
 ### `/schedule`
 
