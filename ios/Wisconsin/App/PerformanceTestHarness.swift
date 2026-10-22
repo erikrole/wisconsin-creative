@@ -2594,17 +2594,21 @@ enum UIReviewFixtureAPI {
     }
 
     static var gearPicks: Data {
-        Data(#"""
+        // `GT_GEAR_PICKS=picked` seeds a saved draft so the review bar shows.
+        let submission = ProcessInfo.processInfo.environment["GT_GEAR_PICKS"] == "picked"
+            ? #"{"version":1,"totalCents":9300,"submittedAt":null,"updatedAt":"2026-10-20T15:00:00Z","lines":[{"sku":"BP-1-RED-M","style":"BP-1","colorCode":"RED","size":"M","quantity":1,"unitPriceCents":6500,"lineTotalCents":6500,"itemName":"Pullover hoodie","colorLabel":"Cardinal","category":"Tops"},{"sku":"BP-3-RED-OSFA","style":"BP-3","colorCode":"RED","size":"OSFA","quantity":1,"unitPriceCents":2800,"lineTotalCents":2800,"itemName":"Staff cap","colorLabel":"Cardinal","category":"Accessories"}]}"#
+            : "null"
+        return Data("""
         {"data":{
           "cycle":{"id":"c1","title":"Fall 2026 gear","deadline":"2026-11-15T05:00:00Z","isOpen":true,"launchedAt":"2026-10-01T05:00:00Z"},
           "participant":{"id":"p1","fit":"MENS","allowanceCents":30000},
-          "submission":null,
+          "submission":\(submission),
           "catalog":{"maxQuantity":4,"categories":["Tops","Bottoms","Accessories"],"items":[
             {"style":"BP-1","name":"Pullover hoodie","fit":"MENS","category":"Tops","priceCents":6500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""},{"code":"BLK","label":"Black","swatch":"#111111","image":""}]},
             {"style":"BP-2","name":"Quarter zip","fit":"MENS","category":"Tops","priceCents":7500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]},
             {"style":"BP-3","name":"Staff cap","fit":"MENS","category":"Accessories","priceCents":2800,"sizeLabel":"Size","sizes":["OSFA"],"sizesAreExact":true,"oneSize":true,"defaultSize":"OSFA","kit":{"kind":"CORE_KIT","colorCode":"RED"},"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]}
           ]}
         }}
-        """#.utf8)
+        """.utf8)
     }
 }

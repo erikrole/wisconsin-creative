@@ -354,7 +354,11 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Brand.Space.lg) {
                 blastStack
                 DashboardHero(
-                    name: session.currentUser?.name ?? ""
+                    name: session.currentUser?.name ?? "",
+                    openProfile: {
+                        rememberSceneDestination("profile")
+                        navigationPath.append(ProfileRoute())
+                    }
                 )
                 if vm.error != nil {
                     RefreshFailurePill(message: vm.error ?? "")
@@ -487,17 +491,6 @@ struct HomeView: View {
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        rememberSceneDestination("profile")
-                        navigationPath.append(ProfileRoute())
-                    } label: {
-                        AccountAvatar(size: 32)
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Profile")
-                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showNotifications = true
@@ -656,6 +649,7 @@ struct HomeView: View {
 
 private struct DashboardHero: View {
     let name: String
+    let openProfile: () -> Void
 
     private var firstName: String {
         name.split(separator: " ").first.map(String.init) ?? ""
@@ -689,21 +683,31 @@ private struct DashboardHero: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(displayDate)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.6)
-            Text(accessibilityGreeting)
-                .font(.system(size: 32, weight: .heavy))
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .top, spacing: Brand.Space.sm) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(displayDate)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.6)
+                Text(accessibilityGreeting)
+                    .font(.system(size: 32, weight: .heavy))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(displayDate), \(accessibilityGreeting)")
+            Spacer(minLength: 0)
+            // Your photo (or role-colored initials) lives with your name, not
+            // inside a toolbar button that flattens it to a solid disc.
+            Button(action: openProfile) {
+                AccountAvatar(size: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Profile")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, Brand.Space.xs)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(displayDate), \(accessibilityGreeting)")
     }
 }
 
@@ -760,24 +764,27 @@ private struct StatStrip: View {
                 .foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
             } else {
-                // Tiles pair up two to a row. A tile left without a partner (a
-                // lone metric, or the odd one out) spans the row as a compact
-                // number-and-label strip rather than leaving a hole beside it.
-                let rows = dynamicTypeSize.isAccessibilitySize
-                    ? activeItems.map { [$0] }
-                    : stride(from: 0, to: activeItems.count, by: 2).map {
-                        Array(activeItems[$0..<min($0 + 2, activeItems.count)])
-                    }
-                VStack(spacing: Brand.Space.sm) {
-                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        HStack(spacing: Brand.Space.sm) {
-                            ForEach(row) { item in
-                                StatRow(item: item, isWide: row.count == 1)
-                            }
-                        }
-                    }
+                // A single quiet line of counts under the greeting: red only
+                // for overdue, everything else is plain text. Big colored
+                // tiles made a normal day look like an alarm.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) { summaryItems }
+                    VStack(alignment: .leading, spacing: 4) { summaryItems }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var summaryItems: some View {
+        ForEach(Array(activeItems.enumerated()), id: \.element.id) { index, item in
+            if index > 0 {
+                Text("·")
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            StatSummaryButton(item: item)
         }
     }
 }
@@ -791,51 +798,23 @@ private struct StatItem: Identifiable {
     let action: () -> Void
 }
 
-private struct StatRow: View {
+private struct StatSummaryButton: View {
     let item: StatItem
-    var isWide = false
-
-    private var valueText: some View {
-        Text("\(item.value)")
-            .font(.system(size: 34, weight: .heavy))
-            .monospacedDigit()
-            .foregroundStyle(Color.statusText(item.tone))
-            .contentTransition(.numericText())
-    }
-
-    private var labelText: some View {
-        Text(item.label)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-    }
     @State private var hapticTrigger = false
 
     var body: some View {
-        Button(action: {
+        Button {
             hapticTrigger.toggle()
             item.action()
-        }) {
-            // The number is the point of the tile: no icon square, no chevron.
-            Group {
-                if isWide {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        valueText
-                        labelText
-                        Spacer(minLength: 0)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 2) {
-                        valueText
-                        labelText
-                    }
-                }
-            }
-            .flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)
-            .contentShape(Rectangle())
+        } label: {
+            Text("\(item.value) \(item.label.lowercased())")
+                .font(.subheadline.weight(item.tone == .red ? .semibold : .regular))
+                .foregroundStyle(item.tone == .red ? AnyShapeStyle(Color.statusText(.red)) : AnyShapeStyle(.secondary))
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
+        .sensoryFeedback(.selection, trigger: hapticTrigger)
         .accessibilityLabel("\(item.label): \(item.value)")
         .accessibilityHint("Opens related work")
     }
