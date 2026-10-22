@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "3cf4a1f302b3a1e1276dbb50394daf7aed86ad20",
+  "sourcePatchSha256": "b1b1924e86855951e375530cca12e4cbd52c2a02ef0550dbe9f51be97307e4dd",
+  "settings": {
+    "device": "Chrome headless",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "fixture": "FB FX3 1 plus Sony NP-FZ100 units 37-39; development device toolbar hidden; unit-number field retains focus",
+    "role": "STAFF",
+    "route": "/dev-labels?device-proof=1",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-22T15:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "26ed6dd92c4faa07deda68522ed27d486b31840f41dc0da29169e078b8ee4709",
+  "dimensions": [
+    1440,
+    1100
+  ]
+}

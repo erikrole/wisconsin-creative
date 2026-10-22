@@ -1,0 +1,16 @@
+[
+  {
+    "case": "Empty packets and phase notification precede completion",
+    "outTransfers": 203,
+    "finalCommands": 1,
+    "state": "completed",
+    "closed": true
+  },
+  {
+    "case": "Short raster write stops without retry",
+    "outTransfers": 9,
+    "finalCommands": 0,
+    "state": "started",
+    "closed": true
+  }
+]

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brother direct connection check</title>
+<style>
+body{font:16px -apple-system,BlinkMacSystemFont,sans-serif;background:#f4f4f5;color:#18181b;max-width:620px;margin:10vh auto;padding:24px}main{background:white;border:1px solid #ddd;border-radius:16px;padding:32px}h1{font-size:26px;line-height:1.2}p{line-height:1.5;color:#52525b}button{font:inherit;min-height:44px;padding:10px 18px;border:0;border-radius:8px;background:#b60022;color:white;cursor:pointer}button:disabled{opacity:.5;cursor:default}pre{white-space:pre-wrap;word-break:break-word;font:13px ui-monospace,monospace;background:#f4f4f5;padding:16px;border-radius:8px;min-height:80px}#close{background:#444;margin-left:8px}
+</style>
+<main><h1>Brother direct print test</h1><p>One production item label, sent directly to the PT-D610BT over USB. Verified Gotham XNarrow Bold, slightly larger · Medium Small QR · 12 mm tape.</p><img src="/label-proof.png?v=4" alt="Centered FB, FX3, 1 and its QR code" style="display:block;width:388px;max-width:100%;image-rendering:pixelated;margin:24px auto"><button id="usb">Connect USB Brother</button><button id="query" disabled>Read USB status</button><p><button id="print-one" disabled>Print 1 label · FB FX3 1</button></p><p><button id="connect">Connect Bluetooth Brother</button><button id="close" disabled>Disconnect</button></p><pre id="status" role="status">Ready. Choose only the Brother PT-D610BT. A print attempt is never automatically repeated.</pre></main>
+<script>
+let port;
+let usbDevice, usbInterface, usbIn, usbOut;
+const status=document.querySelector('#status');
+const connect=document.querySelector('#connect');
+const close=document.querySelector('#close');
+const log=(message)=>status.textContent+='\n'+new Date().toISOString()+' '+message;
+const usb=document.querySelector('#usb');
+const query=document.querySelector('#query');
+usb.disabled=!('usb' in navigator);
+usb.onclick=async()=>{
+  usb.disabled=true;
+  try{
+    const granted=(await navigator.usb.getDevices()).filter(d=>d.vendorId===0x04f9&&d.productId===0x20e1);
+    usbDevice=granted.length===1?granted[0]:await navigator.usb.requestDevice({filters:[{vendorId:0x04f9,productId:0x20e1}]});
+    log('USB selected: '+usbDevice.productName+' (04f9:20e1)');
+    await usbDevice.open();
+    if(!usbDevice.configuration) await usbDevice.selectConfiguration(usbDevice.configurations[0].configurationValue);
+    log('USB interfaces: '+JSON.stringify(usbDevice.configuration.interfaces.map(i=>({number:i.interfaceNumber,alternates:i.alternates.map(a=>({setting:a.alternateSetting,class:a.interfaceClass,endpoints:a.endpoints.map(e=>({number:e.endpointNumber,type:e.type,direction:e.direction,packet:e.packetSize}))}))}))));
+    const target=usbDevice.configuration.interfaces.flatMap(i=>i.alternates.map(a=>({i,a}))).find(({a})=>a.endpoints.some(e=>e.type==='bulk'&&e.direction==='in')&&a.endpoints.some(e=>e.type==='bulk'&&e.direction==='out'));
+    if(!target) throw new Error('No bidirectional bulk interface.');
+    usbInterface=target.i.interfaceNumber;
+    await usbDevice.claimInterface(usbInterface);
+    if(target.i.alternate.alternateSetting!==target.a.alternateSetting) await usbDevice.selectAlternateInterface(usbInterface,target.a.alternateSetting);
+    usbIn=target.a.endpoints.find(e=>e.type==='bulk'&&e.direction==='in').endpointNumber;
+    usbOut=target.a.endpoints.find(e=>e.type==='bulk'&&e.direction==='out').endpointNumber;
+    log('USB OPEN: interface '+usbInterface+', IN '+usbIn+', OUT '+usbOut+'. Zero printer-command bytes written.');
+    query.disabled=false;close.disabled=false;window.dispatchEvent(new Event('printer-usb-open'));
+  }catch(error){log(error.name+': '+error.message);if(usbDevice?.opened)await usbDevice.close().catch(()=>{});usb.disabled=false;}
+};
+query.onclick=async()=>{
+  query.disabled=true;
+  let timer;
+  try{
+    const result=await usbDevice.transferOut(usbOut,new Uint8Array([0x1b,0x69,0x53]));
+    if(result.status!=='ok'||result.bytesWritten!==3)throw new Error('Status request did not complete.');
+    log('Sent status request only: 1b 69 53');
+    const bytes=[];
+    await Promise.race([(async()=>{while(bytes.length<32){const read=await usbDevice.transferIn(usbIn,64);if(read.status!=='ok'||!read.data?.byteLength)throw new Error('Empty or failed USB status read.');bytes.push(...new Uint8Array(read.data.buffer,read.data.byteOffset,read.data.byteLength));}})(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Status response timed out after 8 seconds.')),8000);})]);
+    if(bytes.length!==32||bytes[0]!==0x80||bytes[1]!==0x20||bytes[2]!==0x42)throw new Error('Unrecognized status: '+bytes.map(n=>n.toString(16).padStart(2,'0')).join(' '));
+    log('STATUS: '+JSON.stringify({length:bytes.length,error1:bytes[8],error2:bytes[9],tapeWidthMm:bytes[10],mediaType:bytes[11],statusType:bytes[18],phase:bytes[19],tapeColor:bytes[24],textColor:bytes[25]}));
+    log('Raw status: '+bytes.map(n=>n.toString(16).padStart(2,'0')).join(' '));
+    query.disabled=false;
+  }catch(error){log(error.name+': '+error.message);if(usbDevice?.opened)await usbDevice.close().catch(()=>{});usb.disabled=false;}
+  finally{clearTimeout(timer);}
+};
+connect.disabled=!('serial' in navigator);
+if(connect.disabled)log('Web Serial is unavailable in this browser.');
+connect.onclick=async()=>{
+  connect.disabled=true;
+  try{
+    const granted=(await navigator.serial.getPorts()).filter(p=>p.getInfo().bluetoothServiceClassId==='00001101-0000-1000-8000-00805f9b34fb');
+    port=granted.length===1?granted[0]:await navigator.serial.requestPort({filters:[{bluetoothServiceClassId:0x1101}]});
+    log('Selected: '+JSON.stringify(port.getInfo()));
+    await port.open({baudRate:115200,dataBits:8,stopBits:1,parity:'none',flowControl:'none'});
+    log('OPEN: readable='+Boolean(port.readable)+', writable='+Boolean(port.writable)+'. Zero bytes written.');
+    close.disabled=false;
+  }catch(error){log(error.name+': '+error.message);connect.disabled=false;}
+};
+close.onclick=async()=>{
+  try{if(port?.readable)await port.close();if(usbDevice?.opened){await usbDevice.releaseInterface(usbInterface);await usbDevice.close();}log('CLOSED. No print commands sent.');close.disabled=true;query.disabled=true;connect.disabled=false;usb.disabled=false;}
+  catch(error){log(error.name+': '+error.message);}
+};
+</script>
+<script src="/print.js"></script>
+</html>

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "3cf4a1f302b3a1e1276dbb50394daf7aed86ad20",
+  "sourcePatchSha256": "8c90f06619edf0577e9578abae3f98c7ba8e5fc656310b69e9b988e5aede6281",
+  "settings": {
+    "device": "Codex in-app browser",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "fixture": "dev-labels / one FB A7 IV 1 copy / empty history",
+    "role": "STAFF",
+    "route": "/dev-labels",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en / host default; no localized dates displayed",
+    "timezone": "host default; no timestamps displayed",
+    "clock": "no clock-dependent content displayed",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "9cbff96f06e3d48d606d0bea65d640f0cf913e87834a81c218a26eb9857b1982",
+  "dimensions": [
+    1440,
+    1100
+  ]
+}

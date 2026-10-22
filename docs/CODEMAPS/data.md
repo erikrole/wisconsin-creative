@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 139 | 5 |
+| `User` | 140 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -19,7 +19,7 @@
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
-| `Asset` | 43 | 8 |
+| `Asset` | 44 | 8 |
 | `FirmwareWatchTarget` | 17 | 3 |
 | `Booking` | 44 | 15 |
 | `BookingAccountabilityExclusion` | 11 | 4 |
@@ -37,6 +37,7 @@
 | `ScanSession` | 9 | 2 |
 | `OverrideEvent` | 8 | 4 |
 | `AuditLog` | 9 | 4 |
+| `LabelPrintJob` | 11 | 4 |
 | `ProductEvent` | 12 | 6 |
 | `UserAppInstallation` | 15 | 4 |
 | `SignatureCollection` | 21 | 4 |

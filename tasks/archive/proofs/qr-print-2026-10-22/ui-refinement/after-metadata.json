@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "3cf4a1f302b3a1e1276dbb50394daf7aed86ad20",
+  "sourcePatchSha256": "7d64520c9ab9246363380a887c4aea459516d7ad9016570b6a0a88923ff5f455",
+  "settings": {
+    "device": "Headless Chrome via Playwright",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "fixture": "dev-labels: FB FX3 1 and FZ100 units 37-39; 4 labels; device-proof=1",
+    "role": "STAFF fixture",
+    "route": "/dev-labels?device-proof=1",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-22T15:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

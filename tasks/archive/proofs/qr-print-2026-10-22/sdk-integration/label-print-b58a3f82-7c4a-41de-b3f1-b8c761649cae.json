@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "transport": "sdk-chain-v1",
+  "id": "b58a3f82-7c4a-41de-b3f1-b8c761649cae",
+  "browserId": "8d29cb7c-8677-42d9-9cbc-1b6d6c03c865",
+  "actor": {
+    "id": "dev",
+    "name": "Dev Staff"
+  },
+  "createdAt": "2026-10-22T21:08:58.678Z",
+  "updatedAt": "2026-10-22T21:09:11.756Z",
+  "revision": 6,
+  "labels": [
+    {
+      "copyId": "device-check-0:0:0",
+      "row": {
+        "kind": "body",
+        "dept": "TEST",
+        "model": "CHAIN",
+        "number": "A",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-0"
+    },
+    {
+      "copyId": "device-check-1:0:0",
+      "row": {
+        "kind": "body",
+        "dept": "TEST",
+        "model": "CHAIN",
+        "number": "B",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-1"
+    },
+    {
+      "copyId": "device-check-2:0:0",
+      "row": {
+        "kind": "body",
+        "dept": "TEST",
+        "model": "CHAIN",
+        "number": "C",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-2"
+    }
+  ],
+  "outcomes": [
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:08:58.686Z",
+      "recordedAt": "2026-10-22T21:09:11.756Z",
+      "evidence": "printer"
+    },
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:09:02.511Z",
+      "recordedAt": "2026-10-22T21:09:11.756Z",
+      "evidence": "printer"
+    },
+    {
+      "status": "pending"
+    }
+  ],
+  "activeIndex": null,
+  "state": "stopped",
+  "finish": {
+    "kind": "stop-feed",
+    "state": "completed",
+    "attemptedAt": "2026-10-22T21:09:06.002Z",
+    "recordedAt": "2026-10-22T21:09:11.756Z"
+  }
+}

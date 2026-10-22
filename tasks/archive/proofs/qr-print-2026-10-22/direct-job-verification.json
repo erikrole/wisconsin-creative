@@ -1,0 +1,35 @@
+{
+  "id": "fb-fx3-1-usb-proof-3-gotham-outlines",
+  "tag": "FB FX3 1",
+  "qr": "c62a82d7",
+  "vendorId": 1273,
+  "productId": 8417,
+  "tapeWidthMm": 12,
+  "dpi": 180,
+  "width": 194,
+  "height": 76,
+  "cellDots": 3,
+  "qrVersion": 1,
+  "qrErrorCorrection": "M",
+  "qrCoreDots": 63,
+  "textFont": "Gotham XNarrow Bold",
+  "verifiedPostScriptName": "GothamXNarrow-Bold",
+  "textFrame": {
+    "x": 43,
+    "y": 8,
+    "width": 26,
+    "height": 60
+  },
+  "qrFrame": {
+    "x": 87,
+    "y": 6,
+    "width": 63,
+    "height": 63
+  },
+  "inkOuterMargins": {
+    "left": 43,
+    "right": 44
+  },
+  "decodedQr": "c62a82d7",
+  "rasterRoundTrip": true
+}

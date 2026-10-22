@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 /Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative
+
+ ✓ tests/label-print-jobs.postgres.test.ts (9 tests) 137ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  13:09:44
+   Duration  615ms (transform 50ms, setup 10ms, collect 319ms, tests 137ms, environment 0ms, prepare 33ms)
+

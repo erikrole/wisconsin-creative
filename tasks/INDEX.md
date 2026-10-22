@@ -39,6 +39,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `qr-print-audit-plan-2026-10-22.md` — Approved Gotham/Medium Small layout, USB helper, larger previews, durable operator history and safe remaining-only recovery; SDK chain default physically accepted for six mixed layouts/four scans and Stop/reload/C-only recovery, one initial blank/no between-label blanks, exact packet proof and failure simulation; authenticated preview, application migration and release remain pending.
+
 - `performance-web-ios-neon-2026-10-20.md` — browser cache/request lifecycle, native decode/persistence/network work, and production Neon diagnostics; tracks rollout and physical-device energy proof separately.
 
 - `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.

@@ -11,7 +11,7 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 322 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 693 |
+| `src/lib/services/availability.ts` | 700 |
 | `src/lib/services/blast-targeting.ts` | 166 |
 | `src/lib/services/blasts.ts` | 359 |
 | `src/lib/services/booking-custody.ts` | 82 |
@@ -21,7 +21,7 @@
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 738 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle.ts` | 3386 |
+| `src/lib/services/bookings-lifecycle.ts` | 3389 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/budget.ts` | 950 |
@@ -70,6 +70,7 @@
 | `src/lib/services/kit-list-availability.ts` | 35 |
 | `src/lib/services/kit-member-availability.ts` | 97 |
 | `src/lib/services/kits.ts` | 836 |
+| `src/lib/services/label-print-jobs.ts` | 89 |
 | `src/lib/services/licenses.ts` | 684 |
 | `src/lib/services/live-activities.ts` | 630 |
 | `src/lib/services/manual-event-time.ts` | 304 |
@@ -142,12 +143,12 @@
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 454 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
-| `src/lib/availability-copy.ts` | 343 |
+| `src/lib/availability-copy.ts` | 345 |
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 158 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 170 |
-| `src/lib/booking-action-policy.ts` | 215 |
+| `src/lib/booking-action-policy.ts` | 216 |
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
@@ -155,7 +156,10 @@
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 229 |
-| `src/lib/brother-label-csv.ts` | 134 |
+| `src/lib/brother-chain.ts` | 71 |
+| `src/lib/brother-label-csv.ts` | 185 |
+| `src/lib/brother-label-render.ts` | 133 |
+| `src/lib/brother-usb.ts` | 180 |
 | `src/lib/bulk-batteries.ts` | 49 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
@@ -171,8 +175,8 @@
 | `src/lib/claim-review-workflow.ts` | 48 |
 | `src/lib/client-enums.ts` | 85 |
 | `src/lib/clipboard.ts` | 19 |
-| `src/lib/collaborator-access.ts` | 164 |
-| `src/lib/collaborator-gear.ts` | 177 |
+| `src/lib/collaborator-access.ts` | 175 |
+| `src/lib/collaborator-gear.ts` | 181 |
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 71 |
 | `src/lib/companion-store.ts` | 375 |
@@ -213,6 +217,10 @@
 | `src/lib/item-image-draft.ts` | 88 |
 | `src/lib/kiosk-activation.ts` | 8 |
 | `src/lib/kiosk-staff-token.ts` | 79 |
+| `src/lib/label-print-client.ts` | 20 |
+| `src/lib/label-print-controller.ts` | 199 |
+| `src/lib/label-print-job.ts` | 183 |
+| `src/lib/label-print-storage.ts` | 53 |
 | `src/lib/license-dates.ts` | 56 |
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
@@ -228,7 +236,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 274 |
+| `src/lib/permissions.ts` | 279 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -291,6 +299,7 @@
 | `src/lib/shift-constants.ts` | 13 |
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-reminder-workflow.ts` | 26 |
+| `src/lib/shift-trade-actions.ts` | 60 |
 | `src/lib/software-vault-access.ts` | 20 |
 | `src/lib/software-vault-crypto.ts` | 11 |
 | `src/lib/software-vault-validation.ts` | 39 |
@@ -544,6 +553,7 @@
 
 ### `/api/dashboard`
 
+- `/api/dashboard/activity`
 - `/api/dashboard`
 - `/api/dashboard/stats`
 
@@ -669,6 +679,11 @@
 - `/api/kits/[id]/members`
 - `/api/kits/[id]`
 - `/api/kits`
+
+### `/api/labels`
+
+- `/api/labels/print-jobs/[id]`
+- `/api/labels/print-jobs`
 
 ### `/api/licenses`
 

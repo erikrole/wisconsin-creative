@@ -1,0 +1,13 @@
+{
+  "buttons": [
+    {
+      "text": "Camera Bodies.csv1 label",
+      "disabled": false
+    },
+    {
+      "text": "Batteries.csv1 label",
+      "disabled": false
+    }
+  ],
+  "text": "Print sheet\n\n2 labels from 2 lines\n\nClear\nCamera Bodies.lbx\n1 label\nFB A7 IV 1\n6d6623d4\nFB\nA7 IV\n1\n1 label\nBatteries.lbx\n1 label\nSony NP-FZ100 Battery\n1 unit label · 37\n37\nFamily label\nUnit labels\nNot printed · 13\nAll · 49\nPick numbers\n\nNo active unit 999\n\nTemplate\nBatteries.lbx\nNumber-Tag.lbx\n1 label\nCamera Bodies.csv\n1 label\nBatteries.csv\n1 label\n\nOpen the matching template in P-touch Editor (the file button next to each CSV), connect the CSV as its database, then print all records."
+}

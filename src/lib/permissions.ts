@@ -48,6 +48,11 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     edit: ["ADMIN", "STAFF"],
     manage_role: ["ADMIN", "STAFF"],
   },
+  label_print: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    print: ["ADMIN", "STAFF", "STUDENT"],
+    review_others: ["ADMIN", "STAFF"],
+  },
   asset: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     create: ["ADMIN", "STAFF"],

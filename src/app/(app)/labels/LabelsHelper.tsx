@@ -10,6 +10,7 @@ import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { PageHeader } from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import { useLabelCatalog } from "./use-label-catalog";
 import { LabelGenerators, useLabelCart } from "./LabelCart";
@@ -111,7 +112,7 @@ function PickerRow({ item, added, onToggle }: { item: PickerItem; added: boolean
   return (
     <li
       className={cn(
-        "group flex items-center gap-3 px-4 py-2.5 transition-colors",
+        "group flex items-center gap-3 px-4 py-3 transition-colors",
         added ? "bg-[var(--accent-soft)]" : "hover:bg-muted/40",
       )}
     >
@@ -133,7 +134,7 @@ function PickerRow({ item, added, onToggle }: { item: PickerItem; added: boolean
       <Button
         variant={added ? "ghost" : "outline"}
         size="sm"
-        className={cn("h-9 w-[84px] shrink-0", added && "text-[var(--accent)]")}
+        className={cn("h-10 w-[84px] shrink-0", added && "text-[var(--accent)]")}
         onClick={onToggle}
         aria-pressed={added}
         aria-label={added ? `Remove ${item.ariaLabel} from the print sheet` : `Add ${item.ariaLabel} to the print sheet`}
@@ -159,7 +160,8 @@ export default function LabelsHelper() {
   const preselectedItems = searchParams.get("items");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const { cart, hydrated, has, add, remove, update, clear } = useLabelCart();
+  const { data: me } = useCurrentUser();
+  const { cart, hydrated, has, add, remove, update, clear, undo, canUndo, storageError, conflict, reloadSaved, retrySave, hasLegacy, importLegacy } = useLabelCart(me?.id);
   const [didPreselect, setDidPreselect] = useState(false);
 
   const { data: items, loading, error, reload } = useLabelCatalog(search, {
@@ -209,17 +211,21 @@ export default function LabelsHelper() {
   const total = printableCount(sheetRows(cart, unitsBySku));
 
   return (
-    <div className="pb-24 lg:pb-0">
+    <div className="pb-24 xl:pb-0">
       <PageHeader
         title="Print labels"
-        description="Pick gear, choose how many of each, and download a CSV ready for the Brother label printer."
+        description="Choose your gear, check each label, then print over USB."
         className="no-print"
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
         <div className="flex min-w-0 flex-col gap-4">
           <section aria-label="Gear" className="no-print overflow-hidden rounded-[var(--radius)] border border-border bg-card">
-            <div className="flex flex-col gap-3 border-b border-border/70 p-3 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 border-b border-border/70 p-4">
+              <div>
+                <h2 className="text-base">Choose gear</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Find items and families to add to your sheet.</p>
+              </div>
               <DebouncedSearchInput
                 id="labels-search"
                 name="labels-search"
@@ -234,7 +240,7 @@ export default function LabelsHelper() {
                 value={filter}
                 onValueChange={(value) => value && setFilter(value as Filter)}
                 aria-label="Show"
-                className="shrink-0 [&>button]:gap-1.5 [&>button]:text-sm"
+                className="w-full [&>button]:min-h-10 [&>button]:flex-1 [&>button]:gap-1.5 [&>button]:text-sm"
               >
                 <ToggleGroupItem value="all">All</ToggleGroupItem>
                 <ToggleGroupItem value="serialized">
@@ -304,7 +310,7 @@ export default function LabelsHelper() {
                 compact
               />
             ) : (
-              <ul className="max-h-[min(640px,calc(100vh-280px))] divide-y divide-border/50 overflow-y-auto">
+              <ul className="max-h-[min(640px,calc(100dvh-340px))] divide-y divide-border/50 overflow-y-auto">
                 {visible.map((item) => (
                   <PickerRow
                     key={item.id}
@@ -325,12 +331,16 @@ export default function LabelsHelper() {
           onUpdate={update}
           onRemove={remove}
           onClear={clear}
-          className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]"
+          onUndo={undo}
+          canUndo={canUndo}
+          draftIssue={storageError}
+          draftActions={storageError || hasLegacy ? <div className="flex flex-wrap gap-2">{storageError && <><Button variant="outline" size="sm" className="h-10" onClick={retrySave}>{conflict ? "Keep this sheet" : "Retry saving sheet"}</Button>{conflict && <Button variant="outline" size="sm" className="h-10" onClick={reloadSaved}>Use saved sheet</Button>}</>}{hasLegacy && <Button variant="outline" size="sm" className="h-10" onClick={importLegacy}>Add older browser sheet to my sheet</Button>}</div> : undefined}
+          className="xl:sticky xl:top-4 xl:max-h-[calc(100dvh-9rem)]"
         />
       </div>
 
       {cart.length > 0 && (
-        <div className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur xl:hidden">
           <Button asChild className="h-11 w-full justify-between">
             <a href="#print-sheet">
               <span>Review print sheet</span>
