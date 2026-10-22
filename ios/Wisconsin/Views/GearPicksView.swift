@@ -16,6 +16,8 @@ final class GearPicksModel {
     var cycle: GearPickCycle?
     var participant: GearPickParticipant?
     var catalog: GearPickPhoneCatalog?
+    /// Nil until loaded, and nil for good when there is no kit (route absent,\n    /// not launched, not on the list). The card is simply not drawn.
+    var kit: GearMyKit?
     var lines: [GearPickDraftLine] = []
     var baseVersion = 0
     var submittedAt: String?
@@ -70,8 +72,11 @@ final class GearPicksModel {
         defer { if loadID == requestID { isReloading = false } }
         if !hasLoaded { phase = .loading }
         do {
+            async let kitTask: GearMyKit? = try? await APIClient.shared.myGearKit()
             let payload = try await APIClient.shared.myGearPicks()
+            let loadedKit = await kitTask
             guard loadID == requestID, !Task.isCancelled else { return }
+            kit = loadedKit
             apply(payload, replacingDraft: replacingDraft || !isDirty)
             hasLoaded = true
         } catch {
@@ -368,6 +373,11 @@ struct GearPicksView: View {
             } description: {
                 Text("There's no Under Armour gear pick window right now.")
             }
+        case .notOnList where model.kit != nil:
+            List {
+                if let kit = model.kit { GearMyKitSection(kit: kit) }
+            }
+            .listStyle(.insetGrouped)
         case .notOnList:
             ContentUnavailableView {
                 Label("You're not on this year's pick list", systemImage: "person.2")
@@ -383,6 +393,7 @@ struct GearPicksView: View {
         let sections = model.sections()
         return List {
             summary
+            if let kit = model.kit { GearMyKitSection(kit: kit) }
             if model.catalog == nil {
                 Section {
                     Text("The catalog didn't load, so you can review a saved list but not add gear.")
@@ -507,6 +518,105 @@ struct GearPicksView: View {
         } else {
             StatusPill(label: "Draft", tone: .orange)
         }
+    }
+}
+
+/// "My kit": what you are getting and where each piece stands. Calm on
+/// purpose: a light header, one sentence of status, then a short list with one
+/// detail line each and status as plain secondary text beside a small glyph.
+struct GearMyKitSection: View {
+    let kit: GearMyKit
+    @Environment(\.openURL) private var openURL
+
+    /// Four rows at a glance; the rest sit behind the disclosure.
+    private let glance = 4
+    @State private var showsAll = false
+
+    private var shown: [GearMyKitPiece] {
+        showsAll ? kit.pieces : Array(kit.pieces.prefix(glance))
+    }
+
+    var body: some View {
+        Section {
+            // The title block is a clear first row rather than a section
+            // header, so it keeps full-contrast text instead of the list's
+            // grey header styling.
+            VStack(alignment: .leading, spacing: 4) {
+                Text("My kit")
+                    .font(.gothamBold(size: 17, relativeTo: .headline))
+                Text(kit.headline)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 4)
+            .listRowSeparator(.hidden)
+            ForEach(shown) { piece in
+                row(piece)
+                    .listRowSeparator(.hidden)
+            }
+            if kit.pieces.count > glance {
+                Button(showsAll ? "Show fewer" : "Show all \(kit.pieces.count)") {
+                    withAnimation { showsAll.toggle() }
+                }
+                .font(.subheadline)
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func row(_ piece: GearMyKitPiece) -> some View {
+        let status = piece.status(order: kit.order)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(piece.itemName)
+                    .font(.gothamBold(size: 15, relativeTo: .subheadline))
+                    .lineLimit(1)
+                Text(piece.detail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            statusLabel(status)
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // A missing size is the one thing a person can fix from here.
+            if status == .needsSize { openProfile() }
+        }
+    }
+
+    @ViewBuilder
+    private func statusLabel(_ status: GearMyKitPiece.Status) -> some View {
+        switch status {
+        case .needsSize:
+            glyphText("ruler", "Add your size", tone: Color.statusText(.orange), weight: .medium)
+        case .planned:
+            glyphText("circle.dotted", "Planned", tone: .secondary)
+        case .onOrder(let expected):
+            glyphText("shippingbox", expected.map { "Due \($0)" } ?? "On order", tone: .secondary)
+        case .inHand(let day):
+            glyphText("checkmark.circle", day.map { "In hand · \($0)" } ?? "In hand", tone: Color.statusText(.green))
+        }
+    }
+
+    private func glyphText(_ symbol: String, _ text: String, tone: some ShapeStyle, weight: Font.Weight = .regular) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol)
+            Text(text)
+        }
+        .font(.footnote.weight(weight))
+        .foregroundStyle(tone)
+        .lineLimit(1)
+    }
+
+    private func openProfile() {
+        guard let url = URL(string: "profile?tab=gear", relativeTo: AppEnvironment.activeAPIBaseURL)?.absoluteURL else { return }
+        openURL(url)
     }
 }
 

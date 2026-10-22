@@ -110,6 +110,130 @@ struct GearPickDraftLine: Identifiable, Hashable, Sendable {
     var category: String?
 }
 
+/// The signed-in person's own kit (`GET /api/gear-picks/me/kit`). Decoded
+/// defensively: `source` stays a string so a value this build does not know
+/// still renders, and everything but a piece's sku has a default.
+struct GearMyKit: Decodable, Sendable {
+    struct Order: Decodable, Sendable {
+        let placedAt: String?
+        let expectedAt: String?
+
+        init(placedAt: String?, expectedAt: String?) {
+            self.placedAt = placedAt
+            self.expectedAt = expectedAt
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            placedAt = try c.decodeIfPresent(String.self, forKey: .placedAt)
+            expectedAt = try c.decodeIfPresent(String.self, forKey: .expectedAt)
+        }
+
+        private enum CodingKeys: String, CodingKey { case placedAt, expectedAt }
+    }
+
+    let group: String
+    let order: Order
+    let pieces: [GearMyKitPiece]
+
+    init(group: String, order: Order, pieces: [GearMyKitPiece]) {
+        self.group = group
+        self.order = order
+        self.pieces = pieces
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        group = try c.decodeIfPresent(String.self, forKey: .group) ?? ""
+        order = try c.decodeIfPresent(Order.self, forKey: .order) ?? Order(placedAt: nil, expectedAt: nil)
+        pieces = try c.decodeIfPresent([GearMyKitPiece].self, forKey: .pieces) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey { case group, order, pieces }
+
+    /// Counted by line, the same unit the list shows ("Show all 5"), so the
+    /// summary and the list never disagree about a ×2 piece.
+    var totalPieces: Int { pieces.count }
+    var handedPieces: Int { pieces.filter(\.handed).count }
+    var needsSize: Bool { pieces.contains { $0.needsSize } }
+
+    /// Where the whole kit stands, as one sentence.
+    var headline: String {
+        if totalPieces > 0, handedPieces >= totalPieces { return "Everything is in your hands." }
+        if handedPieces > 0 { return "\(handedPieces) of \(totalPieces) in hand." }
+        if let placed = GearPickDate.shortDay(order.placedAt) {
+            if let expected = GearPickDate.shortDay(order.expectedAt) {
+                return "Ordered \(placed). Expected around \(expected)."
+            }
+            return "Ordered \(placed). We'll tell you when it arrives."
+        }
+        return "Planned. The order goes in during October."
+    }
+}
+
+struct GearMyKitPiece: Decodable, Identifiable, Sendable {
+    /// Mirrors `SIZE_NEEDED` in `src/lib/gear-picks/order.ts`.
+    static let sizeNeeded = "Size needed"
+
+    enum Status: Equatable { case needsSize, planned, onOrder(expected: String?), inHand(on: String?) }
+
+    let sku: String
+    let itemName: String
+    let colorLabel: String
+    let source: String
+    let size: String
+    let quantity: Int
+    let handed: Bool
+    let handedOutAt: String?
+
+    var id: String { "\(source)|\(sku)|\(size)" }
+    var needsSize: Bool { size == Self.sizeNeeded }
+
+    init(sku: String, itemName: String, colorLabel: String = "", source: String, size: String,
+         quantity: Int = 1, handed: Bool = false, handedOutAt: String? = nil) {
+        self.sku = sku
+        self.itemName = itemName
+        self.colorLabel = colorLabel
+        self.source = source
+        self.size = size
+        self.quantity = quantity
+        self.handed = handed
+        self.handedOutAt = handedOutAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sku = try c.decode(String.self, forKey: .sku)
+        itemName = try c.decodeIfPresent(String.self, forKey: .itemName) ?? sku
+        colorLabel = try c.decodeIfPresent(String.self, forKey: .colorLabel) ?? ""
+        source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
+        size = try c.decodeIfPresent(String.self, forKey: .size) ?? Self.sizeNeeded
+        quantity = max(1, try c.decodeIfPresent(Int.self, forKey: .quantity) ?? 1)
+        handed = try c.decodeIfPresent(Bool.self, forKey: .handed) ?? false
+        handedOutAt = try c.decodeIfPresent(String.self, forKey: .handedOutAt)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case sku, itemName, colorLabel, source, size, quantity, handed, handedOutAt
+    }
+
+    /// Same precedence as the web card: handed, then missing size, then ordered.
+    func status(order: GearMyKit.Order) -> Status {
+        if handed { return .inHand(on: GearPickDate.shortDay(handedOutAt)) }
+        if needsSize { return .needsSize }
+        if GearPickDate.parse(order.placedAt) != nil { return .onOrder(expected: GearPickDate.shortDay(order.expectedAt)) }
+        return .planned
+    }
+
+    /// One quiet detail line: size, plus colour when there is one.
+    var detail: String {
+        var parts = [needsSize ? "No size yet" : "Size \(size)"]
+        if !colorLabel.isEmpty { parts.append(colorLabel) }
+        if quantity > 1 { parts.append("×\(quantity)") }
+        return parts.joined(separator: " · ")
+    }
+}
+
 enum GearPickMoney {
     static func format(_ cents: Int) -> String {
         let sign = cents < 0 ? "-" : ""
@@ -126,6 +250,11 @@ enum GearPickDate {
         if let date = formatter.date(from: value) { return date }
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: value)
+    }
+
+    /// "Oct 21", for the dates a kit status mentions.
+    static func shortDay(_ value: String?) -> String? {
+        parse(value)?.formatted(.dateTime.month(.abbreviated).day())
     }
 
     static func label(_ value: String?) -> String? {
