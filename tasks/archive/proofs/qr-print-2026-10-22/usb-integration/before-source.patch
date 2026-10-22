@@ -1,0 +1,1585 @@
+diff --git a/docs/AREA_ITEMS.md b/docs/AREA_ITEMS.md
+index 3a9973d7b..6e022ca26 100644
+--- a/docs/AREA_ITEMS.md
++++ b/docs/AREA_ITEMS.md
+@@ -3,7 +3,7 @@
+ ## Document Control
+ - Area: Items
+ - Owner: Wisconsin Athletics Creative Product
+-- Last Updated: 2026-10-18
++- Last Updated: 2026-10-22
+ - Status: Active
+ - Version: V1
+ 
+@@ -50,6 +50,14 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
+ 7. The mobile Items list renders serialized assets and item families in the server-provided mixed order; unit-tracked and quantity-tracked families keep the same naming as web rows.
+ 8. The mobile Items list intentionally avoids desktop-only bulk actions and advanced filter density.
+ 
++### QR Print helper (local follow-up, 2026-10-22)
++
++The helper on PR #590 builds a print sheet from serialized items and item families, keeps printed text editable without changing scan identity, and downloads one CSV per Brother template. Numbered family labels derive the full `{familyQr}-{unitNumber}` identity. Downloading is separate from deliberately confirming that physical labels were printed and applied (D-022).
++
++Local audit fixes block invalid/unknown unit picks and failed unit reads from silently producing partial files, track download freshness by file contents, preserve cumulative downloaded unit batches, repair all six `.lbx` merge bindings, and constrain/center text separately from the QR. All QR templates use the user-requested Medium Small cells and the existing Gotham typography. Payloads that would grow beyond version 1 / M require a wider-tape layout instead of changing the stored scan identity.
++
++Product acceptance is still open: P-touch rejects a one-record CSV and the changed authenticated route is unverified. In the isolated Chrome WebUSB proof, the user approved a centered, unclipped Medium Small label with exact Gotham outlines and a correct production scan. A subsequent comparison enlarges Gotham from 19 to 21 px and received a real no-error printer completion acknowledgement with P-touch closed. The 12 mm tape still cannot contain the full nominal four-module quiet zone at this cell size; acceptance of one physical label does not validate every template. Direct printing is not yet integrated into the product. See [the audit ledger](../tasks/qr-print-audit-plan-2026-10-22.md).
++
+ ### Inventory Hygiene
+ 1. Staff/admin opens the "Keep data clean" lane on `/operations` (the old `/items/hygiene` route redirects there).
+ 2. The lane shows cleanup checks that improve picker, search, checkout, kit, and scan quality.
+@@ -372,6 +380,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
+ - Item is in an in-progress checkout draft (`Checking Out`) and detail header must deep-link correctly.
+ 
+ ## Acceptance Criteria
++- [ ] QR Print follow-up: authenticated feature proof, one-record export recovery, and centered Medium Small physical scan/feed/cut acceptance; isolated direct USB communication does not close these gates.
+ - [x] AC-1: Items list supports required filters, search, and baseline columns.
+ - [x] AC-2: `tagName` is primary in list and detail for serialized assets.
+ - [x] AC-3: Header status line supports the defined labels, colors, and deep links for active reservation, checkout, and draft-checkout states.
+@@ -447,6 +456,8 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
+ 
+ ## Change Log
+ 
++- 2026-10-22: **QR Print local audit.** Hardened selection/export recovery, download freshness, native merge bindings, centered frames and measured text fit while preserving Medium Small QR sizing and Gotham. Source and fixture proof remain separate from physical acceptance; direct USB status communication succeeded without P-touch, while the one-record import and final scan/feed/cut gates remain open. Not deployed by this audit.
++
+ - 2026-10-18: **Items keyboard and failed lookups stay explicit (local).** Row Enter and Space open the item only when the row itself has focus, so a nested favorite, checkbox, or menu keeps the key. Page arrows and Escape ignore open dialogs, menus, listboxes, and the item-type toggle. Rows per page names its purpose. Cleanup parent search, gap counts, and attachment search say the load failed and offer Try again instead of an empty or complete result. Closing Retire returns focus to the control that opened it. Source tests cover the helpers; authenticated browser proof is still open.
+ - 2026-10-18: **iPhone item Activity reads the website History tab.** Staff and admin open Activity on an item. It uses `GET /api/assets/:id/activity` with the same scopes (all activity, item updates, bookings) and cursor pages. A booking row opens that booking. Students and collaborators still do not get `asset.audit`. Previous bookings on the item are unchanged. An Xcode build on a Mac is still required.
+ - 2026-10-17: **Item insights and collaborator attachments.** Day-of-week and monthly insight buckets use the Madison calendar day, so an evening checkout stays on that day. A collaborator who can browse the catalog sees an item's attachments on the item, without serial numbers, and cannot list attachments for an item they cannot open.
+diff --git a/docs/CODEMAPS/architecture.md b/docs/CODEMAPS/architecture.md
+index b758a76c2..d28e604ff 100644
+--- a/docs/CODEMAPS/architecture.md
++++ b/docs/CODEMAPS/architecture.md
+@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
+ 
+ | Surface | Count |
+ |---|---:|
+-| App pages | 104 |
+-| App layouts | 14 |
+-| API route handlers | 420 |
++| App pages | 106 |
++| App layouts | 29 |
++| API route handlers | 421 |
+ | Service files | 112 |
+-| Component files | 181 |
+-| Test files | 835 |
++| Component files | 183 |
++| Test files | 836 |
+ 
+ ## Oversized Source Watchlist
+ 
+@@ -22,23 +22,23 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
+ 
+ | File | Lines |
+ |---|---:|
+-| `src/lib/services/bookings-lifecycle.ts` | 3386 |
++| `src/lib/services/bookings-lifecycle.ts` | 3389 |
+ | `src/lib/services/signatures.ts` | 2366 |
+ | `src/lib/services/notifications.ts` | 2045 |
+-| `src/app/(app)/schedule/_components/ListView.tsx` | 1983 |
++| `src/app/(app)/schedule/_components/ListView.tsx` | 1981 |
+ | `src/lib/services/reports.ts` | 1938 |
+ | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+ | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
+ | `src/app/(app)/staff/[id]/UserInfoTab.tsx` | 1581 |
+-| `src/app/(app)/resources/page.tsx` | 1574 |
++| `src/app/(app)/resources/page.tsx` | 1578 |
+ | `src/lib/services/shift-trades.ts` | 1567 |
+ | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
+-| `src/components/ActivityTimeline.tsx` | 1387 |
++| `src/components/ActivityTimeline.tsx` | 1388 |
+ | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1371 |
+ | `src/app/(app)/budget/BudgetView.tsx` | 1358 |
+-| `src/app/api/assets/route.ts` | 1311 |
++| `src/app/api/assets/route.ts` | 1314 |
+ | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
+-| `src/hooks/use-schedule-data.ts` | 1269 |
++| `src/hooks/use-schedule-data.ts` | 1270 |
+ | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
+ | `src/app/(app)/settings/app-activity/page.tsx` | 1234 |
+ | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
+diff --git a/docs/CODEMAPS/areas.md b/docs/CODEMAPS/areas.md
+index 5bc4619db..e05c9d30c 100644
+--- a/docs/CODEMAPS/areas.md
++++ b/docs/CODEMAPS/areas.md
+@@ -55,9 +55,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
+ 
+ - Doc: `docs/AREA_DASHBOARD.md`
+ - Pages: _none matched_
+-- APIs: `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
++- APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
+ - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
+-- Tests: `tests/dashboard-accessibility.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-motion-source.test.ts`, `tests/dashboard-overflow-filter-aware.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/dashboard-ui-polish.test.ts`
++- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
+ 
+ ## events
+ 
+@@ -89,7 +89,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
+ - Pages: `/items/[id]`, `/items/hygiene`, `/items`
+ - APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/retire`, `/api/assets/[id]`
+ - Services: `src/lib/services/kiosk-active-checkout-items.ts`
+-- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`, `tests/ios-items-row-accessibility.test.ts`
++- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`
+ 
+ ## kiosk
+ 
+diff --git a/docs/CODEMAPS/backend.md b/docs/CODEMAPS/backend.md
+index 037959c39..b26a0aed9 100644
+--- a/docs/CODEMAPS/backend.md
++++ b/docs/CODEMAPS/backend.md
+@@ -11,7 +11,7 @@
+ | `src/lib/services/auto-assign.ts` | 92 |
+ | `src/lib/services/auto-fill-preview.ts` | 322 |
+ | `src/lib/services/availability-conflict-recompute.ts` | 130 |
+-| `src/lib/services/availability.ts` | 693 |
++| `src/lib/services/availability.ts` | 700 |
+ | `src/lib/services/blast-targeting.ts` | 166 |
+ | `src/lib/services/blasts.ts` | 359 |
+ | `src/lib/services/booking-custody.ts` | 82 |
+@@ -21,7 +21,7 @@
+ | `src/lib/services/booking-rules.ts` | 135 |
+ | `src/lib/services/bookings-checkin.ts` | 738 |
+ | `src/lib/services/bookings-helpers.ts` | 310 |
+-| `src/lib/services/bookings-lifecycle.ts` | 3386 |
++| `src/lib/services/bookings-lifecycle.ts` | 3389 |
+ | `src/lib/services/bookings-queries.ts` | 322 |
+ | `src/lib/services/bookings.ts` | 9 |
+ | `src/lib/services/budget.ts` | 950 |
+@@ -142,12 +142,12 @@
+ | `src/lib/auth-email-guidance.ts` | 7 |
+ | `src/lib/auth.ts` | 454 |
+ | `src/lib/auto-fill-preview-types.ts` | 61 |
+-| `src/lib/availability-copy.ts` | 343 |
++| `src/lib/availability-copy.ts` | 345 |
+ | `src/lib/avatar.ts` | 44 |
+ | `src/lib/battery-compatibility.ts` | 158 |
+ | `src/lib/bhphoto-image.ts` | 67 |
+ | `src/lib/blob.ts` | 170 |
+-| `src/lib/booking-action-policy.ts` | 215 |
++| `src/lib/booking-action-policy.ts` | 216 |
+ | `src/lib/booking-actions.ts` | 14 |
+ | `src/lib/booking-availability-window.ts` | 31 |
+ | `src/lib/booking-concurrency.ts` | 39 |
+@@ -155,7 +155,7 @@
+ | `src/lib/booking-status-display.ts` | 170 |
+ | `src/lib/booking-statuses.ts` | 9 |
+ | `src/lib/breadcrumbs.ts` | 229 |
+-| `src/lib/brother-label-csv.ts` | 134 |
++| `src/lib/brother-label-csv.ts` | 185 |
+ | `src/lib/bulk-batteries.ts` | 49 |
+ | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
+ | `src/lib/bulk-unit-qr.ts` | 111 |
+@@ -171,8 +171,8 @@
+ | `src/lib/claim-review-workflow.ts` | 48 |
+ | `src/lib/client-enums.ts` | 85 |
+ | `src/lib/clipboard.ts` | 19 |
+-| `src/lib/collaborator-access.ts` | 164 |
+-| `src/lib/collaborator-gear.ts` | 177 |
++| `src/lib/collaborator-access.ts` | 175 |
++| `src/lib/collaborator-gear.ts` | 181 |
+ | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
+ | `src/lib/companion-projection-contract.ts` | 71 |
+ | `src/lib/companion-store.ts` | 375 |
+@@ -291,6 +291,7 @@
+ | `src/lib/shift-constants.ts` | 13 |
+ | `src/lib/shift-display.ts` | 71 |
+ | `src/lib/shift-reminder-workflow.ts` | 26 |
++| `src/lib/shift-trade-actions.ts` | 60 |
+ | `src/lib/software-vault-access.ts` | 20 |
+ | `src/lib/software-vault-crypto.ts` | 11 |
+ | `src/lib/software-vault-validation.ts` | 39 |
+@@ -544,6 +545,7 @@
+ 
+ ### `/api/dashboard`
+ 
++- `/api/dashboard/activity`
+ - `/api/dashboard`
+ - `/api/dashboard/stats`
+ 
+diff --git a/docs/CODEMAPS/data.md b/docs/CODEMAPS/data.md
+index 1141fd86a..d8f2fa158 100644
+--- a/docs/CODEMAPS/data.md
++++ b/docs/CODEMAPS/data.md
+@@ -19,7 +19,7 @@
+ | `Location` | 17 | 1 |
+ | `Department` | 7 | 1 |
+ | `Category` | 9 | 3 |
+-| `Asset` | 43 | 8 |
++| `Asset` | 44 | 8 |
+ | `FirmwareWatchTarget` | 17 | 3 |
+ | `Booking` | 44 | 15 |
+ | `BookingAccountabilityExclusion` | 11 | 4 |
+diff --git a/docs/CODEMAPS/frontend.md b/docs/CODEMAPS/frontend.md
+index d2eebbd06..7b9a569bd 100644
+--- a/docs/CODEMAPS/frontend.md
++++ b/docs/CODEMAPS/frontend.md
+@@ -101,6 +101,8 @@
+ | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
+ | `/releases` | `src/app/(public)/releases/page.tsx` |
+ | `/change-password` | `src/app/change-password/page.tsx` |
++| `/dev-home` | `src/app/dev-home/page.tsx` |
++| `/dev-labels` | `src/app/dev-labels/page.tsx` |
+ | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
+ | `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
+ | `/forgot-password` | `src/app/forgot-password/page.tsx` |
+@@ -114,14 +116,29 @@
+ 
+ | Route | File |
+ |---|---|
++| `/badges` | `src/app/(app)/badges/layout.tsx` |
++| `/blasts` | `src/app/(app)/blasts/layout.tsx` |
++| `/bookings` | `src/app/(app)/bookings/layout.tsx` |
+ | `/budget` | `src/app/(app)/budget/layout.tsx` |
++| `/checkouts` | `src/app/(app)/checkouts/layout.tsx` |
++| `/events` | `src/app/(app)/events/layout.tsx` |
++| `/import` | `src/app/(app)/import/layout.tsx` |
+ | `/issues` | `src/app/(app)/issues/layout.tsx` |
++| `/items` | `src/app/(app)/items/layout.tsx` |
+ | `/kits` | `src/app/(app)/kits/layout.tsx` |
++| `/labels` | `src/app/(app)/labels/layout.tsx` |
+ | `/` | `src/app/(app)/layout.tsx` |
++| `/notifications` | `src/app/(app)/notifications/layout.tsx` |
++| `/operations` | `src/app/(app)/operations/layout.tsx` |
++| `/profile` | `src/app/(app)/profile/layout.tsx` |
+ | `/reports` | `src/app/(app)/reports/layout.tsx` |
+ | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
++| `/reservations` | `src/app/(app)/reservations/layout.tsx` |
++| `/schedule` | `src/app/(app)/schedule/layout.tsx` |
++| `/search` | `src/app/(app)/search/layout.tsx` |
+ | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
+ | `/settings` | `src/app/(app)/settings/layout.tsx` |
++| `/signatures` | `src/app/(app)/signatures/layout.tsx` |
+ | `/staff` | `src/app/(app)/staff/layout.tsx` |
+ | `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
+ | `/wishlist` | `src/app/(app)/wishlist/layout.tsx` |
+@@ -134,7 +151,7 @@
+ | File | Lines |
+ |---|---:|
+ | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+-| `src/components/ActivityTimeline.tsx` | 1387 |
++| `src/components/ActivityTimeline.tsx` | 1388 |
+ | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
+ | `src/components/onboarding/OnboardingDialog.tsx` | 1042 |
+ | `src/components/TradeBoard.tsx` | 974 |
+@@ -147,11 +164,11 @@
+ | `src/components/BookingDetailsSheet.tsx` | 728 |
+ | `src/components/ui/sidebar.tsx` | 710 |
+ | `src/components/schedule/SportSetupWizard.tsx` | 675 |
+-| `src/components/Sidebar.tsx` | 621 |
++| `src/components/Sidebar.tsx` | 624 |
+ | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
+ | `src/components/CommandPalette.tsx` | 588 |
+ | `src/components/booking-details/BookingHeader.tsx` | 472 |
+-| `src/components/AppShell.tsx` | 437 |
++| `src/components/AppShell.tsx` | 438 |
+ | `src/components/event-editor/EventEditorFields.tsx` | 435 |
+ | `src/components/ui/heatmap.tsx` | 434 |
+ | `src/components/ui/chart.tsx` | 387 |
+@@ -174,7 +191,6 @@
+ | `src/hooks/use-copy-feedback.ts` | 62 |
+ | `src/hooks/use-current-user.ts` | 53 |
+ | `src/hooks/use-dashboard-data.ts` | 244 |
+-| `src/hooks/use-dashboard-filters.ts` | 146 |
+ | `src/hooks/use-fetch.ts` | 113 |
+ | `src/hooks/use-form-options.ts` | 32 |
+ | `src/hooks/use-form-submit.ts` | 188 |
+@@ -185,7 +201,7 @@
+ | `src/hooks/use-mobile.ts` | 20 |
+ | `src/hooks/use-operational-polling-activity.ts` | 155 |
+ | `src/hooks/use-profile-completion.ts` | 65 |
+-| `src/hooks/use-schedule-data.ts` | 1269 |
++| `src/hooks/use-schedule-data.ts` | 1270 |
+ | `src/hooks/use-sidebar-counts.ts` | 23 |
+ | `src/hooks/use-url-state.ts` | 129 |
+ | `src/hooks/useBookingActions.ts` | 297 |
+diff --git a/docs/CODEMAPS/routes.md b/docs/CODEMAPS/routes.md
+index 468a76043..1e4872f53 100644
+--- a/docs/CODEMAPS/routes.md
++++ b/docs/CODEMAPS/routes.md
+@@ -99,6 +99,8 @@
+ - `/about/tech-stack` -> `src/app/(public)/about/tech-stack/page.tsx`
+ - `/releases` -> `src/app/(public)/releases/page.tsx`
+ - `/change-password` -> `src/app/change-password/page.tsx`
++- `/dev-home` -> `src/app/dev-home/page.tsx`
++- `/dev-labels` -> `src/app/dev-labels/page.tsx`
+ - `/dev-sidebar` -> `src/app/dev-sidebar/page.tsx`
+ - `/dev-trade-board` -> `src/app/dev-trade-board/page.tsx`
+ - `/forgot-password` -> `src/app/forgot-password/page.tsx`
+@@ -110,14 +112,29 @@
+ 
+ ## Layouts
+ 
++- `/badges` -> `src/app/(app)/badges/layout.tsx`
++- `/blasts` -> `src/app/(app)/blasts/layout.tsx`
++- `/bookings` -> `src/app/(app)/bookings/layout.tsx`
+ - `/budget` -> `src/app/(app)/budget/layout.tsx`
++- `/checkouts` -> `src/app/(app)/checkouts/layout.tsx`
++- `/events` -> `src/app/(app)/events/layout.tsx`
++- `/import` -> `src/app/(app)/import/layout.tsx`
+ - `/issues` -> `src/app/(app)/issues/layout.tsx`
++- `/items` -> `src/app/(app)/items/layout.tsx`
+ - `/kits` -> `src/app/(app)/kits/layout.tsx`
++- `/labels` -> `src/app/(app)/labels/layout.tsx`
+ - `/` -> `src/app/(app)/layout.tsx`
++- `/notifications` -> `src/app/(app)/notifications/layout.tsx`
++- `/operations` -> `src/app/(app)/operations/layout.tsx`
++- `/profile` -> `src/app/(app)/profile/layout.tsx`
+ - `/reports` -> `src/app/(app)/reports/layout.tsx`
+ - `/reports/usage` -> `src/app/(app)/reports/usage/layout.tsx`
++- `/reservations` -> `src/app/(app)/reservations/layout.tsx`
++- `/schedule` -> `src/app/(app)/schedule/layout.tsx`
++- `/search` -> `src/app/(app)/search/layout.tsx`
+ - `/settings/app-activity` -> `src/app/(app)/settings/app-activity/layout.tsx`
+ - `/settings` -> `src/app/(app)/settings/layout.tsx`
++- `/signatures` -> `src/app/(app)/signatures/layout.tsx`
+ - `/staff` -> `src/app/(app)/staff/layout.tsx`
+ - `/staff/workforce` -> `src/app/(app)/staff/workforce/layout.tsx`
+ - `/wishlist` -> `src/app/(app)/wishlist/layout.tsx`
+@@ -278,6 +295,7 @@
+ - `/api/cron/notifications` -> `src/app/api/cron/notifications/route.ts`
+ - `/api/cron/rehost-images` -> `src/app/api/cron/rehost-images/route.ts`
+ - `/api/cron/youtube-sweep` -> `src/app/api/cron/youtube-sweep/route.ts`
++- `/api/dashboard/activity` -> `src/app/api/dashboard/activity/route.ts`
+ - `/api/dashboard` -> `src/app/api/dashboard/route.ts`
+ - `/api/dashboard/stats` -> `src/app/api/dashboard/stats/route.ts`
+ - `/api/db-diagnostics` -> `src/app/api/db-diagnostics/route.ts`
+diff --git a/docs/CODEMAPS/schema.md b/docs/CODEMAPS/schema.md
+index e9166d31c..906eecb4a 100644
+--- a/docs/CODEMAPS/schema.md
++++ b/docs/CODEMAPS/schema.md
+@@ -425,7 +425,7 @@ Indexes and constraints:
+ 
+ ## Model `Asset`
+ 
+-Fields: 43
++Fields: 44
+ 
+ - `id                      String                  @id @default(cuid())`
+ - `assetTag                String                  @unique @map("asset_tag")`
+@@ -449,6 +449,7 @@ Fields: 43
+ - `availableForReservation Boolean                 @default(true) @map("available_for_reservation")`
+ - `availableForCheckout    Boolean                 @default(true) @map("available_for_checkout")`
+ - `availableForCustody     Boolean                 @default(true) @map("available_for_custody")`
++- `collaboratorVisible     Boolean                 @default(true) @map("collaborator_visible")`
+ - `linkUrl                 String?                 @map("link_url")`
+ - `imageUrl                String?                 @map("image_url")`
+ - `imageRehostAttempts     Int                     @default(0) @map("image_rehost_attempts")`
+diff --git a/docs/GAPS_AND_RISKS.md b/docs/GAPS_AND_RISKS.md
+index f1cb5a473..891d84650 100644
+--- a/docs/GAPS_AND_RISKS.md
++++ b/docs/GAPS_AND_RISKS.md
+@@ -70,6 +70,8 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
+ 
+ ## Active Risks
+ 
++- **QR Print product acceptance (2026-10-22, local PR #590 follow-up):** the user approved the exact centered Gotham/Medium Small direct USB label and its production scan, and a larger-text comparison received real no-error printer completion. Other templates, authenticated feature proof, direct-print product integration, and one-record P-touch CSV recovery remain open. Medium Small on 12 mm tape cannot provide a full nominal four-module quiet zone; one successful physical code does not remove that layout constraint. See [QR Print audit](../tasks/qr-print-audit-plan-2026-10-22.md).
++
+ | Risk | Early Signal | Defense | Owner |
+ |---|---|---|---|
+ | Analytics creep | Chart requests arrive before a workflow has a clear decision owner | Apply the Phase C filter in NORTH_STAR and keep reports read-only and operationally grounded | Product |
+diff --git a/next-env.d.ts b/next-env.d.ts
+index 4b3f3b58d..c690306b7 100644
+--- a/next-env.d.ts
++++ b/next-env.d.ts
+@@ -1,6 +1,6 @@
+ /// <reference types="next" />
+ /// <reference types="next/image-types/global" />
+-/// <reference path="./.next/build/types/routes.d.ts" />
++/// <reference path="./.next/dev/types/routes.d.ts" />
+ 
+ // NOTE: This file should not be edited
+ // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+diff --git a/public/label-templates/Batteries.lbx b/public/label-templates/Batteries.lbx
+index 8a2ff5ff1bad2b86b1abf2a2e39f09cc0d28480f..cd933bd38ad61b0c6d33cb1e2b08d035f579c11b 100644
+GIT binary patch
+delta 1717
+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
+L0006A00000S7<AP
+
+delta 1765
+zcmV<B1{(Q=5wsD1P)h>@6aWAK2mk;8AOQ1!7b;r@006KQ000R9003-ZVr6VDcx`O$
+zSXpn|I1qmCuMo7@$JnxSI0@nuNh}uzT-$5A*!HQQBwA)nkqSxW=&#@5p~Fr#s1^$p
+z3v6C24mtPC$6>BMK4;W>#6l9zhJLRT_#S34PY6qg{+IQC_~_jKc>UojSC<Koiwra6
+z0SA+pxf=RgrSi*eSH@eMA=!xpS6eJPgl%{?SG<U~-F^@Zx-@$3W{5D~@k;eVaXWUy
+zQt~VO+)}&dD7h1Xp4xG1j*^>XC~axGVJZ0|Bp|#kB{-(a1Ef%dWJ@6>R~1DRwatQI
+zDf#2}{ITVKZ`4~43NFPA3#7Oh`Z3Qc2@As<CIoi;Yh8j7PhPyZ5CY0@wZ#~U!2EbU
+z-%E(Vu`*Jp>m{5w6>}-gK0_I<&z5^R%CYb=oDekh!Hy@AsO``{KJJ|5P%T?b(k-Ys
+z9oTh-L`v8cZ-CbCoY$l^&xih?)2}H@%ei;zmMg`7v+5uh1iV1jVv1NIV=%|}P@(t~
+zvs7EMK~$$J<BZ2!!81G}GN<Te=qpjcMlJ|bcbsxjZ8(;CM@~k@IpeIM4E^5%^XG^Y
+zwgb}G{P`ZpAz(U0bi+l4v=^rrz89f*mkM66WDR-7R-{$}{Gi~tH@N6ml$i<lt<9si
+zSRajl&U(S^8Uo*KM7~TzT&O8w*b_J{C=z!C=nQm-HUeX_su|tcl2u#v$ynt*L!xY+
+zUaG*mgr1yrPMQhro6SfRa=WrfH2X50I?5z5z7-OS1ybM)q-Qptg?l7-C_W5l74=z>
+zMOc_HY8%VAmqFIF#jC?X?Pu+nDSRH?LvhQ0>njHYC5kjQjVC$^{h)K|!qD3b!*S3I
+zf?c&S&J#TUY@q9IzWBBXXHcvxrM4Cji?>?JdcK&3<259YlH5hkSeawyIozMjR+CXU
+zUfz5TopE15hPB!(zg5ehi7*7s%C{JylUQo9dHtz0k;EmSlwqXd=NwuSC!P(mD{LEo
+ze5iNVTa?E;^PzACZK&{PEK<CNw$~6fy}1pi)5&Umxc`#lvbOd%oYW*Tt1-beG1;}+
+zAH;Wi7bMXV$6O@y%|>cHIt!HYr+J~~n_FEwaxD;(8||UP1xna%1*lWVQnRL5h1U1d
+zW4mh9)~n*P6_-PobBOTJ|6_SKA8Cny2EC*)=m!>jOen1k0Ny`sIR>^kfw0sl2uZj+
+zhVm>j#FiK(_HuDtd(<0BQl=*n2(2kKxOw8;h@={~97BzwvII+u!sSXrEbRfvW^Elt
+z0*eL(qVSg2bu1nlp~&D1JcYWzaXiJ3deJ-m9Sp>juE-CpJJQ|~Q4DrzBYp3Go)cyP
+zx4IV1Mnm;OQ?nk$;3mJmIKjc$dD1)TnM@hlD{HT>^yFg(rnj(S&^dNcabgW~P|-U%
+zK+IFS{qMj<f6x*zY#aXvkzx&TKl?Q>LE!9nW~}}NP+_VrS7Xl91O`Dzpgh$SH;#RR
+z@c?Ds*BKImKUK8{wh@IWi7QKgo?I1P=#<1;Bv#IcoTzwv!;&$|2-VlVHms@1>D|C*
+z_^dp<*?@`Kop3x3?;z6PITqlTy~LyvWQTcSrAynfZdyxi1NYA@Y-zcN)0C#Y?u1@t
+zlry7Tz6y_($&}y}D$)E7{qf{$IC6Jo3@tJiCU_;z$y^tkp44asZCkK^VOOpU5{_$z
+zM^2K7eZy1`cc{H#j{#c`I+gr@JwzMedl$~u;nKjCBJrDBFfK!E8ymMbt8h9oE#BSN
+z(a>q(sT5n8&I(FzZ4Wt$sf8THHhVga^$Ie!aLC%X_>e_#Ah`n``Ihg^%2lozpwJY&
+zgrx^>1T|+SxnnmL`%U71TqHWzr@iA^=7EeFxtoA(j_SH&=>$5~xCHl-Et~(ls9hIz
+z52D#jZxf_sHD{aWp@VXGTwY(5kL2o&?J0x5<H-~nuq47W0Ak$z0xtsDg%OA1?ub7z
+z%26V_?)`d1QG}^HiZdqELvfFSpx?XCgOkB|@OZJq_nlZi!YE*W?*KFH{8P^672%%8
+z7Vq6F1sazyX>JI6Iap{AFi>$utLLO1Q_OHCEymZeIJ{!ydz-E>t2uR3>#b;d=)sBM
+zY4qaX%lrv_dlz0q=N`Si-gh?lqhK=e2FaP%Dz|%5jKVe^L1Huhh{G&bFH_T%Z+U81
+z-dFTqx>_me9tPzT4U*iWxewc#<-Z=UKl}wyO9KRxKL{GLaR#9Q8uNb_Dq98s0I(DQ
+z00{s900000009610001!EC@9u004pp003}uZ*VSnZER3W1qJ{B000620sw6Q001!v
+H00000r|34=
+
+diff --git a/public/label-templates/Camera Bodies.lbx b/public/label-templates/Camera Bodies.lbx
+index 0dec51d09244d4a3dd6942396c2e1f96ed77b36a..00fe3297315a38b519b8247c53066521df1ea55f 100644
+GIT binary patch
+delta 1727
+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
+V2Q>tM0eJ?Kum>6jC<p)m004vlN{avh
+
+delta 1506
+zcmV<81s(dU5zr5RP)h>@6aWAK2mk;8AONv=i*R=Z007k#000R9003-ZVr6VDcx`O$
+zSly4>I1qo|zaq-%9?NGb+tsoauuvgU;2^7OAB|%Y7spO*XLspef8&pYKv$>oa5}BD
+zybzB)<C)+5#u?}K({sjxM<Nv!d=R!9tuP=Qi<t6c5I#hI(|6b5r@O1$T;Ie37a8F?
+z01d8gay<xBt@E2^Q{j|kNHw-n=#<C?<vY>LwJ31f?6g|_CfhzYGemjlb(KCaa+$hS
+zDfKmZzHoP=QEJB$Jzb`4G)irnq2xl}txBoCMH1k>(1KU0B0w5#k-E@Gsa2tfwwGqX
+zs+9Wpa((Q7^lN-;1K|?Fi9}k+L5M|GSy)-+NlalTyfYNsiue%VLQ0_FCM5(&VE=-4
+z7{pW(tgY2~w1)MTF*nN2bCi+e+Hx*OIgvp|Vu}VK`0+$zoesioxA7qdwxon6DQwZX
+z?!IrlH<Ap=gz`Dr8ENDCD2hZr2zyS=N!DJszG@_Yv=&*lP)G`KAm=kfJXRPS3IkMV
+zF(*7RzGzv1BokcVREmt;Q<XDxC?|4BxgHB9WHqrvOr6ZA*}aX<Mr$R5@Q;@LdEt!j
+zK{U0$FaSFgJO@a3LT1PW(fb$%TZH$C6a|kXNHlRK%_g7^8+6<KkDW@guy~JLB7;@*
+z?*2o6yETdc`DP9JG7q@WbIM5|Nm4K*#|7-!G6?M?A$D|B^lM91<JD*DRq$K^d#G^t
+z8SQmX^Jzv~S*Ud54x+`weC{Q)*hW?;B3DR5D3F`Qaxpm(`9=5~%nI{Gk!^{zAQ}%#
+z)JuqsZ1v0H)-lRsSeEx<`yIHg?rzO7W>3F=n%Kr*qQ7qRee~U0?CnmYa}s^OVW%(g
+zE07}pVh^qHa`kOBSpZ3S!W;<@$EmRrEm!l&G=i)#ntRZ!n>pcussn93`wGg9UghYw
+zYWO>-0#MGdI~GjhPPh22)X><2UfQtM$a4<0NaDc3>!=(7<{!eqml6|rZyz+tpz1V#
+z`9fquA}DfmB+ZAT$$UQBMCbE|oRnlbnebK-W8!I9=;dx?GOr?uxY`+CeN8jU_Zv7c
+z3RRjh5~uB=D1CRM8b3UBay=DX&){hG0wxk8@dxB*s8^H)Ul&M9@l;U=e4`pMiYrf^
+zJem3iTbv@fF@YPLsmAG$$5WJ1X6n#?I9A`u@4JJ?$+Hf~ZU-)!a3<5~WDJl&<U~ST
+zj$BGhx+kJ=))oB;;(mF2CL25MT)Sd7hR@G8Bm0%n?aC|fM>+fjA7_(mDHw3d{tv?8
+zL$sWmBEZ1(skG2}V35iUXUxIL%0pVE;K05d+0%V`RCp9Lp1GdFiArB;Ti2X_88Vvi
+z01A%&ggM0Q*tBI(o0CN}S=+a(rufAvczFS`wTaPiGnvn9r8ZCZsO{-an9^+JIxiR-
+zxl-^F%Y+<ZmphZh;|S8V64dP3cj<yx{T5clV^C5r1z#tw_O$>!)6kl#0AAX9$!%(<
+z{xucWg-aQmO!wN|qs=oLw%Sd9Q*?JVYzMR1RmWD1mAG9E`*<>gVzr^cOWASft(GpV
+zrREu&|AKGt4d4G1-#7lg;rj~kJ-!C+ZvE}IygI+s`*wP+c|4dqWxe(9w(8BV8~rb>
+z?`*M|-A|_L;g`v)?0`oO{Qj$Mg3p-b=##@WRbbQD{k0x1?~O%!`&QO}p`S#GDP_mD
+z2Xz1Twd$A#g0;ED1EM!w;98L(z9uMkpGUmbiL};$Io{xu;Qc*K%*DHG46CmIs`?CI
+zzams^C8WhIfYcnlBS;cilK=`YMSaBLM-7S$o|rjF0)p|JJeonf_a`_=7;`5;+g&HK
+zEe5}glVR}P^>yvqhaEd9QQP`Qedn^t>UH1uTH}xHTHAH*Ydwdmx*pq)I-a#6KDejy
+z`{do#KeKrTzX2Mtc#Cj%1polm6aWAT0000000001000000FzP(H3R?vo&}SO2pR@W
+I2LJ#702tQV>Hq)$
+
+diff --git a/public/label-templates/Lenses.lbx b/public/label-templates/Lenses.lbx
+index 27be03185cf4e0b1f030769440e55ace650aa083..3526333af5388e77f45dc1a163650f2bacfccbd4 100644
+GIT binary patch
+delta 1727
+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
+V2Q>tM0eJ?Kum>6jCkOxl007iiR&W3S
+
+delta 1507
+zcmV<91swXS5zr5RP)h>@6aWAK2mk;8AOO5v76y0)007w(000R9003-ZVr6VDcx`O$
+zSW9o)I1s+)R|s0{v3|sjodj_TJCO?muI;rIY<r|BT4GI+DoN$hU%$hLWZ4N8^<l9n
+zkX&L8Im4N6z8Q^l^XWNf!6T813O)?GtxgyajzvOwIt(9w;>m~0@YC(tO`)$7fy<n5
+z9e@T`*M%O2nbyU1yRC3Wa->=tDRf3;i}I~#7h04!YoB*IgEredw{t{!=yjETVdOM*
+zt5WG}@_gd$Mx)YBBzihc+h|nUG)L))zFU<_e}g2zd!hxeR7Zd`+8}kJkxHvZ5p7P*
+zf>o*X@#*@1*y%U;)&;_)gcFIhki!s*ytc5k%27gLC%iQj+=%2Qz@?Nx!*xaokih;6
+zx?zw|NwBt7XYmToTgF@~yU$Th_GhcT0u@9CIY}rQhTz8&O>{O4d%ae_0Jda=rWssu
+ze%brj`e-CMk}2ggvNh7y<z5tvVi;aHH78kl-R7x(vCvxN^+6#i#DSd84Dm!^a3~B=
+zsl|-&)cB%h36flJfio#`a!*yk&`Y&ZNXqq{U_#a#Tg24Cj+)-v=xnrBG7SId*gr3v
+z@*RjK_Ad;;4h7Ev(yfp=GC^Eig~0~lT`EP%lNb_BoJn&D=)(oQ?%?XYmdq{QW0%Na
+z8GpEc?{_=n7?5u_ps(_POFg5U1d^mBL-MYKJ39uUtt7;*_KN;&rE0wTY`qGeYhYh$
+z+<iv-7jC)Fs99}fsj{_eMe~Q*%uA+;jjdEfE|G>{AUpHLJUS5hL--iZ8ufXZZ-}%o
+z8Xqg%E0B$B`RZ_IALl+W%Y3o<4(wL9H>Qz)+5XoM+Zasz{nmw#zt@Pq*ExuN(6XDS
+zcoj%de6daIZn6BfjOIX6o-#)Q#BpY<#Ea!Dn#7PbMhg#_b+RBlP)(SvUtdAlxoel-
+z>gBIs3NSgtt}U3f9bWNEiJ^&yys}}fk>>(xktBfw*HJkJ#QS03ONj}*vp+P+q3Se$
+z`9fq$VkmOcl4hfEG@DJ=@$vpkK`JU8Y<R1PG4Zr0^<q0Vc~`MSTy2f7zNQ)FyEQb7
+zQdMS*#A&-ID&O6z!46NHLQe$OQ)tazz(i^!zCnJ5dPRBgb&jMIPc?zSH>we%xc219
+zlWAbE#Tk-o6S%>dYMhODGC?_IrVfpNW6hiVy<7MhJ?nsMx8R})Cz?#6JAe!#Clcav
+z<WgGF9TBCouINt?532T=uI>8#(p9%HeB9rR>@}miwO8JcYWWHuXOn9w7;wt|ABLlc
+zcri0YfPv`~X`%DLAXOO7n8wMfCap4XU{|edcc1JP9tBONZl-Xe%9qB~4QEDwjHWz*
+zf}=lS4>7woV;R(DG>@Z|eY$Fj-`s+S7a-f%7?0M`Y-%gDeRxOXPS;;5v$gBIWNhq8
+z!AmR?3WQzmOcM7iNY_$ObLYUN3m)|wIFa0el6ounCULc|1>l*6(NqQS(AEoXQ#<jG
+zsjw+r$i!s&qTAcsJhEY{-3&#4w`VY*eCT&NLHDd{E5}OR&4z(IokGFd@ZiDh`14**
+zC)QK@2+n`O_v#(r{}kVM{=Vb;8{oTt6x`nUH{j~^`K{^qW2YW}yN${6cmQ^*|7HB0
+z&ezlXXtEl8iGIr|c<jI*{MLi;5tAH!3V2l&*bH}nt?m~0#-e=#SJt6_pG1lYW&6<w
+zbpQ6X>S_T5EAu7~h+g-AYh{l3ilD@OBJo-W(#8<xc!M*7clR_kFW=R0Sbqsn^``*)
+zC7~WIAua9zq-O6OL6XRZ1W<S@>OB@e8c^i$i<wRm5R7N!(JZ<be}aRAG1mdQt#kWT
+zV}rpj<760oce7o$@o~p0ZZxj`(Y(1DvPM_qPSlS&jj`+4*Jch?{eo;i?0D9S<i-7}
+zzER$u{R6Xk2EG9ryj&Ircm)6e*%SZ(2><{9000000RR91005Iw2sH!%0G|buiU=A8
+JO$Pt~006}T-_HO5
+
+diff --git a/public/label-templates/Number-Tag.lbx b/public/label-templates/Number-Tag.lbx
+index 0b1da94c477f5e74ba2c6ebbc177c51d4fc82c4a..bc8e897b86dc3b2b38a71e54882d5a401bbc4b73 100644
+GIT binary patch
+delta 1705
+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
+
+delta 1512
+zcmV<E1sD4F5VsG1P)h>@6aWAK2mk;8AOL{u8!li4006TP000R9003-ZVr6VDcx`O$
+zSWA=II1s+)SGc^j#{h=RWM*oZ)BtvhDgrDxwaHP)!d8$aN0R4}U!T^)#?0gpPFty3
+zF1A|gR`=Imw`6WVJe4eXAW~7m$6?ePgaP4LWR&OQ@N=4fyuAuP+`YN2^i3vkT@tPX
+z(BSH((&Mnuy1ME26)s4LRBtDRE{N<=z8C#Uiy9aG;b8E-&vsA!5>Xy{U8SEHIZxfH
+zH2Ru6ow>WwXtXnl9?#P@8jUtBQGTZHR;AJ3AqnuFX~8SC5g?6rNS$e<(P~jdyK}Q(
+zRT_PKzCLz;`W?PSK)9T6B9Rty9AZ(n7S>id&M3@;cZPyHkv#{vmJ(>VEeHV;*hdhB
+zK}IFP+FD(t8(41{bEE7$M<qF~ZRRRe5gC*uqi7t0ACENC#W);|dY2Wjr64pfV2k0^
+z=w0ufk(5a0lrPBMNPAaDQ7Wo&c;VEXWaD+at0qE!Yf-ifg`^M%ay~P}GljvSFhI2y
+z3&L~bi<UJ=O2Gv#q$tUZs*0iKW}=dm>#1NuwiA2A)X9vR&unxyS}Pfce+}%<3+Ma*
+zqQw5f0PIlk93b5bSt1j}#dR3$5I*Em)I3We(ZrcFn}9xSFpAz^4_nF7;yrPR4A$w}
+z*=00;n52MwzXN@f2VCm~<s^_KuNjil8ulC*g!YmUJ31=*wT-Ir>ZA24cxr)tZgFoi
+zI_zDaX4H&!vR1{`wW8(c#llPGnT@ShM6QvBU?4lo)iOR2`9=68oGt3hy4(?IVKhEA
+zxHljh+4|Mu!7<KbV3zq}_YK&s?rwc2Xxd1BXVOMuP>8O27aoSo-lzk^aBu>G9i8J`
+zAVu}b_O9t_{dFBLfvY@cjthw6!dOXH>qVTTkUT~!kDT?gB0TVof4<z#XK}K*{}g-Y
+zzJLwqwH<zKhrfd`fadJGCSj7;?Bw$LTWO-1Pe5bCS|d*tR3^y+2eK!&10VSAYl{hg
+ze6TN?lu(A6d?GR@DOA1bQH%RYyjaY)>C5@&iZt9hnebK-W8!gD>(zc@h@eu5xY`?c
+zeUUTD4_oLUwQ9^5iPLt0H14}mhbXU@<mgjD$qImL9R9PJu4cxf?L^8t^n*x|P{vvZ
+zK=)tAt$`~z5Nu3G14M5|z_q$Wd_z!w=8g)lbt1iIH0S1C0XSLSz&U~sGn$(w<Q0w`
+zQME16cGPC1AT4eIq~_=yL6XRh1W@=@)JH77cc3WY4I+gk6O0$+!3?5{zrjJm*p~hv
+zZP4WogI~tUF!&}Ycipo+<m^Oe>+jv2&BY4N<-6%1xtiXOu5F&I<dv^?x8@dqV=q6y
+zD*KDJ>aS0lUo_|qyLBIp-1tAKd{>WuV9BR|`sk0YcT1j1CxYua+|9gziQGv14e28s
+z*r*J?ERmGrv853BMm1s-x1KzDGQBt0;sVL73EbdJH7@RXmY|X{a}XQHx;y!O_wX7&
+z>45C_;Gzj9PLg;EkU```LR^l2TuMuNAfk5Gl`Xp{a@VKaRpIc;@!i;cdA~8T*MyE*
+zr@R}@@D)7HCf8Chpp<=%!({#?p83-Y1J@I2!E2h8stjw)-HEmRsQ@1i&B(U1<f!l<
+zXf}7B6>Xn-xqHVS+c5(uIr;<U5bJc%X}nD1jqN>};*%+;PRJrRm#2<@baKCq7js*v
+z{nHIP8@d+L*lhjgHDeQ330`7}P$BG6XL5KPLAutyH%6|?%N;Dprl6yK6?m7n+E)Uw
+zOv9I{3gFJJSKMYc@we2lD_qIUB>Lj|^4;L_@@V&kon!xvI*r#ZHN@lj9O~4D1*ePS
+z&HrU|UK#aYpxI4vw@axO_Udat*?d!m4?g$S{QGeC<|j}~0|b*X2pY3x2A=^Mfb1JC
+zU<CjGvk(9P2><{9000000RR91005I72sI=C0EYzt0B~||a4vXlY*0%D1^@s600IC4
+O0BryO05k^x0000@v)U&B
+
+diff --git a/public/label-templates/Numbers.lbx b/public/label-templates/Numbers.lbx
+index 6ef41274b29b9961a96b23167b8ae56c2acaec00..d1ff82a00f224fa8daf91aced9c497642d7c1b67 100644
+GIT binary patch
+delta 1462
+zcmV;n1xfnU4TBGVP)h>@6aWAK2mk;8AOPpuzxXc&001=)000R9003-ZVr6VDcx`O$
+zS6gq}It+f_uP}U`mrJ{LZP9dSx?~98B|+oiY>%?7*ji=DkmO$W>qk+N<Fq|R^M3jg
+zixMgF<420U{PI}y=$<Ogq?p9x!6=TX$YsGqIf;Ly^N(kL@t3O)myNk7WZu?Pm<Tk4
+zzG%!Ou8e6ehC`iKv?h9xDQPOI225<_uradDtKrdT^m)j$$6-yFh`p{hPn;g6jw(Ul
+z(8mLBw;DmaP~_n-ZL1NqSxw3VeMgm`pAiM{9%#WUbrBFlGNKPO60|xLNp@%!P$lT+
+zhwJA~zsI+KF%Yh#f+}L9n#8%RI}2-6o)rvs;wwwROcqa3-YNw&+*FhT3GgQx$5Fu)
+z%?(;j(pxx>jJeRbFGx*yXTx4Y8mgk27K}_{@Z*6MrkcdZ$Ai-b*iuneR&d49+3}~r
+zCo8FmDw#;=)=CFwJ5ef|NqpkeoaEN)_D@ZvF|zJ|4obx!4&r>~L=-v)hvJB|MkZ90
+z))%8%kknGhyi&5JUzu(=c?uhiV#3@=E>*X&C0y_A=*3rz4x>fMB>rcFe_pr{cOaVM
+zUmSrQ2A%_?Td8VdgE%>lqm1NtrIM{EQb;s)ChaAl4;LJdKc63Uk|p9jb%~7D>Bq09
+z<IyyK1>}c4=tCaz)+9{ONYS$8MBTJ-=g1<oRg~gtr|8cHRqNF^^eTGnfPLz4_Zc0Z
+zyX7vUc9p4CR~y%gmOqljOBMyj)@rKO#6U2Ro#kpd+Y|Xi`Exis)R%3YQH3yC9|P_I
+zWGh?0I6T_LxeE-LFSFmkZhduW8yWV$o)}|)*pL5gaMF+exF7xa)Ezs-uSm(}JGQNx
+z)%w?Zwgj4rk~<m@kyqAAx>_f*c?x;stnr|sn++9_?gNc}{RHKno4>l{dr$?SoMG1(
+zY~uE>cvosz;Xw~J&>DSgpc-irId~nJQ@|WFd@*sE-{FU$HPoG<->E8T3T1AaQgS_i
+zoh8X)lRn>nYG@$S-iEhIIF}Er)~vQun|YloBJ|e!>Z_VFakqh%(duBvO1yTFp{+Ti
+zyg*7g#}krKZg+2KE>*GGZngC>gdKu)s~({|*BUdI!YrVhdjXfFmH3|e4N9EU(a$AO
+zN<MUq19zAqoaLSC51xIWZ8GwTsEzY~B5Ih)t7}orNzJ$|UF%r?CV%f1K4*_6qT4OF
+zXyc#F=d&BY7@(pGfN*ToMzK38TW4LfKhze0YXDM}8x$O!If1qOyeC@O%NiJWZh1$-
+z@&!Q7rZ7r!U?Kia;_DyjDzRmgLv73zV&{<|y0I*?&6bD8t}AfhF0AlHnC}#S?j<W0
+zZVqvx;7jl7o-@~+l_G)?Wq)9ga9rC_4yt*!OlP<FA{&;!x&;p&K-=4xUT<c}0&9D?
+ze@E|5*OP+T&UMjpK6S<8B}j#a<SuzOi+=U-=nNCKmdxH7QV0`528W6p(9^HQ-zTr}
+z1q56(FwyD=-g>hVnBBR5-QvD~aHR^H?DM13<CD?pr<0xKXO^&0*oo?DKE=wxZ+EL@
+zpePqm;TRpf<&M?=*VCc(G<=3<KhOP!rMq_%=RM!hVOqSp3{!76G)D%z@O+U#`wT*O
+z)&b>jb`WKGge_AKa(xf8muu`e>b||-@9us`buHJA3Q&4XXl&1}GrQtsR+JP{@NTBd
+zDd+#%tZUb#cL6-_@A|Dx&nMsgx4T=t<hQg{gy(xz^xyX0+}!sB(Rf7^DE<<~y|ZZc
+zeI5gNwY;aZx-m})685!7P-S0){=6d6dousw=oJ3{z54JMP)h>@la2-&v&96Q0UGDp
+zzxXc&001=)000R90000000031004jilY0g=B!B@{1pokWa&K@hcx`M@O9ci100002
+Q00IDQ000002LJ#705p)p>Hq)$
+
+delta 1286
+zcmV+h1^N1e57Z5RP)h>@6aWAK2mk;8AOL@68CQS=006xV000R9003-ZVr6VDcx`O$
+zSIchOIuPCWD+Jwj{LI4%;uLWr6$Vt>h!vn+QW7oknj!^~YV3af9lm5G>7w4>Y%C6W
+zhBIf*jFkJYhnfbzu#kkac{m=7!T__J7lf7b@HLGuX5rU=hcEYyx+{3z)|jaP5KP`R
+zY93ZfHFv|I%qv_YImiT86&3@+c6`_<-saVCG8)|sX?7Uah_KLMr8-i49^61YUg5);
+zw`+t)7XrPVht>#>CN(P0jNL#yK0^ZNJ=22&br~RqG9=G*;!z!oC_A?b2IBGg`S{%8
+zdwLs#;7ZJYut187d6@IM^RO}Cs35QtK4=MMyf_AVD+I`JTVV_$Fh9XK3<@G}u8h|t
+zeSz~vF?Z7JGgRZ#S-;ny28*D^1wr!=;&>y4s^;NzI=F5?EfpqZ1y@XF)62o7w$w<J
+zge7>Vt%KRgl=5aCURjv6yf|$C)PgI;>+T>I1oA+CHfD-gA#(^Q3{b0hf?26!QKAJ)
+z%^A-t!E5|XWJA%>Z#051^~5O`-Np`4`EExppG|fqTVt7r|BTF^GcMU4OtJY31Mov2
+za-ej_MU8Y4SGQr1p?qHo-m)TvLSySvUjlfzU^>3JophF!;d@~V8En#v=j-ukkplC>
+z9`(L|4tc8*!f+sP*-|8)TDWth8QKYq&FTbnXFXI$_02>T96Dl;9q+E9<6FBtRaCDs
+z(aLITN73pvNt|U_nA}>4#Re%z2CB1KucCJ*cPRfzXUF=gturhPjXFlpyC+%OHlGfU
+zPI;aZGs@@Lzo2gUaIXiMnSVXA$wB9T>$0DJ4W|9<r~TZ=*OsJnq6!3WzMG--wBG#O
+zL@N*}E2$L$VtJ*#r0Y!*#VJ&clEzVHf^0AgWS?de*AD;>uDURPcFVuv6lk)J?O4!d
+zdw<1W6^0a!a__@<!-ocX5f_0a*Gf4B#sT44iSm4J9u%&j>lFTuMTt{ray^og$3>KX
+zB+G63asSw0FQs=I&MTsnzpY!f-Ys<9WhxMpI~}X*X-e3B3j?E--i@|cw9UfDZdW~Z
+zIN>xZ=1eVNG&=+3rM9>M`3?FN)xnPy5`w>V0)p6xLX_lPByUbkH=5hLLSm~E*E|!I
+zSC6cSQBA1sLmgQECU@@+9;1T_@NNfxA?kFZIF6oxGRPbY$jgdLDna&`x7NEPzp>V{
+z?Pe~@tuahy)}TFq9B|t9S<>S!EEkAhej>>FWJ+)fqB6hp@bNWWC%OxAka{c(ca9k(
+z8!Z|=IjNu0vVs8ier3jcd;<L9q*&UI3TyJQ^sep&^GHd_0_ZsM8}<-2YyDk+2F)3*
+z(&)v!UKPpzxCL)7ptiTMc-%(G(zNRE{T;nK?SS!ayU<xn>B9DcvluBfD7VGaRdlP1
+z$;=dN!->Atmk?g}85}B}04M*He_y=H^#f>4!RM(A;Ki-h%v3jaud1+bT#G^%`*w0Y
+zy&7F#UY$ID@MQX4e;z%=3)49?=Goq=70AjZG_1)EUd&e2|M%0m{WSc*XTQ$<fhD__
+zp!s-n^BF$<?34dL<l)PIP)h>@lRXC-vvdWV0UCd18CQS=006xV000R90000000031
+w00000lPU)_Bme-X1ONbVa&K@hcx`M@O9ci10000200IDQ0000{1^@s6036*@-2eap
+
+diff --git a/public/label-templates/SD Cards.lbx b/public/label-templates/SD Cards.lbx
+index 660a47de61038be76ad9d4d6aaa0ddccda790e44..c10e1962646b9d922636e0339468c8cbffc0e6cc 100644
+GIT binary patch
+delta 1455
+zcmV;g1yK6U53UavP)h>@6aWAK2mk;8AOQ4M(8ON_006p?7af27NRT=W;uNtX6$V_}
+zh*fNQq$NsXLy-bW<<Vci!<Q^OZcqc8JuK=&Yz{dOe)G+c%+=@TiUyBZNW$4T9QFob
+zfLY2j!isVDEr~x|grBcZu4;9e@wBNhQvql&d0DG*SSnRt_WLp|afM`WBe*KD=n<Cl
+zeyw<umi^PgVAOx7o9BLo2n(IAR4)`Cr*2fdzQWH(de<6WI}_;XIBl)rwMm7FBV#uz
+zUVnoGz<Z<xr_}BMDYQZINF!dWMG<X|&4N+!`swldsnzfBZ3u)bFv9{VF2-TXtJcEG
+zC`TEAnebXuaKp2gAZ>&I8m>!>fdu9&7=}Sc1WuK)I!}M@V7+0?r8M&lRd~DB&()~L
+zBB*di&^UxRo=B$3ad>vt`&a{8N=%9pT%2C?F7&uUq9AOJb1mzN5?+tPbE{+}cTTgr
+zYQmM`RlAT20=qyqVv1NMQwS#vP^0)9vqDFbBdXI?amLe9@Cx4&SyS{f4wYzNq85ay
+zDW_bt6Hb3+J0oYeW^-n<Mlufn8kmn0&e#KpV)F?DutOkpKs4u~LV6eHpTb~+(uYFu
+zhGhxl8C#Ru3Fw1^v*GB|X)9S6xF<G`!7BN1`*Ap!BmjKBgS<~e+Ne2UI1spKC=$~K
+zd=4~3xxm<rwu)}8SJhE{F;NB2EwV2y@Ghal(SCnI^=Km+S*~p-T6~+&on)4oy)_bx
+z6;iMnNY7%qh;~G7QMwOji~6FeHdq)Kb&MW&53-i6UM(JM_qpAeAwJ*y0CLOgE8WLT
+z`|F6!9`yb%dZY8h01SI)2LL!Cut4zot7%))<?8z?S^!a5K`jpuOG|AfS+3?$oIv6z
+zsU3f6Ce9kOKz5NfaovM*@4OB3dprCcSOF<(*fs{8xm_2(l^c>d)V&R34L{dVk2nh~
+zzLw1ifDRh2nkY{n%nyYtC_II~Vo~4(3SBp)`OPGn&u8mofBvP$o=rOw&MKmmKP?-z
+z%qKeaG7*T$T*vClniBS~hNjU-Z$?X;cD8>pwqk;5W;kI3kI(hg9ZtE(mU%99fPT+@
+zr*_n#lVe(~V$ReITDcQYUTBGHs9&JKQ5D=TkP!T-r5nUT6rv<;<9>3)8|h4>B@$~J
+zMNku!mNzVmQAMcctq!c~$@$IUXY{NBoaYdt-h33t(G&m%oUi~CEES~^<N@=>T9<$1
+zCx}P37Pu(ZX6*a9HoV^uwd^(jhiz0Y4nKT_kG08^;1n2Wz99p%`{*{lyZH+FN})7j
+zVbF8fAX#gY>1IoPW0xhw@Zd-0NQk!zkDO#PdkwK7A5O=6C!QNh3Kl?xlAkb#s2S^<
+z929f3NTNG)AS;p{oPrY%!0k*-Zq|R%d}d0!zw4vp)Al59whf&%lum5zIEf)cjZ&LF
+zoyYA6GPdGG`@FDiq1wQFHU$-VXzN|(Dpxu{GzE8A8Ney8mdxZfb_ZM76)r{A_TYmS
+zOl#10sOyvX{^QB;#?*`vSeKf6te8Pzn_a;nZkh9cs-)3>QAzzhIN!kc><@pw?~3mq
+z{=P51r+@JMH}Kt_0o|L7Y_HSi73i*c@P@p;@^9hxDIF+tH;ZR;IHbK0Zu<c8`Zky%
+zk;z^vAK@`(FM8(b`>UDmJ<mN??fuKW8sHQrOqz?Dy`$N4USO1QM%(9IiYfhDCtBKb
+zX&dzZO;5fx=_sV{f%(>@9{yb5`aCr&JLl=IExkFp8-u~&fXF|^yU6XVG6uVW-eOIm
+z1EB(56@SE0RjZe|q2-}17?rm@OyRFU@9jfm@9ROA-1~a?1!a!1-`^+10g>F1xgWNA
+z{XZeEPyPY3r3JMC8uV7s#9svf0J;<a00{s900000009610Du9LbO$v9fB}Y+tOpwg
+JD+d4o008Dgv3LLg
+
+delta 1490
+zcmV;@1ugon56ur3P)h>@6aWAK2mk;8AOLhM1^a#l008Ha7ae~sJ3*Q>h*QLlR2Wcg
+zBUX0XBPG!i8;TT2Dv$p94j+<b#|dg+vxh}}h|MAA_05CBTz-D4sP}+{B%F=?(O~F%
+zm}NXCtQh-uN%Y~||9o|HS*wejXHA8f@_>WMi&~BSQmOhP2xL~`3dun#xGJ$25Vqz)
+zt$34_!SQf-7SMn6DX0)(zT=hZnc~CP4NJ?f@Y8|XHAl;x3-ovxx8`WMNrj37Z8t0}
+ze~JXad!Piz)OmmuN|8KJNXylsh|)u&U|3rI>~Q|f^7ry>1PNDQh6PewjQxyPorI-f
+z4s!xK{*_L_l;_W0)(8P<xGFJ*Brspz$oFz0aHfpZIJtj?^Cn|1q}gYv!ke@0UX5xj
+zyb9+8jeW4=k>siz`zI%Zk2PdViAhm{isSRaxn5UD6okcit!aHy!t1erYMCtM)^YYv
+zO}J9L>JD;2zzbw8rikS-19N;2HHycW721+DqB>j^XFMwfuka0#HAT;3Ux@}bYC)Kq
+za>_-w;aGn*J92hooHNcE%Gm#FXg-cOWA{Lc%*XdY4gu2v(KQzp(q5c?^1T#g_l4jM
+z%M*w*wj#9>;0FaKqq9%P9c6Cdp4d2g%jCn&$I)<-0PsN%`8Et$qhi9aCveeFB&H4M
+z9BPQx0%Nn<FuJoXtG4QkvC4bukbUlecL5!p?FN5TuTs&-a%DTw{4S0iWtJP?8i~ac
+zDR2hDGhfWZEs{Hw?ZVliK5wcN3j?FJvBkXwS<{v;4i7heZX7d-&(j}}-16#D_c7D{
+zdSv5+_W%4f|3`z9J^mkHmnV4r)pV`tV)=a;&LK}(L2Vi!mX%scvRKApltA1lsU2v>
+z%o=|)PxgT}c6|fp!D(ma_ip(+r~*({u<Z*vaN8<=D>Ni`ptmxNH2hRUIpW;2@Y-Zf
+z0CV7Q#YA~_Z+<9TLES0*6^jBVQ0KZQ#n+QCj%TZ6cmKJ@Z8B|bIH`GRRuRE8H$k<k
+zqf@<gi!(0r#d<BZ3Jp7@{BhB!#d@OiL?(X%F}c>BxgJ0XyI(<vX=JNZQ>-rQbL**H
+z^|Hw&TCF0^)C@YgBT!ywitDFepuSP%eVZd8_+yuDU>i}0lB~1j(IwuQjzm@>v2s4t
+zL}leQ%Og|~s`FMG*4O0puHk3+q&&P{gNfRmFp9z{01TdE0e;z3luD3$%o{6RlAnJ-
+zKC`vJMX@sLww-IiyZunpUgrO(v&z}gE??kdWill=g$y*`WB>XtS;V?zGN_A480Z`@
+zNY*;TbfcwhQ<o(eaNn-Xbr5YB9yrNob_B7c)|Q^?o-x;y6wHJ2BtKyfQM1-l98_{R
+zPr_Ss87q?Q-GbW=knL?uu2*3^Gj)F*Z0qRhwEd_R+nLT9N+-5(9K~cpjWQcM9mLHF
+z!nNc?>pZtTp-N#tp8|{A=XyVFm8%5EG6i$2^x%e93uXcvxl7IO6Bi=y`tM!|rZ4FE
+z>FOx@_VH+RZ3@N^tV*4Dte8Pn8?WF3w`uc#Dx<UiqKtwaIN!kc<PW~@itm4){C!`1
+zkN@ENZ{WMR1Nvi(>_%zx0(3JTydSSF+jnsHjP{fn%%WKgGg3>0NgqHC{^qo)unZ)?
+z3146JV==f5SBtybX}Ai$+|6#_D@G}%GRWjZu)6W4NaS(=3wXNOxzIe6U)$-Ah3;`{
+zhdmuAGe#i7q?rosKxiiefl+_X8SNf}8K(3fof^_Sm^NPSPL=YlO_y_e=3H+y>g5lv
+zFJN=BcLBdH>CMe;8w?D4NbS4558T!%Bd~Ai4c0lg$5eo;;tx2iYV{nOJl^MmVR>7_
+z6#feI-a177z8Z9mzORN?QsyA}!EQqAA;~S8`(ewy{g36<(JxR-0|c{*1+f7dbSwq?
+segyyk=M(?{2><{9000000RR91005I!2Q>o#0Hu?S2O9=T2LJ#70Dt_@H~;_u
+
+diff --git a/src/app/(app)/labels/LabelCart.tsx b/src/app/(app)/labels/LabelCart.tsx
+index dff94373f..df9169613 100644
+--- a/src/app/(app)/labels/LabelCart.tsx
++++ b/src/app/(app)/labels/LabelCart.tsx
+@@ -143,6 +143,7 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
+   const [from, setFrom] = useState(1);
+   const [to, setTo] = useState(10);
+   const [prefix, setPrefix] = useState("");
++  const validRange = Number.isSafeInteger(from) && Number.isSafeInteger(to) && Math.abs(to - from) <= 499;
+ 
+   return (
+     <Collapsible
+@@ -166,7 +167,7 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
+             <Input className="w-20" value={sdDept} onChange={(e) => setSdDept(e.target.value)} placeholder="FB" />
+           </Field>
+           <Field label="Cards">
+-            <Input className="w-20" type="number" min={1} max={MAX_SD_CARDS} value={sdCount} onChange={(e) => setSdCount(Math.min(MAX_SD_CARDS, Math.max(1, Number(e.target.value) || 1)))} />
++            <Input className="w-20" type="number" min={1} max={MAX_SD_CARDS} step={1} value={sdCount} onChange={(e) => setSdCount(Math.min(MAX_SD_CARDS, Math.max(1, Math.floor(Number(e.target.value) || 1))))} />
+           </Field>
+           <Field label="Slots">
+             <Input className="w-24" value={sdSlots} onChange={(e) => setSdSlots(e.target.value)} placeholder="A,B" />
+@@ -224,10 +225,10 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
+ 
+         <GeneratorBlock title="Number run" hint="Plain numbers, up to 500 at a time.">
+           <Field label="From">
+-            <Input className="w-20" type="number" value={from} onChange={(e) => setFrom(Number(e.target.value) || 0)} />
++            <Input className="w-20" type="number" step={1} value={from} onChange={(e) => setFrom(Number(e.target.value) || 0)} aria-invalid={!validRange} />
+           </Field>
+           <Field label="To">
+-            <Input className="w-20" type="number" value={to} onChange={(e) => setTo(Number(e.target.value) || 0)} />
++            <Input className="w-20" type="number" step={1} value={to} onChange={(e) => setTo(Number(e.target.value) || 0)} aria-invalid={!validRange} />
+           </Field>
+           <Field label="Prefix">
+             <Input className="w-20" value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="#" />
+@@ -235,12 +236,13 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
+           <Button
+             variant="outline"
+             className="h-10"
+-            disabled={Math.abs(to - from) > 499}
++            disabled={!validRange}
+             onClick={() => onAdd(generatedEntries(numberRangeRows(from, to, prefix, "text")))}
+           >
+             <Plus className="size-4" />
+             Add
+           </Button>
++          {!validRange && <p role="status" className="w-full text-xs text-destructive">Use whole numbers, up to 500 labels at a time.</p>}
+         </GeneratorBlock>
+       </CollapsibleContent>
+     </Collapsible>
+diff --git a/src/app/(app)/labels/LabelPreview.tsx b/src/app/(app)/labels/LabelPreview.tsx
+index b293a7526..acc8a2cb2 100644
+--- a/src/app/(app)/labels/LabelPreview.tsx
++++ b/src/app/(app)/labels/LabelPreview.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useEffect, useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import { Barlow_Condensed } from "next/font/google";
+ import type { LabelKind } from "@/lib/brother-label-csv";
+ import { cn } from "@/lib/utils";
+@@ -26,30 +26,22 @@ type TemplateLayout = {
+     align: "center" | "top";
+     /** Batteries.lbx turns its number a quarter turn. */
+     rotated?: boolean;
++    fixed?: boolean;
+   };
+   qr?: { gap: number; y: number; size: number };
+   end: number;
+ };
+ 
+-/**
+- * Object frames copied from the .lbx files on the share
+- * (Media/RESOURCES/GUIDES/Labels/Brother Printer). Positions are in points
+- * along the tape (x) and across it (y), exactly as P-touch Editor stores them.
+- */
++/** Balanced frames in the bundled .lbx files, in points along/across the tape. */
+ export const TEMPLATE_LAYOUTS: Record<LabelKind, TemplateLayout> = {
+-  // Text6 x 8.7 w 12.2 (AUTOLEN), Barcode7 x 25.5 y 1.8 30×30.
+-  body: { start: 8.7, text: { width: 12.2, size: 7.6, weight: 700, align: "center" }, qr: { gap: 4.6, y: 1.8, size: 30 }, end: 5.6 },
+-  // Text6 x 6.5 w 30 (AUTOLEN), Barcode7 x 40.5 y 1.5 30×30.
+-  lens: { start: 6.5, text: { width: 30, size: 7.6, weight: 700, align: "center" }, qr: { gap: 4, y: 1.5, size: 30 }, end: 5.6 },
+-  // 28.8pt fixed; Text1 x 8.6 w 11.3 h 28.
+-  sd: { length: 28.8, start: 8.6, text: { width: 11.3, y: 2.8, height: 28, size: 7.7, weight: 700, align: "center" }, end: 8.9 },
+-  // Numbers.lbx: Text1 x 9 y 8.3 w 13 h 16.6 at 13.8pt (AUTOLEN).
+-  text: { start: 9, text: { width: 13, y: 8.3, height: 16.6, size: 13.8, weight: 700, align: "center" }, end: 5.6 },
+-  // Number-Tag.lbx: Text3 x 5.5 y 9.8 w 10.2 h 13.2 at 11pt, Barcode2 x 18.5 y 6.3 20×20.
+-  numberTag: { start: 5.5, text: { width: 10.2, y: 9.8, height: 13.2, size: 11, weight: 700, align: "top" }, qr: { gap: 2.8, y: 6.3, size: 20 }, end: 5.6 },
+-  // Batteries.lbx: 57.6pt fixed; Text6 x 7.3 y 4.2 w 14.4 h 25.2 at 12pt heavy, turned 270° (P-touch turns clockwise,
+-  // so it reads bottom to top); Barcode2 x 20.5 y 1.8 30×30.
+-  battery: { length: 57.6, start: 7.3, text: { width: 14.4, y: 4.2, height: 25.2, size: 12, weight: 900, align: "center", rotated: true }, qr: { gap: -1.2, y: 1.8, size: 30 }, end: 7.1 },
++  // Equal outer margins; fixed text cannot grow into the QR's quiet zone.
++  body: { start: 5.6, text: { width: 30, y: 3.15, height: 27.3, size: 7.6, weight: 700, align: "center", fixed: true }, qr: { gap: 6.4, y: 1.8, size: 30 }, end: 5.6 },
++  lens: { start: 5.6, text: { width: 30, y: 3.15, height: 27.3, size: 7.6, weight: 700, align: "center", fixed: true }, qr: { gap: 6.4, y: 1.8, size: 30 }, end: 5.6 },
++  sd: { length: 28.8, start: 8.75, text: { width: 11.3, y: 2.8, height: 28, size: 7.7, weight: 700, align: "center" }, end: 8.75 },
++  text: { start: 5.6, text: { width: 13, y: 8.5, height: 16.6, size: 13.8, weight: 700, align: "center" }, end: 5.6 },
++  numberTag: { start: 5.6, text: { width: 10.2, y: 10.2, height: 13.2, size: 11, weight: 700, align: "center", fixed: true }, qr: { gap: 6.4, y: 1.8, size: 30 }, end: 5.6 },
++  // P-touch's clockwise 270° rotation makes the battery number read bottom to top.
++  battery: { length: 62, start: 5.6, text: { width: 14.4, y: 4.2, height: 25.2, size: 12, weight: 900, align: "center", rotated: true }, qr: { gap: 6.4, y: 1.8, size: 30 }, end: 5.6 },
+ };
+ 
+ /** The text lines a template prints for a row, blank lines included (they hold the layout). */
+@@ -79,7 +71,8 @@ function useQrSvg(value: string) {
+     import("qrcode").then((QRCode) =>
+       QRCode.toString(value, {
+         type: "svg",
+-        margin: 1,
++        margin: 2,
++        version: 1,
+         errorCorrectionLevel: "M",
+         color: { dark: "#ffffffff", light: "#00000000" },
+       }).then(
+@@ -99,8 +92,8 @@ function useQrSvg(value: string) {
+ }
+ 
+ /**
+- * The label as the template prints it, to scale: tape width, frame positions,
+- * QR size and font sizes all come from the .lbx file for that template.
++ * Approximate tape layout from the .lbx frames. P-touch owns final font fitting
++ * and printer output; browser fallback fonts can have different metrics.
+  */
+ export function LabelPreview({
+   kind,
+@@ -126,6 +119,24 @@ export function LabelPreview({
+   const svg = useQrSvg(layout.qr ? qrCodeValue : "");
+   const lines = templateLines(kind, { dept, model, number });
+   const { text } = layout;
++  const textRef = useRef<HTMLSpanElement>(null);
++  const [fit, setFit] = useState(1);
++  const constrained = Boolean(text.fixed || text.rotated || layout.length);
++
++  useEffect(() => {
++    if (!constrained) return;
++    let live = true;
++    const measure = () => {
++      const node = textRef.current;
++      if (!live || !node) return;
++      const width = (text.rotated ? text.height! : text.width) * scale;
++      const height = (text.rotated ? text.width : text.height ?? TAPE_WIDTH_PT) * scale;
++      setFit(Math.min(1, width / Math.max(1, node.scrollWidth), height / Math.max(1, node.scrollHeight)));
++    };
++    measure();
++    void document.fonts.ready.then(measure);
++    return () => { live = false; };
++  }, [constrained, dept, model, number, scale, text]);
+ 
+   const textFrame = (
+     <span
+@@ -135,22 +146,23 @@ export function LabelPreview({
+         marginLeft: pt(layout.start),
+         marginTop: pt(text.y ?? 0),
+         height: pt(text.height ?? TAPE_WIDTH_PT),
+-        width: text.rotated || layout.length ? pt(text.width) : undefined,
++        width: constrained ? pt(text.width) : undefined,
+       }}
+     >
+       <span
++        ref={textRef}
+         className="flex flex-col items-center whitespace-pre text-center"
+         style={{
+           fontSize: pt(text.size),
+           lineHeight: 1.2,
+           fontWeight: text.weight,
++          ...(constrained ? { width: "max-content", alignSelf: "center", transform: `scale(${fit})`, transformOrigin: text.align === "top" ? "center top" : "center" } : {}),
+           ...(text.rotated
+             ? {
+                 position: "absolute",
+                 left: "50%",
+                 top: "50%",
+-                width: pt(text.height ?? TAPE_WIDTH_PT),
+-                transform: "translate(-50%, -50%) rotate(-90deg)",
++                transform: `translate(-50%, -50%) rotate(-90deg) scale(${fit})`,
+               }
+             : {}),
+         }}
+@@ -167,7 +179,8 @@ export function LabelPreview({
+       aria-hidden
+       className={cn(
+         condensed.className,
+-        "relative flex shrink-0 items-start overflow-hidden rounded-[3px] bg-black text-white shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_1px_2px_rgba(0,0,0,0.25)]",
++        // Measurements must use the final geometry, including with global reduced-motion styles.
++        "relative flex shrink-0 items-start overflow-hidden rounded-[3px] bg-black text-white transition-none [&_*]:transition-none shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_1px_2px_rgba(0,0,0,0.25)]",
+         className,
+       )}
+       style={{
+diff --git a/src/app/(app)/labels/LabelsHelper.tsx b/src/app/(app)/labels/LabelsHelper.tsx
+index fcf9a69ee..f9752d83f 100644
+--- a/src/app/(app)/labels/LabelsHelper.tsx
++++ b/src/app/(app)/labels/LabelsHelper.tsx
+@@ -133,7 +133,7 @@ function PickerRow({ item, added, onToggle }: { item: PickerItem; added: boolean
+       <Button
+         variant={added ? "ghost" : "outline"}
+         size="sm"
+-        className={cn("h-9 w-[84px] shrink-0", added && "text-[var(--accent)]")}
++        className={cn("h-10 w-[84px] shrink-0", added && "text-[var(--accent)]")}
+         onClick={onToggle}
+         aria-pressed={added}
+         aria-label={added ? `Remove ${item.ariaLabel} from the print sheet` : `Add ${item.ariaLabel} to the print sheet`}
+diff --git a/src/app/(app)/labels/PrintSheet.tsx b/src/app/(app)/labels/PrintSheet.tsx
+index b46aa31a0..4b4cbcfef 100644
+--- a/src/app/(app)/labels/PrintSheet.tsx
++++ b/src/app/(app)/labels/PrintSheet.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useMemo, useState } from "react";
++import { useId, useMemo, useState } from "react";
+ import { useQueries, useQueryClient } from "@tanstack/react-query";
+ import { toast } from "sonner";
+ import { Check, Download, FileDown, Minus, Pencil, Plus, RotateCcw, X } from "lucide-react";
+@@ -18,6 +18,7 @@ import {
+   MAX_COPIES,
+   clampCopies,
+   entryKind,
++  entryPrintIssue,
+   entryRows,
+   parseUnitPick,
+   printableCount,
+@@ -46,7 +47,11 @@ async function readUnits(skuId: string, signal?: AbortSignal): Promise<SheetUnit
+   if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+   if (!res.ok) throw new Error("server");
+   const json = await parseJsonSafely<{ data?: SheetUnit[] }>(res);
+-  return json?.data ?? [];
++  if (!Array.isArray(json?.data) || !json.data.every((unit) =>
++    Number.isSafeInteger(unit.unitNumber) && unit.unitNumber > 0 && typeof unit.status === "string" &&
++    (unit.labelPrintedAt === null || typeof unit.labelPrintedAt === "string")
++  )) throw new Error("server");
++  return json.data;
+ }
+ 
+ /** Unit lists for every numbered family on the sheet that prints unit labels. */
+@@ -66,8 +71,9 @@ export function useSheetUnits(cart: CartEntry[]) {
+     unitsBySku[skuId] = results[index]?.data;
+     if (results[index]?.isError) failed.add(skuId);
+   });
+-  const loading = results.some((result) => result.isLoading);
+-  return { unitsBySku, loading, failed };
++  const loading = results.some((result) => result.isPending);
++  const retry = () => { results.forEach((result) => { if (result.isError) void result.refetch(); }); };
++  return { unitsBySku, loading, failed, retry };
+ }
+ 
+ function download(filename: string, csv: string) {
+@@ -94,10 +100,10 @@ function Stepper({
+   label: string;
+ }) {
+   return (
+-    <div className="inline-flex h-9 items-center rounded-full border border-border bg-background">
++    <div className="inline-flex h-10 items-center rounded-full border border-border bg-background focus-within:ring-[3px] focus-within:ring-ring/50">
+       <button
+         type="button"
+-        className="grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-40"
++        className="grid size-10 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
+         onClick={() => onChange(clampCopies(value - 1))}
+         disabled={value <= 1}
+         aria-label={`One fewer ${label}`}
+@@ -113,7 +119,7 @@ function Stepper({
+       />
+       <button
+         type="button"
+-        className="grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-40"
++        className="grid size-10 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
+         onClick={() => onChange(clampCopies(value + 1))}
+         disabled={value >= MAX_COPIES}
+         aria-label={`One more ${label}`}
+@@ -214,21 +220,23 @@ function SheetEntry({
+ }) {
+   const [editing, setEditing] = useState(false);
+   const [marking, setMarking] = useState(false);
++  const issueId = useId();
+   const family = entry.family;
+   const unitMode = printsUnits(entry);
+   const counted = family && !family.trackByNumber;
+   const unitNumbers = selectedUnitNumbers(entry, units);
+   const unknown = unknownPickedNumbers(entry, units);
+   const pickInvalid = family?.unitScope === "pick" ? parseUnitPick(family.unitPick ?? "").invalid : [];
++  const issue = entryPrintIssue(entry, units);
+   const labels = printableCount(entryRows(entry, units));
+   const kind = entryKind(entry);
+-  const missingQr = LABEL_KINDS[kind].needsQr && !entry.qrCodeValue;
++  const missingQr = LABEL_KINDS[kind].needsQr && !(unitMode ? family?.binQrCodeValue : entry.qrCodeValue)?.trim();
+   const active = units?.filter((unit) => unit.status !== "RETIRED") ?? [];
+   const unprinted = active.filter((unit) => !unit.labelPrintedAt).length;
+   const firstUnit = unitNumbers[0];
+   const edited = textEdited(entry);
+-  const toMark = (downloadedUnits ?? []).filter((n) => !units?.find((u) => u.unitNumber === n)?.labelPrintedAt);
+-  const canMark = unitMode && toMark.length > 0;
++  const toMark = (downloadedUnits ?? []).filter((n) => units?.some((u) => u.unitNumber === n && u.status !== "RETIRED" && !u.labelPrintedAt));
++  const canMark = unitMode && !unitsFailed && toMark.length > 0;
+ 
+   const meta = unitMode
+     ? !units
+@@ -236,12 +244,16 @@ function SheetEntry({
+         ? "Units could not load"
+         : "Loading units…"
+       : unitNumbers.length === 0
+-        ? family?.unitScope === "pick"
++        ? active.length === 0
++          ? "No active units to label"
++          : family?.unitScope === "pick"
+           ? "Type unit numbers to print"
+           : "Every unit already has a label"
+-        : `${plural(unitNumbers.length, "unit label")} · ${compactRanges(unitNumbers)}`
++        : issue
++          ? "Fix unit selection before downloading"
++          : `${plural(unitNumbers.length, "unit label")} · ${compactRanges(unitNumbers)}`
+     : missingQr
+-      ? "No QR code, so the CSV skips it"
++      ? "An item QR code is required"
+       : entry.qrCodeValue || entry.name;
+ 
+   return (
+@@ -280,14 +292,16 @@ function SheetEntry({
+       </div>
+ 
+       <div className="mt-2 overflow-x-auto pb-1">
+-        {unitMode ? (
++        {unitMode && firstUnit ? (
+           <LabelPreview
+             kind={kind}
+             dept=""
+             model=""
+-            number={firstUnit ? String(firstUnit) : "1"}
+-            qrCodeValue={`${family!.binQrCodeValue}-${firstUnit ?? 1}`}
++            number={String(firstUnit)}
++            qrCodeValue={`${family!.binQrCodeValue}-${firstUnit}`}
+           />
++        ) : unitMode ? (
++          <p className="text-xs text-muted-foreground">Choose active unit numbers to preview a label.</p>
+         ) : (
+           <button
+             type="button"
+@@ -300,12 +314,16 @@ function SheetEntry({
+         )}
+       </div>
+ 
++      {issue && (!unitMode || (units && family?.unitScope !== "pick")) && (
++        <p role="status" className="mt-2 text-xs text-destructive">{issue}</p>
++      )}
++
+       {family?.trackByNumber && (
+         <ToggleGroup
+           type="single"
+           value={family.mode}
+           onValueChange={(mode) => mode && onUpdate({ family: { ...family, mode: mode as "family" | "units" } })}
+-          className="mt-2 w-full [&>button]:min-h-9 [&>button]:flex-1 [&>button]:text-xs"
++          className="mt-2 w-full [&>button]:min-h-10 [&>button]:flex-1 [&>button]:text-xs"
+           aria-label={`What to print for ${entry.title}`}
+         >
+           <ToggleGroupItem value="family">Family label</ToggleGroupItem>
+@@ -319,7 +337,7 @@ function SheetEntry({
+             type="single"
+             value={family!.unitScope}
+             onValueChange={(scope) => scope && onUpdate({ family: { ...family!, unitScope: scope as UnitScope } })}
+-            className="w-full [&>button]:min-h-9 [&>button]:flex-1 [&>button]:text-xs"
++            className="w-full [&>button]:min-h-10 [&>button]:flex-1 [&>button]:text-xs"
+             aria-label={`Which units of ${entry.title}`}
+           >
+             <ToggleGroupItem value="unprinted">Not printed{units ? ` · ${unprinted}` : ""}</ToggleGroupItem>
+@@ -332,17 +350,18 @@ function SheetEntry({
+                 value={family!.unitPick ?? ""}
+                 onChange={(e) => onUpdate({ family: { ...family!, unitPick: e.target.value } })}
+                 placeholder="7, or 12-18, or 3, 9, 20-24"
+-                inputMode="numeric"
++                aria-invalid={Boolean(issue)}
++                aria-describedby={issue ? issueId : undefined}
+                 aria-label={`Unit numbers of ${entry.title} to print`}
+               />
+-              {(pickInvalid.length > 0 || unknown.length > 0) && (
+-                <p className="text-xs text-destructive">
++              {issue && (
++                <p id={issueId} role="status" className="text-xs text-destructive">
+                   {[
+-                    pickInvalid.length > 0 ? `Can't read ${pickInvalid.join(", ")}` : "",
++                    pickInvalid.length > 0 ? `Can't read ${pickInvalid.slice(0, 4).join(", ")}. ${issue}` : "",
+                     unknown.length > 0 ? `No active unit ${compactRanges(unknown)}` : "",
+                   ]
+                     .filter(Boolean)
+-                    .join(". ")}
++                    .join(". ") || issue}
+                 </p>
+               )}
+             </div>
+@@ -386,7 +405,7 @@ function SheetEntry({
+ 
+       {canMark && (
+         <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-[var(--accent-soft)] px-3 py-2 text-xs">
+-          <span>Stuck these on?</span>
++          <span>Printed and applied?</span>
+           <Button
+             size="sm"
+             className="h-10"
+@@ -438,8 +457,8 @@ export function PrintSheet({
+   className?: string;
+ }) {
+   const queryClient = useQueryClient();
+-  const { unitsBySku, loading, failed } = useSheetUnits(cart);
+-  const [downloaded, setDownloaded] = useState<Set<LabelKind>>(new Set());
++  const { unitsBySku, loading, failed, retry } = useSheetUnits(cart);
++  const [downloaded, setDownloaded] = useState<Partial<Record<LabelKind, string>>>({});
+   // Exactly which units went out in a downloaded CSV, per family, so "Mark printed"
+   // never covers units that were added or re-picked after the download.
+   const [exportedUnits, setExportedUnits] = useState<Record<string, number[]>>({});
+@@ -448,6 +467,7 @@ export function PrintSheet({
+   const rows = useMemo(() => sheetRows(cart, unitsBySku), [cart, unitsBySku]);
+   const files = useMemo(() => templateFiles(rows), [rows]);
+   const total = printableCount(rows);
++  const blocked = loading || failed.size > 0 || cart.some((entry) => entryPrintIssue(entry, entry.family ? unitsBySku[entry.family.skuId] : undefined));
+   const groups = KIND_ORDER.map((kind) => ({
+     kind,
+     entries: cart.filter((entry) => entryKind(entry) === kind),
+@@ -493,7 +513,11 @@ export function PrintSheet({
+       const skuId = entry.family!.skuId;
+       exported[skuId] = Array.from(new Set([...(exported[skuId] ?? []), ...selectedUnitNumbers(entry, unitsBySku[skuId])]));
+     }
+-    setExportedUnits((prev) => ({ ...prev, ...exported }));
++    setExportedUnits((prev) => {
++      const next = { ...prev };
++      for (const [skuId, numbers] of Object.entries(exported)) next[skuId] = Array.from(new Set([...(prev[skuId] ?? []), ...numbers]));
++      return next;
++    });
+   };
+ 
+   return (
+@@ -531,37 +555,43 @@ export function PrintSheet({
+         </div>
+       ) : (
+         <div className="min-h-0 flex-1 overflow-y-auto">
+-          {groups.map((group) => (
+-            <div key={group.kind}>
+-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-[var(--bg-surface)]/90 px-4 py-1.5 text-xs font-bold text-muted-foreground backdrop-blur">
++          <ul className="divide-y divide-border/60">
++            {groups.flatMap((group) => [
++              <li key={`heading-${group.kind}`} className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-[var(--bg-surface)]/90 px-4 py-1.5 text-xs font-bold text-muted-foreground backdrop-blur">
+                 <span>{LABEL_KINDS[group.kind].template}</span>
+                 <span className="font-normal tabular-nums">
+                   {plural(printableCount(rows.filter((row) => row.kind === group.kind)), "label")}
+                 </span>
+-              </div>
+-              <ul className="divide-y divide-border/60">
+-                {group.entries.map((entry) => (
+-                  <SheetEntry
+-                    key={entry.id}
+-                    entry={entry}
+-                    units={entry.family ? unitsBySku[entry.family.skuId] : undefined}
+-                    unitsFailed={Boolean(entry.family && failed.has(entry.family.skuId))}
+-                    downloadedUnits={
+-                      canMarkPrinted && entry.family && printsUnits(entry) ? exportedUnits[entry.family.skuId] ?? null : null
+-                    }
+-                    onUpdate={(patch) => onUpdate(entry.id, patch)}
+-                    onRemove={() => onRemove(entry.id)}
+-                    onMarkPrinted={(numbers) => markPrinted(entry, numbers)}
+-                  />
+-                ))}
+-              </ul>
+-            </div>
+-          ))}
++              </li>,
++              ...group.entries.map((entry) => (
++                <SheetEntry
++                  key={entry.id}
++                  entry={entry}
++                  units={entry.family ? unitsBySku[entry.family.skuId] : undefined}
++                  unitsFailed={Boolean(entry.family && failed.has(entry.family.skuId))}
++                  downloadedUnits={
++                    canMarkPrinted && entry.family && printsUnits(entry) ? exportedUnits[entry.family.skuId] ?? null : null
++                  }
++                  onUpdate={(patch) => onUpdate(entry.id, patch)}
++                  onRemove={() => onRemove(entry.id)}
++                  onMarkPrinted={(numbers) => markPrinted(entry, numbers)}
++                />
++              )),
++            ])}
++          </ul>
+         </div>
+       )}
+ 
+       {cart.length > 0 && (
+         <footer className="flex flex-col gap-2 border-t border-border/70 bg-[var(--bg-surface)]/60 px-4 py-3">
++          {failed.size > 0 ? (
++            <div role="alert" className="flex items-center justify-between gap-2 text-xs text-destructive">
++              <span>Unit numbers could not load. Download is paused to keep the sheet complete.</span>
++              <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={retry}>Try again</Button>
++            </div>
++          ) : blocked && !loading ? (
++            <p role="status" className="text-xs text-destructive">Fix the label choices above before downloading.</p>
++          ) : null}
+           {files.length === 0 ? (
+             <p className="text-xs text-muted-foreground">
+               {loading ? "Loading unit numbers…" : "Nothing on the sheet can print yet."}
+@@ -572,15 +602,16 @@ export function PrintSheet({
+                 <Button
+                   variant={index === 0 ? "default" : "outline"}
+                   className="h-10 min-w-0 flex-1 justify-between"
+-                  disabled={loading}
++                  disabled={Boolean(blocked)}
++                  aria-label={`Download ${file.file}, ${plural(file.labels, "label")}${downloaded[file.kind] === file.csv ? ", current version downloaded" : downloaded[file.kind] ? ", updated since last download" : ""}`}
+                   onClick={() => {
+                     download(file.file, file.csv);
+-                    setDownloaded((prev) => new Set(prev).add(file.kind));
++                    setDownloaded((prev) => ({ ...prev, [file.kind]: file.csv }));
+                     recordExport(file.kind);
+                   }}
+                 >
+                   <span className="flex min-w-0 items-center gap-2">
+-                    {downloaded.has(file.kind) ? <Check className="size-4" /> : <Download className="size-4" />}
++                    {downloaded[file.kind] === file.csv ? <Check className="size-4" /> : <Download className="size-4" />}
+                     <span className="truncate">{file.file}</span>
+                   </span>
+                   <span className="tabular-nums opacity-80">{plural(file.labels, "label")}</span>
+@@ -594,8 +625,9 @@ export function PrintSheet({
+             ))
+           )}
+           <p className="text-xs leading-relaxed text-muted-foreground">
+-            Open the matching template in P-touch Editor (the file button next to each CSV), connect the CSV as its
+-            database, then print all records.
++            Open the matching template in P-touch Editor (the file button). If asked to locate its database,
++            choose Reopen, then Browse and select the CSV. Keep the header row option checked. Confirm a record
++            and its text fit before printing. Previews approximate the tape layout.
+           </p>
+         </footer>
+       )}
+diff --git a/src/app/(app)/labels/label-sheet.ts b/src/app/(app)/labels/label-sheet.ts
+index e7cda65d6..305f8b58c 100644
+--- a/src/app/(app)/labels/label-sheet.ts
++++ b/src/app/(app)/labels/label-sheet.ts
+@@ -1,11 +1,13 @@
+ import {
+   LABEL_KINDS,
+   buildBrotherCsv,
++  fitsBrotherQr,
+   parseAssetTag,
+   unitTagRows,
+   type LabelKind,
+   type LabelRow,
+ } from "@/lib/brother-label-csv";
++import { MAX_BULK_UNIT_NUMBER } from "@/lib/request-limits";
+ 
+ /** Most labels one sheet entry can ask for; a typo should not queue 10,000 prints. */
+ export const MAX_COPIES = 500;
+@@ -154,11 +156,17 @@ export function parseUnitPick(text: string): { numbers: number[]; invalid: strin
+     const from = Number(range[1]);
+     const to = Number(range[2] ?? range[1]);
+     const [low, high] = from <= to ? [from, to] : [to, from];
+-    if (low < 1 || high - low >= MAX_PICK) {
++    if (!Number.isSafeInteger(low) || !Number.isSafeInteger(high) || low < 1 || high > MAX_BULK_UNIT_NUMBER || high - low >= MAX_PICK) {
+       invalid.push(part);
+       continue;
+     }
+-    for (let n = low; n <= high && numbers.size < MAX_PICK; n += 1) numbers.add(n);
++    const added = [];
++    for (let n = low; n <= high; n += 1) if (!numbers.has(n)) added.push(n);
++    if (numbers.size + added.length > MAX_PICK) {
++      invalid.push(part);
++      continue;
++    }
++    for (const n of added) numbers.add(n);
+   }
+   return { numbers: [...numbers].sort((a, b) => a - b), invalid };
+ }
+@@ -189,8 +197,25 @@ export function unitKindOf(entry: CartEntry): UnitKind {
+   return entry.family?.unitKind ?? "battery";
+ }
+ 
++/** A sheet must be corrected before export rather than silently dropping labels. */
++export function entryPrintIssue(entry: CartEntry, units: SheetUnit[] | undefined): string | null {
++  const qr = printsUnits(entry) ? entry.family?.binQrCodeValue : entry.qrCodeValue;
++  if (LABEL_KINDS[entryKind(entry)].needsQr && !qr?.trim()) return "This label needs an item QR code.";
++  const qrIssue = "This QR code needs wider tape and a matching P-touch layout.";
++  if (!printsUnits(entry)) return LABEL_KINDS[entry.kind].needsQr && !fitsBrotherQr(entry.qrCodeValue) ? qrIssue : null;
++  if (!units) return "Loading unit numbers…";
++  if (selectedUnitNumbers(entry, units).some((n) => !fitsBrotherQr(`${entry.family!.binQrCodeValue}-${n}`))) return qrIssue;
++  if (entry.family?.unitScope !== "pick") return null;
++  const picked = parseUnitPick(entry.family.unitPick ?? "");
++  if (picked.invalid.length > 0) return "Use whole unit numbers and ranges, up to 2,000 units at a time.";
++  if (picked.numbers.length === 0) return "Choose at least one unit number.";
++  if (unknownPickedNumbers(entry, units).length > 0) return "Remove numbers that are not active units of this family.";
++  return null;
++}
++
+ /** The CSV rows one sheet entry turns into. */
+ export function entryRows(entry: CartEntry, units: SheetUnit[] | undefined): LabelRow[] {
++  if (entryPrintIssue(entry, units)) return [];
+   if (printsUnits(entry) && entry.family) {
+     return unitTagRows(
+       entry.family.binQrCodeValue,
+diff --git a/src/lib/brother-label-csv.ts b/src/lib/brother-label-csv.ts
+index a754fe536..2affa7557 100644
+--- a/src/lib/brother-label-csv.ts
++++ b/src/lib/brother-label-csv.ts
+@@ -25,6 +25,17 @@ export type LabelRow = {
+   copies: number;
+ };
+ 
++/** Version 1 / M keeps the 12 mm templates at the requested Medium Small size.
++ * Capacities: https://www.qrcode.com/en/about/versionPage/versionPage1_10.html
++ * Preserve scan identity; longer or non-ASCII values need a wider-tape layout.
++ */
++export function fitsBrotherQr(value: string): boolean {
++  if (!value || /[^\x20-\x7e]/.test(value)) return false;
++  if (/^\d+$/.test(value)) return value.length <= 34;
++  if (/^[0-9A-Z $%*+./:-]+$/.test(value)) return value.length <= 20;
++  return value.length <= 14;
++}
++
+ export const LABEL_KINDS: Record<
+   LabelKind,
+   { label: string; file: string; template: string; headers: string[]; needsQr: boolean }
+@@ -105,6 +116,7 @@ export function sdCardRows(camera: string, dept: string, count: number, slots: s
+ }
+ 
+ export function numberRangeRows(from: number, to: number, prefix: string, kind: "text" | "numberTag"): LabelRow[] {
++  if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || Math.abs(to - from) > 499) return [];
+   const rows: LabelRow[] = [];
+   const step = from <= to ? 1 : -1;
+   for (let n = from; step > 0 ? n <= to : n >= to; n += step) {
+@@ -138,6 +150,9 @@ export function buildBrotherCsv(kind: LabelKind, rows: LabelRow[]): string {
+     .filter((row) => row.kind === kind)
+     .filter((row) => !LABEL_KINDS[kind].needsQr || row.qrCodeValue)
+     .flatMap((row) => {
++      if (LABEL_KINDS[kind].needsQr && !fitsBrotherQr(row.qrCodeValue)) {
++        throw new Error("This QR code needs a wider-tape template.");
++      }
+       const line = cells(row).map(quote).join(",");
+       return Array.from({ length: Math.max(1, Math.floor(row.copies)) }, () => line);
+     });
+diff --git a/tasks/INDEX.md b/tasks/INDEX.md
+index 9b8bbd330..542dca89f 100644
+--- a/tasks/INDEX.md
++++ b/tasks/INDEX.md
+@@ -39,6 +39,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
+ 
+ ## Active Follow-up Ledgers
+ 
++- `qr-print-audit-plan-2026-10-22.md` — QR helper hardening, centered Gotham/Medium Small templates, physical scan acceptance, one-record export limitation, and direct USB printing proof.
++
+ - `performance-web-ios-neon-2026-10-20.md` — browser cache/request lifecycle, native decode/persistence/network work, and production Neon diagnostics; tracks rollout and physical-device energy proof separately.
+ 
+ - `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.
+diff --git a/tests/brother-label-csv.test.ts b/tests/brother-label-csv.test.ts
+index 3aeef760f..39e451a28 100644
+--- a/tests/brother-label-csv.test.ts
++++ b/tests/brother-label-csv.test.ts
+@@ -1,6 +1,7 @@
+ import { describe, expect, it } from "vitest";
+ import {
+   buildBrotherCsv,
++  fitsBrotherQr,
+   numberRangeRows,
+   parseAssetTag,
+   sdCardRows,
+@@ -49,6 +50,20 @@ describe("buildBrotherCsv", () => {
+     const csv = buildBrotherCsv("text", [row({ kind: "text", model: "FB", copies: 3 })]);
+     expect(body(csv)).toEqual(["Label", "FB", "FB", "FB"]);
+   });
++  it("refuses an oversized QR instead of growing it beyond the 12 mm layout", () => {
++    expect(() => buildBrotherCsv("body", [row({ qrCodeValue: "legacy-camera-code-123456" })])).toThrow("wider-tape");
++  });
++});
++
++describe("fixed-size Brother QR capacity", () => {
++  it.each([
++    ["c62a82d7", true], ["94e068d1-12345", true],
++    ["1234567890123456789012345678901234", true], ["12345678901234567890123456789012345", false],
++    ["ABCDEFGHIJKLMNOPQRST", true], ["ABCDEFGHIJKLMNOPQRSTU", false],
++    ["abcdefghijklmn", true], ["abcdefghijklmno", false], ["équipement", false],
++  ])("keeps %j within version 1 / M: %s", (value, fits) => {
++    expect(fitsBrotherQr(value)).toBe(fits);
++  });
+ });
+ 
+ describe("generators", () => {
+@@ -65,6 +80,9 @@ describe("generators", () => {
+   it("builds number ranges with a prefix", () => {
+     expect(numberRangeRows(1, 3, "#", "text").map((r) => r.model)).toEqual(["#1", "#2", "#3"]);
+   });
++  it.each([[1.5, 3], [1, 501]])("rejects invalid or oversized number runs %s to %s", (from, to) => {
++    expect(numberRangeRows(from, to, "", "text")).toEqual([]);
++  });
+ });
+ 
+ describe("battery labels", () => {
+diff --git a/tests/label-sheet.test.ts b/tests/label-sheet.test.ts
+index bd569a15d..f06c6c42a 100644
+--- a/tests/label-sheet.test.ts
++++ b/tests/label-sheet.test.ts
+@@ -1,6 +1,7 @@
+ import { describe, expect, it } from "vitest";
+ import {
+   clampCopies,
++  entryRows,
+   entryKind,
+   familyEntry,
+   parseUnitPick,
+@@ -43,6 +44,14 @@ describe("parseUnitPick", () => {
+   it("reports what it can't read", () => {
+     expect(parseUnitPick("4, abc, 0").invalid).toEqual(["abc", "0"]);
+   });
++  it("rejects numbers outside the unit API's integer range", () => {
++    expect(parseUnitPick("3, 2147483648")).toEqual({ numbers: [3], invalid: ["2147483648"] });
++  });
++  it("reports a selection past the cap instead of silently truncating it", () => {
++    const picked = parseUnitPick("1-2000, 2001");
++    expect(picked.numbers).toHaveLength(2000);
++    expect(picked.invalid).toEqual(["2001"]);
++  });
+ });
+ 
+ describe("edited text", () => {
+@@ -111,6 +120,16 @@ describe("print sheet rows", () => {
+     expect(printableCount(sheetRows([asUnits(numbered, "unprinted")], {}))).toBe(0);
+   });
+ 
++  it("checks the complete derived QR before exporting any units", () => {
++    const entry = asUnits(familyEntry({ id: "batt", name: "NP-FZ100", binQrCodeValue: "abcdefghijklmn", trackByNumber: true, onHandQuantity: 4 }), "all");
++    expect(entryRows(entry, units)).toEqual([]);
++  });
++
++  it.each(["2, abc", "2, 9", "2, 4", ""])("does not export a partial picked batch for %j", (unitPick) => {
++    const entry: CartEntry = { ...asUnits(numbered, "all"), family: { ...numbered.family!, mode: "units", unitScope: "pick", unitPick } };
++    expect(entryRows(entry, units)).toEqual([]);
++  });
++
+   it("splits a mixed sheet into one CSV per template", () => {
+     const files = templateFiles(sheetRows([camera, asUnits(numbered, "unprinted"), counted], { batt: units }));
+     expect(files.map((file) => file.file)).toEqual(["Camera Bodies.csv", "Batteries.csv"]);
+diff --git a/tests/label-template-bindings.test.ts b/tests/label-template-bindings.test.ts
+index 9702a8d6c..55d8ab657 100644
+--- a/tests/label-template-bindings.test.ts
++++ b/tests/label-template-bindings.test.ts
+@@ -41,4 +41,52 @@ describe("P-touch templates", () => {
+       for (const field of bound) expect(provided, `${kind.template} binds ${field}`).toContain(field);
+     }
+   });
++
++  it("binds every printable text and QR object to the intended merge field", () => {
++    const expected = {
++      body: { text: "Label", barcode: "Codes" },
++      lens: { text: "Label", barcode: "Codes" },
++      sd: { text: "F5" },
++      text: { text: "Label" },
++      numberTag: { text: "Number", barcode: "Codes" },
++      battery: { text: "item_number", barcode: "qr_code" },
++    };
++    for (const [kind, fields] of Object.entries(expected)) {
++      const template = LABEL_KINDS[kind as keyof typeof LABEL_KINDS];
++      const xml = readZipEntry(readFileSync(`${dir}/${template.template}`), "label.xml");
++      for (const [type, field] of Object.entries(fields)) {
++        const objects = [...xml.matchAll(new RegExp(`<${type}:${type}>([\\s\\S]*?)</${type}:${type}>`, "g"))];
++        expect(objects.length, `${template.template}: ${type} objects`).toBeGreaterThan(0);
++        for (const object of objects) expect(object[1], `${template.template}: ${type} merge`).toContain(`dbMergeFieldStyleName="${field}"`);
++        expect(xml).toContain(`fieldName="${field}"`);
++      }
++      expect(xml).toContain(`databasePath="${template.file}"`);
++      expect(xml).toContain(`mergeTable="${template.file}"`);
++      expect(xml).toContain('currentRecord="0"');
++    }
++  });
++
++  it("centers every frame, separates the text and QR, and uses Medium Small QR cells", () => {
++    const attributes = (tag: string) => Object.fromEntries([...tag.matchAll(/([\w]+)="([^"]*)"/g)].map((m) => [m[1], m[2]]));
++    for (const kind of Object.values(LABEL_KINDS)) {
++      const xml = readZipEntry(readFileSync(`${dir}/${kind.template}`), "label.xml");
++      const paper = attributes(xml.match(/<style:paper\b[^>]*>/)![0]);
++      const frames = [...xml.matchAll(/<pt:objectStyle\b[^>]*>/g)].map((m) => attributes(m[0]));
++      const width = parseFloat(paper.width!);
++      for (const frame of frames) {
++        expect(parseFloat(frame.y!) + parseFloat(frame.height!) / 2, kind.template).toBeCloseTo(width / 2);
++      }
++      frames.sort((a, b) => parseFloat(a.x!) - parseFloat(b.x!));
++      for (let i = 1; i < frames.length; i += 1) {
++        expect(parseFloat(frames[i]!.x!) - parseFloat(frames[i - 1]!.x!) - parseFloat(frames[i - 1]!.width!), kind.template).toBeGreaterThanOrEqual(6);
++      }
++      const last = frames.at(-1)!;
++      const end = parseFloat(last.x!) + parseFloat(last.width!);
++      const trailing = paper.autoLength === "true" ? parseFloat(paper.marginBottom!) : parseFloat(paper.height!) - end;
++      expect(parseFloat(frames[0]!.x!), `${kind.template}: equal outer margins`).toBeCloseTo(trailing);
++      for (const qr of xml.matchAll(/<barcode:qrcodeStyle\b[^>]*>/g)) {
++        expect(attributes(qr[0]).cellSize, kind.template).toBe("1.2pt");
++      }
++    }
++  });
+ });

@@ -1,0 +1,22 @@
+{
+  "bitmap": {
+    "width": 194,
+    "height": 76,
+    "decodedQr": "c62a82d7",
+    "approvedPixelDifferences": 8
+  },
+  "partialBatch": "1 completed, second unknown, third not sent",
+  "concurrentChooser": "zero USB writes after uncertain other-tab batch",
+  "recovery": "receipt survives reload; explicit physical review required",
+  "appliedMutationUnitNumbers": [
+    37
+  ],
+  "stop": "first label completes; second not sent",
+  "permissions": "USB allowed only on labels/dev fixture; denied on login",
+  "widths": [
+    1440,
+    768,
+    390
+  ],
+  "pageErrors": []
+}

@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-22T22:01:57.116Z",
+  "gitBranch": "codex/qr-print-usb-history",
+  "origin": "http://127.0.0.1:3148",
+  "actor": {
+    "id": "cmucmdw4f000gp5evcsy0ao45",
+    "name": "Creative Admin",
+    "role": "ADMIN"
+  },
+  "parentId": "f902b00f-1ce5-4aef-a41f-5f4e1923f0dc",
+  "childId": "3f04c630-98c3-4180-b082-660d0f8cf92f",
+  "checks": [
+    "real authenticated session",
+    "unauthenticated history blocked",
+    "client attribution rejected",
+    "session attribution and idempotent create",
+    "one unresolved browser batch",
+    "idempotent checkpoint and stale revision rejected",
+    "uncertain output blocks recovery",
+    "explicit no-output review, exact child lineage and durable history"
+  ],
+  "physicalOutput": "None; all test receipts are explicitly synthetic and no USB commands were used."
+}

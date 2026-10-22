@@ -1,0 +1,13 @@
+{
+  "source": "Pure installed SDK final-page generation; experimental feed candidate, not an exposed SDK finish API",
+  "bytes": 59,
+  "rows": 4,
+  "headBytesPerRow": 16,
+  "decodedInkBits": 0,
+  "nativeLengthGuard": true,
+  "pageMode": 2,
+  "jobCount": 3,
+  "packet": "G2l6xAEMAAQAAAACABtpSwgbaU1AG2lBARtpa2MDABtpZA4ATQJHAgDxAEcCAPEARwIA8QBHAgDxABo=",
+  "sha256": "c244a46c4d00762592292b3ad3a1b911e9dca73171887883133bbbd8d2b8d404",
+  "hex": "1b 69 7a c4 01 0c 00 04 00 00 00 02 00 1b 69 4b 08 1b 69 4d 40 1b 69 41 01 1b 69 6b 63 03 00 1b 69 64 0e 00 4d 02 47 02 00 f1 00 47 02 00 f1 00 47 02 00 f1 00 47 02 00 f1 00 1a"
+}

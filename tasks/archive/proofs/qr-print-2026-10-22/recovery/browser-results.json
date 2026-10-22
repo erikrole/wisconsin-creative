@@ -1,0 +1,14 @@
+{
+  "partial": "1 printed, 1 uncertain, 1 not sent",
+  "resume": "exact copies for units 38 and 39, linked parent history",
+  "history": "operator, per-copy identity and completion timestamp",
+  "undo": true,
+  "crossTabDraftConflict": true,
+  "widths": [
+    1440,
+    1024,
+    768,
+    390
+  ],
+  "pageErrors": []
+}

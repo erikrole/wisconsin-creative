@@ -66,12 +66,12 @@ const baseConfig: NextConfig = {
     ],
   },
   async headers() {
-    const permissionsPolicyFor = (geolocation: string) => [
+    const permissionsPolicyFor = (geolocation: string, usb = "()") => [
       "camera=(self)",
       "microphone=()",
       `geolocation=${geolocation}`,
       "payment=()",
-      "usb=()",
+      `usb=${usb}`,
       "serial=()",
       "bluetooth=()",
       "magnetometer=()",
@@ -103,6 +103,15 @@ const baseConfig: NextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ].filter((header): header is { key: string; value: string } => Boolean(header)),
       },
+      // USB is available only on the helper; device access still requires the browser chooser.
+      {
+        source: "/labels/:path*",
+        headers: [{ key: "Permissions-Policy", value: permissionsPolicyFor("()", "(self)") }],
+      },
+      ...(process.env.NODE_ENV !== "production" ? [{
+        source: "/dev-labels/:path*",
+        headers: [{ key: "Permissions-Policy", value: permissionsPolicyFor("()", "(self)") }],
+      }] : []),
       // Email clients load these images from another origin. The site-wide
       // same-origin resource policy above makes Outlook and other webview-based
       // clients drop them as broken images, so the email assets opt out.

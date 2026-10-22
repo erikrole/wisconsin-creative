@@ -83,6 +83,7 @@
 | `src/lib/services/kit-list-availability.ts` | 35 |
 | `src/lib/services/kit-member-availability.ts` | 97 |
 | `src/lib/services/kits.ts` | 836 |
+| `src/lib/services/label-print-jobs.ts` | 102 |
 | `src/lib/services/licenses.ts` | 684 |
 | `src/lib/services/live-activities.ts` | 630 |
 | `src/lib/services/manual-event-time.ts` | 304 |
@@ -184,7 +185,10 @@
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 229 |
-| `src/lib/brother-label-csv.ts` | 170 |
+| `src/lib/brother-chain.ts` | 71 |
+| `src/lib/brother-label-csv.ts` | 185 |
+| `src/lib/brother-label-render.ts` | 133 |
+| `src/lib/brother-usb.ts` | 180 |
 | `src/lib/bulk-batteries.ts` | 80 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 221 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
@@ -244,6 +248,10 @@
 | `src/lib/kiosk-activation.ts` | 8 |
 | `src/lib/kiosk-heartbeat-cache.ts` | 165 |
 | `src/lib/kiosk-staff-token.ts` | 79 |
+| `src/lib/label-print-client.ts` | 20 |
+| `src/lib/label-print-controller.ts` | 199 |
+| `src/lib/label-print-job.ts` | 188 |
+| `src/lib/label-print-storage.ts` | 53 |
 | `src/lib/license-dates.ts` | 56 |
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
@@ -261,7 +269,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 390 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 281 |
+| `src/lib/permissions.ts` | 286 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-cache.ts` | 10 |
@@ -719,6 +727,11 @@
 - `/api/kits/[id]/members`
 - `/api/kits/[id]`
 - `/api/kits`
+
+### `/api/labels`
+
+- `/api/labels/print-jobs/[id]`
+- `/api/labels/print-jobs`
 
 ### `/api/licenses`
 

@@ -1,0 +1,9 @@
+{
+  "buttons": [
+    {
+      "text": "Camera Bodies.csv1 label",
+      "disabled": true
+    }
+  ],
+  "text": "Print sheet\n\n1 label from 2 lines\n\nClear\nCamera Bodies.lbx\n1 label\nFB A7 IV 1\n6d6623d4\nFB\nA7 IV\n1\n1 label\nBatteries.lbx\n0 labels\nSony NP-FZ100 Battery\nFix unit selection before downloading\n37\nFamily label\nUnit labels\nNot printed · 13\nAll · 49\nPick numbers\n\nNo active unit 999\n\nTemplate\nBatteries.lbx\nNumber-Tag.lbx\n0 labels\n\nFix the label choices above before downloading.\n\nCamera Bodies.csv\n1 label\n\nOpen the matching template in P-touch Editor (the file button). If asked to locate its database, choose Reopen, then Browse and select the CSV. Keep the header row option checked. Confirm a record and its text fit before printing. Previews approximate the tape layout."
+}

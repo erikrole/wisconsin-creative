@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBrotherCsv,
+  fitsBrotherQr,
   numberRangeRows,
   parseAssetTag,
   sdCardRows,
@@ -49,6 +50,20 @@ describe("buildBrotherCsv", () => {
     const csv = buildBrotherCsv("text", [row({ kind: "text", model: "FB", copies: 3 })]);
     expect(body(csv)).toEqual(["Label", "FB", "FB", "FB"]);
   });
+  it("refuses an oversized QR instead of growing it beyond the 12 mm layout", () => {
+    expect(() => buildBrotherCsv("body", [row({ qrCodeValue: "legacy-camera-code-123456" })])).toThrow("wider-tape");
+  });
+});
+
+describe("fixed-size Brother QR capacity", () => {
+  it.each([
+    ["c62a82d7", true], ["94e068d1-12345", true],
+    ["1234567890123456789012345678901234", true], ["12345678901234567890123456789012345", false],
+    ["ABCDEFGHIJKLMNOPQRST", true], ["ABCDEFGHIJKLMNOPQRSTU", false],
+    ["abcdefghijklmn", true], ["abcdefghijklmno", false], ["équipement", false],
+  ])("keeps %j within version 1 / M: %s", (value, fits) => {
+    expect(fitsBrotherQr(value)).toBe(fits);
+  });
 });
 
 describe("generators", () => {
@@ -64,6 +79,9 @@ describe("generators", () => {
   });
   it("builds number ranges with a prefix", () => {
     expect(numberRangeRows(1, 3, "#", "text").map((r) => r.model)).toEqual(["#1", "#2", "#3"]);
+  });
+  it.each([[1.5, 3], [1, 501]])("rejects invalid or oversized number runs %s to %s", (from, to) => {
+    expect(numberRangeRows(from, to, "", "text")).toEqual([]);
   });
 });
 

@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Print labels straight to USB",
+    "type": "feature",
+    "summary": "QR Print sends centered Gotham labels directly to the Brother printer, with larger previews and less tape waste. Print history records who printed each label and supports careful recovery after an interruption.",
+    "details": [
+      "Connect the Brother PT-D610BT in desktop Chrome or Edge and print without opening P-touch Editor.",
+      "Chained batches keep the approved Medium Small QR and Gotham layout, with one initial leader instead of blank strips between labels.",
+      "Stop preserves the unsent labels; review uncertain output and continue with only the confirmed remainder.",
+      "Print history keeps the operator, label content, timestamps and recovery links. Printing and confirming labels were applied remain separate steps.",
+      "Larger previews and whole-sheet checks catch text, QR and selection problems before printing. Drafts follow the signed-in account on the current browser."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 617
+  },
+  {
+    "date": "2026-10-22",
     "title": "Continue setup on either device",
     "type": "improvement",
     "summary": "Your setup answers save as you go, so you can continue on the web or iPhone. Profile photos are easier to frame and retry.",

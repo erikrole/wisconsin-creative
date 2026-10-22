@@ -1,0 +1,26 @@
+Browser tab: 1047086678, Title: "QR chained printing check", URL: "http://127.0.0.1:3146/chain.html".
+1 AXWebArea QR chained printing check, URL: 127.0.0.1:3146/chain.html
+	2 container
+		3 heading Chained USB print check, Value: 1
+			4 text Chained USB print check
+		5 text Isolated TEST CHAIN C and D labels with the approved Gotham/Medium Small layout; both QRs identify FB FX3 1. Intermediate acknowledgements remain provisional. No automatic retry. No production data changes.
+		6 image Exact Gotham TEST CHAIN C and Medium Small QR
+		7 button Connect Brother USB, ID: connect
+		8 button (disabled) Print 2 chained labels, ID: two
+		9 button (disabled) Print 1 held label, ID: held
+		10 button (disabled) Zero-raster recovery unavailable, ID: recover
+		11 button (disabled) Test stop release · 1 blank raster, ID: finish
+		12 button Physical check complete · Archive test, ID: review
+		13 text Ready. This probe sends only the approved label, with no automated retry.
+2026-10-22T19:02:55.907Z Status {"type":0,"phase":0,"phaseHigh":0,"phaseLow":0,"error1":0,"error2":0}
+2026-10-22T19:02:55.908Z Brother ready; status only.
+2026-10-22T19:03:04.506Z Status {"type":0,"phase":0,"phaseHigh":0,"phaseLow":0,"error1":0,"error2":0}
+2026-10-22T19:03:04.506Z Printing first page in chain mode.
+2026-10-22T19:03:04.523Z Status {"type":0,"phase":0,"phaseHigh":0,"phaseLow":0,"error1":0,"error2":0}
+2026-10-22T19:03:04.528Z Status {"type":0,"phase":0,"phaseHigh":0,"phaseLow":0,"error1":0,"error2":0}
+2026-10-22T19:03:04.549Z Status {"type":0,"phase":0,"phaseHigh":0,"phaseLow":0,"error1":0,"error2":0}
+2026-10-22T19:03:24.729Z No completion response — no automatic retry; check physical tape.
+2026-10-22T19:05:15.121Z Status {"type":0,"phase":0,"phaseHigh":0,"phaseLow":0,"error1":0,"error2":0}
+2026-10-22T19:05:15.122Z Brother ready; status only.
+
+The focused UI element is 7 button Connect Brother USB, ID: connect

@@ -1,0 +1,12 @@
+{
+  "item": "FB FX3 1",
+  "qr": "c62a82d7",
+  "device": "Brother PT-D610BT 04f9:20e1",
+  "media": "12 mm laminated white-on-black",
+  "interface": "Integrated USBPrintControls in dev-labels, all server APIs mocked",
+  "printerCompletion": "1 of 1 labels completed",
+  "userAcceptance": "Yes, it looks right and scans",
+  "font": "Exact GothamXNarrow-Bold outlines at 21 px",
+  "brotherApp": "P-touch closed",
+  "productionMutation": false
+}
