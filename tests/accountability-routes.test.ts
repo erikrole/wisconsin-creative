@@ -91,7 +91,7 @@ describe("accountability routes", () => {
     expect(body.capabilities).toEqual({ canExport: true, canManageExclusions: true });
     expect(body.metrics.excludedRecords).toBe(1);
     expect(body.excluded).toEqual([{ bookingId: "excluded-1", note: "Bad import" }]);
-    expect(body.spotlightJeers).toHaveLength(3);
+    expect(body).not.toHaveProperty("spotlightJeers");
     expect(getCachedAccountabilityReport).toHaveBeenCalledWith({
       startYear: 2025,
       locationId: undefined,
@@ -146,24 +146,6 @@ describe("accountability routes", () => {
       totalLateHours: 8,
     });
     expect(body).not.toHaveProperty("excluded");
-  });
-
-  it("serves the same unique jeer set to every internal role", async () => {
-    const sets: string[][] = [];
-
-    for (const actor of [admin, staff, student]) {
-      vi.mocked(requireAuth).mockResolvedValue(actor);
-      const response = await GET(
-        new Request("https://app.example.com/api/accountability"),
-        noParams,
-      );
-      sets.push((await response.json()).spotlightJeers);
-    }
-
-    expect(sets[0]).toHaveLength(3);
-    expect(new Set(sets[0]).size).toBe(3);
-    expect(sets[1]).toEqual(sets[0]);
-    expect(sets[2]).toEqual(sets[0]);
   });
 
   it("keeps external collaborators outside the internal leaderboard", async () => {

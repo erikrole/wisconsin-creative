@@ -13,4 +13,14 @@ describe("parseDateRange", () => {
       "endsAt must be later than startsAt"
     );
   });
+
+  it("rejects a booking longer than a year (mistyped year)", () => {
+    expect(() => parseDateRange("2026-10-21T12:00:00.000Z", "2062-10-21T12:00:00.000Z")).toThrow(
+      "A booking can't run longer than a year"
+    );
+  });
+
+  it("allows a long but plausible booking", () => {
+    expect(() => parseDateRange("2026-10-21T12:00:00.000Z", "2027-04-21T12:00:00.000Z")).not.toThrow();
+  });
 });

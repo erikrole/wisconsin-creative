@@ -6,6 +6,8 @@ import {
   AlertCircleIcon,
   ArrowLeftRightIcon,
   CalendarDaysIcon,
+  CalendarOffIcon,
+  CalendarPlusIcon,
   CheckIcon,
   ChevronRightIcon,
   ClockIcon,
@@ -48,6 +50,10 @@ export type Slot<T> =
   | { state: "error"; onRetry: () => void }
   | { state: "ready"; rows: T };
 
+/** Students' upcoming dated "can't work" entries, plus the names of weekly ones. */
+export type CantWorkSlot = Slot<{ away: CantWorkRow[]; weekly: string[] }>;
+export type CantWorkRow = { id: string; title: string; when: string };
+
 export type HomeSync = { label: string; live: boolean; description?: string };
 
 export type HomeViewProps = {
@@ -69,6 +75,9 @@ export type HomeViewProps = {
   attention?: Slot<AttentionItem[]>;
   upNext?: Slot<UpNextItem[]>;
   upNextEmpty?: { title: string; description: string; href: string; action: string };
+  /** Students only: days they can't work, kept one tap away every day. */
+  cantWork?: CantWorkSlot;
+  onAddCantWork?: () => void;
   myGear?: Slot<GearRow[]>;
   myGearHref?: string;
   coverage?: Slot<CoverageRow[]>;
@@ -122,6 +131,11 @@ const ATTENTION_PREVIEW = 5;
 
 export function HomeView(props: HomeViewProps) {
   const { role, now, pageError, onRetry } = props;
+  const teamGearInMain = !props.activity;
+  const hasPrimary = Boolean(props.attention || props.upNext || props.cantWork);
+  const hasSecondary = Boolean(props.activity || (teamGearInMain && props.teamGear));
+  const hasAside = Boolean(props.myGear || props.trades || props.crew || props.coverage || (!teamGearInMain && props.teamGear));
+  const splitColumns = (hasPrimary || hasSecondary) && hasAside;
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 pb-8" data-home>
       <HomeHeader {...props} />
@@ -141,8 +155,12 @@ export function HomeView(props: HomeViewProps) {
         <>
           {props.notice}
           {props.summary && <SummaryStrip slot={props.summary} />}
-          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
-            <div className="flex min-w-0 flex-col gap-5">
+          <div className={cn(
+            "grid items-start gap-5",
+            splitColumns && "xl:grid-cols-[minmax(0,1fr)_minmax(0,380px)]",
+            splitColumns && hasPrimary && hasSecondary && "xl:grid-rows-[min-content_1fr]",
+          )}>
+            {hasPrimary && <div className="flex min-w-0 flex-col gap-5">
               {props.attention && (
                 <AttentionSection
                   slot={props.attention}
@@ -157,8 +175,12 @@ export function HomeView(props: HomeViewProps) {
               {props.upNext && (
                 <UpNextSection slot={props.upNext} now={now} empty={props.upNextEmpty} onTarget={props.onTarget} />
               )}
-            </div>
-            <div className="flex min-w-0 flex-col gap-5">
+              {props.cantWork && <CantWorkSection slot={props.cantWork} onAdd={props.onAddCantWork} />}
+            </div>}
+            {hasAside && <div className={cn(
+              "flex min-w-0 flex-col gap-5",
+              splitColumns && hasPrimary && hasSecondary && "xl:col-start-2 xl:row-start-1 xl:row-span-2",
+            )}>
               {props.myGear && (
                 <GearSection
                   title={role === "STUDENT" || role === "COLLABORATOR" ? "My gear" : "Checked out to you"}
@@ -178,12 +200,16 @@ export function HomeView(props: HomeViewProps) {
                 <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
               )}
               {props.crew && <CrewSection slot={props.crew} />}
-              {props.activity && <ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} />}
               {props.coverage && <CoverageSection slot={props.coverage} />}
-              {props.teamGear && (
-                <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />
-              )}
-            </div>
+              {!teamGearInMain && props.teamGear && <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />}
+            </div>}
+            {hasSecondary && <div className={cn(
+              "flex min-w-0 flex-col gap-5",
+              splitColumns && hasPrimary && "xl:col-start-1 xl:row-start-2",
+            )}>
+              {props.activity && <ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} />}
+              {teamGearInMain && props.teamGear && <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />}
+            </div>}
           </div>
         </>
       )}
@@ -283,26 +309,31 @@ function SectionHeader({ id, title, count, href, linkLabel = "View all" }: {
   );
 }
 
-function StateBlock({ icon: Icon, title, description, action, tone = "neutral" }: {
+function StateBlock({ icon: Icon, title, description, action, tone = "neutral", compact = false }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description?: string;
   action?: ReactNode;
   tone?: HomeTone | "positive";
+  compact?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
+    <div className={cn("flex", compact ? "items-start gap-3 px-4 pt-3 pb-4" : "flex-col items-center gap-1 px-6 py-8 text-center")}>
       <span
+        aria-hidden="true"
         className={cn(
-          "mb-2 flex size-10 items-center justify-center rounded-full",
+          "flex shrink-0 items-center justify-center rounded-full",
+          compact ? "size-8" : "mb-2 size-10",
           tone === "positive" ? "bg-[var(--green-bg)] text-[var(--green-text)]" : TONE_TILE[tone],
         )}
       >
-        <Icon className="size-5" />
+        <Icon className={compact ? "size-4" : "size-5"} />
       </span>
-      <p className="text-sm font-bold text-foreground">{title}</p>
-      {description && <p className="max-w-[320px] text-[13px] text-muted-foreground">{description}</p>}
-      {action && <div className="mt-3">{action}</div>}
+      <div className={cn("flex min-w-0 flex-col gap-1", compact ? "flex-1" : "items-center")}>
+        <p className="text-sm font-bold text-foreground">{title}</p>
+        {description && <p className="max-w-[320px] text-[13px] text-muted-foreground">{description}</p>}
+        {action && <div className="mt-3">{action}</div>}
+      </div>
     </div>
   );
 }
@@ -430,6 +461,7 @@ function AttentionSection({ slot, onTarget, onQuick, busyTradeId, onRemind, remi
         <SectionError what="what needs attention" onRetry={slot.onRetry} />
       ) : rows.length === 0 ? (
         <StateBlock
+          compact
           icon={CheckIcon}
           tone="positive"
           title="You’re all caught up"
@@ -481,7 +513,7 @@ function AttentionRow({ item, onTarget }: { item: AttentionItem; onTarget: (t: A
         <span className="truncate text-[13px] text-muted-foreground">{item.detail}</span>
       </span>
       <span className="flex shrink-0 items-center gap-0.5 text-[13px] font-bold text-muted-foreground transition-colors group-hover:text-foreground">
-        <span className="max-sm:sr-only">{item.action}</span>
+        <span className={item.quick || item.remind ? "sr-only" : "max-sm:sr-only"}>{item.action}</span>
         <ChevronRightIcon className="size-4" aria-hidden="true" />
       </span>
     </>
@@ -524,6 +556,7 @@ function UpNextSection({ slot, now, empty, onTarget }: {
         <SectionError what="your schedule" onRetry={slot.onRetry} />
       ) : groups.length === 0 && !featured ? (
         <StateBlock
+          compact
           icon={CalendarDaysIcon}
           title={empty?.title ?? "Nothing on your calendar"}
           description={empty?.description ?? "Shifts and gear pickups you’re part of show up here."}
@@ -557,7 +590,7 @@ function FeaturedNext({ row, now, onTarget }: { row: UpNextItem; now: Date; onTa
   const action = row.kind === "pickup" ? "View pickup" : row.kind === "shift" ? "Open event" : "Open";
   return (
     <div className="mx-3 mt-1 mb-2 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-[var(--accent-soft)] px-4 py-3.5" data-featured-next>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div className="flex min-w-[min(100%,220px)] flex-1 basis-[220px] flex-col gap-0.5">
         <p className="text-xs font-bold text-[var(--blue-text)]">
           {row.kind === "pickup" ? "Next pickup" : "Next up"} · {soon === "now" ? "happening now" : soon}
         </p>
@@ -606,6 +639,65 @@ function UpNextRow({ row, onTarget }: { row: UpNextItem; onTarget: (t: Attention
   return <button type="button" className={cn(ROW, "cursor-pointer")} onClick={() => onTarget(target)}>{body}</button>;
 }
 
+const CANT_WORK_PREVIEW = 3;
+
+function CantWorkSection({ slot, onAdd }: { slot: CantWorkSlot; onAdd?: () => void }) {
+  const away = slot.state === "ready" ? slot.rows.away : [];
+  const weekly = slot.state === "ready" ? slot.rows.weekly : [];
+  const empty = slot.state === "ready" && away.length === 0;
+  return (
+    <HomeCard aria-labelledby="home-cant-work" data-cant-work>
+      <SectionHeader id="home-cant-work" title="Can’t work" count={away.length} href="/welcome/availability" linkLabel="All times" />
+      {slot.state === "loading" ? (
+        <RowsSkeleton rows={2} />
+      ) : slot.state === "error" ? (
+        <SectionError what="the days you can’t work" onRetry={slot.onRetry} />
+      ) : (
+        <div className="flex flex-col pb-1.5">
+          {empty ? (
+            <div className="flex items-start gap-3 px-4 py-2.5">
+              <span aria-hidden="true" className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <CalendarOffIcon className="size-4" />
+              </span>
+              <p className="text-[13px] text-muted-foreground">
+                Away for a trip, an exam or another job? Add it so you aren’t scheduled then.
+              </p>
+            </div>
+          ) : (
+            <ul className="flex flex-col">
+              {away.slice(0, CANT_WORK_PREVIEW).map((row) => (
+                <li key={row.id} className="flex min-h-12 items-center gap-3 px-4 py-2">
+                  <span aria-hidden="true" className="w-[3px] self-stretch rounded-full bg-[var(--orange)]" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
+                    <span className="truncate text-[13px] tabular-nums text-muted-foreground">{row.when}</span>
+                  </span>
+                </li>
+              ))}
+              {away.length > CANT_WORK_PREVIEW && (
+                <li className="px-4 pb-1 text-[13px] text-muted-foreground">+{away.length - CANT_WORK_PREVIEW} more</li>
+              )}
+            </ul>
+          )}
+          {weekly.length > 0 && (
+            <p className="truncate px-4 pt-1 text-[13px] text-muted-foreground" data-cant-work-weekly>
+              Every week: {weekly.join(", ")}
+            </p>
+          )}
+          {onAdd && (
+            <div className="px-4 pt-2 pb-2">
+              <Button variant="outline" className="h-10" onClick={onAdd}>
+                <CalendarPlusIcon data-icon="inline-start" />
+                Add days you can’t work
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </HomeCard>
+  );
+}
+
 /* ── Right rail ─────────────────────────────────────────── */
 
 function GearSection({ title, href, slot, emptyTitle, emptyDescription, emptyAction, onSelectBooking }: {
@@ -630,7 +722,7 @@ function GearSection({ title, href, slot, emptyTitle, emptyDescription, emptyAct
       ) : slot.state === "error" ? (
         <SectionError what="your gear" onRetry={slot.onRetry} />
       ) : slot.rows.length === 0 ? (
-        <StateBlock icon={PackageCheckIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
+        <StateBlock compact icon={PackageCheckIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
       ) : (
         <GearList rows={slot.rows} onSelectBooking={onSelectBooking} />
       )}
@@ -680,7 +772,7 @@ function TradesSection({ slot, href, onQuick, busyTradeId }: {
       ) : slot.state === "error" ? (
         <SectionError what="trades" onRetry={slot.onRetry} />
       ) : slot.rows.length === 0 ? (
-        <StateBlock icon={ArrowLeftRightIcon} title="No open trades" description="Shifts a teammate posts that you can pick up appear here." />
+        <StateBlock compact icon={ArrowLeftRightIcon} title="No open trades" description="Shifts a teammate posts that you can pick up appear here." />
       ) : (
         <ul className="flex flex-col pb-1.5">
           {slot.rows.map((row) => (
@@ -712,7 +804,7 @@ function CrewSection({ slot }: { slot: Slot<CrewRow[]> }) {
       ) : slot.state === "error" ? (
         <SectionError what="today’s crew" onRetry={slot.onRetry} />
       ) : slot.rows.length === 0 ? (
-        <StateBlock icon={CalendarDaysIcon} title="No one is on today" description="Published shifts for today show here with who’s working." />
+        <StateBlock compact icon={CalendarDaysIcon} title="No one is on today" description="Published shifts for today show here with who’s working." />
       ) : (
         <ul className="flex flex-col pb-1.5">
           {slot.rows.map((row) => (
@@ -744,7 +836,7 @@ function ActivitySection({ slot, onSelectBooking }: { slot: Slot<ActivityRow[]>;
       ) : slot.state === "error" ? (
         <SectionError what="recent activity" onRetry={slot.onRetry} />
       ) : slot.rows.length === 0 ? (
-        <StateBlock icon={ClockIcon} title="Quiet so far" description="Kiosk pickups and returns from the last day show here." />
+        <StateBlock compact icon={ClockIcon} title="Quiet so far" description="Kiosk pickups and returns from the last day show here." />
       ) : (
         <ul className="flex flex-col pb-1.5">
           {slot.rows.map((row) => (
@@ -790,7 +882,7 @@ function CoverageSection({ slot }: { slot: Slot<CoverageRow[]> }) {
       ) : slot.state === "error" ? (
         <SectionError what="events" onRetry={slot.onRetry} />
       ) : slot.rows.length === 0 ? (
-        <StateBlock icon={CalendarDaysIcon} title="No events this week" description="Synced games and events land here with crew coverage." />
+        <StateBlock compact icon={CalendarDaysIcon} title="No events this week" description="Synced games and events land here with crew coverage." />
       ) : (
         <ul className="flex flex-col pb-1.5">
           {slot.rows.map((row) => {
@@ -845,7 +937,7 @@ function TeamGearSection({ slot, onSelectBooking }: {
       ) : slot.state === "error" ? (
         <SectionError what="team gear" onRetry={slot.onRetry} />
       ) : slot.rows.rows.length === 0 ? (
-        <StateBlock icon={PackageCheckIcon} title="Everything is on the shelf" description="No one has gear checked out." />
+        <StateBlock compact icon={PackageCheckIcon} title="Everything is on the shelf" description="No one has gear checked out." />
       ) : (
         <GearList rows={slot.rows.rows} onSelectBooking={onSelectBooking} />
       )}
@@ -863,7 +955,7 @@ export function HomeSkeleton() {
         <Skeleton className="h-7 w-64 bg-muted" />
       </div>
       <SummaryStrip slot={{ state: "loading" }} />
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <HomeCard><RowsSkeleton rows={4} /></HomeCard>
         <HomeCard><RowsSkeleton rows={3} /></HomeCard>
       </div>

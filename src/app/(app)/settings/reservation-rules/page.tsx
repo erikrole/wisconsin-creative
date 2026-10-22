@@ -4,13 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/EmptyState";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import type { ReservationRules } from "@/lib/services/reservation-rules";
@@ -176,81 +175,80 @@ export default function ReservationRulesPage() {
         </Alert>
       )}
       <form ref={formElement} noValidate onSubmit={(event) => { event.preventDefault(); void handleSave(); }}>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Booking constraints</CardTitle>
-            <CardDescription>Booking limits apply to new reservations. No-show expiry also controls when uncollected reservations are cancelled.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {/* Advance window */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rr-advance">Advance booking window (days)</Label>
-              <Input
-                id="rr-advance"
-                name="advanceWindowDays"
-                type="number"
-                min={1}
-                max={730}
-                value={form.advanceWindowDays}
-                onChange={(e) => setField("advanceWindowDays", e.target.value)}
-                placeholder="No limit"
-                aria-invalid={!!errors.advanceWindowDays}
-                aria-describedby="advanceWindowDays-help"
-                className="h-10 max-w-48"
-                disabled={saving}
-              />
-              <p id="advanceWindowDays-help" aria-live="polite" className={errors.advanceWindowDays ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {errors.advanceWindowDays ?? "Reservations cannot start more than this many days in the future. Leave blank for no limit."}
-              </p>
-            </div>
-
-            {/* No-show expiry */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rr-expiry">No-show expiry (hours)</Label>
-              <Input
-                id="rr-expiry"
-                name="noShowExpiryHours"
-                type="number"
-                min={1}
-                max={336}
-                value={form.noShowExpiryHours}
-                onChange={(e) => setField("noShowExpiryHours", e.target.value)}
-                aria-invalid={!!errors.noShowExpiryHours}
-                aria-describedby="noShowExpiryHours-help"
-                className="h-10 max-w-48"
-                disabled={saving}
-              />
-              <p id="noShowExpiryHours-help" aria-live="polite" className={errors.noShowExpiryHours ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {errors.noShowExpiryHours ?? "A reservation becomes Pending Pickup at its scheduled start. If pickup does not happen within this window, the reservation is automatically cancelled and its gear is released."}
-              </p>
-            </div>
-
-            {/* Max concurrent */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rr-max-concurrent">Max active reservations per user</Label>
-              <Input
-                id="rr-max-concurrent"
-                name="maxConcurrentReservations"
-                type="number"
-                min={1}
-                max={50}
-                value={form.maxConcurrentReservations}
-                onChange={(e) => setField("maxConcurrentReservations", e.target.value)}
-                placeholder="No limit"
-                aria-invalid={!!errors.maxConcurrentReservations}
-                aria-describedby="maxConcurrentReservations-help"
-                className="h-10 max-w-48"
-                disabled={saving}
-              />
-              <p id="maxConcurrentReservations-help" aria-live="polite" className={errors.maxConcurrentReservations ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {errors.maxConcurrentReservations ?? "Counts Booked reservations. Leave blank for no limit."}
-              </p>
-            </div>
-
-            {saveError && <Alert variant="destructive"><AlertDescription>{saveError}</AlertDescription></Alert>}
-            <SettingsSaveBar dirty={dirty} saving={saving} onReset={resetChanges} />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-4">
+        <SettingsGroup
+          title="Booking constraints"
+          description="Limits apply to new reservations. No-show expiry also decides when uncollected reservations are cancelled."
+        >
+          <SettingsRow
+            label="Advance booking window (days)"
+            htmlFor="rr-advance"
+            descriptionId="advanceWindowDays-help"
+            invalid={!!errors.advanceWindowDays}
+            description={errors.advanceWindowDays ?? "How far ahead a reservation can start. Leave blank for no limit."}
+          >
+            <Input
+              id="rr-advance"
+              name="advanceWindowDays"
+              type="number"
+              min={1}
+              max={730}
+              placeholder="No limit"
+              value={form.advanceWindowDays}
+              onChange={(e) => setField("advanceWindowDays", e.target.value)}
+              aria-invalid={!!errors.advanceWindowDays}
+              aria-describedby="advanceWindowDays-help"
+              className="h-10"
+              disabled={saving}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="No-show expiry (hours)"
+            htmlFor="rr-expiry"
+            descriptionId="noShowExpiryHours-help"
+            invalid={!!errors.noShowExpiryHours}
+            description={errors.noShowExpiryHours ?? "Reservations become Pending Pickup at their start. If nobody picks up within this window, they are cancelled and the gear is released."}
+          >
+            <Input
+              id="rr-expiry"
+              name="noShowExpiryHours"
+              type="number"
+              min={1}
+              max={336}
+              value={form.noShowExpiryHours}
+              onChange={(e) => setField("noShowExpiryHours", e.target.value)}
+              aria-invalid={!!errors.noShowExpiryHours}
+              aria-describedby="noShowExpiryHours-help"
+              className="h-10"
+              disabled={saving}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Max active reservations per person"
+            htmlFor="rr-max-concurrent"
+            descriptionId="maxConcurrentReservations-help"
+            invalid={!!errors.maxConcurrentReservations}
+            description={errors.maxConcurrentReservations ?? "Counts Booked reservations. Leave blank for no limit."}
+          >
+            <Input
+              id="rr-max-concurrent"
+              name="maxConcurrentReservations"
+              type="number"
+              min={1}
+              max={50}
+              placeholder="No limit"
+              value={form.maxConcurrentReservations}
+              onChange={(e) => setField("maxConcurrentReservations", e.target.value)}
+              aria-invalid={!!errors.maxConcurrentReservations}
+              aria-describedby="maxConcurrentReservations-help"
+              className="h-10"
+              disabled={saving}
+            />
+          </SettingsRow>
+        </SettingsGroup>
+        {saveError && <Alert variant="destructive"><AlertDescription>{saveError}</AlertDescription></Alert>}
+        <SettingsSaveBar dirty={dirty} saving={saving} onReset={resetChanges} />
+        </div>
       </form>
     </SettingsPageShell>
   );

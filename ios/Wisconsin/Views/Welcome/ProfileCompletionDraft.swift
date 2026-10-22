@@ -96,7 +96,7 @@ final class ProfileCompletionDraft {
             return Self.digits(wiscardCardNumber).count == 10
                 && Self.digits(wiscardIssueCode).count == 1
         case .student:
-            return !studentYear.isEmpty && !graduationTerm.isEmpty
+            return !studentYear.isEmpty
         case .apparel:
             return !topSizeFit.isEmpty
                 && !selectedTopSize.isEmpty
@@ -126,7 +126,12 @@ final class ProfileCompletionDraft {
                 issueCode: Self.digits(wiscardIssueCode)
             )
         case .student:
-            return .student(year: studentYear, graduationTerm: graduationTerm, gradYear: graduationYear)
+            let hasTerm = !graduationTerm.isEmpty
+            return .student(
+                year: studentYear,
+                graduationTerm: hasTerm ? graduationTerm : nil,
+                gradYear: hasTerm ? graduationYear : nil
+            )
         case .apparel:
             return .apparel(
                 topSizeFit: topSizeFit,

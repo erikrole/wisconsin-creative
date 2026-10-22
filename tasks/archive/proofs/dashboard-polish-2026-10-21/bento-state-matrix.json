@@ -1,0 +1,726 @@
+{
+  "results": [
+    {
+      "role": "STUDENT",
+      "state": "ready",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention3",
+          "top": 287.09375,
+          "height": 310.625,
+          "width": 552
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 310.625,
+          "width": 552
+        },
+        {
+          "name": "My gear3",
+          "top": 613.71875,
+          "height": 238.1875,
+          "width": 552
+        },
+        {
+          "name": "Open trades2",
+          "top": 613.71875,
+          "height": 238.1875,
+          "width": 552
+        },
+        {
+          "name": "Working today",
+          "top": 867.90625,
+          "height": 296.25,
+          "width": 552
+        },
+        {
+          "name": "Team gear out14",
+          "top": 867.90625,
+          "height": 296.25,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STUDENT",
+      "state": "empty",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention",
+          "top": 287.09375,
+          "height": 203.5625,
+          "width": 552
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 203.5625,
+          "width": 552
+        },
+        {
+          "name": "My gear",
+          "top": 506.65625,
+          "height": 147.5625,
+          "width": 552
+        },
+        {
+          "name": "Open trades",
+          "top": 506.65625,
+          "height": 147.5625,
+          "width": 552
+        },
+        {
+          "name": "Working today",
+          "top": 670.21875,
+          "height": 128.0625,
+          "width": 552
+        },
+        {
+          "name": "Team gear out",
+          "top": 670.21875,
+          "height": 128.0625,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STUDENT",
+      "state": "loading",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention",
+          "top": 281.09375,
+          "height": 226,
+          "width": 552
+        },
+        {
+          "name": "Up next",
+          "top": 281.09375,
+          "height": 226,
+          "width": 552
+        },
+        {
+          "name": "My gear",
+          "top": 523.09375,
+          "height": 170,
+          "width": 552
+        },
+        {
+          "name": "Open trades",
+          "top": 523.09375,
+          "height": 170,
+          "width": 552
+        },
+        {
+          "name": "Working today",
+          "top": 709.09375,
+          "height": 226,
+          "width": 552
+        },
+        {
+          "name": "Team gear out",
+          "top": 709.09375,
+          "height": 226,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STUDENT",
+      "state": "partial",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention3",
+          "top": 287.09375,
+          "height": 310.625,
+          "width": 552
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 310.625,
+          "width": 552
+        },
+        {
+          "name": "My gear3",
+          "top": 613.71875,
+          "height": 238.1875,
+          "width": 552
+        },
+        {
+          "name": "Open trades",
+          "top": 613.71875,
+          "height": 238.1875,
+          "width": 552
+        },
+        {
+          "name": "Working today",
+          "top": 867.90625,
+          "height": 296.25,
+          "width": 552
+        },
+        {
+          "name": "Team gear out14",
+          "top": 867.90625,
+          "height": 296.25,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STUDENT",
+      "state": "error",
+      "overflow": 0,
+      "sections": []
+    },
+    {
+      "role": "STAFF",
+      "state": "ready",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention6",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you2",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out14",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STAFF",
+      "state": "empty",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention",
+          "top": 287.09375,
+          "height": 128.0625,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 128.0625,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you",
+          "top": 431.15625,
+          "height": 176.0625,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 431.15625,
+          "height": 176.0625,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 431.15625,
+          "height": 176.0625,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out",
+          "top": 623.21875,
+          "height": 128.0625,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 623.21875,
+          "height": 128.0625,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STAFF",
+      "state": "loading",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention",
+          "top": 281.09375,
+          "height": 226,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 281.09375,
+          "height": 226,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you",
+          "top": 523.09375,
+          "height": 226,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 523.09375,
+          "height": 226,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 523.09375,
+          "height": 226,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out",
+          "top": 765.09375,
+          "height": 226,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 765.09375,
+          "height": 226,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STAFF",
+      "state": "partial",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention6",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you2",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out14",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "STAFF",
+      "state": "error",
+      "overflow": 0,
+      "sections": []
+    },
+    {
+      "role": "ADMIN",
+      "state": "ready",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention8",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you2",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out14",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "ADMIN",
+      "state": "empty",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention",
+          "top": 287.09375,
+          "height": 128.0625,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 128.0625,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you",
+          "top": 431.15625,
+          "height": 176.0625,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 431.15625,
+          "height": 176.0625,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 431.15625,
+          "height": 176.0625,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out",
+          "top": 623.21875,
+          "height": 128.0625,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 623.21875,
+          "height": 128.0625,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "ADMIN",
+      "state": "loading",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention",
+          "top": 281.09375,
+          "height": 226,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 281.09375,
+          "height": 226,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you",
+          "top": 523.09375,
+          "height": 226,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 523.09375,
+          "height": 226,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 523.09375,
+          "height": 226,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out",
+          "top": 765.09375,
+          "height": 226,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 765.09375,
+          "height": 226,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "ADMIN",
+      "state": "partial",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Needs attention8",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 551.984375
+        },
+        {
+          "name": "Up next",
+          "top": 287.09375,
+          "height": 395.3125,
+          "width": 552
+        },
+        {
+          "name": "Checked out to you2",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Working today",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.671875
+        },
+        {
+          "name": "Coming up",
+          "top": 698.40625,
+          "height": 238.1875,
+          "width": 362.65625
+        },
+        {
+          "name": "Team gear out14",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 551.984375
+        },
+        {
+          "name": "Recent activity",
+          "top": 952.59375,
+          "height": 296.25,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "ADMIN",
+      "state": "error",
+      "overflow": 0,
+      "sections": []
+    },
+    {
+      "role": "COLLABORATOR",
+      "state": "ready",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Up next",
+          "top": 143.09375,
+          "height": 340.625,
+          "width": 552
+        },
+        {
+          "name": "My gear2",
+          "top": 143.09375,
+          "height": 340.625,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "COLLABORATOR",
+      "state": "empty",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Up next",
+          "top": 143.09375,
+          "height": 184.0625,
+          "width": 552
+        },
+        {
+          "name": "My gear",
+          "top": 143.09375,
+          "height": 184.0625,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "COLLABORATOR",
+      "state": "loading",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Up next",
+          "top": 143.09375,
+          "height": 226,
+          "width": 552
+        },
+        {
+          "name": "My gear",
+          "top": 143.09375,
+          "height": 226,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "COLLABORATOR",
+      "state": "partial",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Up next",
+          "top": 143.09375,
+          "height": 340.625,
+          "width": 552
+        },
+        {
+          "name": "My gear2",
+          "top": 143.09375,
+          "height": 340.625,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "role": "COLLABORATOR",
+      "state": "error",
+      "overflow": 0,
+      "sections": [
+        {
+          "name": "Up next",
+          "top": 143.09375,
+          "height": 130,
+          "width": 552
+        },
+        {
+          "name": "My gear",
+          "top": 143.09375,
+          "height": 130,
+          "width": 552
+        }
+      ]
+    },
+    {
+      "viewport": [
+        1100,
+        1000
+      ],
+      "role": "ADMIN",
+      "state": "ready",
+      "theme": "dark",
+      "overflow": 0,
+      "capture": "bento-after-1100.png"
+    },
+    {
+      "viewport": [
+        1000,
+        1000
+      ],
+      "role": "ADMIN",
+      "state": "partial",
+      "theme": "dark",
+      "overflow": 0,
+      "capture": "bento-after-tablet-partial.png"
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "role": "STUDENT",
+      "state": "ready",
+      "theme": "dark",
+      "overflow": 0,
+      "capture": "bento-after-phone-student.png"
+    },
+    {
+      "viewport": [
+        1440,
+        1100
+      ],
+      "role": "ADMIN",
+      "state": "ready",
+      "theme": "light",
+      "overflow": 0,
+      "capture": "bento-after-light-ready.png"
+    }
+  ],
+  "pageErrors": []
+}

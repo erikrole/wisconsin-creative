@@ -189,6 +189,7 @@ export async function sendPushToUser(userId: string, opts: PushMessage): Promise
         threadId: pushThreadId(opts.payload, opts.category),
         badge: unreadCount,
         relevanceScore: entry?.relevance,
+        filterCriteria: entry?.group,
         collapseId: opts.collapseId ?? opts.notificationId,
       }
     );
@@ -1711,7 +1712,8 @@ export async function createReservationLifecycleNotification(args: {
   event: ReservationLifecycleEvent;
   version?: Date;
 }): Promise<void> {
-  const { bookingId, bookingTitle, requesterUserId, actorUserId, event, version } = args;
+  const { bookingId, requesterUserId, actorUserId, event, version } = args;
+  const bookingTitle = args.bookingTitle ? displayBookingTitle(args.bookingTitle) : "";
 
   // Don't notify users when they cancel their own reservation
   if (event === "cancelled" && requesterUserId === actorUserId) return;
@@ -1791,8 +1793,10 @@ export async function createReservationLifecycleNotification(args: {
  * during check-in scanning.
  */
 export async function notifyItemReport(args: {
-  bookingId: string;
-  bookingTitle: string;
+  /** Absent for a report filed from the item page. */
+  bookingId?: string;
+  bookingTitle?: string;
+  reportId?: string;
   assetId: string;
   assetTag: string;
   itemDescription: string;
@@ -1807,33 +1811,35 @@ export async function notifyItemReport(args: {
   });
 
   const now = new Date();
+  const bookingTitle = args.bookingTitle ? displayBookingTitle(args.bookingTitle) : "";
   const typeLower = args.reportType.toLowerCase();
   const notifType = `checkin_item_${typeLower}`;
   const title = `Item reported ${typeLower}: ${args.assetTag}`;
+  const where = args.bookingTitle ? ` during check-in of "${bookingTitle}"` : "";
   const body = args.reportType === "DAMAGED"
-    ? `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as damaged during check-in of "${args.bookingTitle}".${args.damageDescription ? ` Description: ${args.damageDescription}` : ""}`
-    : `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as lost during check-in of "${args.bookingTitle}".`;
+    ? `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as damaged${where}.${args.damageDescription ? ` Description: ${args.damageDescription}` : ""}`
+    : `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as ${args.bookingTitle ? "lost" : "missing"}${where}.`;
 
   // Batch-create all notifications in one INSERT
   const notifData = supervisors.map((s) => ({
     userId: s.id,
-    bookingId: args.bookingId,
+    bookingId: args.bookingId ?? null,
     type: notifType,
     title,
     body,
     payload: {
       bookingId: args.bookingId,
-      bookingTitle: args.bookingTitle,
+      bookingTitle,
       assetId: args.assetId,
       assetTag: args.assetTag,
       reportType: args.reportType,
       reporterName: args.reporterName,
-      href: `/checkouts/${args.bookingId}`,
+      href: args.bookingId ? `/checkouts/${args.bookingId}` : "/damage",
       ...(args.evidenceImageUrl ? { evidenceImageUrl: args.evidenceImageUrl } : {}),
     },
     channel: "IN_APP" as const,
     sentAt: now,
-    dedupeKey: `${args.bookingId}:item_report:${args.assetId}:${s.id}`,
+    dedupeKey: `${args.bookingId ?? args.reportId ?? "item"}:item_report:${args.assetId}:${s.id}`,
   }));
 
   // A repeat report of the same asset on the same booking dedupes to the
@@ -1863,7 +1869,7 @@ export async function notifyItemReport(args: {
           kind: "item",
           title,
           body,
-          bookingTitle: args.bookingTitle,
+          bookingTitle: args.bookingTitle ? bookingTitle : args.assetTag,
           dueAt: now.toISOString(),
           href: `/checkouts/${args.bookingId}`,
         }),

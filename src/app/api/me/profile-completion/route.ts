@@ -37,8 +37,9 @@ const patchSchema = z.discriminatedUnion("step", [
   z.object({
     step: z.literal("STUDENT"),
     studentYearOverride: z.nativeEnum(StudentYear),
-    graduationTerm: z.nativeEnum(GraduationTerm),
-    gradYear: z.number().int().min(currentYear - 1).max(currentYear + 10),
+    // Graduation is never required. It is saved only when both fields arrive.
+    graduationTerm: z.nativeEnum(GraduationTerm).optional(),
+    gradYear: z.number().int().min(currentYear - 1).max(currentYear + 10).optional(),
   }),
   z.object({
     step: z.literal("APPAREL"),
@@ -193,8 +194,9 @@ export const PATCH = withAuth(async (req, { user }) => {
         : body.step === "STUDENT"
           ? {
               studentYearOverride: body.studentYearOverride,
-              graduationTerm: body.graduationTerm,
-              gradYear: body.gradYear,
+              ...(body.graduationTerm && body.gradYear
+                ? { graduationTerm: body.graduationTerm, gradYear: body.gradYear }
+                : {}),
               profilePromptSnoozedUntil: null,
             }
           : body.step === "APPAREL"
@@ -254,6 +256,7 @@ export const PATCH = withAuth(async (req, { user }) => {
     }
     throw error;
   }
+
 
   return ok({ data: responseData(updated) });
 });

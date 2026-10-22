@@ -16,7 +16,17 @@ import type { CreateBookingContext } from "../dashboard-types";
 import { FlaggedReportDialog } from "../dashboard/flagged-items-banner";
 import { GearPicksBanner } from "../dashboard/gear-picks-banner";
 import { ProfileCompletionBanner } from "../dashboard/profile-completion-banner";
-import { HomeSkeleton, HomeView, type Slot } from "./HomeView";
+import { WrappedBanner } from "@/components/wrapped/WrappedBanner";
+import { CantWorkDialog } from "@/components/availability/CantWorkDialog";
+import {
+  formatAwayDates,
+  formatClockTime,
+  groupWeekly,
+  upcomingAway,
+  type AvailabilityBlockLite,
+} from "@/lib/unavailable-times";
+import { GettingStartedCard } from "./GettingStartedCard";
+import { HomeSkeleton, HomeView, type CantWorkSlot, type Slot } from "./HomeView";
 import {
   TRADE_BOARD_HREF,
   activityRows,
@@ -161,6 +171,38 @@ function useTrades(status: "OPEN" | "CLAIMED", enabled: boolean) {
   });
 }
 
+/**
+ * A student worker's own "can't work" entries. Home keeps them one tap away so
+ * adding a trip or an exam is part of the week, not a profile errand.
+ */
+function useCantWork(userId: string | null) {
+  return useQuery<AvailabilityBlockLite[]>({
+    queryKey: ["home-cant-work", userId ?? "none"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/users/${userId}/availability`, { signal });
+      if (handleAuthRedirect(res, "/")) throw new DOMException("Auth redirect", "AbortError");
+      if (!res.ok) throw new Error("server");
+      const json = await parseJsonSafely<{ data?: AvailabilityBlockLite[] }>(res);
+      return Array.isArray(json?.data) ? json.data : [];
+    },
+    enabled: Boolean(userId),
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+function cantWorkSlot(query: ReturnType<typeof useCantWork>): CantWorkSlot {
+  const slot = slotOf(query);
+  if (slot.state !== "ready") return slot;
+  const away = upcomingAway(slot.rows).map((item) => ({
+    id: item.id,
+    title: item.label ?? "Can’t work",
+    when: item.allDay ? formatAwayDates(item) : `${formatAwayDates(item)} · ${formatClockTime(item.startsAt)} – ${formatClockTime(item.endsAt)}`,
+  }));
+  const weekly = groupWeekly(slot.rows).map((item) => item.label ?? "Weekly time");
+  return { state: "ready", rows: { away, weekly: [...new Set(weekly)] } };
+}
+
 /** Who is working which event today: the same feed as Staff › Today. */
 function useTodayCrew(enabled: boolean) {
   const userId = useAuthenticatedQueryUserId();
@@ -230,6 +272,11 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
   const claimedTrades = useTrades("CLAIMED", role === "ADMIN");
   const crew = useTodayCrew(role !== null);
   const activity = useRecentActivity(team);
+  const { data: me } = useCurrentUser();
+  // The availability API lets student workers edit only their own times.
+  const cantWorkUserId = role === "STUDENT" && me?.staffingType === "ST" && !readOnly ? me.id : null;
+  const cantWork = useCantWork(cantWorkUserId);
+  const [cantWorkOpen, setCantWorkOpen] = useState(false);
   const confirm = useConfirm();
   const reminders = useOverdueReminders();
   useDayRollover(now, loadData);
@@ -310,7 +357,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         onRefresh={() => loadData()}
         pageError={!data && !fastStats ? fetchError === "network" ? "network" : fetchError ? "server" : false : false}
         onRetry={() => loadData()}
-        banners={<><ProfileCompletionBanner /><GearPicksBanner /></>}
+        banners={<><GettingStartedCard /><ProfileCompletionBanner /><GearPicksBanner /><WrappedBanner /></>}
         dayLine={view?.dayLine}
         summary={view?.summary}
         attention={view?.attention}
@@ -318,6 +365,8 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         upNextEmpty={role === "STUDENT"
           ? { title: "No shifts yet", description: "Pick up an open shift from a teammate on the Trade Board.", href: TRADE_BOARD_HREF, action: "Open Trade Board" }
           : undefined}
+        cantWork={cantWorkUserId ? cantWorkSlot(cantWork) : undefined}
+        onAddCantWork={() => setCantWorkOpen(true)}
         myGear={view?.myGear}
         coverage={view?.coverage}
         teamGear={view?.teamGear}
@@ -333,6 +382,14 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
         remindingId={reminders.remindingId}
         remindedIds={reminders.remindedIds}
       />
+      {cantWorkUserId && (
+        <CantWorkDialog
+          userId={cantWorkUserId}
+          open={cantWorkOpen}
+          onOpenChange={setCantWorkOpen}
+          onSaved={() => void cantWork.refetch()}
+        />
+      )}
       {selectedBookingId && (
         <Suspense>
           <BookingDetailsSheet

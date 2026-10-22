@@ -444,7 +444,9 @@ export async function getTeamScoreboard(
     endsAt: { lt: now },
     status: { not: "CANCELLED" },
     isHidden: false,
-    archivedAt: null,
+    // No archivedAt filter: the season window bounds the record, and the
+    // nightly archive (4 months after an event ends) must not erase games
+    // from a season that is still running.
   });
   const narrowed = narrowedFilterWhere(filters);
 

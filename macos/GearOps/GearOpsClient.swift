@@ -151,6 +151,10 @@ actor GearOpsClient: GearOpsServing {
         guard let http = response as? HTTPURLResponse else {
             throw GearOpsClientError.invalidResponse
         }
+        let path = DiagnosticBreadcrumbs.pathTemplate(request.url?.path ?? "")
+        if path != "/api/companion/diagnostics" {
+            DiagnosticBreadcrumbs.shared.record(.api, "\(request.httpMethod ?? "GET") \(path) → \(http.statusCode)")
+        }
 
         if (200...299).contains(http.statusCode) {
             do {
@@ -170,6 +174,18 @@ actor GearOpsClient: GearOpsServing {
         default:
             throw GearOpsClientError.server(statusCode: http.statusCode, message: message)
         }
+    }
+
+    /// Uploads one MetricKit diagnostic payload with the companion
+    /// credential. Best-effort: a crash report is never worth an error.
+    func uploadDiagnostics(_ payload: Data, credential: String) async {
+        guard let body = DiagnosticUpload.body(platform: "macos", payload: payload) else { return }
+        struct Stored: Decodable, Sendable { let stored: Int }
+        struct Wrapper: Decodable, Sendable { let data: Stored }
+        var request = makeRequest(path: "/api/companion/diagnostics", method: "POST")
+        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+        let _: Wrapper? = try? await perform(request)
     }
 
     private static func networkMessage(for error: Error) -> String {

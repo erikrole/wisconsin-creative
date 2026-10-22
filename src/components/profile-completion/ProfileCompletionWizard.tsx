@@ -245,7 +245,7 @@ export function ProfileCompletionWizard({
       return /^\d{4,32}$/.test(wiscardCardNumber.trim()) && /^\d{1,8}$/.test(wiscardIssueCode.trim());
     }
     if (step === "STUDENT") {
-      return Boolean(studentYear && parseAnticipatedGraduation(anticipatedGraduation));
+      return Boolean(studentYear);
     }
     if (step === "PHOTO") return Boolean(data.profile.avatarUrl);
     const topSize = topSizeChoice === "OTHER" ? topSizeOther.trim() : topSizeChoice;
@@ -264,7 +264,6 @@ export function ProfileCompletionWizard({
     shoeSizeSystem,
     step,
     studentYear,
-    anticipatedGraduation,
     topSizeChoice,
     topSizeFit,
     topSizeOther,
@@ -316,12 +315,11 @@ export function ProfileCompletionWizard({
                 wiscardCardNumber: wiscardCardNumber.trim(),
                 wiscardIssueCode: wiscardIssueCode.trim(),
               }
-            : step === "STUDENT" && graduation && studentYear
+            : step === "STUDENT" && studentYear
               ? {
                   step,
                   studentYearOverride: studentYear,
-                  graduationTerm: graduation.term,
-                  gradYear: graduation.year,
+                  ...(graduation ? { graduationTerm: graduation.term, gradYear: graduation.year } : {}),
                 }
               : {
                   step,
@@ -747,75 +745,36 @@ export function ProfileCompletionWizard({
 
   if (isPage) {
     return (
-      <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <nav aria-label="Setup steps" className="hidden lg:block">
-          <ol className="space-y-1">
-            {visibleSteps.map((visibleStep, index) => {
-              const current = visibleStep === step;
-              const completeByStep =
-                visibleStep === "EMAIL"
-                  ? data.completion.completeByField.campusEmail
-                    && data.completion.completeByField.athleticsEmail
-                  : visibleStep === "PHONES"
-                    ? data.completion.completeByField.personalPhone
-                      && (hasSimplePhoneStep || data.completion.completeByField.workPhone)
-                    : visibleStep === "WISCARD"
-                      ? data.completion.completeByField.wiscard
-                      : visibleStep === "STUDENT"
-                        ? data.completion.completeByField.studentYear
-                          && data.completion.completeByField.anticipatedGraduation
-                        : visibleStep === "APPAREL"
-                          ? data.completion.completeByField.clothingSize
-                            && data.completion.completeByField.shoeSize
-                          : data.completion.completeByField.photo;
-              return (
-                <li key={visibleStep}>
-                  <button
-                    type="button"
-                    onClick={() => goToStep(visibleStep, index > stepIndex ? 1 : -1)}
-                    disabled={saving}
+      <div className="flex flex-col gap-4">
+        <nav aria-label="Setup steps" className="space-y-2">
+          <ol className="flex gap-1.5">
+            {visibleSteps.map((visibleStep, index) => (
+              <li key={visibleStep} className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => goToStep(visibleStep, index > stepIndex ? 1 : -1)}
+                  disabled={saving}
+                  aria-label={`${PROFILE_STEP_SHORT_LABELS[visibleStep]}, step ${index + 1} of ${visibleSteps.length}`}
+                  aria-current={visibleStep === step ? "step" : undefined}
+                  className="group flex h-6 w-full items-center"
+                >
+                  <span
                     className={cn(
-                      "flex h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition-colors",
-                      current
-                        ? "bg-accent font-medium text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                      "h-1 w-full rounded-full transition-colors",
+                      index <= stepIndex ? "bg-[var(--accent)]" : "bg-[var(--border)] group-hover:bg-[var(--text-muted)]",
                     )}
-                    aria-current={current ? "step" : undefined}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums",
-                        completeByStep
-                          ? "bg-[var(--green-bg)] text-[var(--green-text)]"
-                          : current
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {completeByStep ? <CheckIcon className="size-3" aria-hidden="true" /> : index + 1}
-                    </span>
-                    {PROFILE_STEP_SHORT_LABELS[visibleStep]}
-                  </button>
-                </li>
-              );
-            })}
+                  />
+                </button>
+              </li>
+            ))}
           </ol>
+          <p className="text-sm text-[var(--text-secondary)] tabular-nums">
+            Step {stepIndex + 1} of {visibleSteps.length} · {PROFILE_STEP_SHORT_LABELS[step]}
+          </p>
         </nav>
 
-        <section className="min-w-0 rounded-lg border bg-card shadow-xs">
-          <header className="space-y-3 border-b px-5 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Badge variant="orange" size="sm">
-                Step {stepIndex + 1} of {visibleSteps.length}
-              </Badge>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {data.completion.completedCount} of {data.completion.totalCount} details complete
-              </span>
-            </div>
-            <Progress
-              value={((stepIndex + 1) / visibleSteps.length) * 100}
-              aria-label={`Step ${stepIndex + 1} of ${visibleSteps.length}`}
-            />
+        <section className="min-w-0 rounded-2xl border border-[var(--border)] bg-card shadow-xs">
+          <header className="space-y-1 px-5 pt-6 sm:px-8">
             <div className="grid">
               <AnimatePresence initial={false} custom={stepMotionContext}>
                 <motion.div
@@ -827,14 +786,14 @@ export function ProfileCompletionWizard({
                   exit="exit"
                   className="col-start-1 row-start-1 flex flex-col gap-1"
                 >
-                  <h2 className="text-lg font-semibold tracking-tight">{copy.title}</h2>
-                  <p className="text-sm text-muted-foreground">{copy.description}</p>
+                  <h2 className="text-xl">{copy.title}</h2>
+                  <p className="text-sm text-[var(--text-secondary)]">{copy.description}</p>
                 </motion.div>
               </AnimatePresence>
             </div>
           </header>
 
-          <div className="flex min-h-[280px] flex-col gap-5 px-5 py-5 sm:px-6">
+          <div className="flex min-h-[260px] flex-col gap-5 px-5 py-6 sm:px-8">
             <div className="relative grid flex-1">
               <AnimatePresence initial={false} custom={stepMotionContext}>
                 <motion.div
@@ -858,7 +817,7 @@ export function ProfileCompletionWizard({
             )}
           </div>
 
-          <footer className="flex flex-wrap items-center gap-2 border-t px-5 py-4 sm:px-6">
+          <footer className="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-8 max-sm:[&>button]:w-full">
             {actions}
           </footer>
         </section>

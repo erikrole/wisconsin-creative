@@ -1353,7 +1353,9 @@ struct KioskNeededNextCard: View {
                         .foregroundStyle(KioskText.tertiary)
                 }
             }
-            if let title = item.bookingTitle { row("For", displayTitle(title)) }
+            // The server already sends the display title; trimming it again cut
+            // typed titles at a dash ("Media Day - Kohl Center").
+            if let title = item.bookingTitle { row("For", title) }
             row("When", KioskDueCopy.relative(item.startsAt))
             HStack(spacing: 12) {
                 Text("Item")
@@ -1370,10 +1372,6 @@ struct KioskNeededNextCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .kioskCard()
         .accessibilityElement(children: .combine)
-    }
-
-    private func displayTitle(_ title: String) -> String {
-        kioskEventDisplayTitle(title, sportCode: nil)
     }
 
     private func row(_ label: String, _ value: String) -> some View {

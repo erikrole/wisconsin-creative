@@ -63,14 +63,15 @@ struct PostTradeSheet: View {
 
     init(
         myShifts: [MyShift],
+        alreadyPostedIds: Set<String> = [],
         wrapsInNavigationStack: Bool = true,
         onPosted: @escaping (TradePostCandidate) -> Void
     ) {
-        let now = Date()
         let candidates = myShifts
             // The server refuses a post once the effective call time has
-            // passed, not the event start, so offer only shifts it will take.
-            .filter { ($0.callStartsAt ?? $0.startsAt) > now && $0.statusValue == .active }
+            // passed, not the event start, and refuses a second open post for
+            // the same shift, so offer only shifts it will take.
+            .filter { $0.isPostableForTrade && !alreadyPostedIds.contains($0.id) }
             .map { TradePostCandidate(shift: $0) }
             .sorted { $0.startsAt < $1.startsAt }
         self.candidates = candidates
@@ -266,7 +267,7 @@ struct PostTradeSheet: View {
         ContentUnavailableView {
             Label("No shifts to post", systemImage: "calendar.badge.exclamationmark")
         } description: {
-            Text("Only active, upcoming shifts can be posted to the Trade Board.")
+            Text("Upcoming shifts you haven't already posted show up here.")
         }
         .frame(maxWidth: .infinity, minHeight: 360)
     }

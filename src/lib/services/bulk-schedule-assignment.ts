@@ -404,6 +404,7 @@ function scopeWindowFilter(scope: BulkAssignmentScope): Prisma.CalendarEventWher
   const startsAt = new Date(scope.rangeStartsAt);
   const endsAt = new Date(scope.rangeEndsAt);
   return {
+    ...(scope.eventIds.length > 0 ? { id: { in: scope.eventIds } } : {}),
     isHidden: false,
     archivedAt: null,
     status: { not: "CANCELLED" },
@@ -906,6 +907,7 @@ export async function applyBulkScheduleAssignment(
           batchId,
           scope: {
             sportCodes: input.scope.sportCodes,
+            eventIds: input.scope.eventIds,
             workerScope: input.scope.workerScope,
             period: input.scope.period,
             area: input.scope.area,

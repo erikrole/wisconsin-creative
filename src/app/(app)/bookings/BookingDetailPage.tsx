@@ -49,6 +49,7 @@ import { formatCountdownCompact, formatDateTime, getUrgency } from "@/lib/format
 import { nextQuarterHourAfter } from "@/lib/quarter-hour";
 
 import BookingEquipmentTab from "./BookingEquipmentTab";
+import BookingReportsCard from "./BookingReportsCard";
 import BookingHistoryTab from "./BookingHistoryTab";
 
 /* ── Main Component ── */
@@ -74,6 +75,7 @@ export default function BookingDetailPage({
 
   // History collapse state
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   // Edit sheet state
   const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -303,7 +305,7 @@ export default function BookingDetailPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       {/* ── Header ── */}
       <BookingHeader
         booking={booking}
@@ -436,23 +438,40 @@ export default function BookingDetailPage({
         </Alert>
       )}
 
-      {/* ── Two-column layout: Equipment + Info ── */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-        {/* Left: Equipment manifest */}
+      {kind === "CHECKOUT" && booking && <div className="mb-6"><BookingReportsCard bookingId={booking.id} /></div>}
+
+      {/* ── Gear first, details tucked below ── */}
+      <div className="flex flex-col gap-6">
         <BookingEquipmentTab
           booking={booking}
           onBookingUpdated={patchLocal}
           onAddItems={canAddItems ? () => { setEditSheetEquipment(true); setEditSheetOpen(true); } : undefined}
         />
 
-        {/* Right: Info card */}
-        <BookingInfoCard
-          booking={booking}
-          canEdit={canEdit}
-          onSave={actions.saveField}
-          onPatch={patchLocal}
-        />
-      </div>
+        <Collapsible open={detailsExpanded} onOpenChange={setDetailsExpanded}>
+          <Card elevation="flat" className="rounded-xl border-border/50 shadow-xs">
+            <CardHeader className="pb-0">
+              <CollapsibleTrigger className="flex w-full items-center gap-2 text-left">
+                <ChevronDown className={`size-4 transition-transform ${detailsExpanded ? "" : "-rotate-90"}`} />
+                <CardTitle className="text-base tracking-tight">Details and notes</CardTitle>
+                <span className="ml-auto truncate text-xs text-muted-foreground">
+                  Schedule, people, location, notes
+                </span>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="p-0 pt-2">
+                <BookingInfoCard
+                  bare
+                  booking={booking}
+                  canEdit={canEdit}
+                  onSave={actions.saveField}
+                  onPatch={patchLocal}
+                />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
       {/* ── History section (inline, collapsible) ── */}
       {booking.auditLogs.length > 0 && (
@@ -496,6 +515,7 @@ export default function BookingDetailPage({
           </Card>
         </Collapsible>
       )}
+      </div>
 
       {/* ── Edit sheet ── */}
       <BookingDetailsSheet

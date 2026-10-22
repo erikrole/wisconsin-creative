@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 describe("GearOps macOS security contracts", () => {
+  it("keeps the XCTest host away from the installed app's credential", () => {
+    const app = source("macos/GearOps/GearOpsApp.swift");
+    const fixture = source("macos/GearOps/GearOpsFixture.swift");
+
+    // A real model in the test host would restore and rotate the installed
+    // app's Keychain token and sign it out.
+    expect(fixture).toContain('environment["XCTestConfigurationFilePath"] != nil');
+    expect(fixture).toContain("credentialStore: FixtureCredentialStore()");
+    expect(app).toContain("if GearOpsTestHost.isActive { return GearOpsTestHost.makeModel() }");
+    expect(app).toContain("if GearOpsFixture.isActive || GearOpsTestHost.isActive { return }");
+  });
+
   it("uses an ephemeral cookie-free transport and bypasses URL cache", () => {
     const client = source("macos/GearOps/GearOpsClient.swift");
 

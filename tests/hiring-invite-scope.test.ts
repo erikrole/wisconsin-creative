@@ -16,6 +16,7 @@ vi.mock("@/lib/services/onboarding-lifecycle", () => ({
 const models = {
   allowedEmail: { findMany: vi.fn(), count: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), deleteMany: vi.fn() },
   user: { findMany: vi.fn() },
+  studentAvailabilityBlock: { groupBy: vi.fn().mockResolvedValue([]) },
 };
 vi.mock("@/lib/db", () => ({ get db() { return models; } }));
 

@@ -29,6 +29,9 @@ enum AppRuntimeMode {
         /// rows, headers, and control strip can be rendered and screenshotted
         /// without a signed-in session.
         case schedule
+        /// The same Schedule with every read past the first window failing,
+        /// so the later-weeks retry row can be seen rather than reasoned about.
+        case scheduleLaterFailure = "schedule-later-failure"
         /// The Trade Board as staff see it: claims owed a decision. Exercises
         /// the review queue, which only has rows to show once claims stop
         /// resolving themselves.
@@ -44,14 +47,28 @@ enum AppRuntimeMode {
         /// the shape where "You're all set" used to render directly above a
         /// populated Drafts card.
         case homeAllClear
+        /// Home as a student in their first weeks, so the Getting started
+        /// checklist can be rendered and screenshotted without a session.
+        case homeGettingStarted = "home-getting-started"
         /// The native profile Scoreboard against a canned season payload, so
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
         case scoreboard
+        /// The shared team Scoreboard against a canned season: fact cards,
+        /// leaderboard, head to head and the explorer, with the signed-in
+        /// fixture user on the board so the "You" row shows.
+        case teamScoreboard = "team-scoreboard"
+        /// Creative Wrapped against a canned recap. `GT_WRAPPED_CARD` picks the
+        /// card to open on, and auto-advance is off, so every card can be
+        /// captured without tapping the simulator.
+        case wrapped
         /// The current user's Profile against canned identity, badge, and shift
         /// payloads. The Scoreboard entry lives between Next Up and the badge
         /// shelf, and a row's treatment can only be judged beside its neighbours.
         case profile
+        /// A teammate's staff profile (UserDetailView): Right now, This week,
+        /// Performance, and the badge shelf against canned payloads.
+        case staffProfile
         /// The signed-out entry screens. Neither needs a session or a fixture
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
@@ -85,6 +102,9 @@ enum AppRuntimeMode {
         /// without a signed-in session.
         case notificationsInbox = "notifications-inbox"
         case passwordSetup = "password-setup"
+        /// Settings > Report a Problem with a few recent actions seeded, so
+        /// the attachment list can be reviewed without a real session.
+        case reportProblem = "report-problem"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request
         /// drops its requester filter.
@@ -98,6 +118,23 @@ enum AppRuntimeMode {
         case bookingCancel = "booking-cancel"
         /// Item detail with its edit sheet open, against a canned asset.
         case itemEdit = "item-edit"
+        /// Item detail for the Damage and loss states: staff with an open missing
+        /// case, an open damage case, a closed case, the Record outcome sheet
+        /// open, a student with the Report a problem sheet open, and the Items
+        /// list with a missing row. All served from canned payloads.
+        case damageMissing = "damage-missing"
+        case damageDamaged = "damage-damaged"
+        case damageClosed = "damage-closed"
+        case damageRecordOutcome = "damage-record-outcome"
+        case damageReportProblem = "damage-report-problem"
+        case damageItemsMissing = "damage-items-missing"
+        /// The staff Damage and loss queue: open list, closed list, empty, one
+        /// case's detail, and the Record outcome sheet over the queue.
+        case damageQueueOpen = "damage-queue-open"
+        case damageQueueClosed = "damage-queue-closed"
+        case damageQueueEmpty = "damage-queue-empty"
+        case damageQueueDetail = "damage-queue-detail"
+        case damageQueueRecord = "damage-queue-record"
         /// The reservation composer with its QR cover open. A simulator has no
         /// camera, so this captures the permission priming a first-time user
         /// actually meets, not a live viewfinder.
@@ -175,6 +212,11 @@ enum AppRuntimeMode {
         static var bookingEdit: Bool { matches(.bookingEdit) }
         static var bookingCancel: Bool { matches(.bookingCancel) }
         static var itemEdit: Bool { matches(.itemEdit) }
+        static var damageRecordOutcome: Bool { matches(.damageRecordOutcome) }
+        static var damageReportProblem: Bool { matches(.damageReportProblem) }
+        static var damageQueueClosed: Bool { matches(.damageQueueClosed) }
+        static var damageQueueDetail: Bool { matches(.damageQueueDetail) }
+        static var damageQueueRecord: Bool { matches(.damageQueueRecord) }
         static var createBookingScanner: Bool { matches(.createBookingScanner) }
         static var search: Bool { matches(.search) || matches(.searchPartial) }
 
@@ -204,11 +246,13 @@ enum AppRuntimeMode {
 #if DEBUG
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
-             .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile,
+             .schedule, .scheduleLaterFailure, .tradeBoardStaff, .tradeBoardStudent,
+             .home, .homeAllClear, .homeGettingStarted, .scoreboard, .teamScoreboard, .wrapped, .profile, .staffProfile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
+             .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome,
+             .damageReportProblem, .damageItemsMissing, .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty,
+             .damageQueueDetail, .damageQueueRecord, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
              .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .blastStaff, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,

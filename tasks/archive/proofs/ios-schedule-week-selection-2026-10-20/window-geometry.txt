@@ -1,0 +1,1 @@
+width=440.0,height=956.0,locale=en_US,timezone=America/Chicago

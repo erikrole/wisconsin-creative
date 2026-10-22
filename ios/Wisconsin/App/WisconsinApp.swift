@@ -1,3 +1,4 @@
+import BackgroundTasks
 import CoreSpotlight
 import Foundation
 import SwiftUI
@@ -20,6 +21,7 @@ struct WisconsinApp: App {
 
     init() {
         AppMetricMonitor.shared.start()
+        DiagnosticBreadcrumbs.shared.record(.lifecycle, "App launched")
         try? Tips.configure([.displayFrequency(.daily)])
 #if DEBUG
         // Harness screenshots must be deterministic: a first-run tip popover
@@ -51,6 +53,7 @@ struct WisconsinApp: App {
                     handleScenePhaseChange(phase)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                    DiagnosticBreadcrumbs.shared.record(.lifecycle, "Memory warning")
                     Task { @MainActor in
                         ThumbnailCache.shared.evictAll()
                         URLCache.shared.removeAllCachedResponses()
@@ -63,6 +66,13 @@ struct WisconsinApp: App {
                     guard let route = GearTrackerRouteParser.parse(url) else { return }
                     appState.apply(route)
                 }
+                .onContinueUserActivity(BookingHandoff.activityType) { activity in
+                    // Handoff from another device carries the web URL, which
+                    // the universal-link parser already routes.
+                    guard let url = activity.webpageURL,
+                          let route = GearTrackerRouteParser.parse(url) else { return }
+                    appState.apply(route)
+                }
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in
                     // A Spotlight hit carries the booking id, which the push
                     // router already knows how to open — same destination, one
@@ -72,12 +82,17 @@ struct WisconsinApp: App {
                 }
                 .tint(.brandPrimary)
         }
+        .backgroundTask(.appRefresh(GearBackgroundRefresh.identifier)) {
+            await GearBackgroundRefresh.run()
+        }
     }
 
     @ViewBuilder
     private var rootContent: some View {
 #if DEBUG
-        if let scenario = AppRuntimeMode.performanceScenario {
+        if ProcessInfo.processInfo.environment["GT_ASSIGN_PICKER_FIXTURE"] != nil {
+            AssignStudentSheet.reviewFixture()
+        } else if let scenario = AppRuntimeMode.performanceScenario {
             PerformanceTestRootView(scenario: scenario)
         } else {
             RootView()
@@ -106,6 +121,7 @@ struct WisconsinApp: App {
             // previous account's shift and gear cannot outlive their session.
             GearWidgetPublisher.clear()
             SpotlightIndexer.clear()
+            BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: GearBackgroundRefresh.identifier)
             ThumbnailCache.shared.clearForSignOut()
 
             if oldUser != nil {
@@ -147,10 +163,12 @@ struct WisconsinApp: App {
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {
+        DiagnosticBreadcrumbs.shared.record(.lifecycle, "App \(phase == .active ? "active" : phase == .background ? "in background" : "inactive")")
         // Leaving the foreground is where an unfinished reservation is most
         // likely to be lost to a task kill, so persist it and keep composing.
         if phase == .background {
             cancelForegroundRefresh()
+            if session.currentUser != nil { GearBackgroundRefresh.schedule() }
             Task { await drafts.autosave() }
             return
         }

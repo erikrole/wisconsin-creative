@@ -116,11 +116,13 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 | Event | Type | Recipient | Channels |
 |---|---|---|---|
 | Manual badge awarded by admin | `badge_awarded` | Awarded user | In-app |
+| Badge earned automatically | `badge_awarded` | Earning user | In-app, one row per day |
 
 - Persistent inbox only. No toast fanout, email, APNs, or push in this slice.
 - Link target comes from `payload.href` and points to `/staff/{userId}?tab=badges`.
 - Delivery respects `User.notificationPrefs.badges`; missing or old preference shapes default to enabled.
 - Implementation: `POST /api/badges/award` and `awardBadgeManually` in `src/lib/badges/queries.ts`.
+- Daily summary (2026-10-21): automatic awards fold into one row per person per app-timezone day, keyed `badge_day_{userId}_{YYYY-MM-DD}` (`grantBadges` in `src/lib/badges/evaluator.ts`). A later badge the same day rewrites that row's title and body ("3 badges earned", "You earned A, B and C."), appends to `payload.badges`, moves it to the top, and marks it unread. `payload.studentBadgeId`/`badgeDefinitionId` hold the latest badge for older clients. Manual awards stay one row each, keyed `badge_awarded_{studentBadgeId}`, because revoking deletes that row.
 
 ## Deduplication (Local Candidate)
 - Key format: `"{bookingId}:{dueVersion}:{type}:{recipientKind}:{recipientId}"`
@@ -412,6 +414,7 @@ renders a tap-only alert. Neither side needs to ship first.
 - Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
 
 ## Change Log
+- 2026-10-21: **Daily badge summary (local).** Badges were the largest notification type (478 rows in the prior 60 days), and one nightly shift pass or return can cross several thresholds at once. Automatically earned badges now share one inbox row per person per day instead of a row each. Manual awards are unchanged. Focused evaluator tests pass.
 - 2026-10-21: **Inbox counts open work, and self-made actions stop pinging (local).** Production showed 40–50 unread rows per staff member and student, about 85% of them settled (gear already returned, requests another Admin decided, events already over, months-old badges), so the bell and iOS icon badge meant nothing. Settled rows are now marked read automatically (see Notification Center). A reservation the requester created or merged themselves, the owner's side of a kiosk handover, and a shift someone put themselves on by linking their own reservation or checkout to an event are written as read receipts with no push or email. The gear-up nudge is skipped when the assignment came from the person's own reservation or they already have an active booking for the shift or event (29% of nudges in the prior 60 days went to people who had just reserved). Notification email buttons open the exact checkout or event instead of the list page. Staff and Admin overdue follow-up pushes between 10 PM and 7 AM Central now arrive silently (16 of the prior 24 +4h alerts landed 2–4 AM); the student's own alerts are unchanged. Source and focused tests pass; production read-back after deploy remains open.
 - 2026-10-16: **Native blast history is the messages this phone already fetched (local).** Browse → Blasts lists and opens them with the existing `/api/me/blasts` client. Acknowledging removes the home banner and keeps the message in the on-device list. The list is cleared at sign-out. It is not a second copy of the web staff tracker, and it cannot recover a blast this install never downloaded. Xcode and authenticated phone proof remain open.
 - 2026-10-11: **Blasts web recovery and acknowledgment polish (local).** `/blasts` and `/blasts/[id]` now surface load failures with retry instead of an empty history or a false "not found", keep a Refresh action, and summarize people still waiting to acknowledge. Detail filters use the shared ToggleGroup, recipients stack as cards on narrow widths, and compose recovers when event or people lookups fail. Source contracts and focused tests cover the recovery paths; authenticated browser proof remains open.

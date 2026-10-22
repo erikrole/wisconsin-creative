@@ -1,0 +1,54 @@
+
+> creative-ops@2026.04.08.1 ios:xcode:verify
+> bash scripts/ios-xcode-verify.sh
+
+iOS Xcode verification
+Project: ios/Wisconsin.xcodeproj
+Scheme: Wisconsin
+Configuration: Debug
+DerivedData: /private/tmp/wc-schedule-week-selection-20261020/derived
+Test destination: platform=iOS Simulator,id=8FA58E18-C447-4C75-8A9F-14E19BCB6AE9 (IOS_TEST_DESTINATION)
+
+== XcodeGen project drift ==
+
+> creative-ops@2026.04.08.1 ios:project:check
+> node scripts/check-ios-project.mjs
+
+OK: XcodeGen output matches checked-in iOS project files
+
+== iOS drift check ==
+
+> creative-ops@2026.04.08.1 drift:ios
+> bash scripts/ios-drift-check.sh
+
+✓ ios-drift-check: no anti-patterns found across 125 swift files
+
+== iOS gap audit ==
+
+> creative-ops@2026.04.08.1 audit:ios:gaps
+> bash scripts/ios-audit-inventory.sh --gaps
+
+
+═══════════════════════════════════════════════════════════════
+Audit-worthy surfaces:    79
+  ✓ Covered:              79  (100%)
+  ✗ Missing audit:        0
+Exempt (shared/infra):    47
+═══════════════════════════════════════════════════════════════
+✓ no audit gaps
+
+== Xcode simulator build ==
+
+== XCTest simulator suite ==
+2026-10-20 16:53:07.842 xcodebuild[96640:7915253] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-20 16:53:13.654 xcodebuild[96640:7915253] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-20 16:53:13.654 xcodebuild[96640:7915253] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-20 16:53:13.655 xcodebuild[96640:7915253] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-20 16:53:13.922 xcodebuild[96640:7915253] [MT] IDETestOperationsObserverDebug: 6.113 elapsed -- Testing started completed.
+2026-10-20 16:53:13.922 xcodebuild[96640:7915253] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-20 16:53:13.922 xcodebuild[96640:7915253] [MT] IDETestOperationsObserverDebug: 6.113 sec, +6.113 sec -- end
+Testing started
+
+== Xcode generic iOS build ==
+
+OK: iOS Xcode verification passed for Wisconsin.

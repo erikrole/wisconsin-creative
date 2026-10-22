@@ -1,6 +1,17 @@
 import Foundation
 import Observation
 
+struct WelcomeFinish: Equatable {
+    enum Outcome: Equatable {
+        case complete
+        /// They stopped before the last step; the screen says so.
+        case later
+    }
+
+    let userId: String
+    let outcome: Outcome
+}
+
 enum ProfileCompletionRoute: Equatable {
     case welcome
     case app
@@ -41,11 +52,17 @@ final class ProfileCompletionStore {
     private(set) var isSaving = false
     private(set) var error: String?
 
+    /// Set when the last step is done or the user stops early. Holds the Welcome
+    /// route open so the finish screen shows even after the server marks the
+    /// profile complete or snoozed.
+    private(set) var finish: WelcomeFinish?
+
     private var activeUserId: String?
     private var manuallyPresentedUserId: String?
     private var bypassedForSessionUserId: String?
 
     func route(for user: CurrentUser, optimisticSession: Bool) -> ProfileCompletionRoute {
+        if finish?.userId == user.id { return .welcome }
         if bypassedForSessionUserId == user.id { return .app }
         if manuallyPresentedUserId == user.id { return .welcome }
 
@@ -76,6 +93,7 @@ final class ProfileCompletionStore {
             error = nil
             manuallyPresentedUserId = nil
             bypassedForSessionUserId = nil
+            finish = nil
         }
         if isLoading || isSaving { return }
         if !force, response?.profile.id == user.id { return }
@@ -112,6 +130,7 @@ final class ProfileCompletionStore {
             ProfileCompletionHint.save(next)
             if next.completion.profileComplete {
                 manuallyPresentedUserId = nil
+                if case .snooze = update {} else { finish = WelcomeFinish(userId: user.id, outcome: .complete) }
             }
             return next
         } catch APIError.unauthorized {
@@ -135,6 +154,7 @@ final class ProfileCompletionStore {
             ProfileCompletionHint.save(next)
             if next.completion.profileComplete {
                 manuallyPresentedUserId = nil
+                finish = WelcomeFinish(userId: user.id, outcome: .complete)
             }
             return true
         } catch APIError.unauthorized {
@@ -148,7 +168,21 @@ final class ProfileCompletionStore {
     func snooze(for user: CurrentUser) async -> Bool {
         guard let next = await save(.snooze, for: user) else { return false }
         manuallyPresentedUserId = nil
-        return next.completion.isSnoozed || !next.completion.shouldPrompt
+        let stopped = next.completion.isSnoozed || !next.completion.shouldPrompt
+        if stopped { finish = WelcomeFinish(userId: user.id, outcome: .later) }
+        return stopped
+    }
+
+    /// The last step was finished or skipped.
+    func finishSetup(for userId: String) {
+        finish = WelcomeFinish(userId: userId, outcome: .complete)
+        error = nil
+    }
+
+    /// Leaves the finish screen for the app shell.
+    func dismissFinish(for userId: String) {
+        finish = nil
+        continueForSession(for: userId)
     }
 
     func presentManually(for userId: String) {
@@ -173,6 +207,7 @@ final class ProfileCompletionStore {
         error = nil
         manuallyPresentedUserId = nil
         bypassedForSessionUserId = nil
+        finish = nil
         isLoading = false
         isSaving = false
     }

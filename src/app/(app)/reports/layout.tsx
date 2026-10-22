@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import FreshLayout from "@/components/FreshLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission } from "@/lib/rbac";
@@ -17,7 +18,7 @@ export default async function ReportsLayout({ children }: { children: React.Reac
   }
 
   return (
-    <>
+    <FreshLayout>
       <div className="print:hidden">
         <PageHeader
           title="Reports"
@@ -31,6 +32,6 @@ export default async function ReportsLayout({ children }: { children: React.Reac
       <ReportPrintHeader />
 
       {children}
-    </>
+    </FreshLayout>
   );
 }

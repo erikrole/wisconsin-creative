@@ -56,6 +56,7 @@ import {
   type DraftLine,
 } from "./gear-pick-state";
 import { GearItemCard, gearItemAnchorId } from "./GearItemCard";
+import { GEAR_MY_KIT_QUERY_KEY, MyKit, MyKitPage } from "./MyKit";
 import { GearPicksSheet, type GearPicksSheetMode } from "./GearPicksSheet";
 import { GearPreviewDialog, type GearPreview } from "./GearPreviewDialog";
 import { gearIntroSeen, GearPicksIntro } from "./GearPicksIntro";
@@ -112,10 +113,14 @@ export function GearPicker() {
             actionHref="/gear/admin"
           />
         ) : (
-          <EmptyState
-            icon="users"
-            title="You're not on this year's pick list"
-            description="Under Armour staff picks are for full-time creative staff on the 2027–28 roster. If you should be picking, ask an admin to add you."
+          <MyKitPage
+            fallback={
+              <EmptyState
+                icon="users"
+                title="You're not on this year's pick list"
+                description="Under Armour staff picks are for full-time creative staff on the 2027–28 roster. If you should be picking, ask an admin to add you."
+              />
+            }
           />
         )}
       </FadeUp>
@@ -335,6 +340,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
       setDirty(false);
       setSaveIssue(null);
       queryClient.setQueryData(GEAR_PICKS_ME_QUERY_KEY, json.data);
+      void queryClient.invalidateQueries({ queryKey: GEAR_MY_KIT_QUERY_KEY, exact: true });
     } catch {
       setSaveIssue("Couldn't load the saved list. Your unsaved picks are still here. Try reloading again when you're connected.");
     } finally {
@@ -379,6 +385,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
       queryClient.setQueryData<GearPicksMeResponse | null>(GEAR_PICKS_ME_QUERY_KEY, (current) =>
         current ? { ...current, submission: saved } : current,
       );
+      void queryClient.invalidateQueries({ queryKey: GEAR_MY_KIT_QUERY_KEY, exact: true });
       if (submit && !submittedAt) {
         toast.success("Picks submitted. You can still change them until the deadline.", {
           action: { label: "View on profile", onClick: () => router.push("/profile?tab=gear") },
@@ -436,6 +443,8 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
       </PageHeader>
 
       {recovery}
+
+      <MyKit />
 
       {readOnly && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm" role="status">

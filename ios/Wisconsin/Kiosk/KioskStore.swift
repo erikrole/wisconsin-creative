@@ -100,7 +100,13 @@ struct KioskCheckoutDraft: Equatable {
 final class KioskStore {
     var info: KioskInfo?
     var screen: KioskScreen = .activation {
-        didSet { if screen != oldValue { flowGeneration = UUID() } }
+        didSet {
+            guard screen != oldValue else { return }
+            flowGeneration = UUID()
+            // The case name only: associated values can carry a person.
+            let name = String(describing: screen).prefix { $0 != "(" }
+            DiagnosticBreadcrumbs.shared.setScreen(String(name))
+        }
     }
     private(set) var flowGeneration = UUID()
     private var handoffOwner: UUID?
@@ -534,7 +540,9 @@ final class KioskStore {
             while !Task.isCancelled {
                 let interval = await MainActor.run { self?.nextHeartbeatInterval } ?? Self.heartbeatInterval
                 try? await Task.sleep(nanoseconds: interval)
-                guard let self else { return }
+                // Deactivation cancels this task mid-sleep; don't send one more
+                // heartbeat for a kiosk that was just signed out.
+                guard !Task.isCancelled, let self else { return }
                 do {
                     try await KioskAPI.shared.kioskHeartbeat()
                 } catch APIError.unauthorized {

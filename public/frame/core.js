@@ -1,12 +1,13 @@
 /* Photo Frame core — reads EXIF from a photo and formats the settings shown on the frame.
    Client-only: the photo never leaves the browser, so there is no network code here.
 
-   Reads JPEG (APP1), PNG (eXIf) and WebP (EXIF). A file with no EXIF, or EXIF this
-   parser cannot follow, gives an empty result and the fields are typed by hand. */
+   Reads JPEG (APP1), PNG (eXIf) and WebP (EXIF), and finds the Exif block inside
+   HEIC/AVIF by scanning for its header. A file with no EXIF, or EXIF this parser
+   cannot follow, gives an empty result and the fields are typed by hand. */
 (function (root) {
   'use strict';
 
-  var TYPE_SIZE = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+  var TYPE_SIZE = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8 };
 
   function ascii(view, start, length) {
     var out = '';
@@ -31,7 +32,12 @@
       if (type === 3) out.push(view.getUint16(at + i * 2, little));
       else if (type === 4) out.push(view.getUint32(at + i * 4, little));
       else if (type === 1 || type === 7) out.push(view.getUint8(at + i));
+      else if (type === 6) out.push(view.getInt8(at + i));
+      else if (type === 8) out.push(view.getInt16(at + i * 2, little));
       else if (type === 9) out.push(view.getInt32(at + i * 4, little));
+      // Some editors write exposure values as floats or doubles instead of rationals.
+      else if (type === 11) out.push(view.getFloat32(at + i * 4, little));
+      else if (type === 12) out.push(view.getFloat64(at + i * 8, little));
       else if (type === 5 || type === 10) {
         var num = type === 5 ? view.getUint32(at + i * 8, little) : view.getInt32(at + i * 8, little);
         var den = type === 5 ? view.getUint32(at + i * 8 + 4, little) : view.getInt32(at + i * 8 + 4, little);
@@ -110,6 +116,17 @@
         i += 8 + csize + (csize % 2);
       }
     }
+    return scanForExif(view);
+  }
+
+  /** HEIC, AVIF and anything else: look for "Exif\0\0" followed by a TIFF header near the start. */
+  function scanForExif(view) {
+    var end = Math.min(view.byteLength - 10, 512 * 1024);
+    for (var i = 0; i < end; i++) {
+      if (view.getUint32(i, false) !== 0x45786966 || view.getUint16(i + 4, false) !== 0) continue;
+      var order = view.getUint16(i + 6, false);
+      if (order === 0x4949 || order === 0x4d4d) return i + 6;
+    }
     return -1;
   }
 
@@ -137,7 +154,9 @@
   var SONY_MODELS = {
     'ILCE-1': 'A1', 'ILCE-1M2': 'A1 II', 'ILCE-9M3': 'A9 III', 'ILCE-9M2': 'A9 II', 'ILCE-9': 'A9',
     'ILCE-7M5': 'A7 V', 'ILCE-7M4': 'A7 IV', 'ILCE-7M3': 'A7 III', 'ILCE-7RM5': 'A7R V', 'ILCE-7RM4': 'A7R IV',
-    'ILCE-7SM3': 'A7S III', 'ILCE-6700': 'A6700', 'ILME-FX3': 'FX3', 'ILME-FX6': 'FX6', 'ILME-FX30': 'FX30'
+    'ILCE-7RM4A': 'A7R IVA', 'ILCE-7RM3': 'A7R III', 'ILCE-7SM3': 'A7S III', 'ILCE-7CM2': 'A7C II', 'ILCE-7CR': 'A7CR',
+    'ILCE-6700': 'A6700', 'ILCE-6600': 'A6600', 'ILCE-6400': 'A6400',
+    'ILME-FX3': 'FX3', 'ILME-FX3A': 'FX3', 'ILME-FX2': 'FX2', 'ILME-FX6': 'FX6', 'ILME-FX30': 'FX30'
   };
 
   function titleCase(s) {
@@ -153,8 +172,10 @@
       var friendly = SONY_MODELS[model.toUpperCase()];
       return 'Sony ' + (friendly || model.replace(/^(ILCE|ILME)-/i, ''));
     }
-    if (brand && model.toLowerCase().indexOf(brand.toLowerCase()) === 0) return model;
+    // Phones are known by the model alone: "iPhone 16 Pro", not "Apple iPhone 16 Pro".
+    if (/^(iPhone|iPad|Pixel)\b/.test(model)) return model;
     var shown = brand === brand.toUpperCase() && brand.length > 3 ? titleCase(brand) : brand;
+    if (brand && model.toLowerCase().indexOf(brand.toLowerCase()) === 0) return shown + model.slice(brand.length);
     return (shown + ' ' + model).trim();
   }
 
@@ -181,6 +202,29 @@
     return iso ? String(Math.round(iso)) : '';
   }
 
+  /** "24-70mm F2.8" from LensSpecification (min/max focal, min/max aperture), for bodies that skip LensModel. */
+  function formatLensSpec(spec) {
+    if (!Array.isArray(spec) || spec.length < 4) return '';
+    var lo = Math.round(num(spec[0]));
+    var hi = Math.round(num(spec[1]));
+    var f = num(spec[2]);
+    if (!lo) return '';
+    var range = hi && hi !== lo ? lo + '-' + hi + 'mm' : lo + 'mm';
+    return f ? range + ' F' + Math.round(f * 10) / 10 : range;
+  }
+
+  /** "© 2026 Jane Doe. All rights reserved." to "Jane Doe", for a credit when Artist is empty. */
+  function creditFromCopyright(raw) {
+    var s = text(raw)
+      .replace(/all rights reserved\.?/i, '')
+      .replace(/^(©|\(c\)|copyright)\s*/i, '')
+      .replace(/^(©|\(c\))\s*/i, '')
+      .replace(/^\d{4}(\s*-\s*\d{4})?\s*/, '')
+      .replace(/^(by|photo by)\s+/i, '')
+      .replace(/[\s.,;]+$/, '');
+    return s.length > 60 ? '' : s;
+  }
+
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   function formatDate(raw) {
@@ -192,16 +236,19 @@
   /** The values the frame shows, as display strings, from a raw tag map. */
   function summarize(tags) {
     tags = tags || {};
-    var lens = text(tags[0xa434]);
+    var lens = text(tags[0xa434]) || formatLensSpec(tags[0xa432]);
+    // FNumber and ExposureTime first; the APEX values are the fallback some files carry instead.
+    var fnum = num(tags[0x829d]) || (typeof tags[0x9202] === 'number' ? Math.pow(2, tags[0x9202] / 2) : 0);
+    var time = num(tags[0x829a]) || (typeof tags[0x9201] === 'number' ? Math.pow(2, -tags[0x9201]) : 0);
     return {
       camera: cameraName(tags[0x010f], tags[0x0110]),
       lens: lens,
       focal: formatFocal(tags[0x920a]),
-      aperture: formatAperture(tags[0x829d]),
-      shutter: formatShutter(tags[0x829a]),
+      aperture: formatAperture(fnum),
+      shutter: formatShutter(time),
       iso: formatIso(tags[0x8827] || tags[0x8833]),
       date: formatDate(tags[0x9003] || tags[0x0132]),
-      artist: text(tags[0x013b])
+      artist: text(tags[0x013b]) || creditFromCopyright(tags[0x8298])
     };
   }
 
@@ -233,6 +280,13 @@
       : { ink: '#15151a', dim: 'rgba(21,21,26,0.6)', hair: 'rgba(0,0,0,0.14)' };
   }
 
+  /** A safe download name: the photo's name without its extension, path or odd characters. */
+  function exportName(fileName, ext) {
+    var base = String(fileName || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+    base = base.replace(/[\u0000-\u001f<>:"|?*]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    return (base || 'photo') + '-framed.' + ext;
+  }
+
   var api = {
     readTags: readTags,
     readExif: readExif,
@@ -243,6 +297,9 @@
     formatFocal: formatFocal,
     formatIso: formatIso,
     formatDate: formatDate,
+    formatLensSpec: formatLensSpec,
+    creditFromCopyright: creditFromCopyright,
+    exportName: exportName,
     parseHex: parseHex,
     inkFor: inkFor
   };

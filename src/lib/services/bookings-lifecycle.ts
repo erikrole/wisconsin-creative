@@ -8,6 +8,7 @@ import {
   BulkUnitStatus,
   Prisma,
   Role,
+  ScanPhase,
   ScanSessionStatus
 } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -63,6 +64,7 @@ import {
 import { assertBookingSnapshot } from "@/lib/booking-concurrency";
 import { isBookingAllocationConstraintError } from "@/lib/prisma-errors";
 import { unique } from "@/lib/utils";
+import { assertBookingDuration } from "@/lib/time";
 
 type CreateBookingInput = {
   /** Internal kiosk completion receipt, committed atomically with custody. */
@@ -157,6 +159,7 @@ function assertValidBookingWindow(startsAt: Date, endsAt: Date) {
   if (endsAt <= startsAt) {
     throw new HttpError(400, "endsAt must be later than startsAt");
   }
+  assertBookingDuration(startsAt, endsAt);
 }
 
 function assertValidCreateEventLinks(input: CreateBookingInput) {
@@ -2974,6 +2977,22 @@ export async function transferBookingOwner(
           throw new HttpError(400, "Shared travel-case bookings do not have a personal owner");
         }
 
+        if (existing.kind === BookingKind.CHECKOUT && existing.status === BookingStatus.OPEN) {
+          // Same guards as handing items over at the kiosk: a half-finished
+          // return or an accountability hold must settle before custody moves.
+          const [returnSession, exclusion] = await Promise.all([
+            tx.scanSession.findFirst({
+              where: { bookingId, phase: ScanPhase.CHECKIN, status: ScanSessionStatus.OPEN },
+              select: { id: true },
+            }),
+            tx.bookingAccountabilityExclusion.findUnique({ where: { bookingId }, select: { restoredAt: true } }),
+          ]);
+          if (returnSession) throw new HttpError(409, "Finish the in-progress return before transferring this checkout");
+          if (exclusion && !exclusion.restoredAt) {
+            throw new HttpError(409, "Resolve the checkout accountability exclusion before transferring it");
+          }
+        }
+
         const actor = await tx.user.findUnique({
           where: { id: actorUserId },
           select: { role: true },
@@ -3151,6 +3170,7 @@ export async function extendBooking(
       if (newEndsAt.getTime() < Date.now()) {
         throw new HttpError(400, "New end date must be in the future");
       }
+      assertBookingDuration(existing.startsAt, newEndsAt);
 
       const serializedAssetIds = existing.serializedItems.map((i) => i.assetId);
       const bulkItems = existing.bulkItems.map((i) => ({

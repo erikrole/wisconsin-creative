@@ -151,6 +151,17 @@ struct GearTrackerShortcutsProvider: AppShortcutsProvider {
         )
 
         AppShortcut(
+            intent: ExtendCheckoutIntent(),
+            phrases: [
+                "Extend my checkout in \(.applicationName)",
+                "I need my gear longer in \(.applicationName)",
+                "Keep my gear longer in \(.applicationName)",
+            ],
+            shortTitle: "Extend Checkout",
+            systemImageName: "clock.arrow.circlepath"
+        )
+
+        AppShortcut(
             intent: SearchGearIntent(),
             phrases: [
                 "Search gear in \(.applicationName)",

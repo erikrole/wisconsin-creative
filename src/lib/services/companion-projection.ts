@@ -1,5 +1,6 @@
 import { BookingKind, BookingStatus } from "@prisma/client";
 import { db } from "@/lib/db";
+import { withLatestKioskBeats } from "@/lib/kiosk-heartbeat-cache";
 import {
   listCompanionDevices,
   nextCompanionProjectionRevision,
@@ -23,7 +24,7 @@ export async function buildCompanionProjection(
   now = new Date(),
 ): Promise<Omit<CompanionProjection, "revision">> {
   const recentCutoff = new Date(now.getTime() - RECENT_ACTIVITY_MS);
-  const [bookings, devices] = await Promise.all([
+  const [bookings, storedDevices] = await Promise.all([
     db.booking.findMany({
       where: {
         OR: [
@@ -77,6 +78,8 @@ export async function buildCompanionProjection(
     }),
   ]);
 
+  // Idle kiosks heartbeat through Redis; show their newest beat.
+  const devices = await withLatestKioskBeats(storedDevices);
   const activeBookings = bookings.filter((booking) => ACTIVE_STATUSES.includes(booking.status));
   const openBookings = activeBookings
     .filter((booking) => booking.kind === BookingKind.CHECKOUT && booking.status === BookingStatus.OPEN)

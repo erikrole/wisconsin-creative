@@ -1,3 +1,4 @@
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import {
   AccountabilityExclusionReason,
   BookingCustodyScope,
@@ -316,7 +317,7 @@ export async function getAccountabilityReport(
     .filter((booking) => booking.accountabilityExclusion?.restoredAt === null)
     .map((booking) => ({
       bookingId: booking.id,
-      bookingTitle: booking.title.trim() || "Untitled checkout",
+      bookingTitle: displayBookingTitle(booking.title.trim()) || "Untitled checkout",
       requester: booking.requester.name,
       dueAt: booking.endsAt.toISOString(),
       reason: booking.accountabilityExclusion!.reason,
@@ -390,7 +391,7 @@ export async function getAccountabilityReport(
           person.incidents.push({
             incidentId: `${booking.id}:${state}`,
             bookingId: booking.id,
-            title: booking.title.trim() || "Untitled checkout",
+            title: displayBookingTitle(booking.title.trim()) || "Untitled checkout",
             dueAt: booking.endsAt.toISOString(),
             returnedAt: booking.completedAt?.toISOString() ?? null,
             extendedAt: null,
@@ -411,7 +412,7 @@ export async function getAccountabilityReport(
         person.incidents.push({
           incidentId: change.id,
           bookingId: booking.id,
-          title: booking.title.trim() || "Untitled checkout",
+          title: displayBookingTitle(booking.title.trim()) || "Untitled checkout",
           dueAt: change.previousEndsAt.toISOString(),
           returnedAt: null,
           extendedAt: change.changedAt.toISOString(),
