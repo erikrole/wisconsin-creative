@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#fbfbfc" media="(prefers-color-scheme: light)">
@@ -76,11 +76,6 @@
 
     /* ---- top bar ---- */
     .topbar { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: env(safe-area-inset-top) clamp(16px, 3vw, 24px) 0; border-bottom: 1px solid var(--border); background: var(--bg); }
-    .title { display: inline-flex; align-items: center; gap: 9px; margin: 0; font-size: 15px; font-weight: 900; letter-spacing: -0.01em; }
-    .title i { width: 8px; height: 8px; border-radius: 50%; background: #c40a0a; }
-    .private { display: inline-flex; margin-left: auto; margin-right: 4px; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; }
-    .private svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-    @media (max-width: 520px) { .private span { display: none; } }
 
     /* ---- buttons ---- */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 140ms var(--ease), border-color 140ms var(--ease), color 140ms var(--ease); }
@@ -190,38 +185,31 @@
       .actions { order: -1; padding: 4px 16px 18px; border-top: 0; border-bottom: 1px solid var(--border); background: var(--stage); }
       .scroll { padding-bottom: env(safe-area-inset-bottom); }
     }
-    /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
-       An Apps button and the Motion W, last in the top bar (top right, W in
-       the corner), in the page's own text colour. The tool's name is top left. ---- */
-    .wc-brand { display: inline-flex; align-items: center; gap: 12px; flex: none; margin-left: auto; color: inherit; }
-    .wc-badge { display: block; width: 30px; height: 30px; flex: none; }
-    .wc-badge-w {
-      display: block; width: 100%; height: 100%; background: currentColor;
-      -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
-    }
+    /* ---- Shared tool header (v4): the tool's name top left, Apps top right.
+       Shared byte-for-byte by every public tool; colours follow the page's
+       own text colour. ---- */
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; }
+    .brand-mark { width: 28px; height: 28px; flex: none; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent); }
+    .brand-mark svg { display: block; width: 28px; height: 28px; }
+    .brand-name { overflow: hidden; text-overflow: ellipsis; font-weight: 900; font-size: 17px; letter-spacing: -0.01em; white-space: nowrap; }
     .wc-apps {
-      display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border-radius: 8px;
-      color: inherit; text-decoration: none; font-size: 13px; font-weight: 700; line-height: 1;
+      display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; min-height: 34px; padding: 0 12px; border-radius: 9px;
+      color: inherit; text-decoration: none; font-size: 14px; font-weight: 700; line-height: 1;
       background: color-mix(in srgb, currentColor 8%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
       transition: background 150ms ease;
     }
     .wc-apps:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
     .wc-apps svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.8; }
-    .private + .wc-brand { margin-left: 0; }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <p class="title"><i aria-hidden="true"></i>Photo Frame</p>
-    <span class="private" title="Photos are framed in this browser tab and never uploaded.">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
-      <span>Stays on this device</span>
+    <span class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 28 28"><rect width="28" height="28" fill="#08090a"/><rect x="6" y="5" width="16" height="12.5" rx="1.5" fill="none" stroke="#fff" stroke-width="1.6"/><rect x="6" y="21" width="8" height="2.2" fill="#c40a0a"/></svg></span>
+      <span class="brand-name">Photo Frame</span>
     </span>
-    <div class="wc-brand">
-      <a class="wc-apps" href="/apps"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>Apps</a>
-      <span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"></span></span>
-    </div>
+    <a class="wc-apps" href="/apps"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>Apps</a>
   </header>
 
   <main class="empty" id="main">
@@ -232,7 +220,7 @@
           <h1>Frame a photo</h1>
           <p>Drop photos here, or paste one.</p>
           <button class="btn primary big" id="choose" type="button">Choose photos</button>
-          <small>JPEG, PNG, WebP or HEIC. Up to 12 at a time.</small>
+          <small>JPEG, PNG, WebP or HEIC, up to 12 at a time. Photos stay on this device and are never uploaded.</small>
         </div>
         <canvas id="canvas" role="img" aria-label="Framed preview"></canvas>
       </div>
