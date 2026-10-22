@@ -115,6 +115,15 @@ final class TradeBoardViewModel {
         return sections.availableOpenShifts.count + sections.availableTrades.count
     }
     var isLoading: Bool { isLoadingTrades || isLoadingOpenWork }
+    /// Your shifts that already have an open or claimed post. The post picker
+    /// leaves them out instead of offering a post the server refuses with a
+    /// conflict. Best effort: an area filter or an unloaded page can miss one,
+    /// and the server's 409 still covers that.
+    var postedAssignmentIds: Set<String> {
+        Set(trades
+            .filter { ($0.status == .open || $0.status == .claimed) && $0.postedBy.id == currentUserId }
+            .map(\.shiftAssignment.id))
+    }
     var hasSourceFailure: Bool { tradeLoadError != nil || openWorkLoadError != nil }
     var allSourcesFailed: Bool { tradeLoadError != nil && openWorkLoadError != nil }
     var error: String? {
@@ -419,8 +428,6 @@ struct TradeBoardSheet: View {
     let myShifts: [MyShift]
     let currentUserId: String
     var currentUserRole: String = ""
-    var onTradePosted: ((String) -> Void)? = nil
-    var onTradeClaimed: ((String, String) -> Void)? = nil
 
     @State private var vm = TradeBoardViewModel()
     @State private var showPostSheet = false
@@ -438,6 +445,10 @@ struct TradeBoardSheet: View {
     /// re-enable another row's buttons while its request is still running.
     @State private var pendingActionIds: Set<String> = []
     @State private var actionError: String?
+    /// Confirmation for a post or a claim, shown on the board itself. Hosts
+    /// used to toast these behind the sheet, where nobody saw them, and Home
+    /// and Event detail did not confirm at all.
+    @State private var toast: Toast?
     @Environment(\.today) private var today
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.dismiss) private var dismiss
@@ -474,6 +485,7 @@ struct TradeBoardSheet: View {
                     )
                 }
             }
+            .toast($toast, dismissAfter: 3.5)
             .onChange(of: actionError) { _, message in
                 if let message {
                     AccessibilityNotification.Announcement(message).post()
@@ -517,8 +529,16 @@ struct TradeBoardSheet: View {
             }
             .refreshable { await vm.load(forceRefresh: true) }
             .navigationDestination(isPresented: $showPostSheet) {
-                PostTradeSheet(myShifts: myShifts, wrapsInNavigationStack: false) { posted in
-                    onTradePosted?(posted.area)
+                PostTradeSheet(
+                    myShifts: myShifts,
+                    alreadyPostedIds: vm.postedAssignmentIds,
+                    wrapsInNavigationStack: false
+                ) { posted in
+                    toast = Toast(
+                        message: "Posted your \(posted.area.shiftAreaLabel) shift. You stay on it until an Admin approves a claim.",
+                        icon: "checkmark.circle.fill",
+                        role: .success
+                    )
                     Task { await vm.load() }
                 }
             }
@@ -1179,8 +1199,18 @@ struct TradeBoardSheet: View {
         guard let item = openShiftToPickup else { return }
         runAction(item.id, { try await vm.pickup(id: item.id) }, onSuccess: {
             let when = item.shift.effectiveStartsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-            onTradeClaimed?(item.shift.area, when)
+            confirmClaim(area: item.shift.area, when: when)
         }, finally: { openShiftToPickup = nil })
+    }
+
+    /// A claim is a request until an Admin approves it, so the confirmation
+    /// says requested, not picked up.
+    private func confirmClaim(area: String, when: String) {
+        toast = Toast(
+            message: "Requested \(area.shiftAreaLabel) on \(when). An Admin reviews it next.",
+            icon: "checkmark.circle.fill",
+            role: .success
+        )
     }
 
     private func claimConfirmedTrade() {
@@ -1188,7 +1218,7 @@ struct TradeBoardSheet: View {
         runAction(trade.id, { try await vm.claim(id: trade.id) }, onSuccess: {
             let when = trade.shiftAssignment.shift.effectiveStartsAt
                 .formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-            onTradeClaimed?(trade.shiftAssignment.shift.area, when)
+            confirmClaim(area: trade.shiftAssignment.shift.area, when: when)
         }, finally: { tradeToConfirm = nil })
     }
 

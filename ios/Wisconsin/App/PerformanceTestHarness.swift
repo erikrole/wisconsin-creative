@@ -61,7 +61,7 @@ struct PerformanceTestRootView: View {
             UsersView()
         case .resourcesLicenses, .resourcesLicensesOpen:
             LicensesView()
-        case .schedule:
+        case .schedule, .scheduleLaterFailure:
             ScheduleHarnessView()
         case .tradeBoardStaff, .tradeBoardStudent:
             TradeBoardHarnessView()
@@ -812,8 +812,14 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/shift-trades": return TradeBoardFixtureAPI.trades
         case "/api/schedule/open-work": return TradeBoardFixtureAPI.openWork
         case "/api/shift-groups": return ScheduleFixtureAPI.shiftGroups(for: request)
-        case "/api/calendar-events": return ScheduleFixtureAPI.calendarEvents(for: request)
-        case "/api/my-shifts": return ScheduleFixtureAPI.myShifts(for: request)
+        case "/api/calendar-events", "/api/my-shifts":
+            // Unmapped past the first window in the failure scenario, so the
+            // protocol answers 404 the way an outage would.
+            if AppRuntimeMode.performanceScenario == .scheduleLaterFailure,
+               ScheduleFixtureAPI.startsBeyondFirstWindow(request) { return nil }
+            return path == "/api/my-shifts"
+                ? ScheduleFixtureAPI.myShifts(for: request)
+                : ScheduleFixtureAPI.calendarEvents(for: request)
         case "/api/bookings": return BookingFixtureAPI.list(for: request)
         case let path where path.hasPrefix("/api/bookings/"):
             let bookingId = String(path.dropFirst("/api/bookings/".count))
@@ -3722,6 +3728,16 @@ enum ScheduleFixtureAPI {
         windowed(myShifts, request: request, eventOf: { $0["event"] as? [String: Any] })
     }
 
+    /// The first load covers through eight weeks out; a later-weeks read
+    /// starts at or past that.
+    static func startsBeyondFirstWindow(_ request: URLRequest) -> Bool {
+        guard let url = request.url,
+              let raw = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "startDate" })?.value,
+              let start = ISO8601DateFormatter().date(from: raw) else { return false }
+        return start >= Date.now.addingTimeInterval(6 * 7 * 24 * 60 * 60)
+    }
+
     /// Applies the Schedule's `startDate`/`endDate` window the way the routes
     /// do (the event ends after the start and starts by the end), so scrolling
     /// into earlier or later weeks loads different rows in the harness too.
@@ -3937,26 +3953,26 @@ enum ScheduleFixtureAPI {
         let shifts = """
         [
           { "id": "s0", "area": "VIDEO", "workerType": "ST", "startsAt": "\(at(-9, 18))",
-            "endsAt": "\(at(-9, 21))", "status": "COMPLETED",
+            "endsAt": "\(at(-9, 21))", "status": "DIRECT_ASSIGNED",
             "event": { "id": "e21", "summary": "Wrestling vs Iowa", "startsAt": "\(at(-9, 19))",
                        "endsAt": "\(at(-9, 21))", "sportCode": "WRES", "isHome": true,
                        "opponent": "Iowa", "locationId": "loc-fh", "locationName": "UW Field House" },
             "gear": { "status": "none", "bookings": [] } },
           { "id": "s1", "area": "CAMERA", "workerType": "ST", "startsAt": "\(at(0, 9, 30))",
-            "endsAt": "\(at(0, 14, 30))", "status": "ACTIVE",
+            "endsAt": "\(at(0, 14, 30))", "status": "DIRECT_ASSIGNED",
             "event": { "id": "e1", "summary": "Volleyball vs Nebraska", "startsAt": "\(at(0, 11))",
                        "endsAt": "\(at(0, 14))", "sportCode": "VB", "isHome": true,
                        "opponent": "Nebraska", "locationId": "loc-fh", "locationName": "UW Field House" },
             "gear": { "status": "checked_out",
                       "bookings": [ { "id": "b1", "status": "CHECKED_OUT", "kind": "SERIALIZED", "itemCount": 4 } ] } },
           { "id": "s1b", "area": "PHOTO", "workerType": "ST", "startsAt": "\(at(0, 10))",
-            "endsAt": "\(at(0, 14))", "status": "ACTIVE",
+            "endsAt": "\(at(0, 14))", "status": "DIRECT_ASSIGNED",
             "event": { "id": "e1", "summary": "Volleyball vs Nebraska", "startsAt": "\(at(0, 11))",
                        "endsAt": "\(at(0, 14))", "sportCode": "VB", "isHome": true,
                        "opponent": "Nebraska", "locationId": "loc-fh", "locationName": "UW Field House" },
             "gear": { "status": "none", "bookings": [] } },
           { "id": "s2", "area": "REPLAY", "workerType": "FT", "startsAt": "\(at(1, 12))",
-            "endsAt": "\(at(1, 15, 30))", "status": "ACTIVE",
+            "endsAt": "\(at(1, 15, 30))", "status": "DIRECT_ASSIGNED",
             "event": { "id": "e4", "summary": "Football vs Ohio State", "startsAt": "\(at(1, 12))",
                        "endsAt": "\(at(1, 15, 30))", "sportCode": "FB", "isHome": true,
                        "opponent": "Ohio State", "locationId": "loc-cr", "locationName": "Camp Randall Stadium" },
