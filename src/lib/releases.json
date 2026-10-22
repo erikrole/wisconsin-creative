@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Golden Hour forecasts the light",
+    "type": "improvement",
+    "summary": "Golden Hour now forecasts the sky for each golden hour and helps plan the week.",
+    "details": [
+      "Each morning and evening window has a sky outlook, like Good chance of color in the clouds or Low overcast, flat light, with cloud cover and temperature.",
+      "A Next 7 days list shows every evening (or morning) golden hour with its outlook. Tap a day to open it.",
+      "Each window says where the sun rises or sets, like Sets WSW · 255°.",
+      "Hover or drag across the sun path to read the time, light and sun height at any moment.",
+      "A cleaner look on the same full-page sky, with Badger red touches.",
+      "Custom coordinates and My location now show times in that spot's own time zone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 595
+  },
+  {
+    "date": "2026-10-22",
     "title": "QR Studio, refreshed",
     "type": "improvement",
     "summary": "QR Studio has a calmer Badger red look, codes that scan more reliably, calendar event codes, and an optional caption under any code.",
