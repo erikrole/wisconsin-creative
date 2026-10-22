@@ -26,7 +26,7 @@ const REMOVED_WEB_SCAN_FILES = [
 
 const STALE_WEB_SCAN_LINK_SURFACES = [
   "src/app/(app)/bookings/BookingDetailPage.tsx",
-  "src/app/(app)/dashboard/overdue-banner.tsx",
+  "src/app/(app)/_home/HomeView.tsx",
   "src/components/AppShell.tsx",
 ] as const;
 

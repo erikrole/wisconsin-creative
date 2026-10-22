@@ -52,13 +52,13 @@ describe("booking real-time sync source contract", () => {
   });
 
   it("wires booking change sync into dashboard and the shared booking list", () => {
-    const dashboard = source("src/app/(app)/page.tsx");
+    const dashboard = source("src/app/(app)/_home/HomePage.tsx");
     const bookings = source("src/app/(app)/bookings/page.tsx");
     const list = source("src/components/BookingListPage.tsx");
 
     expect(dashboard).toContain('import { useBookingChangeSync } from "@/hooks/use-booking-change-sync"');
     expect(dashboard).toContain("const bookingSync = useBookingChangeSync();");
-    expect(dashboard).toContain('import StatusIndicator from "@/components/ui/status-indicator"');
+    expect(dashboard).toContain('live: bookingSync.state === "active"');
     expect(bookings).toContain('import { useBookingChangeSync } from "@/hooks/use-booking-change-sync"');
     expect(bookings).toContain("const bookingSync = useBookingChangeSync(Boolean(currentUser) && !currentUser?.preview?.readOnly);");
     expect(bookings).toContain("!currentUser?.preview?.readOnly");

@@ -16,8 +16,8 @@ describe("schedule staff/student display source contracts", () => {
     expect(eventCrew).toContain("shiftWorkerLabelForProfile(activeAssignment.user)");
     expect(eventCrew).toContain("const rowClassLabel = activeAssignment");
     expect(eventCrew).toContain("<TableHead>Person</TableHead>");
-    expect(picker).toContain("shiftWorkerTypeForProfile(u)");
-    expect(picker).toContain("shiftWorkerLabelForProfile(u)");
+    expect(picker).toContain("shiftWorkerTypeForProfile(user)");
+    expect(picker).toContain("shiftWorkerLabelForProfile(user)");
     expect(picker).toContain("Will use ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()}");
     expect(picker).toContain("leave ${shiftWorkerSlotLabel(slotWorkerType).toLowerCase()} open");
   });
@@ -94,7 +94,7 @@ describe("schedule staff/student display source contracts", () => {
   it("never substitutes event time into Staff call-time presentation", () => {
     const dashboardRoute = source("src/app/api/dashboard/route.ts");
     const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
-    const dashboardColumn = source("src/app/(app)/dashboard/my-gear-column.tsx");
+    const dashboardColumn = source("src/app/(app)/_home/home-model.ts");
     const notifications = source("src/lib/services/notifications.ts");
     const home = source("ios/Wisconsin/Views/HomeView.swift");
     const profile = source("ios/Wisconsin/Views/ProfileNextUp.swift");

@@ -18,7 +18,7 @@ describe("iOS native control cleanup", () => {
     expect(search).toContain("if showsCancelButton");
     expect(search).toContain("text: $query");
     expect(search).toContain("placement: .navigationBarDrawer(displayMode: .always)");
-    expect(search).toContain('prompt: Text(isCollaborator ? "Search reservable gear" : "Search items, bookings, people")');
+    expect(search).toContain('prompt: Text(isCollaborator ? "Search reservable gear" : "Search gear, kits, events, people")');
     expect(search).toContain("if !isCollaborator");
     expect(search).toContain("SearchService.shared.search(query: query, gearOnly: isCollaborator)");
     expect(search).toContain(".onSubmit(of: .search) { commitSearch() }");
@@ -86,10 +86,13 @@ describe("iOS native control cleanup", () => {
     );
 
     expect(actions).not.toContain(".buttonStyle(.glass)");
-    expect(actions).toMatch(/Label\("Cancel Booking"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
+    // Cancel is a plain destructive row in the grouped list, not a bordered button.
+    expect(actions).toContain("Button(role: .destructive)");
+    expect(actions).not.toContain(".buttonStyle(.bordered)");
     expect(extendBar).not.toContain(".buttonStyle(.glass)");
-    expect(extendBar).toMatch(/Label\("Extend Return Date"[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)/);
-    expect(extendBar).toContain(".background(.ultraThinMaterial)");
+    // The one primary action: prominent capsule in the Claim green.
+    expect(extendBar).toMatch(/Text\("Extend Return"\)[\s\S]*?\.buttonStyle\(\.borderedProminent\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)[\s\S]*?\.tint\(\.green\)/);
+    expect(extendBar).toContain(".background(.bar)");
     expect(extendBar).not.toContain("Divider()");
   });
 });

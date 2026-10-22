@@ -1,3 +1,4 @@
+import { seesTeamGear } from "@/lib/collaborator-access";
 import { BookingStatus, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { startOfDayInAppTz } from "@/lib/app-time";
@@ -62,7 +63,7 @@ export const GET = withAuth(async (req, { user }) => {
   const locationId = searchParams.get("location_id");
   const sportCode = optionalSportCodeSchema.parse(searchParams.get("sport_code") ?? undefined);
   const requesterId = searchParams.get("requester_id");
-  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
+  const teamGear = seesTeamGear(user);
 
   const now = new Date();
   const todayStart = startOfDayInAppTz(now);
@@ -87,7 +88,7 @@ export const GET = withAuth(async (req, { user }) => {
     ...(sportCode ? { sportCode } : {}),
     // Internal Students have team-visible booking reads. Private collaborators
     // remain pinned to their own rows unless the signed preview is active.
-    ...(user.role === "COLLABORATOR" && !collaboratorPreview
+    ...(user.role === "COLLABORATOR" && !teamGear
       ? { requesterUserId: user.id }
       : requesterId
         ? { requesterUserId: requesterId }

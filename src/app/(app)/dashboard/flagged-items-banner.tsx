@@ -103,8 +103,8 @@ export function FlaggedItemsBanner({ items, onChanged }: Props) {
   if (items.length === 0) return null;
 
   const onlyMaintenance = items.every((i) => i.type === "MAINTENANCE");
-  const inventoryHref = onlyMaintenance ? "/items?status=MAINTENANCE" : "/items";
-  const inventoryLabel = onlyMaintenance ? "View maintenance →" : "Open inventory →";
+  const inventoryHref = onlyMaintenance ? "/items?status=MAINTENANCE" : "/damage";
+  const inventoryLabel = onlyMaintenance ? "View maintenance →" : "Damage and loss →";
 
   const damaged = items.filter((i) => i.type === "DAMAGED").length;
   const lost = items.filter((i) => i.type === "LOST").length;
@@ -265,7 +265,7 @@ export function FlaggedItemsBanner({ items, onChanged }: Props) {
   );
 }
 
-function FlaggedReportDialog({ item, onClose }: { item: FlaggedItem | null; onClose: () => void }) {
+export function FlaggedReportDialog({ item, onClose }: { item: FlaggedItem | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const inMaintenance = item?.assetStatus === "MAINTENANCE";

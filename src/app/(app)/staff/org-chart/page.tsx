@@ -290,7 +290,7 @@ export default function OrgChartPage() {
       <PageHeader title="Org chart" description="Reporting relationships for active staff and students." />
 
       {!loading && !error && nameOnlyManagers > 0 && (
-        <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-[#f5e29a] bg-[#fff8e1] px-4 py-3 text-sm text-[#5c4400]">
+        <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-[#f5e29a] bg-[#fff8e1] px-4 py-3 text-sm text-[#5c4400] dark:border-[#e5a200]/30 dark:bg-[#e5a200]/10 dark:text-[#f0d99a]">
           <span aria-hidden className="size-2 shrink-0 rounded-full bg-[#f5b800]" />
           <span>
             <strong>{nameOnlyManagers} {nameOnlyManagers === 1 ? "person lists" : "people list"}</strong> a manager by name only, so they appear at the top level. Link their manager on their profile to place them.

@@ -143,10 +143,33 @@ struct GearTrackerShortcutsProvider: AppShortcutsProvider {
                 "What gear do I have out in \(.applicationName)",
                 "What do I have out in \(.applicationName)",
                 "What's due back in \(.applicationName)",
+                "What gear is due back in \(.applicationName)",
                 "Check my gear in \(.applicationName)",
             ],
             shortTitle: "Check Gear",
             systemImageName: "backpack"
+        )
+
+        AppShortcut(
+            intent: ExtendCheckoutIntent(),
+            phrases: [
+                "Extend my checkout in \(.applicationName)",
+                "I need my gear longer in \(.applicationName)",
+                "Keep my gear longer in \(.applicationName)",
+            ],
+            shortTitle: "Extend Checkout",
+            systemImageName: "clock.arrow.circlepath"
+        )
+
+        AppShortcut(
+            intent: SearchGearIntent(),
+            phrases: [
+                "Search gear in \(.applicationName)",
+                "Find gear in \(.applicationName)",
+                "Is gear available in \(.applicationName)",
+            ],
+            shortTitle: "Search Gear",
+            systemImageName: "magnifyingglass"
         )
 
         AppShortcut(
@@ -155,6 +178,7 @@ struct GearTrackerShortcutsProvider: AppShortcutsProvider {
                 "When's my next shift in \(.applicationName)",
                 "What's my next shift in \(.applicationName)",
                 "Am I working in \(.applicationName)",
+                "When do I work next in \(.applicationName)",
             ],
             shortTitle: "Check Shift",
             systemImageName: "clock.badge.checkmark"

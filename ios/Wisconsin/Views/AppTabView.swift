@@ -375,7 +375,27 @@ struct AppTabView: View {
             }
             .modifier(AppTabShellStyle(usesSidebarAdaptableStyle: showsSidebarDestinations))
             .modifier(AppTabStatusOverlays(isReadOnlyPreview: isReadOnlyPreview))
+            .modifier(WrappedInvitation(role: session.currentUser?.role, isEnabled: !isReadOnlyPreview))
             .animation(reduceMotion ? nil : .easeInOut, value: network.isConnected)
+            .onChange(of: appState.selectedTab, initial: true) { _, tab in
+                DiagnosticBreadcrumbs.shared.setScreen(Self.diagnosticTabName(tab))
+            }
+    }
+
+    /// Tab names as crash and problem reports show them.
+    private static func diagnosticTabName(_ tab: Int) -> String {
+        switch tab {
+        case 0: "Home"
+        case 1: "Gear"
+        case 2: "Browse"
+        case 3: "Search"
+        case 4: "Schedule"
+        case 5: "Staff"
+        case 6: "Guides"
+        case 7: "Licenses"
+        case 8: "Scoreboard"
+        default: "Tab \(tab)"
+        }
     }
 
     private func loadDraftIfAllowed() async {

@@ -1,3 +1,4 @@
+import { missingAssetIds } from "@/lib/services/damage-cases";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -46,6 +47,7 @@ const patchAssetSchema = z
     availableForReservation: z.boolean().optional(),
     availableForCheckout: z.boolean().optional(),
     availableForCustody: z.boolean().optional(),
+    collaboratorVisible: z.boolean().optional(),
   })
   .strict();
 
@@ -110,6 +112,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
           id: params.id,
           parentAssetId: null,
           availableForReservation: true,
+          collaboratorVisible: true,
           status: { not: "RETIRED" },
         },
         select: {
@@ -158,6 +161,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
         checkinReports: user.role === "ADMIN" || user.role === "STAFF" ? {
           select: {
             id: true, type: true, description: true, imageUrl: true, createdAt: true, lastReportedAt: true,
+            resolution: true, resolvedAt: true, resolutionNote: true, resolvedBy: { select: { name: true } },
             reportedBy: { select: { name: true } },
             booking: { select: { id: true, title: true } },
           },
@@ -292,6 +296,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
       // The structured metadata is exposed via the `metadata` field instead.
       notes: parsedMeta ? null : asset.notes,
       computedStatus,
+      missing: computedStatus === "MAINTENANCE" && (await missingAssetIds([asset.id])).has(asset.id),
       isFavorited: !!favoriteRow,
       metadata: parsedMeta,
       activeBooking,

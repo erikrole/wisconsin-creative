@@ -72,14 +72,14 @@ describe("profile completion", () => {
     expect(result.missingFields).toEqual([]);
   });
 
-  it("requires year and anticipated graduation for students", () => {
+  it("requires year but not anticipated graduation for students", () => {
     const result = getProfileCompletion(profile({ role: "STUDENT" }));
 
-    expect(result.totalCount).toBe(8);
+    expect(result.totalCount).toBe(7);
     expect(result.missingFields).not.toContain("workPhone");
     expect(result.missingFields).not.toContain("athleticsEmail");
     expect(result.missingFields).toContain("studentYear");
-    expect(result.missingFields).toContain("anticipatedGraduation");
+    expect(result.missingFields).not.toContain("anticipatedGraduation");
   });
 
   it("accepts complete student academic details", () => {
@@ -101,7 +101,7 @@ describe("profile completion", () => {
     }));
 
     expect(result.isComplete).toBe(true);
-    expect(result.completedCount).toBe(8);
+    expect(result.completedCount).toBe(7);
   });
 
   it("separates operational readiness from profile completion", () => {

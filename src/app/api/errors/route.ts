@@ -1,7 +1,8 @@
 import { withAuth } from "@/lib/api";
-import { HttpError, ok } from "@/lib/http";
+import { ok } from "@/lib/http";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { routeTemplate, stripQuery, summarizeUserAgent, type ErrorReportInput } from "@/lib/error-reporting/grouping";
+import { readBoundedJson } from "@/lib/error-reporting/request-body";
 import { errorReportBodySchema } from "@/lib/schemas/error-reports";
 import { recordErrorReports } from "@/lib/services/error-reports";
 
@@ -13,12 +14,10 @@ const MAX_BODY_BYTES = 200_000;
  * admin Issues page. Clients dedupe repeats; the server caps each person.
  */
 export const POST = withAuth(async (req, { user }) => {
-  const length = Number(req.headers.get("content-length") ?? "0");
-  if (length > MAX_BODY_BYTES) throw new HttpError(413, "Error report too large");
   const limit = await checkRateLimit(`error-reports:${user.id}`, { max: 60, windowMs: 60 * 60_000 });
   if (!limit.allowed) return ok({ data: { stored: 0, throttled: true } });
 
-  const body = errorReportBodySchema.parse(await req.json());
+  const body = errorReportBodySchema.parse(await readBoundedJson(req, MAX_BODY_BYTES, "Error report"));
   const agent = body.client.platform === "web" ? summarizeUserAgent(req.headers.get("user-agent")) : null;
   const now = Date.now();
   const inputs: ErrorReportInput[] = body.reports.map((report) => {

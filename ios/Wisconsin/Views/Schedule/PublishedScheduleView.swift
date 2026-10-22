@@ -19,6 +19,9 @@ struct CollaboratorPublishedScheduleView: View {
     @State private var total = 0
     @State private var isLoading = false
     @State private var isLoadingMore = false
+    /// The next page failed. The end row offers Retry instead of a spinner
+    /// whose `.task` has already run and will not run again.
+    @State private var loadMoreFailed = false
     @State private var error: String?
     @State private var refreshError: String?
     @State private var pendingFollowId: String?
@@ -172,13 +175,35 @@ struct CollaboratorPublishedScheduleView: View {
             }
 
             if events.count < total {
-                HStack {
-                    Spacer()
-                    ProgressView("Loading more events")
-                        .font(.caption)
-                        .task { await loadMore() }
-                    Spacer()
+                Group {
+                    if loadMoreFailed {
+                        VStack(spacing: 10) {
+                            Text("Couldn't load more events")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Button {
+                                Task { await loadMore() }
+                            } label: {
+                                Label("Try Again", systemImage: "arrow.clockwise")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.primary)
+                                    .padding(.horizontal, 14)
+                                    .frame(minHeight: 44)
+                                    .background(Color.flatRaised, in: Capsule())
+                                    .overlay(Capsule().strokeBorder(Color.flatStroke, lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.vertical, 12)
+                    } else {
+                        ProgressView("Loading more events")
+                            .font(.caption)
+                            // Keyed to the page, so a row still on screen
+                            // after a page lands asks for the next one.
+                            .task(id: events.count) { await loadMore() }
+                    }
                 }
+                .frame(maxWidth: .infinity)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
@@ -224,6 +249,7 @@ struct CollaboratorPublishedScheduleView: View {
             total = response.total
             lastLoadedAt = .now
             error = nil
+            loadMoreFailed = false
         } catch APIError.unauthorized {
             return
         } catch {
@@ -238,16 +264,21 @@ struct CollaboratorPublishedScheduleView: View {
     private func loadMore() async {
         guard !isLoading, !isLoadingMore, events.count < total else { return }
         isLoadingMore = true
+        loadMoreFailed = false
         defer { isLoadingMore = false }
         do {
             let response = try await APIClient.shared.publishedSchedule(limit: pageSize, offset: events.count)
             let existingIds = Set(events.map(\.id))
-            events.append(contentsOf: response.data.filter { !existingIds.contains($0.id) })
-            total = response.total
+            let fresh = response.data.filter { !existingIds.contains($0.id) }
+            events.append(contentsOf: fresh)
+            // A page with nothing new would leave the end row asking forever.
+            total = fresh.isEmpty ? events.count : response.total
         } catch APIError.unauthorized {
             return
         } catch {
-            refreshError = error.localizedDescription
+            // Scrolling the row away cancels its task; that is not a failure.
+            guard !Task.isCancelled else { return }
+            loadMoreFailed = true
         }
     }
 

@@ -33,7 +33,8 @@ vi.mock("@/lib/audit", () => ({ createAuditEntryTx: mocks.createAuditEntryTx }))
 vi.mock("@/lib/services/booking-ref", () => ({ nextBookingRef: mocks.nextBookingRef }));
 vi.mock("@/lib/services/notifications", () => ({ sendPushToUser: mocks.sendPushToUser, deferPush: mocks.deferPush }));
 
-import { transferKioskItems, OWNER_TRANSFER_REASON, kioskHandoverCopy } from "@/lib/services/kiosk-item-transfer";
+import { transferKioskItems, OWNER_TRANSFER_REASON } from "@/lib/services/kiosk-item-transfer";
+import { gearHandoverCopy } from "@/lib/services/gear-handover-notify";
 import { issueKioskStaffToken } from "@/lib/kiosk-staff-token";
 
 vi.stubEnv("SESSION_SECRET", "test-session-secret-at-least-32-characters-long");
@@ -100,7 +101,11 @@ describe("kiosk peer transfer", () => {
     ]);
     expect(notes[0].body).toMatch(/^It's on your record now\. It's due .+\.$/);
     expect(notes[1].body).toBe("1 item is off your record now. The rest is still with you.");
-    expect(mocks.deferPush).toHaveBeenCalledTimes(2);
+    // The owner did this themselves: a read receipt, and only the new holder is pushed.
+    expect(notes[0].readAt).toBeNull();
+    expect(notes[1].readAt).toBeInstanceOf(Date);
+    expect(mocks.deferPush).toHaveBeenCalledTimes(1);
+    expect(mocks.sendPushToUser).toHaveBeenCalledWith("peer-1", expect.objectContaining({ category: "checkoutDue" }));
   });
 
   it("lets the owner hand over the whole checkout", async () => {
@@ -133,18 +138,20 @@ describe("kiosk peer transfer", () => {
     await expect(transfer({ targetUserId: undefined, targetBookingId: "co-9" })).rejects.toMatchObject({ status: 403 });
   });
 
-  it("staff transfers need a staff card proof, a reason, and send no handover pushes", async () => {
+  it("staff transfers need a staff card proof and a reason, and tell both people", async () => {
     const staffToken = issueKioskStaffToken({ userId: "staff-1", kioskId: "kiosk-1" }).token;
     mocks.userFindFirst.mockResolvedValueOnce(actor("staff-1", "STAFF"));
     await expect(transfer({ actorId: "staff-1", staffToken })).rejects.toMatchObject({ status: 400 });
 
     mocks.userFindFirst
-      .mockResolvedValueOnce(actor("staff-1", "STAFF"))
+      .mockResolvedValueOnce({ ...actor("staff-1", "STAFF"), name: "Staff Sam" })
       .mockResolvedValueOnce({ id: "peer-1", name: "Erik Role" });
     const result = await transfer({ actorId: "staff-1", reason: "Swapped at the game", staffToken });
     expect(result.success).toBe(true);
     expect(mocks.createAuditEntryTx.mock.calls[0]![1].after).toMatchObject({ reason: "Swapped at the game", staffCardVerified: true });
-    expect(mocks.notificationCreateManyAndReturn).not.toHaveBeenCalled();
+    const rows = mocks.notificationCreateManyAndReturn.mock.calls[0]![0].data;
+    expect(rows.map((row: { userId: string; readAt: Date | null }) => [row.userId, row.readAt])).toEqual([["peer-1", null], ["owner-1", null]]);
+    expect(rows[1].title).toContain("Staff Sam moved");
   });
 
   it("refuses a staff transfer of someone else's checkout without a valid staff card proof", async () => {
@@ -168,7 +175,10 @@ describe("kiosk peer transfer", () => {
   });
 
   it("words the handover copy", () => {
-    const copy = kioskHandoverCopy({ title: "Kit", endsAt, ownerName: "A", targetName: "B", itemCount: 3, sourceClosed: false });
+    const base = { actor: { id: "a", name: "A" }, sourceId: "s", receivingId: "r", stamp: 1, title: "Kit", endsAt, from: { id: "a", name: "A" }, to: { id: "b", name: "B" }, itemCount: 3, sourceClosed: false, isCheckout: true };
+    const copy = gearHandoverCopy(base);
+    expect(copy.toOldHolder.title).toBe("You handed Kit to B");
+    expect(gearHandoverCopy({ ...base, actor: { id: "s", name: "Sam" } }).toOldHolder.title).toBe("Sam moved Kit to B");
     expect(copy.toOldHolder.body).toBe("3 items are off your record now. The rest is still with you.");
   });
 });

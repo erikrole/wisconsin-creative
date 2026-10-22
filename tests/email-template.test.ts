@@ -5,6 +5,7 @@ vi.mock("@/lib/env", () => ({
 }));
 
 import { EMAIL_THEME, renderEmail } from "@/lib/email-template";
+import { buildNotificationEmail } from "@/lib/email";
 
 describe("renderEmail", () => {
   it("renders the shared shell with logo, headline, facts, and one button", () => {
@@ -71,5 +72,25 @@ describe("renderEmail", () => {
     });
     expect(html).toContain("Button not working?");
     expect(html).toContain(`color: ${EMAIL_THEME.danger}`);
+  });
+});
+
+describe("buildNotificationEmail buttons", () => {
+  it("opens the exact checkout or event the email is about", () => {
+    const checkout = buildNotificationEmail({ kind: "checkout", title: "Checkout overdue", body: "Return it.", href: "/checkouts/booking-1" });
+    expect(checkout.html).toContain('href="https://creative.example.test/checkouts/booking-1"');
+    expect(checkout.html).toContain("View checkout");
+
+    const schedule = buildNotificationEmail({ kind: "schedule", title: "Shift assigned", body: "You're on.", href: "/events/event-1" });
+    expect(schedule.html).toContain('href="https://creative.example.test/events/event-1"');
+    expect(schedule.html).toContain("View event");
+  });
+
+  it("falls back to the list page without a safe app path", () => {
+    for (const href of [undefined, "https://evil.example/x", "//evil.example/x"]) {
+      const email = buildNotificationEmail({ kind: "schedule", title: "Schedule ready", body: "Tap.", href });
+      expect(email.html).toContain('href="https://creative.example.test/schedule"');
+      expect(email.html).toContain("View your schedule");
+    }
   });
 });

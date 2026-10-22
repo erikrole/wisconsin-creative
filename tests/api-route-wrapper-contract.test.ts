@@ -15,6 +15,7 @@ const PUBLIC_HANDLER_ROUTES: Record<string, string[]> = {
   "src/app/api/auth/reset-password/route.ts": ["POST"],
   "src/app/api/auth/reset-password/account/route.ts": ["POST"],
   "src/app/api/companion/devices/route.ts": ["POST", "DELETE"],
+  "src/app/api/companion/diagnostics/route.ts": ["POST"],
   "src/app/api/companion/projection/route.ts": ["GET"],
   "src/app/api/companion/session/route.ts": ["POST"],
   "src/app/api/kiosk/activate/route.ts": ["POST"],
@@ -56,6 +57,11 @@ const PUBLIC_ROUTE_SAFETY: Record<string, RegExp[]> = {
     /\bgetClientIp\s*\(/,
   ],
   "src/app/api/companion/devices/route.ts": [
+    /\brequireCompanion\s*\(/,
+    /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
+    /\bgetClientIp\s*\(/,
+  ],
+  "src/app/api/companion/diagnostics/route.ts": [
     /\brequireCompanion\s*\(/,
     /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
     /\bgetClientIp\s*\(/,

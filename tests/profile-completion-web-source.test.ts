@@ -23,7 +23,7 @@ describe("profile completion web wiring", () => {
   });
 
   it("uses a quiet Home banner as the returning-user entry point", () => {
-    const dashboardPage = readFileSync("src/app/(app)/page.tsx", "utf8");
+    const dashboardPage = readFileSync("src/app/(app)/_home/HomePage.tsx", "utf8");
 
     expect(dashboardPage).toContain("<ProfileCompletionBanner />");
     expect(banner).toContain("useProfileCompletion");
@@ -90,9 +90,9 @@ describe("profile completion web wiring", () => {
   it("keeps collaborator Welcome copy aligned with the photo-only contract", () => {
     const welcome = readFileSync("src/app/(app)/welcome/page.tsx", "utf8");
 
-    expect(welcome).toContain("Add a profile photo so the Wisconsin Creative team can recognize you.");
+    expect(welcome).toContain("Add a profile photo so the team can recognize you.");
     expect(welcome).toContain('presentation="page"');
-    expect(welcome).toContain("Let’s get you ready");
+    expect(welcome).toContain("Let’s get you set up");
     expect(welcome).not.toContain("Add a phone number and a profile photo");
     expect(welcome).not.toContain("Add a phone number so the team can reach you.");
   });
@@ -105,5 +105,20 @@ describe("profile completion web wiring", () => {
     expect(wizard).toContain('aria-label="Setup steps"');
     expect(welcome).not.toContain("Operationally ready");
     expect(welcome).not.toContain("Profile complete");
+  });
+
+  it("ends Welcome on a next-steps screen instead of dropping straight into Home", () => {
+    const welcome = readFileSync("src/app/(app)/welcome/page.tsx", "utf8");
+    const done = readFileSync("src/app/(app)/welcome/WelcomeDone.tsx", "utf8");
+
+    expect(welcome).toContain("<WelcomeDone");
+    expect(welcome).toContain('setOutcome("later")');
+    expect(done).toContain('"/schedule"');
+    expect(done).toContain('"/bookings"');
+    expect(done).toContain('"/resources"');
+    expect(done).toContain("role === \"COLLABORATOR\"");
+    // Students are pointed at when they can't work; staff at onboarding status.
+    expect(done).toContain('"/welcome/availability"');
+    expect(done).toContain('"/staff/onboarding-status"');
   });
 });

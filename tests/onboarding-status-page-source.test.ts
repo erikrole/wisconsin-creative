@@ -7,8 +7,8 @@ describe("onboarding status page source wiring", () => {
 
     expect(source).toContain("Onboarding Status");
     expect(source).toContain('url: "/api/users/onboarding-readiness"');
-    expect(source).toContain("const STALE_DAYS = 14");
-    expect(source).toContain("Stale pending");
+    expect(source).toContain("const STALE_DAYS = 3");
+    expect(source).toContain("Not signed in");
     expect(source).toContain("Pending");
     expect(source).toContain("Claimed");
     expect(source).toContain("Operationally ready");
@@ -36,6 +36,17 @@ describe("onboarding status page source wiring", () => {
     expect(source).toContain("Nudge to finish setup");
   });
 
+  it("flags setup stalled past the window and students who have not said when they can't work, without sending anything on its own", () => {
+    const source = readFileSync("src/app/(app)/staff/onboarding-status/page.tsx", "utf8");
+
+    expect(source).toContain("Stalled setup");
+    expect(source).toContain("Nudge everyone stalled");
+    expect(source).toContain('setStatusFilter("stalled")');
+    expect(source).toContain("Hasn’t added when they can’t work");
+    // Nudges only go out when staff press a button.
+    expect(source).not.toContain("useEffect");
+  });
+
   it("keeps old invitation links as a compatibility redirect into app login", () => {
     const source = readFileSync("src/app/register/page.tsx", "utf8");
 
@@ -53,10 +64,8 @@ describe("onboarding status page source wiring", () => {
     expect(users).toContain("Onboarding");
     expect(allowedEmails).toContain('href="/staff/onboarding-status"');
     expect(allowedEmails).toContain("Status");
-    expect(allowedEmails).toContain('name="allowedEmailStatusFilter"');
-    expect(allowedEmails).toContain('id="allowed-email-status-filter"');
     expect(allowedEmails).toContain('aria-label="Allowed email status filter"');
-    expect(allowedEmails).toContain('className="flex flex-wrap items-center gap-2"');
+    expect(allowedEmails).toContain('role="radiogroup"');
     expect(dialog).toContain('href="/staff/onboarding-status"');
     expect(dialog).toContain("View status");
   });

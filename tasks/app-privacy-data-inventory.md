@@ -15,7 +15,7 @@
 | Contacts | No Contacts entitlement or usage description | Do not disclose contacts collection |
 | Photos | Main App Store target has no Photos permission; profile images are read from service URLs | Do not disclose photos/videos as native collection |
 | Tracking/ads | No ATT request, advertising SDK, tracking domain, or ad dependency | Tracking: No |
-| Crash/performance | No third-party crash SDK. Apple MetricKit crash, hang, and resource-exception diagnostics upload to the first-party `/api/diagnostics` (since 1.3) and are grouped into Issues with the signed-in account (2026-10-21) | Declare Crash Data, linked, App Functionality. No Performance Data or Product Interaction analytics |
+| Crash/performance | No third-party crash SDK. Apple MetricKit crash, hang, and resource-exception diagnostics upload to the first-party `/api/diagnostics` (since 1.3) and are grouped into Issues with the signed-in account (2026-10-21) | Declare Crash Data and Performance Data (hang and slow-launch diagnostics), linked, App Functionality. No Product Interaction analytics |
 | Required-reason APIs | UserDefaults used for device-local preferences | Keep `NSPrivacyAccessedAPICategoryUserDefaults` reason `CA92.1` |
 
 ## Data Flow Inventory
@@ -29,6 +29,7 @@
 | Device ID | APNs and ActivityKit device-scoped tokens | Yes | App Functionality | Revoked/replaced on sign-out, permission/device changes, expiry, or account deletion |
 | Other Usage Data | Reservations, custody context, scans, favorites, schedules, availability, notification preferences, and audit actions | Yes | App Functionality | Future work is cancelled on deletion; custody/audit history may remain |
 | Crash Data | MetricKit crash and hang reports, app errors with version, device model, OS, screen, and the last in-app actions | Yes | App Functionality | Grouped into Issues; deleted after 90 days; account erasure removes the link |
+| Performance Data | MetricKit hang, slow-launch, CPU and disk-write exception reports, sent only when one occurs, with the same context as crashes | Yes | App Functionality | Grouped into Issues; deleted after 90 days; account erasure removes the link |
 | Other Diagnostic Data | Authenticated API/server error and request diagnostics from native traffic; Report a problem context | Yes | App Functionality | Used for security, reliability, and support; problem reports deleted after 365 days or on account erasure |
 
 ## Explicit Non-Collection For This Build
@@ -36,7 +37,7 @@
 - No Contacts data.
 - No payment, financial, health, fitness, browsing-history, search-history, advertising, or cross-app tracking data.
 - No camera frames, photos, videos, or audio uploaded by the main iOS target.
-- No device-performance metrics, session replay, or generic tap/click analytics. Recent in-app actions stay on device unless a crash, error, or problem report sends them.
+- No continuous device-performance metrics (only individual hang and slow-launch reports when one occurs), session replay, or generic tap/click analytics. Recent in-app actions stay on device unless a crash, error, or problem report sends them.
 - No third-party/social login. The app uses the organization's first-party invitation and password system.
 
 ## Service Providers And Sharing

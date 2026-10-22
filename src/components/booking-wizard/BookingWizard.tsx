@@ -935,16 +935,16 @@ export function BookingWizard() {
               disabled={isLocked}
               onClick={() => { if (isDone) { setCreateError(""); setStep(s.step); } }}
               className={cn(
-                "h-10 rounded-full px-3 text-xs text-muted-foreground",
-                isActive && "bg-foreground text-background hover:bg-foreground/90 hover:text-background",
+                "h-10 rounded-full px-4 text-sm text-muted-foreground",
+                isActive && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
                 isDone && "text-foreground hover:bg-muted/60",
                 isLocked && "cursor-default",
               )}
             >
               <span
                 className={cn(
-                  "flex size-4 shrink-0 items-center justify-center text-[10px] font-semibold",
-                  isLocked && "opacity-30",
+                  "flex size-4 shrink-0 items-center justify-center text-[11px] font-semibold",
+                  isLocked && "opacity-60",
                 )}
               >
                 {isDone ? <CheckIcon /> : s.step}
@@ -953,7 +953,7 @@ export function BookingWizard() {
               <span
                 className={cn(
                   "font-medium",
-                  isLocked && "opacity-30",
+                  isLocked && "opacity-60",
                 )}
               >
                 {s.label}

@@ -61,7 +61,9 @@ function StatusLine({ asset }: { asset: AssetDetail }) {
       </Badge>
     );
   }
-  if (s === "MAINTENANCE") return <Badge variant="orange" className="px-2.5 py-1 text-xs">Maintenance</Badge>;
+  if (s === "MAINTENANCE") return asset.missing
+    ? <Badge variant="red" className="px-2.5 py-1 text-xs">Missing</Badge>
+    : <Badge variant="orange" className="px-2.5 py-1 text-xs">Maintenance</Badge>;
   if (s === "RETIRED") return <Badge variant="gray" className="px-2.5 py-1 text-xs">Retired</Badge>;
   return <Badge variant="gray" className="px-2.5 py-1 text-xs">{s}</Badge>;
 }
@@ -121,6 +123,7 @@ type ItemHeaderProps = {
   onSaveHeaderField: (field: string, value: string) => Promise<void>;
   onAction: (action: string) => void;
   onImageModalOpen: () => void;
+  onReportProblem: () => void;
 };
 
 export function ItemHeader({
@@ -134,6 +137,7 @@ export function ItemHeader({
   onSaveHeaderField,
   onAction,
   onImageModalOpen,
+  onReportProblem,
 }: ItemHeaderProps) {
   const attachmentKind = asset.parentAsset ? getAttachmentKind(asset) : null;
   const slotLabel = asset.parentAsset ? getSdCardSlotLabel(asset, asset.parentAsset.assetTag) : null;
@@ -308,6 +312,9 @@ export function ItemHeader({
                 <Button variant="outline" className="h-10" disabled title={reserveDisabledTitle}>
                   Reserve
                 </Button>
+              )}
+              {currentUser != null && currentUser.role !== "COLLABORATOR" && asset.computedStatus !== "RETIRED" && (
+                <Button variant="outline" className="h-10" onClick={onReportProblem}>Report a problem</Button>
               )}
               {canEdit && <ActionsMenu asset={asset} disabled={actionBusy} onAction={onAction} />}
             </div>

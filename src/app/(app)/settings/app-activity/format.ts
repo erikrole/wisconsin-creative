@@ -131,3 +131,49 @@ export const SURFACE_LABELS: Record<string, string> = {
   kiosk: "Kiosk",
   other: "Other pages",
 };
+
+type IosClientLike = {
+  appVersion: string | null;
+  appBuild: string | null;
+  deviceModel: string | null;
+  releaseChannel: string | null;
+  buildStatus: BuildStatus;
+  lastSeenAt: string;
+  dormant: boolean;
+};
+
+/** Xcode builds and simulators: what's on a developer's desk, not a phone someone carries. */
+export function isTestBuild(client: Pick<IosClientLike, "releaseChannel" | "buildStatus" | "deviceModel">): boolean {
+  return client.releaseChannel === "development" || client.buildStatus === "development" || deviceName(client.deviceModel) === "Simulator";
+}
+
+/**
+ * One person's iPhones split for the people list: real phones (repeats of the same version on the same
+ * model shown once, newest first) and every Xcode or simulator build folded into one summary, newest build first.
+ */
+export function groupIosClients<T extends IosClientLike>(clients: T[]): { phones: T[]; testBuilds: T[] } {
+  const byRecent = [...clients].sort((a, b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime());
+  const seen = new Set<string>();
+  const phones: T[] = [];
+  for (const client of byRecent) {
+    if (isTestBuild(client)) continue;
+    const key = [client.appVersion, client.appBuild, client.deviceModel, client.dormant].join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    phones.push(client);
+  }
+  const testBuilds = byRecent
+    .filter(isTestBuild)
+    .sort((a, b) => (Number(b.appBuild) || 0) - (Number(a.appBuild) || 0));
+  return { phones, testBuilds };
+}
+
+/** Distinct browser descriptions ("Chrome · Mac") for the web chip, most recent first. */
+export function distinctWebClients(clients: { deviceModel: string | null; lastSeenAt: string }[]): string[] {
+  const names: string[] = [];
+  for (const client of [...clients].sort((a, b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime())) {
+    const name = client.deviceModel ?? "Browser";
+    if (!names.includes(name)) names.push(name);
+  }
+  return names;
+}

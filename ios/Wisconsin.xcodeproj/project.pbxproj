@@ -17,6 +17,7 @@
 		045D72067A5662DABE89377E /* NativeAuthViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050BCD6259A4475915E97169 /* NativeAuthViews.swift */; };
 		0530FB6892E8A44F4C8F967C /* AppIntentsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D82991FC6AE45A56917938 /* AppIntentsData.swift */; };
 		06BF3BC1B205C3B9E8B1C155 /* AnnouncementHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFC2DEAFF4B4E5054970B25 /* AnnouncementHarness.swift */; };
+		085A92CD04D5E9E0DE23ADBB /* CantWorkCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48CBAE7E4E14C58184AF3307 /* CantWorkCard.swift */; };
 		085E8467FC2D0385A67DD157 /* QRScannerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E5D1DB0C8CBAD5E452E807 /* QRScannerSheet.swift */; };
 		089493883612791C05515FAE /* LicensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3D4226E94BA750868A4D0B /* LicensesView.swift */; };
 		0A7B733B24619FD907F15B4A /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC8192CC2274AB7D7E83D4FD /* QuickActions.swift */; };
@@ -30,6 +31,7 @@
 		13F24EADE030F4FF7CE34489 /* KioskHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35BA2B9D7993639E5BC37B75 /* KioskHomeView.swift */; };
 		157E1E0021A0F88C78E3590E /* SidebarWebDestinationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B76322B9A6F0D5B70487D0F2 /* SidebarWebDestinationView.swift */; };
 		16180470B97E979363856F90 /* Gotham-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */; };
+		173C908241873C0433BCA6D2 /* GettingStartedCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FE8F225FC56D641DE108728 /* GettingStartedCard.swift */; };
 		17D60243EEB5E89A81363B3B /* ReportModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841B755DD26E463F2B624373 /* ReportModelsTests.swift */; };
 		18103A77A1D847F0F42FFDCF /* KioskCheckoutDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */; };
 		1AC641AD94A229A52FE17AE0 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ED3D57FAA3E94281C3FF27C /* APIClient.swift */; };
@@ -47,11 +49,14 @@
 		237DD2AF7BCC2631721C737C /* CreateBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */; };
 		2516A89A0CD4284023B38A28 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74157D1DF3F4EF9F53F70494 /* ScheduleView.swift */; };
 		2643D99B273EB3DA3E3D35A7 /* QuarterHourTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */; };
+		27049F0538A41F0CE4BA4377 /* DiagnosticBreadcrumbs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BB988EBEEE51C2AB45ADA8 /* DiagnosticBreadcrumbs.swift */; };
 		27614B86498B5D98CC600630 /* CreateBookingFormRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089FAA6DDBB831B89ED4E5F5 /* CreateBookingFormRows.swift */; };
 		27CB9D802700C529953BDEE1 /* CheckoutReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5357BF3B4A2D7DA30AB258 /* CheckoutReportView.swift */; };
 		27D9158F06A8D80D8B7C5B53 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4321D991D40907BB2A1819C1 /* ReportsView.swift */; };
 		27ECC333F667B220F460C700 /* GuidesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DA88A1DF6F8D23066A07BC /* GuidesView.swift */; };
+		27F49A035B40A64155A20DF5 /* Gotham-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 25CAFE07992F1EB02F507AE2 /* Gotham-Black.ttf */; };
 		28EE6E9E2F95C9BA9B138B38 /* BlastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5827A13830B73BC3EB57808 /* BlastModels.swift */; };
+		295B5BDC52A45372024B4D71 /* DiagnosticBreadcrumbs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BB988EBEEE51C2AB45ADA8 /* DiagnosticBreadcrumbs.swift */; };
 		2A37E7B9C1A68005651FAC4A /* CreateBookingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB412E1DD8493D282F261563 /* CreateBookingViewModel.swift */; };
 		2C1482077FD5A009856F4093 /* EventCatalogModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0F125F7F77142B7AB7F206E /* EventCatalogModelsTests.swift */; };
 		2C6B96B64D01EF1B40948AFD /* BrandAssetModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */; };
@@ -91,10 +96,12 @@
 		4B2A968B07EADEF18DEAD46D /* KioskActivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783E3F89AF08A64D8BE2685D /* KioskActivationView.swift */; };
 		4B5FFF1D1D5E4C8FF671E34F /* PasswordSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DCFCD62823EAF922978F5E0 /* PasswordSetupView.swift */; };
 		4BE20F645C24D0868E431ACB /* UtilizationReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 609E4E02EB555D808A50CE2A /* UtilizationReportView.swift */; };
+		4DE1161A8C3B3A771AD25117 /* KioskMetricMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD453CD512792C3F4CEEF8BD /* KioskMetricMonitor.swift */; };
 		4F0A1067946B104FF1220865 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2536547429CB16E12CB069C0 /* NetworkMonitor.swift */; };
 		4F357F478EDC77FFABCE13B7 /* ProfileCompletionModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */; };
 		521817F1F579897074A3B1D4 /* CreateBookingEventViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */; };
 		5222CCDEB1C3A451B2B7EDED /* PostTradeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C76AD0C31463DD95EE65E1E6 /* PostTradeSheet.swift */; };
+		52955BD2E5E4DCFB41106352 /* WelcomeFinishView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28C13DEE17CFBE2DD21483D5 /* WelcomeFinishView.swift */; };
 		53ED600858F0C9D58AD17CB0 /* ProfileNextUp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66242B4730F2C1AF5CF188FF /* ProfileNextUp.swift */; };
 		5454BB10D274B44B69E460AB /* BookingActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A52E5218FDC8FDA831557F /* BookingActivityView.swift */; };
 		563D04BBDE05CA2EDE98513A /* GearTrackerRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */; };
@@ -123,6 +130,7 @@
 		6D30C6F8EA800382F2619212 /* KioskFlowRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F93CDFD1D75D7CAC2D88211 /* KioskFlowRoutingTests.swift */; };
 		6EDD624F00353B180789238C /* ShiftCalendarTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB452081D764A6DFD0FD57C /* ShiftCalendarTokenStore.swift */; };
 		6F494116C14B986CBC4F1C86 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B798A9A6A730D69BA6E9597B /* SettingsView.swift */; };
+		6F6DA652A4DDC6BB96ADE79E /* WrappedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08289DCDD1AAF39C21595F6D /* WrappedView.swift */; };
 		70A3E38B8611D73E220C8B59 /* ItemActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD3AE6ABC6E4E6D32F563D8E /* ItemActivityView.swift */; };
 		713FB9080DFAA1073EE5FA8C /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */; };
 		71675D3559403AAD9354C225 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58ABE954706326D6137979FB /* BrowseView.swift */; };
@@ -154,12 +162,14 @@
 		8BA7A650D1F606D9AD0E546C /* EventCatalogModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6123A836C8A0D47EA24AA1 /* EventCatalogModels.swift */; };
 		8CD14DB00C265952C199AF6A /* ScheduleWeekStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CD57D0B63E9479D435CAED /* ScheduleWeekStrip.swift */; };
 		904A4A8C645FFEB4CD2AA971 /* ExtendBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */; };
+		913B0E4393E6897C6B82E02E /* DamageCaseModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF04CF259D00BACA205ADD8 /* DamageCaseModelsTests.swift */; };
 		922F655D9910FE2ECB1E7DD8 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
 		92FB41EABAD386A10484F5D8 /* KioskDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07116906C1A1FF6F5D10BFA1 /* KioskDesign.swift */; };
 		942FA5C930D79B2ACBF6B94F /* CurrentDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B792FF3569918A5A54D8693 /* CurrentDay.swift */; };
 		96DAC20EB887DA3916DEE474 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38065600FA5A1C1AC4C8CC2F /* AppState.swift */; };
 		9920100D23D0FF37F2528340 /* KioskBarcodeCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */; };
 		9939B52822812D9C7B8CF92B /* ScannerDebuggerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B542F56A00A8C2FEB2078C /* ScannerDebuggerView.swift */; };
+		9BC82BABC3994046A594234F /* DamageCasesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B52F6EC97DF1D83B6D0E37F /* DamageCasesView.swift */; };
 		9C1F8CA16FA839FC47132297 /* ReportSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C450858455B38900B99D9C1 /* ReportSession.swift */; };
 		9C5BEA921A15CE17B5A5B15D /* GearControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70435C0EDE51880CDE9D6BA1 /* GearControls.swift */; };
 		9CF45F32E90F4C03DDE548AB /* KioskShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */; };
@@ -188,6 +198,7 @@
 		B23E7EE505EE66CF853A4009 /* QuarterHourTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */; };
 		B2FEB545EEB4F42FE18F292F /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */; };
 		B3836CE0F5F3C6E234501639 /* GearWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49E4A7AC5C05860AAB8EBE5 /* GearWidgetSnapshot.swift */; };
+		B38B68BB273B194A452D2D50 /* Gotham-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */; };
 		B5152EECF15D45DC25BE2D08 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */; };
 		B5172B28418254E10FE53FCF /* KioskEventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E476FBFFA1229259FF006C64 /* KioskEventDetailSheet.swift */; };
 		B627C81D60CEF199EE69E537 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB6A309FA698276EE001EE07 /* Preferences.swift */; };
@@ -199,6 +210,7 @@
 		BC65F462F70527063603B045 /* GearWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49E4A7AC5C05860AAB8EBE5 /* GearWidgetSnapshot.swift */; };
 		BC6EB10D11084CD15ABC7C72 /* BlastsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D81B8CCF65841AC7E7668763 /* BlastsView.swift */; };
 		BC815AF152ACBF9E704B2BA5 /* AnnouncementSplashSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */; };
+		BE116399C9F398E683E5BF14 /* DamageCaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D01A74B3493AEA820E5EA67 /* DamageCaseModels.swift */; };
 		BF476A31687D54A1DB40F63B /* BadgeReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2BEE3AD98754BF8D799A18 /* BadgeReportView.swift */; };
 		C102925440D4EB154CF681D1 /* LicenseExpiryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68542663977099AEC90AAFE5 /* LicenseExpiryTests.swift */; };
 		C3ADFDC332E02AC83743947D /* BookingActionSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1E235656D8727D0F626EBA /* BookingActionSheets.swift */; };
@@ -213,6 +225,7 @@
 		CC0861DE9B9E5C12D3EFFD83 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 911EE1AA37106EDB44B9B2E9 /* PrivacyInfo.xcprivacy */; };
 		CE860A32B56D88E0802D8EFE /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */; };
 		CEF64765984853FDCDFE272F /* GearTrackerRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D615552EE7D68CF4808A62 /* GearTrackerRoute.swift */; };
+		CF5C31FF6D5806CF9AD3642F /* ReportProblemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD057CACFBF37733A64C7AF /* ReportProblemSheet.swift */; };
 		D00E7601CEFE39E880ADF85B /* WisconsinPerformanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9128816C8E1A251912BD38AB /* WisconsinPerformanceUITests.swift */; };
 		D0BEAE453503EBBEDD922745 /* KioskDateFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37E6A8082FFD84EC009BC21 /* KioskDateFormatting.swift */; };
 		D1B46EF364FBA2F815B27704 /* NotificationInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059964A4433E68C24BA3469A /* NotificationInboxTests.swift */; };
@@ -225,6 +238,7 @@
 		D5A660B4A7D2D9AD347D60F0 /* AccountabilityPersonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CC6AF91AAA5BB9E1632337 /* AccountabilityPersonView.swift */; };
 		D622D6499DAFD051C68A9C25 /* PasskeyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D4B19DF59FC05500A7F758 /* PasskeyModels.swift */; };
 		D6AFE2C4EFEE0397AA81C6DC /* KioskFlowRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3505D284815BD7237ACFED5F /* KioskFlowRouting.swift */; };
+		D7139E67373631BEE29AD753 /* StaffRightNow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B425D3A009C027DDB54447BE /* StaffRightNow.swift */; };
 		D90FDB80F8FFF8F2921E26A5 /* LatestRequestGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7E2243115099DA4F3973F11 /* LatestRequestGenerationTests.swift */; };
 		D95A4FC980027927CC581CBB /* KioskCompletionPreparationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB467BB9EEA5C6B7553E3B2 /* KioskCompletionPreparationTests.swift */; };
 		DACC18C0E1181FD912992FEE /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6258D04F2CBF34C14EBB69 /* LoginView.swift */; };
@@ -313,6 +327,7 @@
 		07116906C1A1FF6F5D10BFA1 /* KioskDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskDesign.swift; sourceTree = "<group>"; };
 		073F98039DAC37B5AC72487C /* AccountAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAvatar.swift; sourceTree = "<group>"; };
 		07B3B943DF177C91612E3BB7 /* SpotlightIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightIndexer.swift; sourceTree = "<group>"; };
+		08289DCDD1AAF39C21595F6D /* WrappedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrappedView.swift; sourceTree = "<group>"; };
 		089FAA6DDBB831B89ED4E5F5 /* CreateBookingFormRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingFormRows.swift; sourceTree = "<group>"; };
 		0B3D4226E94BA750868A4D0B /* LicensesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicensesView.swift; sourceTree = "<group>"; };
 		0CF2E588B9A1DA4F76309E88 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
@@ -327,6 +342,7 @@
 		1770023701735D8701DCAA5B /* OverdueReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdueReportView.swift; sourceTree = "<group>"; };
 		180AF28376E70B61036C413D /* BrandAssetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetModels.swift; sourceTree = "<group>"; };
 		1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityWidget.swift; sourceTree = "<group>"; };
+		1D01A74B3493AEA820E5EA67 /* DamageCaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DamageCaseModels.swift; sourceTree = "<group>"; };
 		1EA7A7E4A31E909C59D8B15F /* EventTravelModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTravelModels.swift; sourceTree = "<group>"; };
 		21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearTrackerRouteTests.swift; sourceTree = "<group>"; };
 		2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
@@ -339,9 +355,11 @@
 		264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityModelTests.swift; sourceTree = "<group>"; };
 		278E72E73C5B3A226373D733 /* GearPicksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearPicksView.swift; sourceTree = "<group>"; };
 		279D279A34DC519AA0A42205 /* AccountabilityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityModels.swift; sourceTree = "<group>"; };
+		28C13DEE17CFBE2DD21483D5 /* WelcomeFinishView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeFinishView.swift; sourceTree = "<group>"; };
 		294553EF02A8AC64D71ED849 /* Wisconsin.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wisconsin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A73B2A1C9B274552CBA7C8B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendBookingSheet.swift; sourceTree = "<group>"; };
+		2B52F6EC97DF1D83B6D0E37F /* DamageCasesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DamageCasesView.swift; sourceTree = "<group>"; };
 		2BD749C0D91CAF1E8784E04F /* ProfilePhotoCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoCropView.swift; sourceTree = "<group>"; };
 		2DCFCD62823EAF922978F5E0 /* PasswordSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordSetupView.swift; sourceTree = "<group>"; };
 		2F4FFF38CD734CA5656C8878 /* KioskIdleRoster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdleRoster.swift; sourceTree = "<group>"; };
@@ -367,7 +385,9 @@
 		45271B9687525AA0016BAAC6 /* NativeChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeChrome.swift; sourceTree = "<group>"; };
 		4654A0A61430D64DD8A38F71 /* ScheduleQuickFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleQuickFilterBar.swift; sourceTree = "<group>"; };
 		468E248680EC5A61BEC1EE38 /* Skeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeleton.swift; sourceTree = "<group>"; };
+		48CBAE7E4E14C58184AF3307 /* CantWorkCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CantWorkCard.swift; sourceTree = "<group>"; };
 		4A9DAB950F60885A23620BEC /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
+		4AF04CF259D00BACA205ADD8 /* DamageCaseModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DamageCaseModelsTests.swift; sourceTree = "<group>"; };
 		4E70592C49A02FCFFAB9105A /* AccountabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountabilityView.swift; sourceTree = "<group>"; };
 		50023637E6B61A75BF40891B /* CrewRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrewRow.swift; sourceTree = "<group>"; };
 		512445D206E12968A205246E /* KioskIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdentityView.swift; sourceTree = "<group>"; };
@@ -413,6 +433,7 @@
 		783E3F89AF08A64D8BE2685D /* KioskActivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskActivationView.swift; sourceTree = "<group>"; };
 		796958C4A59FDC2C36ED1E38 /* ScheduleCalendarSubscriptionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleCalendarSubscriptionSheet.swift; sourceTree = "<group>"; };
 		7CB467BB9EEA5C6B7553E3B2 /* KioskCompletionPreparationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCompletionPreparationTests.swift; sourceTree = "<group>"; };
+		7DD057CACFBF37733A64C7AF /* ReportProblemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportProblemSheet.swift; sourceTree = "<group>"; };
 		7EB59A790015F3D10E780F5F /* KitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsView.swift; sourceTree = "<group>"; };
 		80B4D45C3B7B120931B9ACC0 /* WisconsinKiosk.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WisconsinKiosk.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		80CA4880F08046F8E23F079B /* ItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemDetailView.swift; sourceTree = "<group>"; };
@@ -441,6 +462,7 @@
 		9CDE77AE37C01B8DA663C7CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9DAF420E532759A9116D675B /* DraftModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftModels.swift; sourceTree = "<group>"; };
 		9E58906A0DD7BCF5024161BE /* NotificationsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSheet.swift; sourceTree = "<group>"; };
+		9FE8F225FC56D641DE108728 /* GettingStartedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GettingStartedCard.swift; sourceTree = "<group>"; };
 		A16A76819006E71CB2219DB9 /* Wisconsin.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wisconsin.entitlements; sourceTree = "<group>"; };
 		A417355DFB5B21031685616A /* ProfileCompletionWelcomeComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionWelcomeComponents.swift; sourceTree = "<group>"; };
 		A5159F2511DF2C09D8E495B8 /* GuideMarkdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideMarkdown.swift; sourceTree = "<group>"; };
@@ -453,6 +475,7 @@
 		AB412E1DD8493D282F261563 /* CreateBookingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingViewModel.swift; sourceTree = "<group>"; };
 		AB5357BF3B4A2D7DA30AB258 /* CheckoutReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReportView.swift; sourceTree = "<group>"; };
 		AC7E600F4A64D29482B039E0 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
+		AD453CD512792C3F4CEEF8BD /* KioskMetricMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskMetricMonitor.swift; sourceTree = "<group>"; };
 		AD7494E64F4395E73A7AA6C1 /* SearchResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultRow.swift; sourceTree = "<group>"; };
 		AE625FDFD675BDE49443B571 /* KioskSleepModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskSleepModeView.swift; sourceTree = "<group>"; };
 		B00CA85202DF85A1C1962FD2 /* ReservationEditFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationEditFlow.swift; sourceTree = "<group>"; };
@@ -460,6 +483,8 @@
 		B04517A8131BAA862DB3FF5E /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		B208F1EB8DD4DA49DADC1CAB /* AppTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTabView.swift; sourceTree = "<group>"; };
 		B24728E65A42F40EDB0BBCF8 /* KioskOnlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskOnlyApp.swift; sourceTree = "<group>"; };
+		B2BB988EBEEE51C2AB45ADA8 /* DiagnosticBreadcrumbs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticBreadcrumbs.swift; sourceTree = "<group>"; };
+		B425D3A009C027DDB54447BE /* StaffRightNow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaffRightNow.swift; sourceTree = "<group>"; };
 		B697AC8644C31499AB3D7408 /* ReportsScreenshotUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsScreenshotUITests.swift; sourceTree = "<group>"; };
 		B76322B9A6F0D5B70487D0F2 /* SidebarWebDestinationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarWebDestinationView.swift; sourceTree = "<group>"; };
 		B798A9A6A730D69BA6E9597B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -585,6 +610,7 @@
 				CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */,
 				8B792FF3569918A5A54D8693 /* CurrentDay.swift */,
 				1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */,
+				B2BB988EBEEE51C2AB45ADA8 /* DiagnosticBreadcrumbs.swift */,
 				C22B3A50B4815BC1451C26DD /* HIDScannerField.swift */,
 				EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */,
 				D39486DE707928DB17EA4667 /* LatestRequestGeneration.swift */,
@@ -697,6 +723,7 @@
 				A417355DFB5B21031685616A /* ProfileCompletionWelcomeComponents.swift */,
 				5740ABDA01126CBBB53F25EF /* ProfileCompletionWelcomeView.swift */,
 				2BD749C0D91CAF1E8784E04F /* ProfilePhotoCropView.swift */,
+				28C13DEE17CFBE2DD21483D5 /* WelcomeFinishView.swift */,
 			);
 			path = Welcome;
 			sourceTree = "<group>";
@@ -705,6 +732,7 @@
 			isa = PBXGroup;
 			children = (
 				59BEC868CE07F10941FEBB5C /* Info.plist */,
+				AD453CD512792C3F4CEEF8BD /* KioskMetricMonitor.swift */,
 				B24728E65A42F40EDB0BBCF8 /* KioskOnlyApp.swift */,
 				D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */,
 			);
@@ -738,6 +766,7 @@
 				A5827A13830B73BC3EB57808 /* BlastModels.swift */,
 				5BF2723F39EDA8F73473EB8E /* BookingActivityModels.swift */,
 				180AF28376E70B61036C413D /* BrandAssetModels.swift */,
+				1D01A74B3493AEA820E5EA67 /* DamageCaseModels.swift */,
 				BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */,
 				9DAF420E532759A9116D675B /* DraftModels.swift */,
 				0E6123A836C8A0D47EA24AA1 /* EventCatalogModels.swift */,
@@ -916,13 +945,16 @@
 				6AF2795089BD5B00BFA48D63 /* BrandAssetsView.swift */,
 				58ABE954706326D6137979FB /* BrowseView.swift */,
 				C47A1F9B414D1FC2CEA2AD4C /* BulkInventoryDetailView.swift */,
+				48CBAE7E4E14C58184AF3307 /* CantWorkCard.swift */,
 				F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */,
+				2B52F6EC97DF1D83B6D0E37F /* DamageCasesView.swift */,
 				05EDCE16A6E704EDF55C5198 /* EventCatalogDetailView.swift */,
 				5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */,
 				379F929043CF47B63E8FD5E6 /* EventsView.swift */,
 				D2E56EA67FA59A14F88AA08A /* EventTravelSection.swift */,
 				2B0058FB3644F501479BA0D5 /* ExtendBookingSheet.swift */,
 				278E72E73C5B3A226373D733 /* GearPicksView.swift */,
+				9FE8F225FC56D641DE108728 /* GettingStartedCard.swift */,
 				A5159F2511DF2C09D8E495B8 /* GuideMarkdown.swift */,
 				14DA88A1DF6F8D23066A07BC /* GuidesView.swift */,
 				64F14676788E6FA7CDD08D48 /* HomeView.swift */,
@@ -942,6 +974,7 @@
 				66242B4730F2C1AF5CF188FF /* ProfileNextUp.swift */,
 				B04517A8131BAA862DB3FF5E /* ProfileView.swift */,
 				6A2DFDC7A0C7BD6C018D43D2 /* PushPrePromptView.swift */,
+				7DD057CACFBF37733A64C7AF /* ReportProblemSheet.swift */,
 				4321D991D40907BB2A1819C1 /* ReportsView.swift */,
 				93A02FB7D1B8ADC547189F1A /* ScanPrePromptView.swift */,
 				74157D1DF3F4EF9F53F70494 /* ScheduleView.swift */,
@@ -949,10 +982,12 @@
 				B798A9A6A730D69BA6E9597B /* SettingsView.swift */,
 				D1BC4D99E28B3664BCC8C004 /* SharedLoginsView.swift */,
 				B76322B9A6F0D5B70487D0F2 /* SidebarWebDestinationView.swift */,
+				B425D3A009C027DDB54447BE /* StaffRightNow.swift */,
 				5BC8F02A51293AC16BA8E3E7 /* TeamBadgesView.swift */,
 				9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */,
 				6B64F325136AF7626ECECE8C /* UserDetailView.swift */,
 				8F94CA79BF538DBB6FF7F225 /* UsersView.swift */,
+				08289DCDD1AAF39C21595F6D /* WrappedView.swift */,
 				A0FD8D74EB1B296CC60D042B /* Announcements */,
 				FD17EDBF8309C42C3F9EECB6 /* Booking */,
 				4E310D05AC0591B9C424B405 /* Components */,
@@ -987,6 +1022,7 @@
 				33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */,
 				E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */,
 				FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */,
+				4AF04CF259D00BACA205ADD8 /* DamageCaseModelsTests.swift */,
 				F0F125F7F77142B7AB7F206E /* EventCatalogModelsTests.swift */,
 				21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */,
 				6FDEEC500E8732A76AA01E90 /* GuideMarkdownTests.swift */,
@@ -1095,6 +1131,7 @@
 			buildConfigurationList = 05D72B203B988EFC32B2A88B /* Build configuration list for PBXNativeTarget "WisconsinLiveActivities" */;
 			buildPhases = (
 				9873F6963E4E58809C13D3AC /* Sources */,
+				7F5EE032D6A78B0BD330668E /* Resources */,
 			);
 			buildRules = (
 			);
@@ -1224,6 +1261,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7F5EE032D6A78B0BD330668E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27F49A035B40A64155A20DF5 /* Gotham-Black.ttf in Resources */,
+				B38B68BB273B194A452D2D50 /* Gotham-Bold.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1236,6 +1282,7 @@
 				ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */,
 				2C6B96B64D01EF1B40948AFD /* BrandAssetModelTests.swift in Sources */,
 				2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */,
+				913B0E4393E6897C6B82E02E /* DamageCaseModelsTests.swift in Sources */,
 				2C1482077FD5A009856F4093 /* EventCatalogModelsTests.swift in Sources */,
 				563D04BBDE05CA2EDE98513A /* GearTrackerRouteTests.swift in Sources */,
 				0E3E3B49635A5FE7B0C6DE71 /* GuideMarkdownTests.swift in Sources */,
@@ -1280,6 +1327,7 @@
 				2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */,
 				7955FAEBBC1B5970FCFD76C5 /* CurrentDay.swift in Sources */,
 				80270EB0689F3880F6383BC1 /* DayTimeChipPicker.swift in Sources */,
+				27049F0538A41F0CE4BA4377 /* DiagnosticBreadcrumbs.swift in Sources */,
 				E9A78D5C1743CBD6CC8AF930 /* HIDScannerField.swift in Sources */,
 				46239E3116E5DE148E7A9C4F /* ItemListText.swift in Sources */,
 				654893DACB94A0EDA73141DF /* KioskAPIClient.swift in Sources */,
@@ -1299,6 +1347,7 @@
 				8AD1ECE2467134BBDC92A41B /* KioskIdentityView.swift in Sources */,
 				A63240779436086293BA2A9E /* KioskIdleRoster.swift in Sources */,
 				9F8F4FCCB5B170E4C08FEBA1 /* KioskIdleView.swift in Sources */,
+				4DE1161A8C3B3A771AD25117 /* KioskMetricMonitor.swift in Sources */,
 				41B90D7E34083A1070406934 /* KioskModels.swift in Sources */,
 				C72EB6E27A3B853D2B074874 /* KioskNativeTextField.swift in Sources */,
 				CB5A9F4D1449DDAFF063E6A6 /* KioskOnlyApp.swift in Sources */,
@@ -1372,6 +1421,7 @@
 				3C75E1BEF022199B034CAACC /* BrandAssetsView.swift in Sources */,
 				71675D3559403AAD9354C225 /* BrowseView.swift in Sources */,
 				784E7CA7101AF7458D03D926 /* BulkInventoryDetailView.swift in Sources */,
+				085A92CD04D5E9E0DE23ADBB /* CantWorkCard.swift in Sources */,
 				27CB9D802700C529953BDEE1 /* CheckoutReportView.swift in Sources */,
 				41B304E3F5ABE1BF6F9B94BB /* CheckoutReturnActivityAttributes.swift in Sources */,
 				D1BE91AB2F76BE372F49B448 /* CheckoutReturnLiveActivityManager.swift in Sources */,
@@ -1384,9 +1434,12 @@
 				2A37E7B9C1A68005651FAC4A /* CreateBookingViewModel.swift in Sources */,
 				8AF1D9B30757EC04020B0A22 /* CrewRow.swift in Sources */,
 				942FA5C930D79B2ACBF6B94F /* CurrentDay.swift in Sources */,
+				BE116399C9F398E683E5BF14 /* DamageCaseModels.swift in Sources */,
+				9BC82BABC3994046A594234F /* DamageCasesView.swift in Sources */,
 				CE860A32B56D88E0802D8EFE /* DashboardModels.swift in Sources */,
 				7507BE07B0E40EAA31B9DBE9 /* DateFormats.swift in Sources */,
 				46010B21A5285A7396574B59 /* DayTimeChipPicker.swift in Sources */,
+				295B5BDC52A45372024B4D71 /* DiagnosticBreadcrumbs.swift in Sources */,
 				B6B0235DB84A35FE3DFF5D6C /* DraftModels.swift in Sources */,
 				D3B8D7EAA8E21FFADF3BA2AA /* EventCatalogDetailView.swift in Sources */,
 				8BA7A650D1F606D9AD0E546C /* EventCatalogModels.swift in Sources */,
@@ -1404,6 +1457,7 @@
 				CEF64765984853FDCDFE272F /* GearTrackerRoute.swift in Sources */,
 				37F0EBD3CF55156C593EB7E5 /* GearWidgetPublisher.swift in Sources */,
 				B3836CE0F5F3C6E234501639 /* GearWidgetSnapshot.swift in Sources */,
+				173C908241873C0433BCA6D2 /* GettingStartedCard.swift in Sources */,
 				AF66ADDE1D3CF5B16155A3BA /* GlobalSearchSheet.swift in Sources */,
 				9EF17BF323C8CEDE6CEC8D66 /* GuideMarkdown.swift in Sources */,
 				27ECC333F667B220F460C700 /* GuidesView.swift in Sources */,
@@ -1457,6 +1511,7 @@
 				79EBDDA41DFD519CF7E83E89 /* ReportChrome.swift in Sources */,
 				EF7FE74D513941148FDDA452 /* ReportFormatting.swift in Sources */,
 				36BAC1888596AE95B99080BB /* ReportLibraryModels.swift in Sources */,
+				CF5C31FF6D5806CF9AD3642F /* ReportProblemSheet.swift in Sources */,
 				9C1F8CA16FA839FC47132297 /* ReportSession.swift in Sources */,
 				27D9158F06A8D80D8B7C5B53 /* ReportsView.swift in Sources */,
 				6A83B2291B4776A186254C0F /* ReservationDraftCard.swift in Sources */,
@@ -1487,6 +1542,7 @@
 				5BFCE075814954BB59669481 /* Skeleton.swift in Sources */,
 				64AE61C02FDEA2B00F655B4F /* SoftwareLoginModels.swift in Sources */,
 				617342117832FB9352D3188A /* SpotlightIndexer.swift in Sources */,
+				D7139E67373631BEE29AD753 /* StaffRightNow.swift in Sources */,
 				1E84624B222CD81665D2EC79 /* StatusPill.swift in Sources */,
 				787D92C62F7AAA641D3A515B /* TeamBadgeModels.swift in Sources */,
 				DB69859A01C14ACE5396D325 /* TeamBadgesView.swift in Sources */,
@@ -1499,8 +1555,10 @@
 				6A29F42A3F64F9E6FDD5EB53 /* UserDetailView.swift in Sources */,
 				8AD8110B0A79C58084C6CB22 /* UsersView.swift in Sources */,
 				4BE20F645C24D0868E431ACB /* UtilizationReportView.swift in Sources */,
+				52955BD2E5E4DCFB41106352 /* WelcomeFinishView.swift in Sources */,
 				321FDB303266285CC1A98953 /* WhatsNewView.swift in Sources */,
 				390F43409B451AAB78D2D0C9 /* WisconsinApp.swift in Sources */,
+				6F6DA652A4DDC6BB96ADE79E /* WrappedView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1534,7 +1592,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1542,7 +1600,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1556,7 +1614,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1564,7 +1622,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1618,14 +1676,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
@@ -1642,14 +1700,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
 				PRODUCT_NAME = "Wisconsin Creative";

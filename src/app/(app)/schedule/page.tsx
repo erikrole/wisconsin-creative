@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
-import { MergeIcon, MoreHorizontalIcon, PlusIcon, SparklesIcon } from "lucide-react";
+import { CalendarOffIcon, MergeIcon, MoreHorizontalIcon, PlusIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -35,6 +35,7 @@ import { ListView } from "./_components/ListView";
 import { NewEventSheet } from "./_components/NewEventSheet";
 import { ScheduleReadiness } from "./_components/ScheduleReadiness";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { CantWorkDialog } from "@/components/availability/CantWorkDialog";
 import { CollaboratorSchedule } from "./_components/CollaboratorSchedule";
 import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
 import type { Area } from "@/types/areas";
@@ -98,8 +99,17 @@ function InternalSchedulePage() {
     return () => window.clearTimeout(id);
   }, []);
   const isStaff = data.currentUserRole === "STAFF" || data.currentUserRole === "ADMIN";
+  const { data: me } = useCurrentUser();
+  // Student workers add their own days off right where they look at shifts.
+  const cantWorkUserId = !isStaff && me?.staffingType === "ST" && !me.preview?.readOnly ? me.id : null;
+  const [cantWorkOpen, setCantWorkOpen] = useState(false);
   const canReviewClaims = data.currentUserRole === "ADMIN";
   const { loadData, setExpandedRowId, setTradeSheetOpen } = data;
+  // ?trades=open (Home, trade notifications) opens the board in use-schedule-data.
+  // ?tradeBoard=1 is kept for notifications sent before that link existed.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tradeBoard") === "1") setTradeSheetOpen(true);
+  }, [setTradeSheetOpen]);
   const { queue, setQueue } = data.filters;
   const queueUnavailable = data.healthUnavailable && queue !== null
     && !["my-calls-today", "stale-source", "trade-approval"].includes(queue);
@@ -413,15 +423,6 @@ function InternalSchedulePage() {
         <PageHeader title="Schedule">
           {isStaff ? (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10"
-                onClick={() => setNewEventOpen(true)}
-              >
-                <PlusIcon data-icon="inline-start" />
-                Add event
-              </Button>
               <Button size="sm" className="h-10" onClick={() => setAutoAssignOpen(true)}>
                 <SparklesIcon data-icon="inline-start" />
                 Auto assign
@@ -434,6 +435,10 @@ function InternalSchedulePage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onSelect={() => setNewEventOpen(true)}>
+                    <PlusIcon className="size-4" />
+                    Add event
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => { setCombineInitialEventIds(null); setCombineEventsOpen(true); }}>
                     <MergeIcon className="size-4" />
                     Combine events
@@ -464,19 +469,27 @@ function InternalSchedulePage() {
               </DropdownMenu>
             </>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => data.setTradeSheetOpen(true)}
-            >
-              Trade Board
-              {data.openTradeCount > 0 && (
-                <Badge variant="orange" size="sm" className="ml-1.5">
-                  {data.openTradeCount}
-                </Badge>
+            <>
+              {cantWorkUserId && (
+                <Button variant="outline" size="sm" className="h-10" onClick={() => setCantWorkOpen(true)}>
+                  <CalendarOffIcon data-icon="inline-start" />
+                  Can’t work
+                </Button>
               )}
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10"
+                onClick={() => data.setTradeSheetOpen(true)}
+              >
+                Trade Board
+                {data.openTradeCount > 0 && (
+                  <Badge variant="orange" size="sm" className="ml-1.5">
+                    {data.openTradeCount}
+                  </Badge>
+                )}
+              </Button>
+            </>
           )}
         </PageHeader>
 
@@ -652,6 +665,10 @@ function InternalSchedulePage() {
           initialArea={(data.filters.areaFilter || null) as Area | null}
           onApplied={data.loadData}
         />
+      )}
+
+      {cantWorkUserId && (
+        <CantWorkDialog userId={cantWorkUserId} open={cantWorkOpen} onOpenChange={setCantWorkOpen} onSaved={data.loadData} />
       )}
 
       {/* Trade Board sheet */}

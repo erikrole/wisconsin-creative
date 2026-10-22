@@ -16,6 +16,7 @@ import {
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ListToolbar } from "@/components/list-page/ListToolbar";
 import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -119,6 +120,14 @@ function getKitStatus(kit: KitRow) {
 
 function KitStatusBadge({ kit }: { kit: KitRow }) {
   const status = getKitStatus(kit);
+  if (status.label === "Ready") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
+        <span className="size-2 rounded-full bg-[var(--green)]" aria-hidden="true" />
+        Ready
+      </span>
+    );
+  }
   return (
     <Badge
       variant={status.variant}
@@ -323,8 +332,8 @@ export default function KitsPage() {
         )}
       />
 
-      <Card className="mt-4">
-        <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(260px,1fr)_220px_auto_auto] md:items-center">
+      <ListToolbar
+        search={(
           <div>
             <label htmlFor="kits-search" className="sr-only">
               Search kits
@@ -337,7 +346,9 @@ export default function KitsPage() {
               onValueChange={setSearch}
             />
           </div>
-
+        )}
+        filters={(
+          <>
           <div>
             <label htmlFor="kits-location-filter" className="sr-only">
               Filter by location
@@ -361,7 +372,6 @@ export default function KitsPage() {
               </SelectContent>
             </Select>
           </div>
-
           <label className="inline-flex min-h-10 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-[background-color,color] hover:bg-accent hover:text-accent-foreground">
             <Checkbox
               checked={includeArchived}
@@ -371,8 +381,10 @@ export default function KitsPage() {
             <ArchiveIcon className="size-4" />
             Show archived
           </label>
-
-          <div className="flex items-center justify-between gap-2 md:justify-end">
+          </>
+        )}
+        trailing={(
+          <>
             {query.refreshing && (
               <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Spinner className="size-4" />
@@ -388,9 +400,9 @@ export default function KitsPage() {
             >
               Clear
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </>
+        )}
+      />
 
       {locationsError && (
         <Alert variant="destructive" className="mt-4">

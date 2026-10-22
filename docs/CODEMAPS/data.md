@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 139 | 5 |
+| `User` | 142 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -19,7 +19,7 @@
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
-| `Asset` | 43 | 8 |
+| `Asset` | 44 | 8 |
 | `FirmwareWatchTarget` | 17 | 3 |
 | `Booking` | 44 | 15 |
 | `BookingAccountabilityExclusion` | 11 | 4 |
@@ -50,6 +50,8 @@
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
 | `CalendarEvent` | 42 | 7 |
+| `GameSnapshot` | 21 | 2 |
+| `WrappedRecap` | 6 | 2 |
 | `EventWorker` | 10 | 4 |
 | `ScheduleEventFollow` | 9 | 3 |
 | `BookingEvent` | 7 | 4 |
@@ -78,7 +80,7 @@
 | `CollaboratorPolicyRevision` | 9 | 3 |
 | `SystemConfig` | 3 | 1 |
 | `BadgeDefinition` | 14 | 3 |
-| `StudentBadge` | 10 | 5 |
+| `StudentBadge` | 11 | 5 |
 | `BadgeStreak` | 8 | 3 |
 | `BadgeEventReceipt` | 6 | 3 |
 | `LicenseCode` | 17 | 4 |
@@ -97,7 +99,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 20 | 7 |
+| `CheckinItemReport` | 25 | 8 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |
@@ -121,7 +123,7 @@
 | `YouTubeLibraryState` | 8 | 1 |
 | `YouTubePublishRecord` | 15 | 2 |
 | `YouTubePlaylistAddition` | 11 | 2 |
-| `GearPickCycle` | 17 | 1 |
+| `GearPickCycle` | 18 | 1 |
 | `GearPickHandout` | 11 | 3 |
 | `GearPickReceipt` | 11 | 2 |
 | `GearPastCycle` | 9 | 1 |
@@ -132,7 +134,7 @@
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
 | `Budget` | 8 | 3 |
-| `BudgetLine` | 26 | 5 |
+| `BudgetLine` | 28 | 6 |
 | `BudgetLineItem` | 10 | 5 |
 | `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |
@@ -263,6 +265,14 @@
 
 - `DAMAGED`
 - `LOST`
+
+### `ReportResolution`
+
+- `REPAIRED`
+- `REPLACED`
+- `WRITTEN_OFF`
+- `FOUND`
+- `NO_ISSUE`
 
 ### `BadgeCategory`
 

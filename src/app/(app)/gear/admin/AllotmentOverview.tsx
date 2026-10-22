@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ export function AllotmentOverview({ title, budget, pending, onSave }: Props) {
   const kitInvalid = kitAmount.length > 0 && (parsedKit === null || parsedKit > 100_000);
 
   const over = budget.remainingCents < 0;
-  const usedPct = budget.budgetCents > 0 ? Math.min(100, (budget.committedCents / budget.budgetCents) * 100) : 0;
+  const usedPct = budget.availableCents > 0 ? Math.min(100, (budget.committedCents / budget.availableCents) * 100) : 0;
 
   function startEdit() {
     setAmount((budget.budgetCents / 100).toFixed(2));
@@ -65,7 +66,7 @@ export function AllotmentOverview({ title, budget, pending, onSave }: Props) {
       {editing ? (
         <div className={`${CARD} flex flex-col gap-4 p-5`}>
           <div className="grid gap-1.5 sm:max-w-xs">
-            <label htmlFor="allotment-budget" className="text-sm font-bold">Total budget</label>
+            <label htmlFor="allotment-budget" className="text-sm font-bold">Under Armour allotment</label>
             <Input
               id="allotment-budget"
               inputMode="decimal"
@@ -74,7 +75,13 @@ export function AllotmentOverview({ title, budget, pending, onSave }: Props) {
               aria-invalid={invalid}
               className="text-right font-mono"
             />
-            {invalid && <p className="text-xs text-[#C62A2F]">Enter a dollar amount like 5500 or 5,500.00.</p>}
+            <p className={`text-xs ${invalid ? "text-[#C62A2F]" : "text-[#60646C] dark:text-muted-foreground"}`}>
+              {invalid
+                ? "Enter a dollar amount like 5500 or 5,500.00."
+                : budget.topUpCents > 0
+                  ? `Creative top-ups (${usd(budget.topUpCents)}) come from the Budget page and are added on top.`
+                  : "Creative money for UA gear is added from a line on the Budget page."}
+            </p>
           </div>
           <div className="grid gap-1.5 sm:max-w-xs">
             <label htmlFor="allotment-student-kit" className="text-sm font-bold">Student kit price</label>
@@ -106,8 +113,12 @@ export function AllotmentOverview({ title, budget, pending, onSave }: Props) {
         <div className="grid gap-3.5 sm:grid-cols-3">
           <div className={`${CARD} px-5 py-[18px]`}>
             <div className={LABEL}>Total budget</div>
-            <div className="mt-1.5 text-4xl font-extrabold leading-[1.05] tracking-[-0.04em] tabular-nums">{usd(budget.budgetCents)}</div>
-            <div className="mt-2 text-[13px] text-[#60646C] dark:text-muted-foreground">{budget.confirmed ? "Confirmed" : "Placeholder until confirmed"}</div>
+            <div className="mt-1.5 text-4xl font-extrabold leading-[1.05] tracking-[-0.04em] tabular-nums">{usd(budget.availableCents)}</div>
+            <div className="mt-2 text-[13px] text-[#60646C] dark:text-muted-foreground">
+              {budget.topUpCents > 0
+                ? `UA ${usd(budget.budgetCents)} · Creative ${usd(budget.topUpCents)}`
+                : budget.confirmed ? "Confirmed" : "Placeholder until confirmed"}
+            </div>
           </div>
           <div className={`${CARD} px-5 py-[18px]`}>
             <div className={LABEL}>Committed so far</div>
@@ -130,9 +141,26 @@ export function AllotmentOverview({ title, budget, pending, onSave }: Props) {
         <div
           className="h-3.5 overflow-hidden rounded-full bg-[#F0F1F3] dark:bg-white/10"
           role="img"
-          aria-label={`${usd(budget.committedCents)} of ${usd(budget.budgetCents)} committed`}
+          aria-label={`${usd(budget.committedCents)} of ${usd(budget.availableCents)} committed`}
         >
           <div className={`h-full rounded-full ${over ? "bg-[#C62A2F]" : "bg-[#12A594]"}`} style={{ width: `${usedPct}%` }} />
+        </div>
+      )}
+
+      {!editing && budget.topUps.length > 0 && (
+        <div className={`${CARD} px-5 py-3.5`}>
+          <div className={LABEL}>From the Creative budget</div>
+          <ul className="mt-2 flex flex-col divide-y divide-[#F0F1F3] dark:divide-white/10">
+            {budget.topUps.map((topUp) => (
+              <li key={topUp.lineId} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <Link href={`/budget?b=${topUp.budgetId}&line=${topUp.lineId}`} className="min-w-0 hover:underline">
+                  <span className="block truncate font-bold">{topUp.description}</span>
+                  <span className="block text-[13px] text-[#60646C] dark:text-muted-foreground">{topUp.budgetLabel}</span>
+                </Link>
+                <span className="shrink-0 font-bold tabular-nums">{usd(topUp.amountCents)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </section>

@@ -301,7 +301,7 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
 
 // ── Kiosk Device Auth ────────────────────────────────────
 
-const KIOSK_COOKIE = "kiosk_session";
+export const KIOSK_COOKIE = "kiosk_session";
 
 export type KioskContext = {
   kioskId: string;
@@ -403,8 +403,9 @@ export async function requireKiosk(): Promise<KioskContext> {
   // `lastSeenAt` is throttled the same way the session slide above is, and for
   // the same reason: it was writing on EVERY kiosk request, including pure
   // reads. That turned every dashboard poll, roster load, and heartbeat into a
-  // write, and write traffic — not read traffic — is what keeps a Neon compute
-  // endpoint from suspending. Minute-level "last seen" precision was never
+  // write. Any query (read or write) wakes a suspended Neon compute, so idle
+  // heartbeats also skip this function entirely (see kiosk-heartbeat-cache).
+  // Minute-level "last seen" precision was never
   // worth a WAL record per request; five minutes is well inside what the admin
   // Kiosk Devices column needs to distinguish a live device from a dark one.
   const lastSeenThrottleMs = 1000 * 60 * 5;

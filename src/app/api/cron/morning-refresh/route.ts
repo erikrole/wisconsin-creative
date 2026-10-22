@@ -12,10 +12,12 @@ import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation"
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { pruneNotificationDeliveries } from "@/lib/services/notification-deliveries";
+import { resolveSettledNotifications } from "@/lib/services/notification-resolution";
 import { runApplicantRetention, type RetentionRunResult } from "@/lib/hiring/retention";
 import { migrateLegacyAppDiagnostics } from "@/lib/services/app-diagnostics";
 import { pruneErrorReports } from "@/lib/services/error-reports";
 import { pruneJobRuns, recordJobRun } from "@/lib/services/job-runs";
+import { captureGameSnapshots, type GameSnapshotRunResult } from "@/lib/services/game-snapshots";
 import { badges, badgesEnabled } from "@/lib/badges";
 import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
 
@@ -50,6 +52,7 @@ const SHIFT_BADGE_CONCURRENCY = 5;
 
 /** Events older than this many months are soft-archived (archivedAt stamped). */
 const EVENT_ARCHIVE_MONTHS = 4;
+const GAME_SNAPSHOT_BUDGET_MS = 3000;
 const PRODUCT_EVENT_RETENTION_DAYS = 90;
 
 /**
@@ -184,6 +187,19 @@ export const GET = withCron(async () => {
     }
   }
 
+  // ── 2c. Snapshot finished games for replay and the season recap ──────
+  // Live crew and result rows can change or vanish after a game; the snapshot
+  // is the durable record. Bounded per run and by its own time budget, and the
+  // remainder is picked up the next morning.
+  let gameSnapshots: GameSnapshotRunResult | null = null;
+  let gameSnapshotsFailed = false;
+  try {
+    gameSnapshots = await captureGameSnapshots(now, { deadlineAt: Date.now() + GAME_SNAPSHOT_BUDGET_MS });
+  } catch (err) {
+    console.error("morning-refresh: game snapshot step failed", err);
+    gameSnapshotsFailed = true;
+  }
+
   // ── 3. Archive old calendar events ───────────────────────────────────
   const archiveCutoff = new Date(now);
   archiveCutoff.setMonth(archiveCutoff.getMonth() - EVENT_ARCHIVE_MONTHS);
@@ -200,7 +216,7 @@ export const GET = withCron(async () => {
 
   // ── 4. Expire stale open/claimed trades and pickup no-shows ─────────
   const productEventCutoff = new Date(now.getTime() - PRODUCT_EVENT_RETENTION_DAYS * 86_400_000);
-  const [tradeResult, pendingPickupResult, firmwareWatchResult, productEventRetentionResult, signatureCleanupResult, deliveryRetentionResult, telemetryRetentionResult] = await Promise.allSettled([
+  const [tradeResult, pendingPickupResult, firmwareWatchResult, productEventRetentionResult, signatureCleanupResult, deliveryRetentionResult, telemetryRetentionResult, settledNotificationsResult] = await Promise.allSettled([
     expireOpenTrades(),
     expirePickupNoShows(now),
     pollFirmwareWatchTargets({ now }),
@@ -208,8 +224,11 @@ export const GET = withCron(async () => {
     cleanupPendingSignatureArtifacts(),
     pruneNotificationDeliveries(now),
     Promise.all([migrateLegacyAppDiagnostics().then(() => pruneErrorReports(now)), pruneJobRuns(now)]),
+    // Read paths settle one person at a time; this catches everyone else.
+    resolveSettledNotifications({ now }),
   ]);
   const maintenanceFailures: string[] = [];
+  if (gameSnapshotsFailed) maintenanceFailures.push("gameSnapshots");
   const { expired: tradesExpired } = maintenanceValue(
     tradeResult,
     { expired: 0 },
@@ -260,6 +279,12 @@ export const GET = withCron(async () => {
     deliveryRetentionResult,
     0,
     "notificationDeliveryRetention",
+    maintenanceFailures,
+  );
+  const notificationsSettled = maintenanceValue(
+    settledNotificationsResult,
+    0,
+    "notificationsSettled",
     maintenanceFailures,
   );
   maintenanceValue(telemetryRetentionResult, [{ events: 0, issues: 0, supportReports: 0 }, 0], "telemetryRetention", maintenanceFailures);
@@ -325,11 +350,13 @@ export const GET = withCron(async () => {
     shiftBadgeUsersRemaining,
     deadlineExceeded: sourcesSkipped > 0 || shiftBadgeUsersRemaining > 0 || firmwareWatch.skipped > 0,
     eventsArchived,
+    gameSnapshots,
     tradesExpired,
     pendingPickups,
     firmwareWatch,
     productEventsDeleted,
     notificationDeliveriesDeleted,
+    notificationsSettled,
     signatureCleanup,
     scheduleAutomation: automationDigest,
     applicantRetention,

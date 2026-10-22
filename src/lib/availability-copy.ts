@@ -149,6 +149,8 @@ function availabilityUnavailableItemMessage(status: string, itemName: string) {
       return `${item} is not enabled for checkout`;
     case "NOT_AVAILABLE_FOR_RESERVATION":
       return `${item} is not enabled for reservations`;
+    case "NOT_AVAILABLE_FOR_COLLABORATORS":
+      return `${item} is not available to collaborators`;
     case "NOT_FOUND":
       return `${item} was not found`;
     default:

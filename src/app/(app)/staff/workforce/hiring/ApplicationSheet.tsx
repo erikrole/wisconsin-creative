@@ -82,7 +82,7 @@ function Stars({ value, className }: { value: number; className?: string }) {
   return (
     <span className={cn("text-[#e5a200]", className)} role="img" aria-label={`${value} of 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} className={n <= Math.floor(value) ? undefined : "text-[#d5d7de]"} aria-hidden>
+        <span key={n} className={n <= Math.floor(value) ? undefined : "text-[#d5d7de] dark:text-[#3a3d44]"} aria-hidden>
           ★
         </span>
       ))}
@@ -348,7 +348,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
             <StageStepper stage={detail.stage} />
 
             {ratedNotes.length > 0 && (
-              <div className="flex items-center gap-3 rounded-xl border border-[#f5e6b3] bg-[#fffbeb] px-4 py-2.5">
+              <div className="flex items-center gap-3 rounded-xl border border-[#f5e6b3] bg-[#fffbeb] px-4 py-2.5 dark:border-[#e5a200]/30 dark:bg-[#e5a200]/10">
                 <span className="text-3xl font-black tracking-tight tabular-nums">{ratingAverage.toFixed(1)}</span>
                 <div>
                   <Stars value={ratingAverage} />
@@ -364,7 +364,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
                 href={detail.interviewUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-3 rounded-xl border border-[#d9e2ff] bg-[#f5f8ff] px-4 py-3 text-foreground no-underline hover:bg-[#eef2ff]"
+                className="flex items-center gap-3 rounded-xl border border-[#d9e2ff] bg-[#f5f8ff] px-4 py-3 text-foreground no-underline hover:bg-[#eef2ff] dark:border-[#8da4ef]/25 dark:bg-[#8da4ef]/10 dark:hover:bg-[#8da4ef]/20"
               >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-white">
                   <Play className="size-4 fill-current" aria-hidden />
@@ -611,7 +611,7 @@ export default function ApplicationSheet({ applicationId, onClose, onChanged, on
         {detail && (
           <div className="sticky bottom-0 mt-auto flex items-center gap-2 border-t bg-card px-4 py-3">
             {detail.stage !== "PASSED" && (
-              <Button variant="outline" className="border-[#f3c7c7] text-[#b42318] hover:text-[#b42318]" onClick={() => void onStageChange(detail.id, "PASSED").then(() => load(detail.id))}>
+              <Button variant="outline" className="border-[#f3c7c7] text-[#b42318] hover:text-[#b42318] dark:border-[#f3c7c7]/30 dark:text-[#ff9b92] dark:hover:text-[#ff9b92]" onClick={() => void onStageChange(detail.id, "PASSED").then(() => load(detail.id))}>
                 Pass
               </Button>
             )}

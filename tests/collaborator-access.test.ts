@@ -194,13 +194,31 @@ describe("BTN response minimization", () => {
     });
     expect(result).toEqual(expect.objectContaining({
       assetTag: "CAM-1",
+      brand: "Brand",
       model: "Model",
       availability: "UNAVAILABLE",
     }));
-    expect(result).not.toHaveProperty("brand");
     expect(result).not.toHaveProperty("serialNumber");
     expect(result).not.toHaveProperty("currentHolder");
-    expect(result).not.toHaveProperty("activeBooking");
+    expect(result.activeBooking).toBeNull();
+  });
+
+  it("lets TEAM_GEAR_VIEW read other people's bookings but never act on them", () => {
+    const actor = { id: "btn-1", role: "COLLABORATOR", capabilities: ["MY_GEAR_VIEW", "TEAM_GEAR_VIEW", "RESERVATION_EDIT_OWN"] };
+    const other = { kind: "RESERVATION" as const, status: "BOOKED", requesterUserId: "staff-1", createdBy: "staff-1" };
+    expect(canPerformBookingAction(actor, other, "view").allowed).toBe(true);
+    expect(canPerformBookingAction(actor, other, "edit").allowed).toBe(false);
+    expect(canPerformBookingAction(actor, other, "cancel").allowed).toBe(false);
+    expect(normalizeCollaboratorCapabilities(["TEAM_GEAR_VIEW"])).toEqual([
+      "GEAR_CATALOG_VIEW",
+      "MY_GEAR_VIEW",
+      "TEAM_GEAR_VIEW",
+    ]);
+  });
+
+  it("scopes BRAND_ASSETS_VIEW to the brand library without adding guides or contacts", () => {
+    expect(normalizeCollaboratorCapabilities(["BRAND_ASSETS_VIEW"])).toEqual(["BRAND_ASSETS_VIEW"]);
+    expect(PERMISSIONS.resource?.view).not.toContain(Role.COLLABORATOR);
   });
 
   it("keeps own booking details usable without asset serials or requester email", () => {

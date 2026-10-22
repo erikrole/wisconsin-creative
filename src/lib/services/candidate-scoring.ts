@@ -6,6 +6,8 @@ import { evaluateAvailabilityPreferences, type AvailabilityBlockLike } from "@/l
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { endOfAppMonth, endOfAppWeek, startOfAppMonth, startOfAppWeek } from "@/lib/app-time";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
+import { sportLabel } from "@/lib/sports";
+import { AREA_LABELS } from "@/types/areas";
 import type {
   CandidateRecommendation,
   CandidateScoreBucket,
@@ -66,6 +68,13 @@ const WEEK_HOUR_OVERLOAD = 12;
 const MONTH_ASSIGNMENT_OVERLOAD = 12;
 const MONTH_HOUR_OVERLOAD = 36;
 const UPCOMING_ASSIGNMENT_WARNING = 5;
+// Fair rotation: every shift already on someone's week costs a little, and
+// people above the pool's typical season load cost a little more, so ties stop
+// landing on the same person until they hit the overload line.
+const WEEK_ASSIGNMENT_PENALTY = 6;
+const WEEK_ASSIGNMENT_PENALTY_CAP = 18;
+const SEASON_BALANCE_WEIGHT = 2;
+const SEASON_BALANCE_CAP = 12;
 
 function effectiveWindow(item: {
   startsAt: Date;
@@ -124,7 +133,46 @@ function bucketFor(score: number, warnings: CandidateScoreSignal[], workloadOver
 }
 
 function sortSignals(a: CandidateScoreSignal, b: CandidateScoreSignal) {
-  return Math.abs(b.weight ?? 0) - Math.abs(a.weight ?? 0);
+  // Slot-type fit is implied by the list a person appears in, so it never leads:
+  // clients that show the first reason (iOS, the legacy shift panel) then say
+  // something useful, like the person's area or roster.
+  const implied = Number(a.code === "role_fit") - Number(b.code === "role_fit");
+  return implied || Math.abs(b.weight ?? 0) - Math.abs(a.weight ?? 0);
+}
+
+// A typical strong fit lands near 120 raw points; scaling into 0-100 keeps
+// strong candidates distinguishable instead of all clamping to 100.
+const RAW_SCORE_CEILING = 130;
+
+function displayScore(raw: number) {
+  return Math.round((Math.max(0, Math.min(RAW_SCORE_CEILING, raw)) / RAW_SCORE_CEILING) * 100);
+}
+
+function areaName(area: string) {
+  return AREA_LABELS[area] ?? area;
+}
+
+function median(values: number[]) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2 : sorted[middle] ?? 0;
+}
+
+/** Stable per-slot rotation so equal candidates do not always resolve to the same id. */
+function rotationKey(shiftId: string, userId: string) {
+  let hash = 2166136261;
+  for (const char of `${shiftId}:${userId}`) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function pastAssignmentCount(candidate: CandidateScoringUser, before: Date, shiftId: string) {
+  return candidate.assignments.filter((assignment) =>
+    assignment.shift.id !== shiftId && assignmentWindow(assignment).startsAt < before,
+  ).length;
 }
 
 export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): CandidateRecommendation[] {
@@ -134,6 +182,19 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
   const monthStart = startOfMonth(targetWindow.startsAt);
   const monthEnd = endOfMonth(targetWindow.startsAt);
   const referenceNow = now ?? new Date();
+  const sportName = shift.sportCode ? sportLabel(shift.sportCode) : null;
+  const seasonCounts = new Map(candidates.map((candidate) => [
+    candidate.id,
+    pastAssignmentCount(candidate, targetWindow.startsAt, shift.id),
+  ]));
+  // Compare season load only against people who could fill this kind of slot.
+  const typicalSeasonCount = median(candidates
+    .filter((candidate) => shiftWorkerTypeForProfile(candidate) === shift.workerType)
+    .map((candidate) => seasonCounts.get(candidate.id) ?? 0));
+
+  // Ranking uses the raw score: strong fits all clamp to 100 for display, and
+  // sorting on the clamped value left every one of them tied.
+  const rawScores = new Map<string, number>();
 
   return candidates
     .map((candidate) => {
@@ -151,30 +212,30 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
       };
 
       if (candidateWorkerType === shift.workerType) {
-        addReason("role_fit", shift.workerType === "ST" ? "Student slot fit" : "Staff slot fit", 24);
+        addReason("role_fit", shift.workerType === "ST" ? "Student" : "Staff", 24);
       } else {
         addWarning(
           "role_mismatch",
-          shift.workerType === "ST" ? "Selecting this person may use a Staff slot" : "Selecting this person may use a Student slot",
+          shift.workerType === "ST" ? "Staff, so this uses a Staff slot" : "Student, so this uses a Student slot",
           -18,
         );
       }
 
       const assignedArea = candidate.areaAssignments.find((area) => area.area === shift.area);
       if (assignedArea?.isPrimary || candidate.primaryArea === shift.area) {
-        addReason("primary_area", "Primary area match", 20);
+        addReason("primary_area", `${areaName(shift.area)} is their main area`, 20);
       } else if (assignedArea) {
-        addReason("area_assignment", "Area assignment match", 14);
+        addReason("area_assignment", `Also works ${areaName(shift.area)}`, 14);
       } else {
-        addWarning("area_gap", "No area assignment match", -12);
+        addWarning("area_gap", `Not on the ${areaName(shift.area)} team`, -12);
       }
 
       const hasSportRoster = Boolean(shift.sportCode)
         && candidate.sportAssignments.some((sport) => sport.sportCode === shift.sportCode);
       if (hasSportRoster) {
-        addReason("sport_roster", "On this sport roster", 16);
+        addReason("sport_roster", `On the ${sportName} roster`, 16);
       } else if (shift.sportCode) {
-        addWarning("sport_gap", "Not on this sport roster", -10);
+        addWarning("sport_gap", `Not on the ${sportName} roster`, -10);
       }
 
       const previousSameSport = Boolean(shift.sportCode)
@@ -184,7 +245,7 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
             && assignment.shift.shiftGroup?.event?.sportCode === shift.sportCode;
         });
       if (previousSameSport) {
-        addReason("prior_sport_assignment", "Has worked this sport recently", 8);
+        addReason("prior_sport_assignment", `Has worked ${sportName} before`, 8);
       }
 
       const blockingConflict = candidate.assignments.some((assignment) => {
@@ -192,7 +253,7 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         return overlaps(targetWindow, assignmentWindow(assignment));
       });
       if (blockingConflict && !allowsOverlappingShifts(candidate.role)) {
-        addWarning("overlapping_assignment", "Already assigned during this call window", -60);
+        addWarning("overlapping_assignment", "Already working during this time", -60);
       }
 
       // Approved time off blocks staff exactly as it blocks students. Gating
@@ -240,17 +301,36 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         || monthAssignments >= MONTH_ASSIGNMENT_OVERLOAD
         || monthHours >= MONTH_HOUR_OVERLOAD;
       if (overloaded) {
-        addWarning("workload_overloaded", "Workload is already heavy", -28);
+        addWarning(
+          "workload_overloaded",
+          weekAssignments >= WEEK_ASSIGNMENT_OVERLOAD || weekHours >= WEEK_HOUR_OVERLOAD
+            ? `Heavy week: ${weekAssignments} ${weekAssignments === 1 ? "shift" : "shifts"} already`
+            : `Heavy month: ${monthAssignments} ${monthAssignments === 1 ? "shift" : "shifts"} already`,
+          -28,
+        );
       } else if (upcomingAssignments >= UPCOMING_ASSIGNMENT_WARNING) {
-        addWarning("upcoming_load", "Many upcoming assignments", -12);
+        addWarning("upcoming_load", `${upcomingAssignments} shifts coming up`, -12);
       } else if (weekAssignments === 0 && monthAssignments <= 2) {
-        addReason("fresh_capacity", "Light recent schedule", 8);
+        addReason("fresh_capacity", "Nothing else this week", 8);
+      }
+      if (!overloaded && weekAssignments > 0) {
+        score -= Math.min(WEEK_ASSIGNMENT_PENALTY_CAP, weekAssignments * WEEK_ASSIGNMENT_PENALTY);
       }
 
+      const seasonCount = seasonCounts.get(candidate.id) ?? 0;
+      const seasonGap = typicalSeasonCount - seasonCount;
+      const seasonAdjustment = Math.max(-SEASON_BALANCE_CAP, Math.min(SEASON_BALANCE_CAP, seasonGap * SEASON_BALANCE_WEIGHT));
+      if (seasonAdjustment >= 4) {
+        addReason("season_balance", "Fewer shifts than most this season", seasonAdjustment);
+      } else {
+        score += seasonAdjustment;
+      }
+
+      rawScores.set(candidate.id, score);
       return {
         userId: candidate.id,
         bucket: bucketFor(score, warnings, overloaded),
-        score: Math.max(0, Math.min(100, score)),
+        score: displayScore(score),
         reasons: reasons.sort(sortSignals),
         warnings: warnings.sort(sortSignals),
         blockingConflict: blockingConflict || Boolean(availability?.blocking),
@@ -265,7 +345,9 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         },
       };
     })
-    .sort((a, b) => b.score - a.score || a.userId.localeCompare(b.userId));
+    .sort((a, b) => (rawScores.get(b.userId) ?? b.score) - (rawScores.get(a.userId) ?? a.score)
+      || (seasonCounts.get(a.userId) ?? 0) - (seasonCounts.get(b.userId) ?? 0)
+      || rotationKey(shift.id, a.userId) - rotationKey(shift.id, b.userId));
 }
 
 type LoadedShift = NonNullable<Awaited<ReturnType<typeof loadShiftForScoring>>>;

@@ -56,10 +56,19 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
           - UIInterfaceOrientationPortraitUpsideDown
-        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes and to take photos of damaged gear."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSSupportsLiveActivities: true
+        # One app-refresh task keeps the Home Screen widgets, Spotlight and
+        # their relevance current between launches (GearBackgroundRefresh).
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.erikrole.Wisconsin.refresh
+        # Handoff of an open booking (BookingHandoff in BookingEntity.swift).
+        NSUserActivityTypes:
+          - com.erikrole.Wisconsin.booking
         ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleURLSchemes:
@@ -74,6 +83,10 @@ targets:
         com.apple.developer.associated-domains:
           - webcredentials:wisconsincreative.com
           - applinks:wisconsincreative.com
+        # Overdue alerts are sent as `interruption-level: time-sensitive`
+        # (src/lib/notification-catalog.ts). Without this entitlement iOS
+        # delivers them as ordinary alerts that Focus and Scheduled Summary hold.
+        com.apple.developer.usernotifications.time-sensitive: true
         # Shared container the Home Screen widgets read their snapshot from.
         com.apple.security.application-groups:
           - group.com.erikrole.Wisconsin
@@ -86,8 +99,8 @@ targets:
         PRODUCT_NAME: Wisconsin Creative
         PRODUCT_MODULE_NAME: Wisconsin
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "1.3"
-        CURRENT_PROJECT_VERSION: "34"
+        MARKETING_VERSION: "1.4"
+        CURRENT_PROJECT_VERSION: "35"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_STRICT_CONCURRENCY: complete
       configs:
@@ -129,7 +142,7 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes and to take photos of damaged gear."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
     settings:
@@ -202,6 +215,8 @@ targets:
       # what it is allowed to know. Shared, not duplicated, so the two
       # processes can never disagree about the payload shape.
       - path: Wisconsin/Widgets/GearWidgetSnapshot.swift
+      # The widgets set their numbers in Gotham, the same faces as the app.
+      - path: Wisconsin/Resources/Fonts
     entitlements:
       path: WisconsinLiveActivities/WisconsinLiveActivities.entitlements
       properties:
@@ -213,14 +228,17 @@ targets:
         CFBundleDisplayName: "Wisconsin Creative Live Activities"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UIAppFonts:
+          - Gotham-Black.ttf
+          - Gotham-Bold.ttf
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
         PRODUCT_NAME: WisconsinLiveActivities
         PRODUCT_BUNDLE_IDENTIFIER: com.erikrole.Wisconsin.LiveActivities
-        MARKETING_VERSION: "1.3"
-        CURRENT_PROJECT_VERSION: "34"
+        MARKETING_VERSION: "1.4"
+        CURRENT_PROJECT_VERSION: "35"
         SKIP_INSTALL: YES
         SWIFT_STRICT_CONCURRENCY: complete
 

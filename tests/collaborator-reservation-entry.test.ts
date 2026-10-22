@@ -3,16 +3,14 @@ import { source } from "./_helpers/source";
 
 describe("collaborator reservation entry contract", () => {
   it("shows the Home reservation action only for the creation capability", () => {
-    const dashboard = source("src/app/(app)/dashboard/collaborator-home.tsx");
-    const headerStart = dashboard.indexOf("<PageHeader");
-    const headerEnd = dashboard.indexOf("</PageHeader>", headerStart);
+    const dashboard = source("src/app/(app)/_home/HomePage.tsx");
+    const view = source("src/app/(app)/_home/HomeView.tsx");
+    const headerStart = view.indexOf("function HomeHeader");
+    const header = view.slice(headerStart, view.indexOf("/* ── Building blocks", headerStart));
 
-    expect(headerStart).toBeGreaterThanOrEqual(0);
-    expect(headerEnd).toBeGreaterThan(headerStart);
-
-    const header = dashboard.slice(headerStart, headerEnd);
     expect(dashboard).toContain("const canCreateReservation = !readOnly && capabilities.includes(\"RESERVATION_CREATE\");");
-    expect(header).toContain("{canCreateReservation &&");
+    expect(dashboard).toContain("canReserve={canCreateReservation}");
+    expect(header).toContain("{canReserve && (");
     expect(header).toContain('href="/reservations/new"');
     expect(header).toContain("New reservation");
   });

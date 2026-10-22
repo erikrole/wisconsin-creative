@@ -1,5 +1,6 @@
 /* Timelapse page wiring. The maths, camera limits and their Sony sources
-   live in core.js. Client-only: the last plan lives in localStorage.
+   live in core.js. Client-only: the last plan lives in localStorage, and a
+   shared plan arrives in the query string (validated by core.sanitize).
  */
 (function () {
   'use strict';
@@ -25,15 +26,11 @@
    'fps', 'fps-label', 'roll-h', 'roll-m', 'roll-s', 'roll-label', 'roll-hint', 'format', 'format-label', 'format-hint',
    'result-label', 'result-value', 'result-sub', 'frames-label', 'stat-frames', 'stat-speed', 'stat-card', 'notes',
    'menu-card', 'menu-title', 'menu-rows', 'presets-block', 'chips', 'chips-hint', 'options-block', 'options',
-   'copy-plan', 'status', 'hud-method', 'hud-body', 'funnel'
+   'copy-plan', 'copy-link', 'reset', 'status', 'hud-method', 'funnel', 'result', 'announce',
+   'mini', 'mini-label', 'mini-value', 'mini-meta'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
-  var state = {
-    body: 'fx3', method: 'sq', mode: 'settings',
-    sqRate: 1, tlInterval: 4, ivInterval: 4,
-    fps: 30, rollSeconds: 600, clipSeconds: 20,
-    movieFormat: 's4k-100', photoFormat: 'craw'
-  };
+  var state = C.sanitize(null);
 
   var core = C.bind(state);
   var body = core.body;
@@ -52,6 +49,7 @@
   var blocked = core.blocked;
   var menuRows = core.menuRows;
   var subjectFor = core.subjectFor;
+  var limitReason = core.limitReason;
 
   function storageGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
   function storageSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
@@ -134,8 +132,8 @@
     var h = Math.max(0, Number(el['roll-h'].value) || 0);
     var m = Math.max(0, Number(el['roll-m'].value) || 0);
     var s = Math.max(0, Number(el['roll-s'].value) || 0);
-    state.rollSeconds = h * 3600 + m * 60 + s;
-    if (state.mode === 'clip') state.clipSeconds = Math.max(0, Number(el.clip.value) || 0);
+    state.rollSeconds = Math.min(C.MAX_ROLL, Math.round(h * 3600 + m * 60 + s));
+    if (state.mode === 'clip') state.clipSeconds = Math.min(C.MAX_CLIP, Math.max(0, Number(el.clip.value) || 0));
     else if (state.method === 'iv') state.ivInterval = Number(el.interval.value) || 0;
     else if (state.method === 'sq') state.sqRate = Number(el.rate.value) || state.sqRate;
     else state.tlInterval = Number(el.rate.value) || state.tlInterval;
@@ -176,10 +174,9 @@
     el.chips.textContent = '';
     var shown = {};
     var list = usableSettings();
-    var fastest = list[0].interval, slowest = list[list.length - 1].interval;
     PRESETS.forEach(function (preset) {
-      var target;
-      if (preset.interval < fastest - 1e-9 || preset.interval > slowest + 1e-9) target = { value: null, interval: preset.interval, usable: false };
+      var target, reason = limitReason(preset.interval);
+      if (reason) target = { value: null, interval: preset.interval, usable: false };
       else target = nearestSetting(preset.interval);
       var key = target.usable ? String(target.value) : 'x' + preset.interval;
       if (shown[key]) return;
@@ -194,16 +191,17 @@
       s.textContent = preset.label;
       chip.appendChild(b); chip.appendChild(s);
       if (!target.usable) {
-        chip.title = state.method === 'sq' ? 'Slower than 1 fps: use Time-lapse or Interval' : 'Past the camera’s limit: needs an intervalometer';
-        chip.setAttribute('aria-label', fmtInterval(preset.interval) + ', ' + preset.label + ', not possible with this method');
+        chip.title = reason;
+        chip.setAttribute('aria-label', fmtInterval(preset.interval) + ', ' + preset.label + '. ' + reason + '.');
       }
+      chip.setAttribute('aria-pressed', chip.className.indexOf('is-active') !== -1 ? 'true' : 'false');
       chip.addEventListener('click', function () { setIntervalValue(target); syncControls(); update(); });
       el.chips.appendChild(chip);
     });
     el['chips-hint'].textContent = state.method === 'sq'
-      ? 'S&Q tops out at 1 frame a second, so it suits fast subjects. Slower cadences need Time-lapse or Interval.'
+      ? 'S&Q tops out at 1 frame a second, so it suits fast subjects. Slower cadences need ' + (body().methods.indexOf('tl') !== -1 ? 'Time-lapse or ' : '') + 'Interval.'
       : state.method === 'tl'
-        ? 'Time-lapse runs 1–10 s in 1 s steps, then 20–60 s. In 4K it stops at 5 s.'
+        ? (currentFormat().k4 ? 'In 4K, Time-lapse stops at 5 s. Pick an HD format for 6–60 s.' : 'Time-lapse runs 1–10 s in 1 s steps, then 20–60 s.')
         : 'Interval shooting runs 1–60 s. Past that you need an external intervalometer.';
   }
 
@@ -222,8 +220,12 @@
       btn.disabled = !s.usable;
       var main = document.createElement('span'); main.className = 'option-main';
       var b = document.createElement('b'); b.textContent = fmtSetting(state.method, s.value);
+      if (btn.className.indexOf('is-closest') !== -1) {
+        var badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = 'Best fit';
+        b.appendChild(badge);
+      }
       var sub = document.createElement('span');
-      sub.textContent = s.usable ? [fmtSpeed(s.interval * state.fps), subjectFor(s.interval)].filter(Boolean).join(' · ') : 'HD only';
+      sub.textContent = s.usable ? [fmtSpeed(s.interval * state.fps), subjectFor(s.interval)].filter(Boolean).join(' · ') : 'Needs an HD format';
       main.appendChild(b); main.appendChild(sub);
       var r = document.createElement('span'); r.className = 'option-roll'; r.textContent = 'Roll ' + fmtClock(roll);
       btn.appendChild(main); btn.appendChild(r);
@@ -240,33 +242,63 @@
   }
 
   function renderHud(result) {
-    var setting = blocked(result) ? '—' : state.method === 'sq' ? state.sqRate + ' fps' : currentInterval() + ' s';
-    el['hud-method'].textContent = METHODS[state.method].label.toUpperCase() + ' · ' + setting;
-    el['hud-body'].textContent = body().name + ' · ' + fpsLabel();
+    el['hud-method'].textContent = [body().name, METHODS[state.method].label, fpsLabel()].join(' · ');
     document.body.setAttribute('data-blocked', blocked(result) ? '1' : '0');
   }
 
   // Real time on top, clip underneath, joined by a cone: the speed-up drawn
   // to scale (the clip bar never shrinks below a sliver so it stays visible).
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    var node = document.createElementNS(SVG_NS, tag);
+    Object.keys(attrs).forEach(function (k) { node.setAttribute(k, String(attrs[k])); });
+    return node;
+  }
+  function labelled(text, value) {
+    var span = document.createElement('span');
+    span.appendChild(document.createTextNode(text + ' '));
+    var b = document.createElement('b'); b.textContent = value;
+    span.appendChild(b);
+    return span;
+  }
   function renderFunnel(result) {
+    el.funnel.textContent = '';
     if (blocked(result)) { el.funnel.hidden = true; return; }
     el.funnel.hidden = false;
-    var W = 1000, clipW = Math.max(14, Math.min(W, (result.clip / result.roll) * W));
-    var x0 = (W - clipW) / 2, ticks = [], n = Math.min(result.frames, 80);
+    var W = 1000, H = 64, bar = 12;
+    var clipW = Math.max(14, Math.min(W, (result.clip / result.roll) * W));
+    var x0 = (W - clipW) / 2, n = Math.max(1, Math.min(result.frames, 80));
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none' });
+    svg.appendChild(svgEl('rect', { 'class': 'bar-real', x: 0, y: 0, width: W, height: bar, rx: 3 }));
     for (var i = 0; i <= n; i++) {
-      var x = (i / n) * W;
-      ticks.push('<line class="tick" x1="' + x.toFixed(1) + '" x2="' + x.toFixed(1) + '" y1="2" y2="14" vector-effect="non-scaling-stroke"/>');
+      var x = ((i / n) * (W - 2) + 1).toFixed(1);
+      svg.appendChild(svgEl('line', { 'class': 'tick', x1: x, x2: x, y1: 2, y2: bar - 2, 'vector-effect': 'non-scaling-stroke' }));
     }
-    el.funnel.innerHTML =
-      '<svg viewBox="0 0 ' + W + ' 86" preserveAspectRatio="none">' +
-      '<defs><linearGradient id="cone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".08"/><stop offset="1" stop-color="#ffb224" stop-opacity=".35"/></linearGradient></defs>' +
-      '<rect class="bar-real" x="0" y="0" width="' + W + '" height="16" rx="3"/>' + ticks.join('') +
-      '<path class="cone" d="M0 16 L' + W + ' 16 L' + (x0 + clipW).toFixed(1) + ' 70 L' + x0.toFixed(1) + ' 70 Z"/>' +
-      '<rect class="bar-clip" x="' + x0.toFixed(1) + '" y="70" width="' + clipW.toFixed(1) + '" height="16" rx="3"/>' +
-      '</svg>' +
-      '<div class="funnel-labels"><span>Real time <b>' + fmtClock(result.roll) + '</b></span><span>' +
-      (result.frames > n ? 'every tick ≈ ' + Math.round(result.frames / n) + ' frames' : result.frames + ' frames') +
-      '</span><span>Clip <b>' + fmtClip(result.clip) + '</b></span></div>';
+    svg.appendChild(svgEl('path', { 'class': 'cone', d: 'M0 ' + bar + ' L' + W + ' ' + bar + ' L' + (x0 + clipW).toFixed(1) + ' ' + (H - bar) + ' L' + x0.toFixed(1) + ' ' + (H - bar) + ' Z' }));
+    svg.appendChild(svgEl('rect', { 'class': 'bar-clip', x: x0.toFixed(1), y: H - bar, width: clipW.toFixed(1), height: bar, rx: 3 }));
+    var labels = document.createElement('div');
+    labels.className = 'funnel-labels';
+    labels.appendChild(labelled('Real time', fmtClock(result.roll)));
+    var mid = document.createElement('span');
+    mid.textContent = result.frames > n ? 'each tick ≈ ' + Math.round(result.frames / n).toLocaleString() + ' frames' : result.frames.toLocaleString() + ' frames';
+    labels.appendChild(mid);
+    labels.appendChild(labelled('Clip', fmtClip(result.clip)));
+    el.funnel.appendChild(svg);
+    el.funnel.appendChild(labels);
+  }
+
+  // One short summary for screen readers, after typing settles.
+  var announceTimer = 0;
+  function announce(text) {
+    clearTimeout(announceTimer);
+    announceTimer = setTimeout(function () { el.announce.textContent = text; }, 700);
+  }
+
+  function renderMini(result) {
+    var bad = blocked(result);
+    el['mini-label'].textContent = el['result-label'].textContent;
+    el['mini-value'].textContent = el['result-value'].textContent;
+    el['mini-meta'].textContent = bad ? 'Check the setup' : fmtSpeed(result.speed) + ' · ' + fmtClock(result.roll) + ' roll';
   }
 
   function render(result) {
@@ -281,9 +313,13 @@
       el['stat-speed'].textContent = '—';
       el['stat-card'].textContent = '—';
       el['menu-card'].hidden = true;
+      el.interval.setAttribute('aria-invalid', state.method === 'iv' && state.mode === 'settings' ? 'true' : 'false');
       if (state.mode === 'settings') renderChips(); else renderOptions(result);
+      renderMini(result);
+      announce(result.notes.length ? result.notes[0].text : '');
       return;
     }
+    el.interval.setAttribute('aria-invalid', 'false');
     if (state.mode === 'settings') {
       el['result-label'].textContent = 'Clip length';
       el['result-value'].textContent = fmtClip(result.clip);
@@ -299,6 +335,8 @@
     el['stat-card'].textContent = fmtCard(result.cardMb);
     renderMenu(result);
     if (state.mode === 'settings') renderChips(); else renderOptions(result);
+    renderMini(result);
+    announce(el['result-label'].textContent + ' ' + el['result-value'].textContent + '. ' + el['result-sub'].textContent + '.');
   }
 
   var lastResult = null;
@@ -310,7 +348,6 @@
     if (state.mode === 'clip' && state.method !== 'iv') el.rate.value = String(state.method === 'sq' ? state.sqRate : state.tlInterval);
     el.interval.value = String(state.ivInterval);
     storageSet(STATE_KEY, JSON.stringify(state));
-    setStatus('');
   }
 
   /* ---------------- switching ---------------- */
@@ -355,7 +392,11 @@
     });
   });
 
-  ['interval', 'clip', 'roll-h', 'roll-m', 'roll-s'].forEach(function (id) { el[id].addEventListener('input', update); });
+  ['interval', 'clip', 'roll-h', 'roll-m', 'roll-s'].forEach(function (id) {
+    el[id].addEventListener('input', update);
+    // On leaving a field, tidy it: 90 min becomes 1 hr 30 min, blanks become 0.
+    el[id].addEventListener('change', function () { update(); syncControls(); });
+  });
   el.rate.addEventListener('change', update);
   el.format.addEventListener('change', function () {
     if (isMovie()) state.movieFormat = el.format.value; else state.photoFormat = el.format.value;
@@ -372,9 +413,29 @@
     update();
   });
 
-  /* ---------------- copy ---------------- */
+  /* ---------------- copy, share, reset ---------------- */
 
-  function setStatus(message) { el.status.textContent = message || ''; }
+  var statusTimer = 0;
+  function setStatus(message) {
+    clearTimeout(statusTimer);
+    el.status.textContent = message || '';
+    if (message) statusTimer = setTimeout(function () { el.status.textContent = ''; }, 4000);
+  }
+
+  function shareUrl() {
+    return window.location.origin + '/timelapse?' + C.toQuery(state);
+  }
+
+  function copyText(text, button, done) {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) { setStatus('Copying needs a secure (https) page.'); return; }
+    navigator.clipboard.writeText(text).then(function () {
+      var label = button.querySelector('span'), before = label.textContent;
+      button.setAttribute('data-done', '1');
+      label.textContent = 'Copied';
+      setStatus(done);
+      setTimeout(function () { button.removeAttribute('data-done'); label.textContent = before; }, 1800);
+    }, function () { setStatus('This browser blocked copying.'); });
+  }
 
   el['copy-plan'].addEventListener('click', function () {
     var result = lastResult || compute();
@@ -383,23 +444,44 @@
     menuRows(result).forEach(function (pair) { lines.push(pair[0] + ': ' + pair[1]); });
     lines.push('Clip: ' + fmtClip(result.clip) + ' (' + fmtSpeed(result.speed) + ')');
     lines.push('Card: ≈ ' + fmtCard(result.cardMb));
-    if (!navigator.clipboard || !navigator.clipboard.writeText) { setStatus('Copying needs a secure (https) page.'); return; }
-    navigator.clipboard.writeText(lines.join('\n')).then(function () { setStatus('Plan copied.'); }, function () { setStatus('This browser blocked copying.'); });
+    lines.push(shareUrl());
+    copyText(lines.join('\n'), el['copy-plan'], 'Plan copied, with a link back to it.');
   });
+
+  el['copy-link'].addEventListener('click', function () {
+    copyText(shareUrl(), el['copy-link'], 'Link copied. It opens this exact plan.');
+  });
+
+  el.reset.addEventListener('click', function () {
+    var fresh = C.sanitize(null);
+    Object.keys(fresh).forEach(function (k) { state[k] = fresh[k]; });
+    document.getElementById('mode-' + state.mode).checked = true;
+    syncControls();
+    update();
+    setStatus('Back to the defaults.');
+  });
+
+  // Phones: once the big readout scrolls away, a slim bar keeps the answer in view.
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      var e = entries[0];
+      el.mini.setAttribute('data-show', !e.isIntersecting && e.boundingClientRect.top < 0 ? '1' : '0');
+    }, { threshold: 0 }).observe(el.result);
+  }
 
   /* ---------------- start ---------------- */
 
+  // A shared link wins over the last saved plan. Either way, every value is
+  // checked by core.sanitize before it touches the page.
+  var shared = C.fromQuery(window.location.search, state);
   var saved = null;
   try { saved = JSON.parse(storageGet(STATE_KEY) || 'null'); } catch (e) { saved = null; }
-  if (saved && typeof saved === 'object') {
-    if (BODIES[saved.body]) state.body = saved.body;
-    if (METHODS[saved.method]) state.method = saved.method;
-    if (saved.mode === 'settings' || saved.mode === 'clip') state.mode = saved.mode;
-    ['sqRate', 'tlInterval', 'ivInterval', 'fps', 'rollSeconds', 'clipSeconds'].forEach(function (k) {
-      if (isFinite(saved[k]) && saved[k] > 0) state[k] = saved[k];
-    });
-    if (typeof saved.movieFormat === 'string') state.movieFormat = saved.movieFormat;
-    if (typeof saved.photoFormat === 'string') state.photoFormat = saved.photoFormat;
+  var start = shared || C.sanitize(saved, state);
+  Object.keys(start).forEach(function (k) { state[k] = start[k]; });
+  // Drop the plan from the address bar once loaded, so later edits aren't
+  // undone by a reload of the old link.
+  if (shared && window.history && window.history.replaceState) {
+    try { window.history.replaceState(null, '', window.location.pathname); } catch (e) { /* sandboxed */ }
   }
   document.getElementById('mode-' + state.mode).checked = true;
   syncControls();

@@ -68,8 +68,13 @@ describe("Schedule stress-test hardening", () => {
     expect(board).toContain("return Color.statusText(venueTone(event.venue))");
     expect(source("ios/Wisconsin/Models/ShiftTradeModels.swift")).toContain("var venue: ScheduleVenue {");
     expect(source("src/lib/services/schedule-open-work.ts")).toContain("site: true,");
+    // Call time, not event start, and the statuses the server actually sends
+    // (`isPostableForTrade` in ScheduleView.swift).
     expect(source("ios/Wisconsin/Views/Schedule/PostTradeSheet.swift")).toContain(
-      ".filter { ($0.callStartsAt ?? $0.startsAt) > now && $0.statusValue == .active }",
+      ".filter { $0.isPostableForTrade && !alreadyPostedIds.contains($0.id) }",
+    );
+    expect(source("ios/Wisconsin/Views/ScheduleView.swift")).toContain(
+      "statusValue.isActive && (callStartsAt ?? startsAt) > Date()",
     );
   });
 
@@ -119,8 +124,9 @@ describe("Schedule follow-up hardening (drafts, claims, token)", () => {
 
   it("uses personal call time and UTC dates on Trade Board rows, and notes a capped list", () => {
     const board = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
-    expect(board).toContain("func dateTimeLine(personalStartsAt: Date?, personalEndsAt: Date?) -> String");
-    expect(board).toContain("personalStartsAt: trade.shiftAssignment.callStartsAt,");
+    expect(board).toContain("func timesLine(personalStartsAt: Date?, personalEndsAt: Date?) -> String");
+    expect(board).toContain("func boardStart(personalStartsAt: Date?, personalEndsAt: Date?) -> Date");
+    expect(board).toContain("personalStartsAt: assignment.callStartsAt,");
     expect(board).toContain("vm.openWork.openShiftsTruncated || vm.openWork.pickupRequestsTruncated");
   });
 });

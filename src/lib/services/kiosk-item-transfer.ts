@@ -6,9 +6,8 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { nextBookingRef } from "@/lib/services/booking-ref";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 import { withSerializationRetry } from "@/lib/serialization";
-import { formatAppDateTime } from "@/lib/app-time";
 import { displayBookingTitle } from "@/lib/booking-display-title";
-import { deferPush, sendPushToUser } from "@/lib/services/notifications";
+import { notifyGearHandover } from "@/lib/services/gear-handover-notify";
 import { canManageAnyCheckout } from "@/lib/services/kiosk-actor";
 import { verifyKioskStaffToken } from "@/lib/kiosk-staff-token";
 import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type KioskOperationContext } from "./kiosk-operation-receipts";
@@ -22,7 +21,7 @@ export async function transferKioskItems(args: {
   staffToken?: string | null;
 }) {
   const { response, handover } = await withSerializationRetry(() => db.$transaction(async (tx) => {
-    const actor = await tx.user.findFirst({ where: { id: args.actorId, ...kioskRosterUserWhere() }, select: { id: true, role: true } });
+    const actor = await tx.user.findFirst({ where: { id: args.actorId, ...kioskRosterUserWhere() }, select: { id: true, name: true, role: true } });
     if (!actor) throw new HttpError(403, "Choose an active operator");
     const source = await tx.booking.findUnique({ where: { id: args.sourceId }, include: {
       requester: { select: { id: true, name: true } },
@@ -61,6 +60,7 @@ export async function transferKioskItems(args: {
     if (!args.targetBookingId && !target) throw new HttpError(400, "Choose the person or checkout receiving these items");
     const destination = args.targetBookingId ? await tx.booking.findUnique({ where: { id: args.targetBookingId }, include: {
       accountabilityExclusion: true, scanSessions: { where: { phase: "CHECKIN", status: "OPEN" } },
+      requester: { select: { id: true, name: true } },
     } }) : null;
     if (args.targetBookingId && (!destination || destination.id === source.id || destination.kind !== "CHECKOUT" || destination.status !== "OPEN" || destination.locationId !== source.locationId || destination.endsAt.getTime() !== source.endsAt.getTime() || destination.scanSessions.length || (destination.accountabilityExclusion && !destination.accountabilityExclusion.restoredAt))) throw new HttpError(409, "Choose an open checkout at the same location with the same due time, or create a checkout for the recipient");
     const receiving = destination ?? await tx.booking.create({ data: {
@@ -112,84 +112,24 @@ export async function transferKioskItems(args: {
     for (const [entityId, action] of auditEntries) await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId, action, before: { sourceSnapshot: source.updatedAt.toISOString(), custodyScope: source.custodyScope, requesterId: source.custodyScope === "PERSON" ? source.requesterUserId : null }, after: evidence });
     const response = { success: true, targetBookingId: receiving.id, sourceClosed, itemCount: serialized.length + units.length, message: `${serialized.length + units.length} items transferred to ${target?.name ?? receiving.title}`, endsAt: receiving.endsAt };
     await finishKioskOperationReceiptTx(tx, args.receipt, response);
-    const handover = isOwner && !isStaff && target ? {
+    const newHolder = target ?? (destination?.custodyScope === "PERSON" ? destination.requester : null);
+    const handover = newHolder && source.custodyScope === "PERSON" && source.requester ? {
+      actor: { id: actor.id, name: actor.name },
       sourceId: source.id,
       receivingId: receiving.id,
       stamp: updatedAt.getTime(),
       title: displayBookingTitle(source.title),
       endsAt: receiving.endsAt,
-      owner: source.requester,
-      target,
+      from: source.requester,
+      to: newHolder,
       itemCount: serialized.length + units.length,
       sourceClosed,
+      isCheckout: true,
     } : null;
     return { response, handover };
   }, { isolationLevel: "Serializable" }));
-  if (handover) await notifyKioskHandover(handover);
+  if (handover) await notifyGearHandover(handover);
   return response;
 }
 
 export const OWNER_TRANSFER_REASON = "Handed over at the kiosk";
-
-export function kioskHandoverCopy(args: {
-  title: string; endsAt: Date; ownerName: string; targetName: string; itemCount: number; sourceClosed: boolean;
-}) {
-  return {
-    toNewHolder: {
-      title: `${args.ownerName} handed you ${args.title}`,
-      body: `It's on your record now. It's due ${formatAppDateTime(args.endsAt)}.`,
-    },
-    toOldHolder: {
-      title: `You handed ${args.title} to ${args.targetName}`,
-      body: args.sourceClosed
-        ? "It's off your record now."
-        : `${args.itemCount} ${args.itemCount === 1 ? "item is" : "items are"} off your record now. The rest is still with you.`,
-    },
-  };
-}
-
-/** Owner-to-peer handovers tell both people. Delivery never fails the transfer. */
-async function notifyKioskHandover(h: {
-  sourceId: string; receivingId: string; stamp: number; title: string; endsAt: Date;
-  owner: { id: string; name: string }; target: { id: string; name: string };
-  itemCount: number; sourceClosed: boolean;
-}) {
-  const copy = kioskHandoverCopy({
-    title: h.title, endsAt: h.endsAt, ownerName: h.owner.name, targetName: h.target.name,
-    itemCount: h.itemCount, sourceClosed: h.sourceClosed,
-  });
-  const messages = [
-    { userId: h.target.id, bookingId: h.receivingId, key: "in", ...copy.toNewHolder },
-    { userId: h.owner.id, bookingId: h.sourceId, key: "out", ...copy.toOldHolder },
-  ];
-  try {
-    const rows = await db.notification.createManyAndReturn({
-      data: messages.map((m) => ({
-        userId: m.userId,
-        bookingId: m.bookingId,
-        type: "kiosk_checkout_handover",
-        title: m.title,
-        body: m.body,
-        payload: { bookingId: m.bookingId, href: `/checkouts/${m.bookingId}` },
-        channel: "IN_APP" as const,
-        sentAt: new Date(),
-        dedupeKey: `kiosk-handover-${h.sourceId}-${h.receivingId}-${h.stamp}-${m.key}`,
-      })),
-      skipDuplicates: true,
-      select: { id: true, userId: true },
-    });
-    for (const row of rows) {
-      const message = messages.find((m) => m.userId === row.userId);
-      if (!message) continue;
-      deferPush(sendPushToUser(message.userId, {
-        title: message.title,
-        body: message.body,
-        payload: { bookingId: message.bookingId, href: `/checkouts/${message.bookingId}` },
-        category: "checkoutDue",
-        notificationId: row.id,
-      }));
-    }
-  } catch (error) {
-    console.error("[kiosk/transfer] handover notification failed", error);
-  }
-}

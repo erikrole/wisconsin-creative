@@ -53,6 +53,8 @@ done
 read -r -d '' REGISTRY <<'EOF' || true
 # View / sheet                         | audit slug                  | status
 HomeView.swift                         | dashboard                   | audit
+GettingStartedCard.swift               | dashboard                   | audit
+CantWorkCard.swift                     | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
 Booking/BookingActivityView.swift      |                             | exempt-shared
@@ -76,6 +78,7 @@ EventTravelSection.swift               |                             | exempt-sh
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
 AccountabilityView.swift               | accountability              | audit
+DamageCasesView.swift                  | damage-cases                | audit
 AccountabilityPersonView.swift         | accountability              | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit
@@ -95,16 +98,20 @@ PasswordSetupView.swift                | login                       | audit
 LaunchView.swift                       |                             | exempt-tiny
 Welcome/ProfileCompletionWelcomeView.swift | welcome                  | audit
 Welcome/ProfilePhotoCropView.swift     | welcome                     | audit
+Welcome/WelcomeFinishView.swift        | welcome                     | audit
 Welcome/ProfileCompletionDraft.swift   |                             | exempt-infra
 Welcome/ProfileCompletionWelcomeComponents.swift |                   | exempt-shared
 UsersView.swift                        | users                       | audit
 UserDetailView.swift                   | users                       | audit
+StaffRightNow.swift                    |                             | exempt-shared
 AppTabView.swift                       | profile                     | audit
 ProfileView.swift                      | profile                     | audit
 ProfileNextUp.swift                    | profile                     | audit
 ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
+WrappedView.swift                      | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
+ReportProblemSheet.swift               | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 SharedLoginsView.swift                 | shared-logins               | audit
 GuidesView.swift                       | resources                   | audit

@@ -84,9 +84,9 @@ describe("iOS Schedule follow-ups", () => {
     expect(eventsRoute).toContain("includePast: eventId ? true : includePast,");
     expect(eventsRoute).toContain("{ OR: [{ id: eventId }, { combinedEvents: { some: { id: eventId } } }] }");
     expect(apiClient).toContain("func scheduleEvent(id: String) async throws -> ScheduleEvent?");
-    expect(schedule).toContain("func event(forLink id: String) async -> ScheduleEvent?");
+    expect(schedule).toContain("func event(forLink id: String) async throws -> ScheduleEvent?");
     expect(schedule).toContain("await ensureLoaded(fetched.startsAt)");
-    expect(schedule).toContain("if let event = await vm.event(forLink: eventId) {");
+    expect(schedule).toContain("if let event = try await vm.event(forLink: eventId) {");
   });
 
   it("opens on the last saved window, per user, cleared at sign-out", () => {
@@ -112,7 +112,9 @@ describe("iOS Schedule follow-ups", () => {
     const published = source("ios/Wisconsin/Views/Schedule/PublishedScheduleView.swift");
     const detail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
     expect(row).toContain("struct VenueDot: View");
-    expect(tradeBoard.match(/VenueDot\(color: shift\.classificationColor\)/g)?.length).toBe(3);
+    // The Trade Board leads with the time column; the day is the section header.
+    expect(tradeBoard).toContain("venueColor: shift.classificationColor");
+    expect(tradeBoard).not.toContain("TradeBoardDateTile");
     expect(tradeBoard).not.toContain(".frame(width: 4, height: 76)");
     expect(published).toContain("VenueDot(color: publishedEventRailColor(event.event))");
     expect(published).not.toContain("StatusRail(");
