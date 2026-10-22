@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ResourceType, Role, ShiftArea } from "@/lib/client-enums";
+import { ResourceType, Role } from "@/lib/client-enums";
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpenIcon,
@@ -13,16 +13,11 @@ import {
   ClipboardListIcon,
   FileTextIcon,
   FolderTreeIcon,
-  FolderOpenIcon,
   HardDriveIcon,
   LayoutGridIcon,
   ListIcon,
-  MailIcon,
-  MapPinIcon,
   PhoneIcon,
   PlusIcon,
-  SlackIcon,
-  UsersIcon,
   VideoIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -30,19 +25,9 @@ import { PageHeader } from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import {
   OperationalActiveFilterChips,
-  OperationalToolbar,
   type OperationalActiveFilter,
 } from "@/components/OperationalToolbar";
-import { UserAvatar } from "@/components/UserAvatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -65,9 +50,9 @@ import {
   inferResourceTypeFromCategory,
   RESOURCE_TYPE_LABELS,
 } from "@/lib/guide-categories";
+import { guideFreshness } from "@/lib/guide-freshness";
 import type { GuideListItem } from "@/lib/guides";
 import { splitFeaturedGuides } from "@/lib/resource-search";
-import { sportLabel } from "@/lib/sports";
 import { cn } from "@/lib/utils";
 import {
   parseResourceFilter,
@@ -77,42 +62,23 @@ import {
   type ResourceLayoutKey as LayoutKey,
   type ResourceSortKey as SortKey,
 } from "./filters";
-
-type MeResponse = { id: string; role: Role };
-type ContactUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  phone: string | null;
-  slackHandle: string | null;
-  slackProfileUrl: string | null;
-  primaryArea: ShiftArea | null;
-  location: string | null;
-  avatarUrl: string | null;
-  active?: boolean;
-  title: string | null;
-  gradYear: number | null;
-  studentYearOverride: "FRESHMAN" | "SOPHOMORE" | "JUNIOR" | "SENIOR" | "GRAD" | null;
-  sportAssignments: {
-    sportCode: string;
-    defaultTraveler: boolean;
-  }[];
-};
-
-type ContactUsersResponse = {
-  data: ContactUser[];
-  total: number;
-};
-
-type ContactRoleFilter = "ALL" | Role;
-type ContactAreaFilter = "ALL" | ShiftArea | "UNASSIGNED";
-type ContactHygieneFilter = "ALL" | "MISSING_PHONE" | "MISSING_SLACK";
+import {
+  buildSportAssignmentGroups,
+  contactSearchText,
+  hasSlackContact,
+  LiveContactsDirectory,
+  SectionHeader,
+  SportAssignmentsDirectory,
+  totalAssignedPeople,
+  type ContactAreaFilter,
+  type ContactHygieneFilter,
+  type ContactRoleFilter,
+  type ContactUsersResponse,
+} from "./_components/ReferenceDirectories";
 
 type ScopeOption = {
   value: FilterKey;
   label: string;
-  description?: string;
 };
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -121,50 +87,26 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "title", label: "Title A-Z" },
 ];
 
-const CONTACT_ROLE_FILTERS: { value: ContactRoleFilter; label: string }[] = [
-  { value: "ALL", label: "All roles" },
-  { value: Role.STAFF, label: "Staff" },
-  { value: Role.STUDENT, label: "Students" },
-  { value: Role.ADMIN, label: "Admins" },
-];
-
-const CONTACT_AREA_FILTERS: { value: ContactAreaFilter; label: string }[] = [
-  { value: "ALL", label: "All areas" },
-  { value: ShiftArea.VIDEO, label: "Video" },
-  { value: ShiftArea.PHOTO, label: "Photo" },
-  { value: ShiftArea.GRAPHICS, label: "Graphics" },
-  { value: ShiftArea.SOCIAL, label: "Social" },
-  { value: ShiftArea.COMMS, label: "Comms" },
-  { value: ShiftArea.LIVE_PRODUCTION, label: "Live Production" },
-  { value: "UNASSIGNED", label: "No area" },
-];
-
-const CONTACT_HYGIENE_FILTERS: { value: ContactHygieneFilter; label: string }[] = [
-  { value: "ALL", label: "All contacts" },
-  { value: "MISSING_PHONE", label: "Missing phone" },
-  { value: "MISSING_SLACK", label: "Missing Slack" },
-];
-
 const RESOURCE_TYPE_FILTERS: { key: FilterKey; type: ResourceType; icon: LucideIcon }[] = [
-  { key: "contacts", type: ResourceType.CONTACTS, icon: PhoneIcon },
-  { key: "building-numbers", type: ResourceType.BUILDING_NUMBERS, icon: Building2Icon },
+  { key: "how-to", type: ResourceType.HOW_TO, icon: BookOpenIcon },
+  { key: "sop", type: ResourceType.SOP, icon: ClipboardListIcon },
+  { key: "troubleshooting", type: ResourceType.TROUBLESHOOTING, icon: WrenchIcon },
   { key: "media-drive", type: ResourceType.MEDIA_DRIVE, icon: HardDriveIcon },
   { key: "server-paths", type: ResourceType.SERVER_PATHS, icon: FolderTreeIcon },
-  { key: "sop", type: ResourceType.SOP, icon: ClipboardListIcon },
-  { key: "how-to", type: ResourceType.HOW_TO, icon: BookOpenIcon },
-  { key: "troubleshooting", type: ResourceType.TROUBLESHOOTING, icon: WrenchIcon },
-  { key: "account-note", type: ResourceType.ACCOUNT_NOTE, icon: BriefcaseBusinessIcon },
   { key: "event-ops", type: ResourceType.EVENT_OPS, icon: VideoIcon },
+  { key: "building-numbers", type: ResourceType.BUILDING_NUMBERS, icon: Building2Icon },
+  { key: "contacts", type: ResourceType.CONTACTS, icon: PhoneIcon },
+  { key: "account-note", type: ResourceType.ACCOUNT_NOTE, icon: BriefcaseBusinessIcon },
   { key: "general", type: ResourceType.GENERAL, icon: FileTextIcon },
 ];
 
-const AREA_FILTERS: (ScopeOption & { area: ShiftArea })[] = [
-  { value: "area-video", label: "Video", area: ShiftArea.VIDEO },
-  { value: "area-photo", label: "Photo", area: ShiftArea.PHOTO },
-  { value: "area-graphics", label: "Graphics", area: ShiftArea.GRAPHICS },
-  { value: "area-social", label: "Social", area: ShiftArea.SOCIAL },
-  { value: "area-comms", label: "Comms", area: ShiftArea.COMMS },
-  { value: "area-live-production", label: "Live Production", area: ShiftArea.LIVE_PRODUCTION },
+const AREA_FILTERS: (ScopeOption & { area: string })[] = [
+  { value: "area-video", label: "Video", area: "VIDEO" },
+  { value: "area-photo", label: "Photo", area: "PHOTO" },
+  { value: "area-graphics", label: "Graphics", area: "GRAPHICS" },
+  { value: "area-social", label: "Social", area: "SOCIAL" },
+  { value: "area-comms", label: "Comms", area: "COMMS" },
+  { value: "area-live-production", label: "Live Production", area: "LIVE_PRODUCTION" },
 ];
 
 const SMART_FILTERS: ScopeOption[] = [
@@ -187,6 +129,10 @@ const SCOPE_OPTIONS: ScopeOption[] = [
   ...AREA_FILTERS,
 ];
 
+const MEDIA_DRIVE_PATH = "smb://ath01-nas.uwia.wisc.edu/users/";
+const FOR_YOU_COUNT = 3;
+const RECENT_COUNT = 6;
+
 function resourceTypeOf(guide: GuideListItem) {
   return guide.type ?? inferResourceTypeFromCategory(guide.category);
 }
@@ -200,69 +146,6 @@ function guideSearchText(guide: GuideListItem) {
     guide.summary,
     guide.searchText,
   ].join(" ").toLowerCase();
-}
-
-function contactSearchText(user: ContactUser) {
-  return [
-    user.name,
-    user.email,
-    user.phone,
-    user.slackHandle,
-    user.slackProfileUrl,
-    user.title,
-    user.role,
-    user.primaryArea,
-    user.location,
-    ...(user.sportAssignments ?? []).flatMap((assignment) => [
-      assignment.sportCode,
-      sportLabel(assignment.sportCode),
-      assignment.defaultTraveler ? "default traveler" : null,
-    ]),
-    user.gradYear ? String(user.gradYear) : null,
-    user.studentYearOverride,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-}
-
-function formatArea(area: ShiftArea | null) {
-  if (!area) return null;
-  const labels: Record<ShiftArea, string> = {
-    VIDEO: "Video",
-    PHOTO: "Photo",
-    GRAPHICS: "Graphics",
-    SOCIAL: "Social",
-    COMMS: "Comms",
-    LIVE_PRODUCTION: "Live Production",
-  };
-  return labels[area];
-}
-
-function formatRole(role: Role) {
-  return role.charAt(0) + role.slice(1).toLowerCase();
-}
-
-function formatStudentYear(user: ContactUser) {
-  if (user.studentYearOverride) {
-    return user.studentYearOverride.charAt(0) + user.studentYearOverride.slice(1).toLowerCase();
-  }
-  if (!user.gradYear) return null;
-  return `Class of ${user.gradYear}`;
-}
-
-function contactSubtitle(user: ContactUser) {
-  return user.role === Role.STUDENT ? formatStudentYear(user) : user.title;
-}
-
-function displaySlackHandle(value: string | null) {
-  if (!value) return null;
-  const normalized = value.trim().replace(/^@+/, "");
-  return normalized ? `@${normalized}` : null;
-}
-
-function hasSlackContact(user: ContactUser) {
-  return Boolean(displaySlackHandle(user.slackHandle) || user.slackProfileUrl);
 }
 
 function typeForFilter(filter: FilterKey) {
@@ -280,7 +163,7 @@ function matchesFilter(guide: GuideListItem, filter: FilterKey): boolean {
     return guide.targetAreas.length > 0 && guide.personalizationReason !== "General";
   }
   const area = areaForFilter(filter);
-  if (area) return guide.targetAreas.includes(area);
+  if (area) return (guide.targetAreas as string[]).includes(area);
   const type = typeForFilter(filter);
   if (type) return resourceTypeOf(guide) === type;
   return true;
@@ -290,32 +173,23 @@ function getFilterLabel(filter: FilterKey) {
   return SCOPE_OPTIONS.find((option) => option.value === filter)?.label ?? "Filtered";
 }
 
-const LIBRARY_TYPE_ORDER: ResourceType[] = [
-  ResourceType.HOW_TO,
-  ResourceType.SOP,
-  ResourceType.TROUBLESHOOTING,
-  ResourceType.MEDIA_DRIVE,
-  ResourceType.SERVER_PATHS,
-  ResourceType.EVENT_OPS,
-  ResourceType.BUILDING_NUMBERS,
-  ResourceType.CONTACTS,
-  ResourceType.ACCOUNT_NOTE,
-  ResourceType.GENERAL,
-];
+function byMostRecent(a: GuideListItem, b: GuideListItem) {
+  return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+}
 
-function groupGuidesByType(guides: GuideListItem[]) {
-  const groups = new Map<ResourceType, GuideListItem[]>();
-  for (const guide of guides) {
-    const type = resourceTypeOf(guide);
-    const list = groups.get(type) ?? [];
-    list.push(guide);
-    groups.set(type, list);
+/**
+ * The library's lead row: admin-featured guides first, then guides ranked for
+ * the reader's area or role. With neither, the newest guides stand in so the
+ * row still says where to start.
+ */
+function selectForYou(featured: GuideListItem[], library: GuideListItem[]) {
+  const personal = library.filter((guide) => guide.personalizationReason !== "General");
+  const picks = [...featured, ...personal].slice(0, FOR_YOU_COUNT);
+  if (picks.length > 0) {
+    const reasons = [...new Set(personal.slice(0, FOR_YOU_COUNT).map((guide) => guide.personalizationReason))];
+    return { title: "For you", reason: reasons.join(", ").replace(/For /g, "") || null, guides: picks };
   }
-  return LIBRARY_TYPE_ORDER.flatMap((type) => {
-    const items = groups.get(type);
-    if (!items?.length) return [];
-    return [{ type, label: RESOURCE_TYPE_LABELS[type], guides: items }];
-  });
+  return { title: "Start here", reason: null, guides: [...library].sort(byMostRecent).slice(0, FOR_YOU_COUNT) };
 }
 
 function ResourceTypeIcon({ type, className }: { type: ResourceType; className?: string }) {
@@ -323,150 +197,55 @@ function ResourceTypeIcon({ type, className }: { type: ResourceType; className?:
   return <Icon className={cn("size-4", className)} aria-hidden="true" />;
 }
 
-function ResourceMark({ type }: { type: ResourceType }) {
+function FreshnessLabel({ guide, className }: { guide: GuideListItem; className?: string }) {
+  const freshness = guideFreshness(guide);
   return (
-    <span className="resource-mark">
-      <ResourceTypeIcon type={type} />
+    <span className={cn("resource-freshness", freshness.stale && "resource-freshness-stale", className)}>
+      {freshness.label}
     </span>
   );
 }
 
-function ResourcesSkeleton({ layout }: { layout: LayoutKey }) {
-  if (layout === "list") {
-    return (
-      <div className="flex flex-col gap-6">
-        <Skeleton className="h-40 w-full rounded-lg" />
-        <div className="overflow-hidden rounded-lg border border-border/80">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-16 w-full rounded-none" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
+function TypePill({ type, published }: { type: ResourceType; published: boolean }) {
   return (
-    <div className="flex flex-col gap-6">
-      <Skeleton className="h-40 w-full rounded-lg" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="h-40 rounded-lg" />
+    <span className="flex flex-wrap items-center gap-1.5">
+      <span className="resource-pill">{RESOURCE_TYPE_LABELS[type]}</span>
+      {!published && <span className="resource-pill resource-pill-draft">Draft</span>}
+    </span>
+  );
+}
+
+function ResourcesSkeleton() {
+  return (
+    <div className="flex flex-col gap-10">
+      <div className="grid gap-4 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-44 rounded-[14px]" />
         ))}
       </div>
+      <Skeleton className="h-16 w-full rounded-xl" />
+      <Skeleton className="h-64 w-full rounded-[14px]" />
     </div>
   );
 }
 
-function GuideMeta({
-  type,
-  published,
-}: {
-  type: ResourceType;
-  published: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Badge variant="secondary" size="sm">
-        {RESOURCE_TYPE_LABELS[type]}
-      </Badge>
-      {!published && (
-        <Badge variant="outline" size="sm">
-          Draft
-        </Badge>
-      )}
-    </div>
-  );
-}
-
-function GuideCard({ guide, showType = true }: { guide: GuideListItem; showType?: boolean }) {
+function GuideCard({ guide }: { guide: GuideListItem }) {
   const type = resourceTypeOf(guide);
 
   return (
     <Link
       href={`/resources/${guide.slug}`}
-      className="resource-tile group no-underline hover:no-underline transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+      className="resource-card group no-underline hover:no-underline transition-[background-color,border-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <ResourceMark type={type} />
-        <ChevronRightIcon
-          className="mt-1 size-4 shrink-0 text-muted-foreground/55 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-foreground group-focus-visible:text-foreground"
-          aria-hidden="true"
-        />
-      </div>
-      {showType ? (
-        <GuideMeta type={type} published={guide.published} />
-      ) : !guide.published ? (
-        <Badge variant="outline" size="sm">
-          Draft
-        </Badge>
-      ) : (
-        <span className="sr-only">{RESOURCE_TYPE_LABELS[type]}</span>
-      )}
-      <h3 className="resource-tile-title line-clamp-3">{guide.title}</h3>
+      <TypePill type={type} published={guide.published} />
+      <h3 className="resource-card-title line-clamp-3">{guide.title}</h3>
       {guide.summary ? (
-        <p className="resource-tile-summary line-clamp-1">{guide.summary}</p>
+        <p className="resource-card-summary line-clamp-2">{guide.summary}</p>
       ) : null}
-    </Link>
-  );
-}
-
-function GuideListRow({ guide, showType = true }: { guide: GuideListItem; showType?: boolean }) {
-  const type = resourceTypeOf(guide);
-
-  return (
-    <Link
-      href={`/resources/${guide.slug}`}
-      className="resource-index-row group no-underline hover:no-underline transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
-    >
-      <ResourceMark type={type} />
-      <div className="min-w-0">
-        <h3 className="resource-index-title line-clamp-1">{guide.title}</h3>
-        {guide.summary ? (
-          <p className="resource-index-summary line-clamp-1">{guide.summary}</p>
-        ) : null}
-        {showType ? (
-          <div className="mt-1">
-            <GuideMeta type={type} published={guide.published} />
-          </div>
-        ) : !guide.published ? (
-          <Badge variant="outline" size="sm" className="mt-1">
-            Draft
-          </Badge>
-        ) : (
-          <span className="sr-only">{RESOURCE_TYPE_LABELS[type]}</span>
-        )}
-      </div>
-      <ChevronRightIcon
-        className="size-4 shrink-0 text-muted-foreground/55 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-foreground group-focus-visible:text-foreground"
-        aria-hidden="true"
-      />
-    </Link>
-  );
-}
-
-function FeaturedLead({ guide }: { guide: GuideListItem }) {
-  const type = resourceTypeOf(guide);
-
-  return (
-    <Link
-      href={`/resources/${guide.slug}`}
-      className="resource-featured group no-underline hover:no-underline transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <ResourceMark type={type} />
-        <Badge variant="secondary" size="sm">
-          Featured
-        </Badge>
-      </div>
-      <GuideMeta type={type} published={guide.published} />
-      <h2 className="resource-featured-title">{guide.title}</h2>
-      {guide.summary ? (
-        <p className="resource-featured-summary line-clamp-1">{guide.summary}</p>
-      ) : null}
-      <span className="resource-featured-go">
-        Open guide
+      <span className="resource-card-meta">
+        <FreshnessLabel guide={guide} />
         <ChevronRightIcon
-          className="size-4 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-foreground"
+          className="size-4 shrink-0 text-muted-foreground/55 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-foreground"
           aria-hidden="true"
         />
       </span>
@@ -474,25 +253,30 @@ function FeaturedLead({ guide }: { guide: GuideListItem }) {
   );
 }
 
-function SectionHeader({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description?: string;
-  action?: ReactNode;
-}) {
+function GuideRow({ guide, showType = true }: { guide: GuideListItem; showType?: boolean }) {
+  const type = resourceTypeOf(guide);
+
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="min-w-0">
-        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
-        {description && (
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground text-pretty">{description}</p>
-        )}
-      </div>
-      {action}
-    </div>
+    <Link
+      href={`/resources/${guide.slug}`}
+      className="resource-row group no-underline hover:no-underline transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+    >
+      <span className="min-w-0">
+        <span className="resource-row-title line-clamp-2">
+          {guide.title}
+          {!guide.published && <span className="resource-pill resource-pill-draft ml-2 align-middle">Draft</span>}
+        </span>
+        {guide.summary ? (
+          <span className="resource-row-summary line-clamp-1">{guide.summary}</span>
+        ) : null}
+      </span>
+      {showType ? (
+        <span className="resource-row-type">{RESOURCE_TYPE_LABELS[type]}</span>
+      ) : (
+        <span className="sr-only">{RESOURCE_TYPE_LABELS[type]}</span>
+      )}
+      <FreshnessLabel guide={guide} className="resource-row-fresh" />
+    </Link>
   );
 }
 
@@ -507,98 +291,168 @@ function GuideResults({
 }) {
   if (layout === "list") {
     return (
-      <div className="resource-index">
+      <div className="resource-list">
         {guides.map((guide) => (
-          <GuideListRow key={guide.id} guide={guide} showType={showType} />
+          <GuideRow key={guide.id} guide={guide} showType={showType} />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {guides.map((guide) => (
-        <GuideCard key={guide.id} guide={guide} showType={showType} />
+        <GuideCard key={guide.id} guide={guide} />
       ))}
     </div>
   );
 }
 
-function TypeGroupedGuides({
+function HomeSection({
+  id,
+  title,
+  aside,
+  children,
+}: {
+  id: string;
+  title: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3.5" aria-labelledby={id}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id={id} className="resource-kicker">{title}</h2>
+        {aside}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function TopicList({
   guides,
-  layout,
+  onPick,
 }: {
   guides: GuideListItem[];
-  layout: LayoutKey;
+  onPick: (key: FilterKey) => void;
 }) {
-  const groups = groupGuidesByType(guides);
+  const counts = new Map<ResourceType, number>();
+  for (const guide of guides) {
+    const type = resourceTypeOf(guide);
+    counts.set(type, (counts.get(type) ?? 0) + 1);
+  }
+  const topics = RESOURCE_TYPE_FILTERS.filter((item) => (counts.get(item.type) ?? 0) > 0);
+  if (topics.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
-      {groups.map((group) => (
-        <section key={group.type} className="resource-index-group" aria-labelledby={`guide-type-${group.type}`}>
-          <div className="resource-index-heading">
-            <h2 id={`guide-type-${group.type}`} className="resource-kicker">
-              {group.label}
-            </h2>
-            <span className="resource-index-count">{group.guides.length}</span>
-          </div>
-          <GuideResults guides={group.guides} layout={layout} showType={false} />
-        </section>
-      ))}
+    <div className="resource-topics">
+      {topics.map((item) => {
+        const count = counts.get(item.type) ?? 0;
+        return (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => onPick(item.key)}
+            className="resource-topic group transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+          >
+            <span className="resource-topic-icon">
+              <ResourceTypeIcon type={item.type} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="resource-topic-name">{RESOURCE_TYPE_LABELS[item.type]}</span>
+              <span className="resource-topic-count">
+                {count} {count === 1 ? "guide" : "guides"}
+              </span>
+            </span>
+            <ChevronRightIcon
+              className="size-4 shrink-0 text-muted-foreground/55 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-foreground"
+              aria-hidden="true"
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-type SportAssignmentGroup = {
-  sportCode: string;
-  label: string;
-  users: ContactUser[];
-  defaultTravelers: ContactUser[];
-};
-
-function buildSportAssignmentGroups(users: ContactUser[]): SportAssignmentGroup[] {
-  const bySport = new Map<string, { users: ContactUser[]; defaultTravelers: ContactUser[] }>();
-
-  for (const user of users) {
-    for (const assignment of user.sportAssignments ?? []) {
-      const group = bySport.get(assignment.sportCode) ?? { users: [], defaultTravelers: [] };
-      group.users.push(user);
-      if (assignment.defaultTraveler) group.defaultTravelers.push(user);
-      bySport.set(assignment.sportCode, group);
-    }
-  }
-
-  return [...bySport.entries()]
-    .map(([sportCode, group]) => ({
-      sportCode,
-      label: sportLabel(sportCode),
-      users: group.users.sort((a, b) => a.name.localeCompare(b.name)),
-      defaultTravelers: group.defaultTravelers.sort((a, b) => a.name.localeCompare(b.name)),
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-function totalAssignedPeople(groups: SportAssignmentGroup[]) {
-  return new Set(groups.flatMap((group) => group.users.map((user) => user.id))).size;
+function QuickTools({
+  loading,
+  contactCount,
+  sportCount,
+  assignedPeople,
+  onShowContacts,
+  onShowAssignments,
+}: {
+  loading: boolean;
+  contactCount: number;
+  sportCount: number;
+  assignedPeople: number;
+  onShowContacts: () => void;
+  onShowAssignments: () => void;
+}) {
+  return (
+    <div className="resource-tools">
+      <ServerPathCopy path={MEDIA_DRIVE_PATH} label="Media Drive path" />
+      {loading ? (
+        <>
+          <Skeleton className="h-[3.75rem] w-full rounded-xl" />
+          <Skeleton className="h-[3.75rem] w-full rounded-xl" />
+        </>
+      ) : (
+        <>
+          {contactCount > 0 && (
+            <button
+              type="button"
+              onClick={onShowContacts}
+              className="resource-tool group transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="resource-tool-name">Contacts</span>
+                <span className="resource-tool-detail">{contactCount} people on the team</span>
+              </span>
+              <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+            </button>
+          )}
+          {sportCount > 0 && (
+            <button
+              type="button"
+              onClick={onShowAssignments}
+              className="resource-tool group transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="resource-tool-name">Sport assignments</span>
+                <span className="resource-tool-detail">
+                  {sportCount} {sportCount === 1 ? "sport" : "sports"}, {assignedPeople} {assignedPeople === 1 ? "person" : "people"}
+                </span>
+              </span>
+              <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 function ResourceSectionSwitcher({ active }: { active: "guides" | "brand-assets" }) {
   return (
-    <div className="inline-flex items-center rounded-md border border-border/80 p-0.5" aria-label="Resource section">
-      <Button asChild variant={active === "guides" ? "secondary" : "ghost"} size="sm" className="h-10 rounded-sm">
-        <Link href="/resources" aria-current={active === "guides" ? "page" : undefined}>
-          <FileTextIcon data-icon="inline-start" />
-          Guides
-        </Link>
-      </Button>
-      <Button asChild variant={active === "brand-assets" ? "secondary" : "ghost"} size="sm" className="h-10 rounded-sm">
-        <Link href="/resources?tab=brand-assets" aria-current={active === "brand-assets" ? "page" : undefined}>
-          <FolderOpenIcon data-icon="inline-start" />
-          Brand assets
-        </Link>
-      </Button>
-    </div>
+    <nav className="resource-segmented" aria-label="Resource section">
+      <Link
+        href="/resources"
+        aria-current={active === "guides" ? "page" : undefined}
+        className="resource-segment transition-[background-color,color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+      >
+        Guides
+      </Link>
+      <Link
+        href="/resources?tab=brand-assets"
+        aria-current={active === "brand-assets" ? "page" : undefined}
+        className="resource-segment transition-[background-color,color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+      >
+        Brand assets
+      </Link>
+    </nav>
   );
 }
 
@@ -615,6 +469,7 @@ export default function ResourcesPage() {
   // Collaborators only ever get the brand library; guides and contacts stay internal.
   const isCollaborator = currentUser?.role === "COLLABORATOR";
   const resourceTab = isCollaborator || searchParams.get("tab") === "brand-assets" ? "brand-assets" : "guides";
+  const isStaffOrAdmin = currentUser?.role === Role.STAFF || currentUser?.role === Role.ADMIN;
   const [contactRoleFilter, setContactRoleFilter] = useState<ContactRoleFilter>("ALL");
   const [contactAreaFilter, setContactAreaFilter] = useState<ContactAreaFilter>("ALL");
   const [contactHygieneFilter, setContactHygieneFilter] = useState<ContactHygieneFilter>("ALL");
@@ -658,22 +513,19 @@ export default function ResourcesPage() {
     });
   };
 
+  // Wait for the role before fetching so a collaborator never requests guides;
+  // a failed /api/me resolves to null and still lets the library load.
+  const guidesEnabled = resourceTab === "guides" && currentUser !== undefined;
+
   const { data: guides, loading: guidesLoading, error: guidesError, reload: reloadGuides } = useFetch<GuideListItem[]>({
     url: "/api/resources",
-    enabled: resourceTab === "guides",
+    enabled: guidesEnabled,
     transform: (json) => (json as { data: GuideListItem[] }).data ?? [],
   });
 
-  const { data: meData } = useFetch<MeResponse>({
-    url: "/api/me",
-    transform: (json) => (json as { user: MeResponse }).user,
-  });
-
-  const isStaffOrAdmin = meData?.role === Role.STAFF || meData?.role === Role.ADMIN;
-
   const { data: contactUsers, loading: contactsLoading, error: contactsError, reload: reloadContacts } = useFetch<ContactUsersResponse>({
     url: "/api/users?limit=200&sort=name",
-    enabled: resourceTab === "guides",
+    enabled: guidesEnabled,
     refetchOnFocus: true,
     transform: (json) => json as unknown as ContactUsersResponse,
   });
@@ -687,9 +539,7 @@ export default function ResourcesPage() {
       return matchesSearch && matchesCategory && matchesFilter(guide, activeFilter);
     });
     if (sort === "recent" || activeFilter === "recent") {
-      return [...base].sort((a, b) => (
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      ));
+      return [...base].sort(byMostRecent);
     }
     if (sort === "title") {
       return [...base].sort((a, b) => a.title.localeCompare(b.title));
@@ -697,13 +547,14 @@ export default function ResourcesPage() {
     return base;
   }, [guides, search, activeCategory, activeFilter, sort]);
 
-  // Admin-curated featured guides lead the home hub when present; the block stays
-  // hidden entirely when nothing is featured, so a clean library is unaffected.
+  // Admin-curated featured guides lead the home row when present; with none,
+  // the row falls back to guides ranked for the reader's area and role.
   const { featured: featuredGuides, library: libraryGuides } = useMemo(
     () => splitFeaturedGuides(filtered),
     [filtered],
   );
-  const featuredLead = featuredGuides[0];
+  const forYou = useMemo(() => selectForYou(featuredGuides, libraryGuides), [featuredGuides, libraryGuides]);
+  const recentlyUpdated = useMemo(() => [...filtered].sort(byMostRecent).slice(0, RECENT_COUNT), [filtered]);
 
   const filteredContactUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -786,792 +637,280 @@ export default function ResourcesPage() {
     activeFilter === "contacts" ||
     (Boolean(search.trim()) && !assignmentsView && filteredContactUsers.length > 0);
   const contactDirectoryCompact = activeFilter !== "contacts" && !search.trim();
+  const resultsTitle = search.trim() && activeFilter === "all" ? `Results for "${search.trim()}"` : getFilterLabel(activeFilter);
+
+  const contactsDirectory = contactDirectoryVisible && (
+    <LiveContactsDirectory
+      users={filteredContactUsers}
+      loading={contactsLoading}
+      total={contactUsers?.total ?? 0}
+      search={search}
+      roleFilter={contactRoleFilter}
+      areaFilter={contactAreaFilter}
+      hygieneFilter={contactHygieneFilter}
+      onRoleFilterChange={setContactRoleFilter}
+      onAreaFilterChange={setContactAreaFilter}
+      onHygieneFilterChange={setContactHygieneFilter}
+      stats={contactStats}
+      canSeeContactHygiene={isStaffOrAdmin}
+      compact={contactDirectoryCompact}
+      onShowAll={() => setFilter("contacts")}
+    />
+  );
 
   return (
-    <div className={cn("flex flex-col p-6", resourceTab === "brand-assets" ? "gap-4" : "gap-6")}>
+    <div className="resource-page mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
       <PageHeader
         title="Resources"
-        className="mb-2"
+        description={resourceTab === "brand-assets"
+          ? "Logos, fonts and brand files, always the current version."
+          : "Everything we know about how Creative works, in one place."}
+        className="mb-0 sm:items-end"
       >
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {!isCollaborator && <ResourceSectionSwitcher active={resourceTab} />}
-          {resourceTab === "guides" && isStaffOrAdmin && (
-            <Button asChild size="sm" className="h-10">
-              <Link href="/resources/new">
-                <PlusIcon data-icon="inline-start" />
-                New guide
-              </Link>
-            </Button>
-          )}
-        </div>
+        {!isCollaborator && <ResourceSectionSwitcher active={resourceTab} />}
       </PageHeader>
 
       {resourceTab === "brand-assets" ? (
         <BrandAssetLibrary canManage={isStaffOrAdmin} />
       ) : (
         <>
-      <OperationalToolbar aria-label="Guide search and filters">
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <DebouncedSearchInput
-              value={search}
-              onValueChange={setSearchParam}
-              placeholder="Search guides, contacts, and assignments…"
-              aria-label="Filter resources"
-              containerClassName="min-w-0 flex-1"
-            />
-            <ResourceCommandPalette
-              guides={guides ?? []}
-              className="h-10 w-10 shrink-0 justify-center px-0 sm:w-auto sm:px-2.5"
-            />
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:shrink-0">
-            <Select value={activeFilter} onValueChange={(value) => setFilter(value as FilterKey)}>
-              <SelectTrigger className="h-10 lg:w-[180px]" aria-label="Guide focus">
-                <SelectValue placeholder="All guides" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Smart</SelectLabel>
-                  {SMART_FILTERS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>References</SelectLabel>
-                  {REFERENCE_FILTERS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Guide focus</SelectLabel>
-                  {RESOURCE_TYPE_FILTERS.map((item) => (
-                    <SelectItem key={item.key} value={item.key}>
-                      {RESOURCE_TYPE_LABELS[item.type]}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Creative area</SelectLabel>
-                  {AREA_FILTERS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-
-            <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
-              <SelectTrigger className="h-10 lg:w-[170px]" aria-label="Sort guides">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Sort</SelectLabel>
-                  {SORT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-
-            <ToggleGroup
-              type="single"
-              value={layout}
-              onValueChange={(value) => {
-                if (value) setLayout(value as LayoutKey);
-              }}
-              className="min-h-10 justify-self-start [&_svg]:size-4"
-              aria-label="Guide layout"
-            >
-              <ToggleGroupItem value="cards" aria-label="Cards" className="min-h-10 px-3">
-                <LayoutGridIcon aria-hidden="true" />
-                <span className="hidden sm:inline">Cards</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem value="list" aria-label="List" className="min-h-10 px-3">
-                <ListIcon aria-hidden="true" />
-                <span className="hidden sm:inline">List</span>
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </div>
-
-        {homeView && (
-          <nav className="resource-jump" aria-label="Jump to">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="resource-jump-chip h-10 border border-border/70 px-3"
-              onClick={() => setFilter("how-to")}
-            >
-              How-to
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="resource-jump-chip h-10 border border-border/70 px-3"
-              onClick={() => setFilter("media-drive")}
-            >
-              Media Drive
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="resource-jump-chip h-10 border border-border/70 px-3"
-              onClick={() => setFilter("contacts")}
-            >
-              Contacts
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="resource-jump-chip h-10 border border-border/70 px-3"
-              onClick={() => setFilter("assignments")}
-            >
-              Assignments
-            </Button>
-          </nav>
-        )}
-
-        {(activeFilters.length > 0 || hasAnyFilter) && (
-          <div className="flex flex-wrap items-center gap-2">
-            <OperationalActiveFilterChips filters={activeFilters} />
-            {hasAnyFilter && (
-              <Button variant="ghost" size="sm" className="h-10" onClick={clearAll}>
-                Clear all
-              </Button>
-            )}
-            {!guidesLoading && !assignmentsView && (
-              <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                {filtered.length} of {totalGuides} guides
-              </span>
-            )}
-          </div>
-        )}
-      </OperationalToolbar>
-
-      {contactsError && !assignmentsView && (
-        <OperationalPartialResultsAlert
-          failures={["Contacts and sport assignments"]}
-          noun="source"
-          title="Guide library loaded without references"
-          recoveryCopy="Guides remain available. Retry before treating Contacts or assignments as complete."
-        />
-      )}
-
-      {!guidesLoading && guidesError && !guides ? (
-        <EmptyState
-          icon="wifi-off"
-          title="Could not load guides"
-          description="The Resources library is unavailable. Check the connection and try again."
-          actionLabel="Retry"
-          onAction={reloadGuides}
-        />
-      ) : guidesLoading ? (
-        <ResourcesSkeleton layout={layout} />
-      ) : assignmentsView ? (
-        contactsError && !contactUsers ? (
-          <EmptyState
-            icon="wifi-off"
-            title="Could not load sport assignments"
-            description="Guide data is still available. Retry the user directory before trusting assignment coverage."
-            actionLabel="Retry"
-            onAction={reloadContacts}
-          />
-        ) : (
-          <SportAssignmentsDirectory
-            groups={sportAssignmentGroups}
-            loading={contactsLoading}
-            search={search}
-          />
-        )
-      ) : filtered.length === 0 && !homeView ? (
-        <>
-          {contactDirectoryVisible && (
-            <LiveContactsDirectory
-              users={filteredContactUsers}
-              loading={contactsLoading}
-              total={contactUsers?.total ?? 0}
-              search={search}
-              roleFilter={contactRoleFilter}
-              areaFilter={contactAreaFilter}
-              hygieneFilter={contactHygieneFilter}
-              onRoleFilterChange={setContactRoleFilter}
-              onAreaFilterChange={setContactAreaFilter}
-              onHygieneFilterChange={setContactHygieneFilter}
-              stats={contactStats}
-              canSeeContactHygiene={isStaffOrAdmin}
-              compact={contactDirectoryCompact}
-              onShowAll={() => setFilter("contacts")}
-            />
-          )}
-          <EmptyState
-            icon="search"
-            title="No guides match this view"
-            description="Try a different keyword, focus area, Creative area, or sort."
-            actionLabel="Clear filters"
-            onAction={clearAll}
-          />
-        </>
-      ) : homeView ? (
-        <div className="flex flex-col gap-10">
-          {featuredLead ? (
-            <section aria-label="Featured guides">
-              <FeaturedLead guide={featuredLead} />
-              {featuredGuides.length > 1 && (
-                <GuideResults guides={featuredGuides.slice(1)} layout="list" />
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2.5">
+              <DebouncedSearchInput
+                value={search}
+                onValueChange={setSearchParam}
+                placeholder="Search guides, contacts, paths…"
+                aria-label="Filter resources"
+                className="resource-search-input"
+                containerClassName="min-w-0 flex-1"
+              />
+              <ResourceCommandPalette
+                guides={guides ?? []}
+                className="resource-search-side hidden md:inline-flex"
+              />
+              {isStaffOrAdmin && (
+                <Button asChild className="resource-search-side shrink-0">
+                  <Link href="/resources/new">
+                    <PlusIcon data-icon="inline-start" />
+                    <span className="hidden sm:inline">New guide</span>
+                    <span className="sr-only sm:hidden">New guide</span>
+                  </Link>
+                </Button>
               )}
-            </section>
-          ) : null}
+            </div>
 
-          <section className="flex flex-col gap-3" aria-label="Guide library">
-            {filtered.length === 0 ? (
-              <EmptyState
-                inline
-                icon="folder"
-                title="No guides yet"
-                description="Create focused guides as each area is ready."
-              />
-            ) : libraryGuides.length > 0 ? (
-              <TypeGroupedGuides guides={libraryGuides} layout={layout} />
-            ) : (
-              <EmptyState
-                inline
-                icon="folder"
-                title="All guides are featured"
-                description="Every guide is highlighted above."
-              />
-            )}
-          </section>
-
-          <ReferenceSummaryStrip
-            loading={contactsLoading}
-            contactStats={contactStats}
-            sportAssignmentGroups={sportAssignmentGroups}
-            onShowContacts={() => setFilter("contacts")}
-            onShowAssignments={() => setFilter("assignments")}
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {contactDirectoryVisible && (
-            <LiveContactsDirectory
-              users={filteredContactUsers}
-              loading={contactsLoading}
-              total={contactUsers?.total ?? 0}
-              search={search}
-              roleFilter={contactRoleFilter}
-              areaFilter={contactAreaFilter}
-              hygieneFilter={contactHygieneFilter}
-              onRoleFilterChange={setContactRoleFilter}
-              onAreaFilterChange={setContactAreaFilter}
-              onHygieneFilterChange={setContactHygieneFilter}
-              stats={contactStats}
-              canSeeContactHygiene={isStaffOrAdmin}
-              compact={contactDirectoryCompact}
-              onShowAll={() => setFilter("contacts")}
-            />
-          )}
-          <section className="flex flex-col gap-3">
-            <SectionHeader title={getFilterLabel(activeFilter)} />
-            <GuideResults
-              guides={filtered}
-              layout={layout}
-              showType={!typeForFilter(activeFilter)}
-            />
-          </section>
-        </div>
-      )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function ResourceToolLink({
-  title,
-  count,
-  description,
-  onClick,
-}: {
-  title: string;
-  count: number;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="resource-tool group transition-[background-color,scale] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <span className="resource-kicker">{title}</span>
-          <span className="resource-index-count">{count}</span>
-        </div>
-        <p className="mt-1 truncate text-sm text-muted-foreground">{description}</p>
-      </div>
-      <ChevronRightIcon
-        className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-        aria-hidden="true"
-      />
-    </button>
-  );
-}
-
-function ReferenceSummaryStrip({
-  loading,
-  contactStats,
-  sportAssignmentGroups,
-  onShowContacts,
-  onShowAssignments,
-}: {
-  loading: boolean;
-  contactStats: { total: number };
-  sportAssignmentGroups: SportAssignmentGroup[];
-  onShowContacts: () => void;
-  onShowAssignments: () => void;
-}) {
-  const assignedPeople = totalAssignedPeople(sportAssignmentGroups);
-  const hasContacts = contactStats.total > 0;
-  const hasAssignments = sportAssignmentGroups.length > 0;
-
-  return (
-    <section className="flex flex-col gap-4" aria-label="Tools and references">
-      <div className="resource-index-heading">
-        <h2 className="resource-kicker">Tools</h2>
-      </div>
-      {loading ? (
-        <div className="resource-tools">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-        </div>
-      ) : (
-        <div className="resource-tools">
-          <div className="resource-tool resource-tool-copy">
-            <ServerPathCopy path="smb://ath01-nas.uwia.wisc.edu/users/" />
-          </div>
-          {hasContacts && (
-            <ResourceToolLink
-              title="Contacts"
-              count={contactStats.total}
-              description="Team directory"
-              onClick={onShowContacts}
-            />
-          )}
-          {hasAssignments && (
-            <ResourceToolLink
-              title="Assignments"
-              count={sportAssignmentGroups.length}
-              description={`${assignedPeople} ${assignedPeople === 1 ? "person" : "people"}`}
-              onClick={onShowAssignments}
-            />
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function SportAssignmentsDirectory({
-  groups,
-  loading,
-  search,
-}: {
-  groups: SportAssignmentGroup[];
-  loading: boolean;
-  search: string;
-}) {
-  if (loading) {
-    return (
-      <section className="flex flex-col gap-3">
-        <SectionHeader
-          title="Sport assignments"
-          description="Read-only sport coverage sourced from user profile assignments."
-        />
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-36 rounded-lg" />
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="flex flex-col gap-3">
-      <SectionHeader
-        title="Sport assignments"
-        description="Read-only sport coverage sourced from user profile assignments."
-      />
-      {groups.length === 0 ? (
-        <EmptyState
-          inline
-          icon="users"
-          title="No sport assignments match this view"
-          description={
-            search.trim()
-              ? "Try a different search across people, sport codes, or sport names."
-              : "No active user profiles have sport assignments yet."
-          }
-        />
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {groups.map((group) => (
-            <Card key={group.sportCode} elevation="flat" className="min-h-36">
-              <CardHeader className="gap-2 p-4 pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <CardTitle className="truncate text-sm">{group.label}</CardTitle>
-                    <p className="mt-1 text-xs text-muted-foreground">{group.sportCode}</p>
-                  </div>
-                  <Badge variant="secondary" className="shrink-0 tabular-nums">
-                    {group.users.length}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 p-4">
-                {group.defaultTravelers.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {group.defaultTravelers.map((user) => (
-                      <Badge key={user.id} variant="outline" className="max-w-full">
-                        <span className="truncate">{user.name}</span>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                <div className="flex flex-col gap-2">
-                  {group.users.slice(0, 5).map((user) => (
-                    <Link
-                      key={user.id}
-                      href={`/staff/${user.id}`}
-                      className="flex min-h-10 min-w-0 items-center gap-2 rounded-md px-1 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    >
-                      <UserAvatar
-                        name={user.name}
-                        avatarUrl={user.avatarUrl}
-                        size="sm"
-                        className="shrink-0"
-                      />
-                      <span className="truncate">{user.name}</span>
-                    </Link>
-                  ))}
-                  {group.users.length > 5 && (
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      +{group.users.length - 5} more
-                    </p>
+            {!homeView && (
+              <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <OperationalActiveFilterChips filters={activeFilters} />
+                  <Button variant="ghost" size="sm" className="h-10" onClick={clearAll}>
+                    Clear all
+                  </Button>
+                  {!guidesLoading && !assignmentsView && (
+                    <span className="text-sm text-muted-foreground tabular-nums">
+                      {filtered.length} of {totalGuides} guides
+                    </span>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                  <Select value={activeFilter} onValueChange={(value) => setFilter(value as FilterKey)}>
+                    <SelectTrigger className="h-10 sm:w-[170px]" aria-label="Guide topic">
+                      <SelectValue placeholder="All guides" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Smart</SelectLabel>
+                        {SMART_FILTERS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>References</SelectLabel>
+                        {REFERENCE_FILTERS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Topic</SelectLabel>
+                        {RESOURCE_TYPE_FILTERS.map((item) => (
+                          <SelectItem key={item.key} value={item.key}>
+                            {RESOURCE_TYPE_LABELS[item.type]}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Creative area</SelectLabel>
+                        {AREA_FILTERS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
 
-function LiveContactsDirectory({
-  users,
-  loading,
-  total,
-  search,
-  roleFilter,
-  areaFilter,
-  hygieneFilter,
-  onRoleFilterChange,
-  onAreaFilterChange,
-  onHygieneFilterChange,
-  stats,
-  canSeeContactHygiene,
-  compact,
-  onShowAll,
-}: {
-  users: ContactUser[];
-  loading: boolean;
-  total: number;
-  search: string;
-  roleFilter: ContactRoleFilter;
-  areaFilter: ContactAreaFilter;
-  hygieneFilter: ContactHygieneFilter;
-  onRoleFilterChange: (value: ContactRoleFilter) => void;
-  onAreaFilterChange: (value: ContactAreaFilter) => void;
-  onHygieneFilterChange: (value: ContactHygieneFilter) => void;
-  stats: {
-    visible: number;
-    total: number;
-    missingPhone: number;
-    missingSlack: number;
-  };
-  canSeeContactHygiene: boolean;
-  compact: boolean;
-  onShowAll: () => void;
-}) {
-  const shownUsers = compact ? users.slice(0, 6) : users;
-  const hasContactFilters = roleFilter !== "ALL" || areaFilter !== "ALL" || hygieneFilter !== "ALL";
+                  <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
+                    <SelectTrigger className="h-10 sm:w-[170px]" aria-label="Sort guides">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Sort</SelectLabel>
+                        {SORT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
 
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
-            <UsersIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-            Team contacts
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground text-pretty">
-            Profile-backed contacts support the Guide library without duplicating phone and Slack details in Markdown.
-          </p>
-        </div>
-        {!loading && (
-          <div className="flex flex-wrap items-center gap-2">
-            {canSeeContactHygiene && stats.missingPhone > 0 && (
-              <Badge variant="outline" className="tabular-nums">
-                {stats.missingPhone} missing phone
-              </Badge>
+                  {!assignmentsView && (
+                    <ToggleGroup
+                      type="single"
+                      value={layout}
+                      onValueChange={(value) => {
+                        if (value) setLayout(value as LayoutKey);
+                      }}
+                      className="col-span-2 min-h-10 justify-self-start [&_svg]:size-4"
+                      aria-label="Guide layout"
+                    >
+                      <ToggleGroupItem value="cards" aria-label="Cards" className="min-h-10 px-3">
+                        <LayoutGridIcon aria-hidden="true" />
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="list" aria-label="List" className="min-h-10 px-3">
+                        <ListIcon aria-hidden="true" />
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  )}
+                </div>
+              </div>
             )}
-            {canSeeContactHygiene && stats.missingSlack > 0 && (
-              <Badge variant="outline" className="tabular-nums">
-                {stats.missingSlack} missing Slack
-              </Badge>
-            )}
-            <Badge variant="secondary" className="tabular-nums">
-              {compact ? Math.min(users.length, 6) : stats.visible}/{total} shown
-            </Badge>
           </div>
-        )}
-      </div>
 
-      {!compact && !loading && (
-        <ContactDirectoryFilters
-          roleFilter={roleFilter}
-          areaFilter={areaFilter}
-          hygieneFilter={hygieneFilter}
-          onRoleFilterChange={onRoleFilterChange}
-          onAreaFilterChange={onAreaFilterChange}
-          onHygieneFilterChange={onHygieneFilterChange}
-          canSeeContactHygiene={canSeeContactHygiene}
-        />
-      )}
+          {contactsError && !assignmentsView && (
+            <OperationalPartialResultsAlert
+              failures={["Contacts and sport assignments"]}
+              noun="source"
+              title="Guide library loaded without references"
+              recoveryCopy="Guides remain available. Retry before treating Contacts or assignments as complete."
+            />
+          )}
 
-      {loading ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: compact ? 3 : 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-32 rounded-lg" />
-          ))}
-        </div>
-      ) : shownUsers.length === 0 ? (
-        <EmptyState
-          inline
-          icon="users"
-          title="No contacts match this view"
-          description={
-            search.trim() || hasContactFilters
-              ? "Try a different contact search or filter."
-              : "No active users are available for the live contact directory."
-          }
-        />
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {shownUsers.map((user) => (
-            <ContactCard key={user.id} user={user} />
-          ))}
-        </div>
-      )}
+          {!guidesLoading && guidesError && !guides ? (
+            <EmptyState
+              icon="wifi-off"
+              title="Could not load guides"
+              description="The Resources library is unavailable. Check the connection and try again."
+              actionLabel="Retry"
+              onAction={reloadGuides}
+            />
+          ) : guidesLoading || !guides ? (
+            <ResourcesSkeleton />
+          ) : assignmentsView ? (
+            contactsError && !contactUsers ? (
+              <EmptyState
+                icon="wifi-off"
+                title="Could not load sport assignments"
+                description="Guide data is still available. Retry the user directory before trusting assignment coverage."
+                actionLabel="Retry"
+                onAction={reloadContacts}
+              />
+            ) : (
+              <SportAssignmentsDirectory
+                groups={sportAssignmentGroups}
+                loading={contactsLoading}
+                search={search}
+              />
+            )
+          ) : homeView ? (
+            totalGuides === 0 ? (
+              <EmptyState
+                icon="folder"
+                title="No guides yet"
+                description={isStaffOrAdmin ? "Write the first guide for how something gets done here." : "Guides will show up here as the team writes them."}
+                actionLabel={isStaffOrAdmin ? "New guide" : undefined}
+                onAction={isStaffOrAdmin ? () => router.push("/resources/new") : undefined}
+              />
+            ) : (
+              <div className="flex flex-col gap-11">
+                <HomeSection
+                  id="resource-for-you"
+                  title={forYou.reason ? `${forYou.title} · ${forYou.reason}` : forYou.title}
+                >
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {forYou.guides.map((guide) => (
+                      <GuideCard key={guide.id} guide={guide} />
+                    ))}
+                  </div>
+                </HomeSection>
 
-      {compact && users.length > 6 && (
-        <div className="flex justify-end">
-          <Button type="button" variant="outline" size="sm" className="h-10" onClick={onShowAll}>
-            Show all contacts
-          </Button>
-        </div>
-      )}
-    </section>
-  );
-}
+                <HomeSection id="resource-tools" title="Quick tools">
+                  <QuickTools
+                    loading={contactsLoading}
+                    contactCount={contactStats.total}
+                    sportCount={sportAssignmentGroups.length}
+                    assignedPeople={totalAssignedPeople(sportAssignmentGroups)}
+                    onShowContacts={() => setFilter("contacts")}
+                    onShowAssignments={() => setFilter("assignments")}
+                  />
+                </HomeSection>
 
-function ContactDirectoryFilters({
-  roleFilter,
-  areaFilter,
-  hygieneFilter,
-  onRoleFilterChange,
-  onAreaFilterChange,
-  onHygieneFilterChange,
-  canSeeContactHygiene,
-}: {
-  roleFilter: ContactRoleFilter;
-  areaFilter: ContactAreaFilter;
-  hygieneFilter: ContactHygieneFilter;
-  onRoleFilterChange: (value: ContactRoleFilter) => void;
-  onAreaFilterChange: (value: ContactAreaFilter) => void;
-  onHygieneFilterChange: (value: ContactHygieneFilter) => void;
-  canSeeContactHygiene: boolean;
-}) {
-  return (
-    <div className="grid gap-3 rounded-md bg-muted/30 p-3 md:grid-cols-2 xl:grid-cols-3">
-      <ContactSelect
-        label="Role"
-        value={roleFilter}
-        options={CONTACT_ROLE_FILTERS}
-        onChange={onRoleFilterChange}
-      />
-      <ContactSelect
-        label="Area"
-        value={areaFilter}
-        options={CONTACT_AREA_FILTERS}
-        onChange={onAreaFilterChange}
-      />
-      {canSeeContactHygiene && (
-        <ContactSelect
-          label="Cleanup"
-          value={hygieneFilter}
-          options={CONTACT_HYGIENE_FILTERS}
-          onChange={onHygieneFilterChange}
-        />
+                <HomeSection id="resource-topics" title="Browse by topic">
+                  <TopicList guides={filtered} onPick={setFilter} />
+                </HomeSection>
+
+                <HomeSection
+                  id="resource-recent"
+                  title="Recently updated"
+                  aside={
+                    <button
+                      type="button"
+                      onClick={() => setFilter("recent")}
+                      className="resource-see-all transition-[color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+                    >
+                      All {totalGuides} guides
+                    </button>
+                  }
+                >
+                  <div className="resource-list">
+                    {recentlyUpdated.map((guide) => (
+                      <GuideRow key={guide.id} guide={guide} />
+                    ))}
+                  </div>
+                </HomeSection>
+              </div>
+            )
+          ) : filtered.length === 0 ? (
+            <>
+              {contactsDirectory}
+              <EmptyState
+                icon="search"
+                title="No guides match this view"
+                description="Try a different word, topic, Creative area, or sort."
+                actionLabel="Clear filters"
+                onAction={clearAll}
+              />
+            </>
+          ) : (
+            <div className="flex flex-col gap-8">
+              {contactsDirectory}
+              <section className="flex flex-col gap-3">
+                <SectionHeader title={resultsTitle} />
+                <GuideResults
+                  guides={filtered}
+                  layout={layout}
+                  showType={!typeForFilter(activeFilter)}
+                />
+              </section>
+            </div>
+          )}
+        </>
       )}
     </div>
-  );
-}
-
-function ContactSelect<TValue extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: TValue;
-  options: { value: TValue; label: string }[];
-  onChange: (value: TValue) => void;
-}) {
-  return (
-    <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-      {label}
-      <Select value={value} onValueChange={(next) => onChange(next as TValue)}>
-        <SelectTrigger className="h-10 bg-background text-foreground" aria-label={`${label} contact filter`}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel>{label}</SelectLabel>
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </label>
-  );
-}
-
-function ContactCard({ user }: { user: ContactUser }) {
-  const subtitle = contactSubtitle(user);
-  const area = formatArea(user.primaryArea);
-  const slackHandle = displaySlackHandle(user.slackHandle);
-
-  return (
-    <Card elevation="flat" className="min-h-32 border-border/80">
-      <CardHeader className="p-4 pb-0">
-        <div className="flex items-start gap-3">
-          <UserAvatar
-            name={user.name}
-            avatarUrl={user.avatarUrl}
-            size="lg"
-            className="shrink-0 ring-1 ring-border"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <CardTitle className="truncate text-sm leading-tight">{user.name}</CardTitle>
-                {subtitle && (
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
-                )}
-              </div>
-              <Badge variant="secondary" size="sm" className="shrink-0">
-                {formatRole(user.role)}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="grid flex-1 content-start gap-2 p-4 text-xs text-muted-foreground">
-        <ContactLine icon={MailIcon} label={user.email} href={`mailto:${user.email}`} />
-        <ContactLine
-          icon={PhoneIcon}
-          label={user.phone || "No phone on profile"}
-          href={user.phone ? `tel:${user.phone.replace(/[^\d+]/g, "")}` : undefined}
-        />
-        <ContactLine
-          icon={SlackIcon}
-          label={slackHandle || (user.slackProfileUrl ? "Slack profile" : "No Slack on profile")}
-          href={user.slackProfileUrl ?? undefined}
-        />
-        <div className="flex min-w-0 flex-wrap gap-2">
-          {area && (
-            <span className="inline-flex min-w-0 items-center gap-1 rounded-md bg-muted px-2 py-1">
-              <BriefcaseBusinessIcon className="size-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">{area}</span>
-            </span>
-          )}
-          {user.location && (
-            <span className="inline-flex min-w-0 items-center gap-1 rounded-md bg-muted px-2 py-1">
-              <MapPinIcon className="size-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">{user.location}</span>
-            </span>
-          )}
-        </div>
-      </CardContent>
-
-      <CardFooter className="px-4 pb-4 pt-0">
-        <Button asChild variant="outline" size="sm" className="h-10 w-full justify-center">
-          <Link href={`/staff/${user.id}`}>View profile</Link>
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
-function ContactLine({
-  icon: Icon,
-  label,
-  href,
-}: {
-  icon: LucideIcon;
-  label: string;
-  href?: string;
-}) {
-  const content = (
-    <>
-      <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-      <span className="truncate">{label}</span>
-    </>
-  );
-
-  if (!href) {
-    return <div className="flex min-h-6 min-w-0 items-center gap-2">{content}</div>;
-  }
-
-  return (
-    <a
-      href={href}
-      className="flex min-h-10 min-w-0 items-center gap-2 rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-    >
-      {content}
-    </a>
   );
 }

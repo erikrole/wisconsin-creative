@@ -142,6 +142,7 @@
 - `/reports` -> `src/app/(app)/reports/layout.tsx`
 - `/reports/usage` -> `src/app/(app)/reports/usage/layout.tsx`
 - `/reservations` -> `src/app/(app)/reservations/layout.tsx`
+- `/resources` -> `src/app/(app)/resources/layout.tsx`
 - `/schedule` -> `src/app/(app)/schedule/layout.tsx`
 - `/scoreboard` -> `src/app/(app)/scoreboard/layout.tsx`
 - `/search` -> `src/app/(app)/search/layout.tsx`

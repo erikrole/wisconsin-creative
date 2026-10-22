@@ -9,7 +9,11 @@ import { toast } from "sonner";
 
 const COPY_RESET_MS = 1600;
 
-export function ServerPathCopy({ path }: { path: string }) {
+/**
+ * One-tap copy for a server path. `label` renders it as a library quick-tool
+ * tile (name over the path) instead of the compact inline button.
+ */
+export function ServerPathCopy({ path, label }: { path: string; label?: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -30,6 +34,53 @@ export function ServerPathCopy({ path }: { path: string }) {
       });
     }
   };
+
+  const icon = (
+    <AnimatePresence initial={false} mode="popLayout">
+      <motion.span
+        key={copied ? "copied" : "copy"}
+        initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+        className="inline-flex items-center justify-center"
+      >
+        {copied ? (
+          <CheckIcon className="size-4" aria-hidden="true" />
+        ) : (
+          <CopyIcon className="size-4" aria-hidden="true" />
+        )}
+      </motion.span>
+    </AnimatePresence>
+  );
+
+  if (label) {
+    return (
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label={`Copy ${label}: ${path}`}
+        aria-pressed={copied}
+        title={path}
+        className="resource-tool group transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="resource-tool-name">{label}</span>
+          <span className="resource-tool-detail resource-tool-path">{path}</span>
+        </span>
+        <span
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 text-sm font-bold",
+            copied ? "text-foreground" : "text-[var(--accent)]",
+          )}
+          aria-live="polite"
+        >
+          {icon}
+          {copied ? "Copied" : "Copy"}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <Button

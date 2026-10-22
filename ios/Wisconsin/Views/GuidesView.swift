@@ -82,6 +82,29 @@ struct GuidesView: View {
         focus != .all || !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// With no search, focus, or sort, the list opens like the web library:
+    /// For you first, then everything by most recent change.
+    private var showsHome: Bool {
+        !hasFilter && sort == .recommended
+    }
+
+    /// Featured guides lead, then guides matched to the reader's role or
+    /// area. Same order as the web library's For you row.
+    private var forYouGuides: [GuideListItem] {
+        let featured = vm.guides
+            .filter(\.featured)
+            .sorted { ($0.featuredRank ?? Int.max) < ($1.featuredRank ?? Int.max) }
+        let personal = vm.guides.filter { !$0.featured && $0.personalizationReason != "General" }
+        return Array((featured + personal).prefix(3))
+    }
+
+    private var recentGuides: [GuideListItem] {
+        let picked = Set(forYouGuides.map(\.id))
+        return vm.guides
+            .filter { !picked.contains($0.id) }
+            .sorted { guideDate($0.updatedAt) > guideDate($1.updatedAt) }
+    }
+
     private var filteredGuides: [GuideListItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let currentRole = session.currentUser?.role ?? ""
@@ -240,14 +263,26 @@ struct GuidesView: View {
                 }
             }
 
+            if showsHome, !forYouGuides.isEmpty {
+                Section {
+                    ForEach(forYouGuides) { guide in
+                        NavigationLink(value: guide) {
+                            GuideRow(guide: guide)
+                        }
+                    }
+                } header: {
+                    Text("For you")
+                }
+            }
+
             Section {
-                ForEach(filteredGuides) { guide in
+                ForEach(showsHome ? recentGuides : filteredGuides) { guide in
                     NavigationLink(value: guide) {
                         GuideRow(guide: guide)
                     }
                 }
             } header: {
-                Text(listHeader)
+                Text(showsHome ? "Recently updated" : listHeader)
             }
 
             if filteredGuides.isEmpty {
@@ -325,6 +360,10 @@ private struct GuideRow: View {
 
                 HStack(spacing: 8) {
                     StatusPill(label: guide.type.label, tone: guide.type.tone)
+                    Text(freshness.label)
+                        .font(.footnote)
+                        .foregroundStyle(freshness.stale ? Color.statusText(.orange) : .secondary)
+                        .lineLimit(1)
                 }
             }
         }
@@ -334,8 +373,10 @@ private struct GuideRow: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
+    private var freshness: GuideFreshness { guide.freshness() }
+
     private var accessibilityLabel: String {
-        var parts = [guide.title, guide.type.label]
+        var parts = [guide.title, guide.type.label, freshness.label]
         if !guide.published {
             parts.append("Draft")
         }
@@ -454,14 +495,24 @@ private struct GuideReaderHeader: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Updated \(guide.updatedSummary) by \(guide.author.name)")
+            Text(freshnessLine)
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(guide.freshness().stale ? Color.statusText(.orange) : .secondary)
 
             Divider()
                 .padding(.top, 4)
         }
         .accessibilityElement(children: .contain)
+    }
+
+    /// Who last vouched for the guide: the verifier when someone marked it
+    /// verified on the web, otherwise the author of the last edit.
+    private var freshnessLine: String {
+        let freshness = guide.freshness()
+        if freshness.verified, let verifier = guide.lastVerifiedBy {
+            return "\(freshness.label) by \(verifier.name)"
+        }
+        return "\(freshness.label) by \(guide.author.name)"
     }
 }
 
@@ -1164,13 +1215,48 @@ private enum GuideSort: String, CaseIterable, Identifiable {
     }
 }
 
-private extension GuideListItem {
-    var updatedSummary: String {
-        let date = guideDate(updatedAt)
-        guard date != .distantPast else { return "Updated" }
-        return date.formatted(date: .abbreviated, time: .omitted)
-    }
+/// Mirrors `src/lib/guide-freshness.ts`: "Verified 6 days ago" when someone
+/// marked the guide verified, otherwise "Updated …", and "Needs review" once
+/// the reference date is older than 180 days.
+struct GuideFreshness: Equatable {
+    static let staleAfterDays = 180
 
+    let label: String
+    let stale: Bool
+    let verified: Bool
+}
+
+func guideRelativeDays(from: Date, now: Date) -> String {
+    let days = max(0, Int(now.timeIntervalSince(from) / 86_400))
+    switch days {
+    case 0: return "today"
+    case 1: return "yesterday"
+    case ..<14: return "\(days) days ago"
+    case ..<60: return "\(days / 7) weeks ago"
+    case ..<365: return "\(days / 30) months ago"
+    default:
+        let years = days / 365
+        return years == 1 ? "a year ago" : "\(years) years ago"
+    }
+}
+
+extension GuideListItem {
+    func freshness(now: Date = Date()) -> GuideFreshness {
+        let verifiedAt = guideDate(lastVerifiedAt)
+        let verified = verifiedAt != .distantPast
+        let reference = verified ? verifiedAt : guideDate(updatedAt)
+        guard reference != .distantPast else {
+            return GuideFreshness(label: "Updated", stale: false, verified: false)
+        }
+        if now.timeIntervalSince(reference) > Double(GuideFreshness.staleAfterDays) * 86_400 {
+            return GuideFreshness(label: "Needs review", stale: true, verified: verified)
+        }
+        let label = "\(verified ? "Verified" : "Updated") \(guideRelativeDays(from: reference, now: now))"
+        return GuideFreshness(label: label, stale: false, verified: verified)
+    }
+}
+
+private extension GuideListItem {
     var searchIndex: String {
         [
             title,
