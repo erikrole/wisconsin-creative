@@ -216,6 +216,21 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Catch mistyped booking end dates",
+    "type": "fixes",
+    "summary": "Reservations and checkouts can no longer be saved, edited or extended to run longer than a year, which catches a mistyped year before it blocks gear.",
+    "details": [
+      "If an end date is more than a year after the start, you'll see a message asking you to check the end date.",
+      "Bookings of a few weeks or months work as before."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 571
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quicker reviews of upcoming changes",
     "type": "improvement",
     "summary": "Upcoming changes can be tried out on a computer with one step before they go live, so updates get checked sooner.",
