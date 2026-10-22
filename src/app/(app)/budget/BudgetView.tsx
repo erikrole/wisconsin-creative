@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -69,6 +70,7 @@ type LineView = {
   unplanned: boolean;
   refundCents: number | null;
   recurring: boolean;
+  gearPickCycleId: string | null;
   links: LinkView[];
 };
 type LinkView = {
@@ -98,6 +100,8 @@ type Detail = {
   budget: { id: string; name: string; fiscalYear: string; allocationCents: number | null; notes: string | null };
   lines: LineView[];
   summary: BudgetSummary;
+  /** Under Armour allotment years a line can top up. */
+  uaCycles: { id: string; title: string }[];
 };
 
 const LIST_KEY = ["budget", "list"] as const;
@@ -253,6 +257,7 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
         <LineDialog
           budgetId={activeId}
           line={lineDialog.line}
+          uaCycles={detail.data?.uaCycles ?? []}
           onClose={() => setLineDialog(null)}
           onSaved={() => {
             setLineDialog(null);
@@ -714,6 +719,14 @@ function BudgetBody({
                               {line.unplanned && (
                                 <span className="rounded-md bg-[#EEF2FF] px-1.5 py-0.5 text-[11px] font-bold text-[#3E63DD] no-underline dark:bg-[#3E63DD]/20">Unplanned</span>
                               )}
+                              {line.gearPickCycleId && (
+                                <Link
+                                  href="/gear/admin"
+                                  className="shrink-0 rounded-md bg-[#E6F7F4] px-1.5 py-0.5 text-[11px] font-bold text-[#0B6E62] no-underline hover:underline dark:bg-[#12A594]/20 dark:text-[#3FD0B8]"
+                                >
+                                  UA {line.gearPickCycleId}
+                                </Link>
+                              )}
                               {line.linkUrl && (
                                 <a href={line.linkUrl} target="_blank" rel="noreferrer noopener" aria-label="Open product link">
                                   <ExternalLinkIcon className="size-3.5 text-muted-foreground" />
@@ -891,11 +904,13 @@ function centsToInput(cents: number | null): string {
 function LineDialog({
   budgetId,
   line,
+  uaCycles,
   onClose,
   onSaved,
 }: {
   budgetId: string;
   line: LineView | null;
+  uaCycles: { id: string; title: string }[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -917,6 +932,7 @@ function LineDialog({
     justification: line?.justification ?? "",
     unplanned: line?.unplanned ?? false,
     recurring: line?.recurring ?? false,
+    gearPickCycleId: line?.gearPickCycleId ?? "",
     refund: centsToInput(line?.refundCents ?? null),
   });
   const set = (key: Exclude<keyof typeof form, "unplanned" | "recurring">) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
@@ -953,6 +969,7 @@ function LineDialog({
       justification: form.justification,
       unplanned: form.unplanned,
       recurring: form.recurring,
+      gearPickCycleId: form.gearPickCycleId === "" ? null : form.gearPickCycleId,
       refundCents,
     };
     setPending(true);
@@ -1008,6 +1025,18 @@ function LineDialog({
           <Field label="Requested by">
             <Input value={form.requesterNote} onChange={(e) => set("requesterNote")(e.target.value)} maxLength={200} />
           </Field>
+          {uaCycles.length > 0 && (
+            <div className="sm:col-span-2">
+              <Field label="Counts toward UA gear">
+                <NativeSelect value={form.gearPickCycleId} onChange={(e) => set("gearPickCycleId")(e.target.value)}>
+                  <option value="">No</option>
+                  {uaCycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>Adds to the {cycle.title} Under Armour budget</option>
+                  ))}
+                </NativeSelect>
+              </Field>
+            </div>
+          )}
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
             <input
               type="checkbox"

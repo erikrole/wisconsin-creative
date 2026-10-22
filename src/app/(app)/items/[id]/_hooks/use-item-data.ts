@@ -37,6 +37,7 @@ function normalizeAssetDetail(asset: AssetDetail): AssetDetail {
     availableForReservation: asset.availableForReservation ?? true,
     availableForCheckout: asset.availableForCheckout ?? false,
     availableForCustody: asset.availableForCustody ?? false,
+    collaboratorVisible: asset.collaboratorVisible ?? true,
     metadata: asset.metadata ?? null,
     activeBooking: asset.activeBooking ?? null,
     hasBookingHistory: asset.hasBookingHistory ?? false,

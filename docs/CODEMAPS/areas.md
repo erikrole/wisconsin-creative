@@ -55,9 +55,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_DASHBOARD.md`
 - Pages: _none matched_
-- APIs: `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
+- APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
-- Tests: `tests/dashboard-accessibility.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-motion-source.test.ts`, `tests/dashboard-overflow-filter-aware.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/dashboard-ui-polish.test.ts`
+- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
 
 ## error-reporting
 
@@ -97,7 +97,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`
 - APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/retire`, `/api/assets/[id]`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
-- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`, `tests/ios-items-row-accessibility.test.ts`
+- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`
 
 ## kiosk
 
@@ -136,7 +136,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Doc: `docs/AREA_NOTIFICATIONS.md`
 - Pages: `/notifications`, `/settings/notifications`
 - APIs: `/api/cron/notifications`, `/api/notifications/count`, `/api/notifications/nudge`, `/api/notifications/process`, `/api/notifications`
-- Services: `src/lib/services/claim-review-notifications.ts`, `src/lib/services/notifications.ts`
+- Services: `src/lib/services/claim-review-notifications.ts`, `src/lib/services/notifications.ts`, `src/lib/services/trade-post-notifications.ts`
 - Tests: `tests/ios-notifications-read-recovery.test.ts`, `tests/ios-notifications-registration-health.test.ts`, `tests/ios-notifications-tapthrough.test.ts`, `tests/ios-notifications-token-honesty.test.ts`, `tests/notifications-count-route.test.ts`, `tests/notifications-ownership-ui-contract.test.ts`, `tests/notifications-route.test.ts`, `tests/notifications-support-hardening.test.ts`
 
 ## public-showroom
@@ -185,7 +185,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/search`
 - APIs: `/api/assets/picker-search`, `/api/budget/item-search`, `/api/image-search`
 - Services: _none matched_
-- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/equipment-picker-search-route.test.ts`, `tests/guide-search-result.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`
+- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/equipment-picker-search-route.test.ts`, `tests/guide-search-result.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-coverage.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`
 
 ## settings
 

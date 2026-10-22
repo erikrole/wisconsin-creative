@@ -163,6 +163,17 @@ describe("owner app activity report", () => {
     });
   });
 
+  it("marks everyone behind on release day, before any phone reports the new App Store build", async () => {
+    delete process.env.IOS_LATEST_APP_VERSION;
+    delete process.env.IOS_LATEST_APP_BUILD;
+    storeMock.loadAppStoreVersion.mockResolvedValue({ version: "1.1" });
+
+    const report = await getAppActivityReport();
+
+    expect(report.latestIosBuild).toEqual({ version: "1.1", build: null, source: "app_store" });
+    expect(report.versions.map((row) => row.status)).toEqual(["stale", "stale"]);
+  });
+
   it("finds the current build from the App Store listing when none is configured", async () => {
     delete process.env.IOS_LATEST_APP_VERSION;
     delete process.env.IOS_LATEST_APP_BUILD;

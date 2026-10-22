@@ -16,7 +16,7 @@ describe("action result copy", () => {
     expect(tradeBoard).toContain("Could not withdraw the request. Refresh the Trade Board and try again.");
     // Open-shift pickups are instant claims, not requests.
     expect(tradeBoard).toContain("Could not claim the shift. Refresh the Trade Board and try again.");
-    expect(tradeBoard).toContain("Open shifts did not load. Retry before acting on shift or trade coverage.");
+    expect(tradeBoard).toContain("Open slots did not load. What you see may be stale.");
 
     expect(tradeBoard).not.toContain("Failed to claim trade");
     expect(tradeBoard).not.toContain("Failed to approve trade");

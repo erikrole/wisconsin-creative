@@ -3,6 +3,7 @@ import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { postTradeSchema } from "@/lib/validation";
 import { listTrades, postTrade } from "@/lib/services/shift-trades";
+import { notifyEligibleStudentsOfTradePost } from "@/lib/services/trade-post-notifications";
 import { createAuditEntry } from "@/lib/audit";
 import type { ShiftTradeStatus } from "@prisma/client";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
@@ -58,6 +59,8 @@ export const POST = withAuth(async (req, { user }) => {
       postedByStaff: trade.postedByUserId !== user.id,
     },
   });
+
+  await notifyEligibleStudentsOfTradePost(trade.id);
 
   return ok({ data: trade }, 201);
 });

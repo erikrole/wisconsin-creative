@@ -38,6 +38,7 @@ const lineSelect = {
   unplanned: true,
   refundCents: true,
   recurring: true,
+  gearPickCycleId: true,
   requester: { select: { id: true, name: true } },
   items: {
     orderBy: { createdAt: "asc" },
@@ -133,6 +134,8 @@ export async function getBudgetDetail(budgetId: string) {
     },
   });
   if (!budget) throw new HttpError(404, "Budget not found.");
+  // UA allotment years a line can top up, newest first.
+  const uaCycles = await db.gearPickCycle.findMany({ orderBy: { id: "desc" }, select: { id: true, title: true } });
   const { lines, ...rest } = budget;
   const summary = summarizeBudget(
     lines.map((line) => ({
@@ -146,7 +149,7 @@ export async function getBudgetDetail(budgetId: string) {
     })),
     rest.allocationCents,
   );
-  return { budget: rest, lines: lines.map(toLineView), summary };
+  return { budget: rest, lines: lines.map(toLineView), summary, uaCycles };
 }
 
 export async function createBudget(actor: Actor, input: CreateBudgetInput) {
@@ -228,6 +231,12 @@ function assertRefund(row: { refundCents: number | null; spentCents: number | nu
   }
 }
 
+async function assertGearCycle(tx: Prisma.TransactionClient, cycleId: string | null | undefined) {
+  if (!cycleId) return;
+  const cycle = await tx.gearPickCycle.findUnique({ where: { id: cycleId }, select: { id: true } });
+  if (!cycle) throw new HttpError(404, "That Under Armour year doesn't exist.");
+}
+
 async function assertRequester(tx: Prisma.TransactionClient, userId: string | null | undefined) {
   if (!userId) return;
   const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true } });
@@ -239,6 +248,7 @@ export async function createLine(actor: Actor, budgetId: string, input: CreateLi
     const budget = await tx.budget.findUnique({ where: { id: budgetId }, select: { id: true } });
     if (!budget) throw new HttpError(404, "Budget not found.");
     await assertRequester(tx, input.requesterUserId);
+    await assertGearCycle(tx, input.gearPickCycleId);
     const row = await tx.budgetLine.create({
       data: {
         budgetId,
@@ -260,6 +270,7 @@ export async function createLine(actor: Actor, budgetId: string, input: CreateLi
         unplanned: input.unplanned,
         refundCents: input.refundCents ?? null,
         recurring: input.recurring,
+        gearPickCycleId: input.gearPickCycleId ?? null,
       },
       select: lineSelect,
     });
@@ -281,6 +292,7 @@ export async function updateLine(actor: Actor, lineId: string, input: UpdateLine
     const before = await tx.budgetLine.findUnique({ where: { id: lineId }, select: lineSelect });
     if (!before) throw new HttpError(404, "Budget line not found.");
     await assertRequester(tx, input.requesterUserId);
+    await assertGearCycle(tx, input.gearPickCycleId);
     const { purchasedOn, ...rest } = input;
     const row = await tx.budgetLine.update({
       where: { id: lineId },

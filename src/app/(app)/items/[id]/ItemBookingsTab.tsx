@@ -272,6 +272,7 @@ function SettingsCard({ asset, canEdit, onRefresh }: { asset: AssetDetail; canEd
     { field: "availableForCheckout", label: "Check-out eligible", value: asset.availableForCheckout, help: "Can leave inventory through a checkout workflow." },
     { field: "availableForReservation", label: "Reservation eligible", value: asset.availableForReservation, help: "Can be reserved for future events or requests." },
     { field: "availableForCustody", label: "Custody eligible", value: asset.availableForCustody, help: "Can be assigned into a user's custody outside short-term bookings." },
+    { field: "collaboratorVisible", label: "Visible to collaborators", value: asset.collaboratorVisible, help: "Partners like Big Ten Network and Learfield can see and reserve it. Turn off to keep it staff and student only." },
   ];
   const enabledCount = toggles.filter((toggle) => toggle.value).length;
 

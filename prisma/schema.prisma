@@ -502,6 +502,7 @@ model Asset {
   availableForReservation Boolean                 @default(true) @map("available_for_reservation")
   availableForCheckout    Boolean                 @default(true) @map("available_for_checkout")
   availableForCustody     Boolean                 @default(true) @map("available_for_custody")
+  collaboratorVisible     Boolean                 @default(true) @map("collaborator_visible")
   linkUrl                 String?                 @map("link_url")
   imageUrl                String?                 @map("image_url")
   imageRehostAttempts     Int                     @default(0) @map("image_rehost_attempts")
@@ -3053,6 +3054,8 @@ model GearPickCycle {
   students        GearPickStudent[]
   receipts        GearPickReceipt[]
   handouts        GearPickHandout[]
+  /// Creative budget lines that top up this year's allotment.
+  budgetLines     BudgetLine[]
 
   @@map("gear_pick_cycles")
 }
@@ -3275,9 +3278,13 @@ model BudgetLine {
   refundCents     Int?             @map("refund_cents")
   /// Repeats every year; offered when the next year's budget is created.
   recurring       Boolean          @default(false)
+  /// Creative money that tops up a year of the Under Armour allotment. The allotment itself stays on
+  /// GearPickCycle.budgetCents; this line is the only place the top-up amount lives.
+  gearPickCycleId String?          @map("gear_pick_cycle_id")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  gearPickCycle   GearPickCycle?   @relation(fields: [gearPickCycleId], references: [id], onDelete: SetNull)
   requester       User?            @relation("BudgetLineRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)
   items           BudgetLineItem[]
   wish            WishItem?
@@ -3286,6 +3293,7 @@ model BudgetLine {
   @@index([budgetId, status])
   @@index([requesterUserId])
   @@index([poNumber])
+  @@index([gearPickCycleId])
   @@map("budget_lines")
 }
 

@@ -107,6 +107,7 @@ type PickerAsset = {
   location: { id: string; name: string } | null;
   category: { id: string; name: string } | null;
   isFavorited?: boolean;
+  activeBooking?: { id: string; kind: string; status: string; title: string; requesterName: string; requesterAvatarUrl: string | null; isOverdue: boolean; endsAt: string } | null;
 };
 
 export function sanitizeCollaboratorPickerAsset(asset: PickerAsset) {
@@ -114,6 +115,7 @@ export function sanitizeCollaboratorPickerAsset(asset: PickerAsset) {
     id: asset.id,
     assetTag: asset.assetTag,
     name: asset.name,
+    brand: asset.brand,
     model: asset.model,
     imageUrl: asset.imageUrl,
     computedStatus: asset.computedStatus,
@@ -122,6 +124,8 @@ export function sanitizeCollaboratorPickerAsset(asset: PickerAsset) {
     category: asset.category,
     categoryName: asset.category?.name ?? null,
     isFavorited: asset.isFavorited ?? false,
+    // Only populated for affiliations granted TEAM_GEAR_VIEW; the route nulls it otherwise.
+    activeBooking: asset.activeBooking ?? null,
   };
 }
 

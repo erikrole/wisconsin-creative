@@ -52,6 +52,7 @@
 		27CB9D802700C529953BDEE1 /* CheckoutReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5357BF3B4A2D7DA30AB258 /* CheckoutReportView.swift */; };
 		27D9158F06A8D80D8B7C5B53 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4321D991D40907BB2A1819C1 /* ReportsView.swift */; };
 		27ECC333F667B220F460C700 /* GuidesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DA88A1DF6F8D23066A07BC /* GuidesView.swift */; };
+		27F49A035B40A64155A20DF5 /* Gotham-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 25CAFE07992F1EB02F507AE2 /* Gotham-Black.ttf */; };
 		28EE6E9E2F95C9BA9B138B38 /* BlastModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5827A13830B73BC3EB57808 /* BlastModels.swift */; };
 		295B5BDC52A45372024B4D71 /* DiagnosticBreadcrumbs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BB988EBEEE51C2AB45ADA8 /* DiagnosticBreadcrumbs.swift */; };
 		2A37E7B9C1A68005651FAC4A /* CreateBookingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB412E1DD8493D282F261563 /* CreateBookingViewModel.swift */; };
@@ -191,6 +192,7 @@
 		B23E7EE505EE66CF853A4009 /* QuarterHourTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */; };
 		B2FEB545EEB4F42FE18F292F /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */; };
 		B3836CE0F5F3C6E234501639 /* GearWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49E4A7AC5C05860AAB8EBE5 /* GearWidgetSnapshot.swift */; };
+		B38B68BB273B194A452D2D50 /* Gotham-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */; };
 		B5152EECF15D45DC25BE2D08 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */; };
 		B5172B28418254E10FE53FCF /* KioskEventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E476FBFFA1229259FF006C64 /* KioskEventDetailSheet.swift */; };
 		B627C81D60CEF199EE69E537 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB6A309FA698276EE001EE07 /* Preferences.swift */; };
@@ -1105,6 +1107,7 @@
 			buildConfigurationList = 05D72B203B988EFC32B2A88B /* Build configuration list for PBXNativeTarget "WisconsinLiveActivities" */;
 			buildPhases = (
 				9873F6963E4E58809C13D3AC /* Sources */,
+				7F5EE032D6A78B0BD330668E /* Resources */,
 			);
 			buildRules = (
 			);
@@ -1231,6 +1234,15 @@
 				1055262B6F98F58C10AC34F1 /* Gotham-Black.ttf in Resources */,
 				3C5D633C4299CA79C40FCFBA /* Gotham-Bold.ttf in Resources */,
 				B5152EECF15D45DC25BE2D08 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7F5EE032D6A78B0BD330668E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27F49A035B40A64155A20DF5 /* Gotham-Black.ttf in Resources */,
+				B38B68BB273B194A452D2D50 /* Gotham-Bold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
