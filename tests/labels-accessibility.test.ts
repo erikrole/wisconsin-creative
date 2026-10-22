@@ -18,6 +18,7 @@ describe("labels page accessibility", () => {
     expect(sheet).toContain("aria-label={`Copies of ${label}`}");
     expect(sheet).toContain("aria-label={`Remove ${entry.title}`}");
     expect(sheet).toContain("aria-label={`What to print for ${entry.title}`}");
+    expect(sheet).toContain("aria-label={`Edit printed text for ${entry.title}`}");
   });
 
   it("pages the whole catalog and skips the catalog status counts", () => {

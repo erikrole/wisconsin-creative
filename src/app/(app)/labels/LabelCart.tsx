@@ -24,7 +24,9 @@ function isFamilySource(value: unknown): boolean {
     typeof family.trackByNumber === "boolean" &&
     typeof family.onHand === "number" &&
     (family.mode === "family" || family.mode === "units") &&
-    (family.unitScope === "unprinted" || family.unitScope === "all")
+    (family.unitScope === "unprinted" || family.unitScope === "all" || family.unitScope === "pick") &&
+    (family.unitPick === undefined || isText(family.unitPick)) &&
+    (family.unitKind === undefined || family.unitKind === "battery" || family.unitKind === "numberTag")
   );
 }
 

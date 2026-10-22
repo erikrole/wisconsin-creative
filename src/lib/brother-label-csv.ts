@@ -9,9 +9,10 @@
  * LF inside the quoted Label. Values are written verbatim (no spreadsheet
  * formula guard): P-touch would print a leading apostrophe literally.
  *
- * Batteries are not here: /api/bulk-skus/[id]/units/labels serves them.
+ * Batteries.lbx is bound to `item_number,qr_code`, the same columns
+ * /api/bulk-skus/[id]/units/labels serves for numbered units.
  */
-export type LabelKind = "body" | "lens" | "sd" | "text" | "numberTag";
+export type LabelKind = "body" | "lens" | "sd" | "text" | "numberTag" | "battery";
 
 export type LabelRow = {
   kind: LabelKind;
@@ -61,6 +62,14 @@ export const LABEL_KINDS: Record<
     file: "Number Tags.csv",
     template: "Number-Tag.lbx",
     headers: ["Number", "Codes"],
+    needsQr: true,
+  },
+  battery: {
+    label: "Batteries",
+    file: "Batteries.csv",
+    template: "Batteries.lbx",
+    // Batteries.lbx is bound to these two fields, so P-touch maps the CSV without asking.
+    headers: ["item_number", "qr_code"],
     needsQr: true,
   },
 };
@@ -117,6 +126,7 @@ function cells(row: LabelRow): string[] {
     case "text":
       return [row.model];
     case "numberTag":
+    case "battery":
       return [row.number || row.model, row.qrCodeValue];
   }
 }
@@ -133,16 +143,21 @@ export function buildBrotherCsv(kind: LabelKind, rows: LabelRow[]): string {
 }
 
 /**
- * One Number Tags row per unit of a numbered item family. The QR is the derived
+ * One row per unit of a numbered item family, for Batteries.lbx or Number-Tag.lbx. The QR is the derived
  * `{familyQr}-{unitNumber}` value the scanner resolves to that exact unit.
  */
-export function unitTagRows(binQrCodeValue: string, unitNumbers: number[], copies = 1): LabelRow[] {
+export function unitTagRows(
+  binQrCodeValue: string,
+  unitNumbers: number[],
+  copies = 1,
+  kind: "battery" | "numberTag" = "battery",
+): LabelRow[] {
   const qr = binQrCodeValue.trim();
   if (!qr) return [];
   return [...unitNumbers]
     .sort((a, b) => a - b)
     .map((unitNumber) => ({
-      kind: "numberTag" as const,
+      kind,
       dept: "",
       model: "",
       number: String(unitNumber),

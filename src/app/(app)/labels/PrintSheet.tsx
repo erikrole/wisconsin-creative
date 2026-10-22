@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Download, Minus, Pencil, Plus, X } from "lucide-react";
+import { Check, Download, FileDown, Minus, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -18,13 +18,20 @@ import {
   clampCopies,
   entryKind,
   entryRows,
+  parseUnitPick,
   printableCount,
   printsUnits,
   selectedUnitNumbers,
   sheetRows,
   templateFiles,
+  textEdited,
+  unitKindOf,
+  unknownPickedNumbers,
+  UNIT_KINDS,
   type CartEntry,
   type SheetUnit,
+  type UnitKind,
+  type UnitScope,
   type UnitsBySku,
 } from "./label-sheet";
 
@@ -112,24 +119,72 @@ function Stepper({
   );
 }
 
+const LINE_FIELDS: Partial<Record<LabelKind, { key: "dept" | "model" | "number"; label: string; placeholder: string }[]>> = {
+  body: [
+    { key: "dept", label: "Top line", placeholder: "Dept, or blank" },
+    { key: "model", label: "Middle line", placeholder: "Model" },
+    { key: "number", label: "Bottom line", placeholder: "Number" },
+  ],
+  lens: [
+    { key: "dept", label: "Top line", placeholder: "Dept, or blank" },
+    { key: "model", label: "Middle line", placeholder: "Lens" },
+    { key: "number", label: "Bottom line", placeholder: "Number" },
+  ],
+  sd: [
+    { key: "dept", label: "Top line", placeholder: "Dept, or blank" },
+    { key: "model", label: "Middle line", placeholder: "Camera" },
+    { key: "number", label: "Bottom line", placeholder: "Card, like 1A" },
+  ],
+  text: [{ key: "model", label: "Text", placeholder: "Label text" }],
+  numberTag: [{ key: "number", label: "Number", placeholder: "12" }],
+  battery: [{ key: "number", label: "Number", placeholder: "12" }],
+};
+
 function EntryEditor({ entry, onUpdate }: { entry: CartEntry; onUpdate: (patch: Partial<CartEntry>) => void }) {
+  const fields = LINE_FIELDS[entry.kind] ?? [];
   return (
-    <div className="mt-3 grid grid-cols-[72px_1fr_72px] gap-2">
-      <Input value={entry.dept} onChange={(e) => onUpdate({ dept: e.target.value })} placeholder="Dept" aria-label={`Dept for ${entry.title}`} />
-      <Input value={entry.model} onChange={(e) => onUpdate({ model: e.target.value })} placeholder="Model" aria-label={`Model for ${entry.title}`} />
-      <Input value={entry.number} onChange={(e) => onUpdate({ number: e.target.value })} placeholder="No." aria-label={`Number for ${entry.title}`} />
-      <NativeSelect
-        className="col-span-3"
-        value={entry.kind}
-        onChange={(e) => onUpdate({ kind: e.target.value as LabelKind })}
-        aria-label={`Template for ${entry.title}`}
-      >
-        {KIND_ORDER.map((kind) => (
-          <option key={kind} value={kind}>
-            {LABEL_KINDS[kind].template}
-          </option>
+    <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-[var(--bg-surface)]/60 p-3">
+      <div className="grid gap-2 sm:grid-cols-3">
+        {fields.map((field) => (
+          <label key={field.key} className={cn("flex flex-col gap-1 text-xs font-medium text-muted-foreground", fields.length === 1 && "sm:col-span-3")}>
+            {field.label}
+            <Input
+              value={entry[field.key]}
+              onChange={(e) => onUpdate({ [field.key]: e.target.value })}
+              placeholder={field.placeholder}
+              aria-label={`${field.label} for ${entry.title}`}
+            />
+          </label>
         ))}
-      </NativeSelect>
+      </div>
+      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+        Template
+        <NativeSelect
+          value={entry.kind}
+          onChange={(e) => onUpdate({ kind: e.target.value as LabelKind })}
+          aria-label={`Template for ${entry.title}`}
+        >
+          {KIND_ORDER.map((kind) => (
+            <option key={kind} value={kind}>
+              {LABEL_KINDS[kind].template}
+            </option>
+          ))}
+        </NativeSelect>
+      </label>
+      <p className="text-xs text-muted-foreground">
+        Only the printed text changes. The QR code stays the item&apos;s, so it still scans to the right gear.
+      </p>
+      {textEdited(entry) && entry.original && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-10 self-start px-2 text-xs text-[var(--accent)]"
+          onClick={() => onUpdate({ ...entry.original })}
+        >
+          <RotateCcw className="size-3.5" />
+          Reset to item
+        </Button>
+      )}
     </div>
   );
 }
@@ -138,7 +193,7 @@ function SheetEntry({
   entry,
   units,
   unitsFailed,
-  downloadedTags,
+  downloadedUnits,
   onUpdate,
   onRemove,
   onMarkPrinted,
@@ -146,7 +201,7 @@ function SheetEntry({
   entry: CartEntry;
   units: SheetUnit[] | undefined;
   unitsFailed: boolean;
-  downloadedTags: boolean;
+  downloadedUnits: boolean;
   onUpdate: (patch: Partial<CartEntry>) => void;
   onRemove: () => void;
   onMarkPrinted: (numbers: number[]) => Promise<void>;
@@ -157,11 +212,16 @@ function SheetEntry({
   const unitMode = printsUnits(entry);
   const counted = family && !family.trackByNumber;
   const unitNumbers = selectedUnitNumbers(entry, units);
+  const unknown = unknownPickedNumbers(entry, units);
+  const pickInvalid = family?.unitScope === "pick" ? parseUnitPick(family.unitPick ?? "").invalid : [];
   const labels = printableCount(entryRows(entry, units));
-  const missingQr = LABEL_KINDS[entryKind(entry)].needsQr && !entry.qrCodeValue;
+  const kind = entryKind(entry);
+  const missingQr = LABEL_KINDS[kind].needsQr && !entry.qrCodeValue;
   const active = units?.filter((unit) => unit.status !== "RETIRED") ?? [];
   const unprinted = active.filter((unit) => !unit.labelPrintedAt).length;
   const firstUnit = unitNumbers[0];
+  const edited = textEdited(entry);
+  const canMark = unitMode && downloadedUnits && unitNumbers.some((n) => !units?.find((u) => u.unitNumber === n)?.labelPrintedAt);
 
   const meta = unitMode
     ? !units
@@ -169,117 +229,193 @@ function SheetEntry({
         ? "Units could not load"
         : "Loading units…"
       : unitNumbers.length === 0
-        ? "Every unit already has a label"
-        : `${plural(unitNumbers.length, "unit label")} · ${unitNumbers[0]}–${unitNumbers.at(-1)}`
+        ? family?.unitScope === "pick"
+          ? "Type unit numbers to print"
+          : "Every unit already has a label"
+        : `${plural(unitNumbers.length, "unit label")} · ${compactRanges(unitNumbers)}`
     : missingQr
       ? "No QR code, so the CSV skips it"
       : entry.qrCodeValue || entry.name;
 
   return (
     <li className="px-4 py-3">
-      <div className="flex items-start gap-3">
-        {unitMode ? (
-          <LabelPreview kind="numberTag" dept="" model="" number={firstUnit ? String(firstUnit) : "#"} qrCodeValue={firstUnit ? `${family!.binQrCodeValue}-${firstUnit}` : ""} />
-        ) : (
-          <LabelPreview kind={entry.kind} dept={entry.dept} model={entry.model} number={entry.number} qrCodeValue={entry.qrCodeValue} />
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-bold">{entry.title}</div>
-              <div className={cn("truncate text-xs", missingQr || unitsFailed ? "text-destructive" : "text-muted-foreground", !unitMode && !missingQr && "font-mono")}>
-                {meta}
-              </div>
-            </div>
-            <div className="-mr-2 -mt-1 flex shrink-0">
-              {!unitMode && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn("size-9 text-muted-foreground", editing && "text-foreground")}
-                  onClick={() => setEditing((value) => !value)}
-                  aria-label={`Edit label text for ${entry.title}`}
-                  aria-pressed={editing}
-                >
-                  <Pencil className="size-3.5" />
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" className="size-9 text-muted-foreground" onClick={onRemove} aria-label={`Remove ${entry.title}`}>
-                <X className="size-4" />
-              </Button>
-            </div>
-          </div>
-
-          {family?.trackByNumber && (
-            <ToggleGroup
-              type="single"
-              value={family.mode}
-              onValueChange={(mode) => mode && onUpdate({ family: { ...family, mode: mode as "family" | "units" } })}
-              className="mt-2 w-full [&>button]:min-h-8 [&>button]:flex-1 [&>button]:text-xs"
-              aria-label={`What to print for ${entry.title}`}
-            >
-              <ToggleGroupItem value="family">Family label</ToggleGroupItem>
-              <ToggleGroupItem value="units">Unit labels</ToggleGroupItem>
-            </ToggleGroup>
-          )}
-
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {unitMode ? (
-              <ToggleGroup
-                type="single"
-                value={family!.unitScope}
-                onValueChange={(scope) => scope && onUpdate({ family: { ...family!, unitScope: scope as "unprinted" | "all" } })}
-                className="[&>button]:min-h-8 [&>button]:text-xs"
-                aria-label={`Which units of ${entry.title}`}
-              >
-                <ToggleGroupItem value="unprinted">Not printed{units ? ` · ${unprinted}` : ""}</ToggleGroupItem>
-                <ToggleGroupItem value="all">All{units ? ` · ${active.length}` : ""}</ToggleGroupItem>
-              </ToggleGroup>
-            ) : (
-              <>
-                <Stepper value={clampCopies(entry.copies)} onChange={(copies) => onUpdate({ copies })} label={`${entry.title} label`} />
-                {counted && family.onHand > 1 && entry.copies !== clampCopies(family.onHand) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 px-2 text-xs text-[var(--accent)]"
-                    onClick={() => onUpdate({ copies: clampCopies(family.onHand) })}
-                  >
-                    One per item · {family.onHand.toLocaleString()}
-                  </Button>
-                )}
-              </>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-bold">{entry.title}</span>
+            {edited && (
+              <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent)]">
+                Edited
+              </span>
             )}
-            <span className="ml-auto text-xs tabular-nums text-muted-foreground">{plural(labels, "label")}</span>
           </div>
-
-          {unitMode && downloadedTags && family!.unitScope === "unprinted" && unitNumbers.length > 0 && (
-            <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-[var(--accent-soft)] px-3 py-2 text-xs">
-              <span>Stuck these on?</span>
-              <Button
-                size="sm"
-                className="h-10"
-                disabled={marking}
-                onClick={async () => {
-                  setMarking(true);
-                  try {
-                    await onMarkPrinted(unitNumbers);
-                  } finally {
-                    setMarking(false);
-                  }
-                }}
-              >
-                <Check className="size-3.5" />
-                {marking ? "Marking…" : `Mark ${unitNumbers.length} printed`}
-              </Button>
-            </div>
+          <div className={cn("truncate text-xs", missingQr || unitsFailed ? "text-destructive" : "text-muted-foreground", !unitMode && !missingQr && "font-mono")}>
+            {meta}
+          </div>
+        </div>
+        <div className="-mr-2 -mt-1 flex shrink-0">
+          {!unitMode && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("size-10 text-muted-foreground", editing && "bg-muted text-foreground")}
+              onClick={() => setEditing((value) => !value)}
+              aria-label={`Edit printed text for ${entry.title}`}
+              aria-pressed={editing}
+            >
+              <Pencil className="size-3.5" />
+            </Button>
           )}
-
-          {editing && !unitMode && <EntryEditor entry={entry} onUpdate={onUpdate} />}
+          <Button variant="ghost" size="icon" className="size-10 text-muted-foreground" onClick={onRemove} aria-label={`Remove ${entry.title}`}>
+            <X className="size-4" />
+          </Button>
         </div>
       </div>
+
+      <div className="mt-2 overflow-x-auto pb-1">
+        {unitMode ? (
+          <LabelPreview
+            kind={kind}
+            dept=""
+            model=""
+            number={firstUnit ? String(firstUnit) : "1"}
+            qrCodeValue={`${family!.binQrCodeValue}-${firstUnit ?? 1}`}
+          />
+        ) : (
+          <button
+            type="button"
+            className="block cursor-pointer rounded-[4px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            onClick={() => setEditing(true)}
+            aria-label={`Edit printed text for ${entry.title}`}
+          >
+            <LabelPreview kind={kind} dept={entry.dept} model={entry.model} number={entry.number} qrCodeValue={entry.qrCodeValue} />
+          </button>
+        )}
+      </div>
+
+      {family?.trackByNumber && (
+        <ToggleGroup
+          type="single"
+          value={family.mode}
+          onValueChange={(mode) => mode && onUpdate({ family: { ...family, mode: mode as "family" | "units" } })}
+          className="mt-2 w-full [&>button]:min-h-9 [&>button]:flex-1 [&>button]:text-xs"
+          aria-label={`What to print for ${entry.title}`}
+        >
+          <ToggleGroupItem value="family">Family label</ToggleGroupItem>
+          <ToggleGroupItem value="units">Unit labels</ToggleGroupItem>
+        </ToggleGroup>
+      )}
+
+      {unitMode && (
+        <div className="mt-2 flex flex-col gap-2">
+          <ToggleGroup
+            type="single"
+            value={family!.unitScope}
+            onValueChange={(scope) => scope && onUpdate({ family: { ...family!, unitScope: scope as UnitScope } })}
+            className="w-full [&>button]:min-h-9 [&>button]:flex-1 [&>button]:text-xs"
+            aria-label={`Which units of ${entry.title}`}
+          >
+            <ToggleGroupItem value="unprinted">Not printed{units ? ` · ${unprinted}` : ""}</ToggleGroupItem>
+            <ToggleGroupItem value="all">All{units ? ` · ${active.length}` : ""}</ToggleGroupItem>
+            <ToggleGroupItem value="pick">Pick numbers</ToggleGroupItem>
+          </ToggleGroup>
+          {family!.unitScope === "pick" && (
+            <div className="flex flex-col gap-1">
+              <Input
+                value={family!.unitPick ?? ""}
+                onChange={(e) => onUpdate({ family: { ...family!, unitPick: e.target.value } })}
+                placeholder="7, or 12-18, or 3, 9, 20-24"
+                inputMode="numeric"
+                aria-label={`Unit numbers of ${entry.title} to print`}
+                autoFocus={!family!.unitPick}
+              />
+              {(pickInvalid.length > 0 || unknown.length > 0) && (
+                <p className="text-xs text-destructive">
+                  {[
+                    pickInvalid.length > 0 ? `Can't read ${pickInvalid.join(", ")}` : "",
+                    unknown.length > 0 ? `No active unit ${compactRanges(unknown)}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join(". ")}
+                </p>
+              )}
+            </div>
+          )}
+          <label className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            Template
+            <NativeSelect
+              className="w-auto"
+              value={unitKindOf(entry)}
+              onChange={(e) => onUpdate({ family: { ...family!, unitKind: e.target.value as UnitKind } })}
+              aria-label={`Unit label template for ${entry.title}`}
+            >
+              {UNIT_KINDS.map((option) => (
+                <option key={option} value={option}>
+                  {LABEL_KINDS[option].template}
+                </option>
+              ))}
+            </NativeSelect>
+          </label>
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {!unitMode && (
+          <>
+            <Stepper value={clampCopies(entry.copies)} onChange={(copies) => onUpdate({ copies })} label={`${entry.title} label`} />
+            {counted && family.onHand > 1 && entry.copies !== clampCopies(family.onHand) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 px-2 text-xs text-[var(--accent)]"
+                onClick={() => onUpdate({ copies: clampCopies(family.onHand) })}
+              >
+                One per item · {family.onHand.toLocaleString()}
+              </Button>
+            )}
+          </>
+        )}
+        <span className="ml-auto text-xs tabular-nums text-muted-foreground">{plural(labels, "label")}</span>
+      </div>
+
+      {canMark && (
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-[var(--accent-soft)] px-3 py-2 text-xs">
+          <span>Stuck these on?</span>
+          <Button
+            size="sm"
+            className="h-10"
+            disabled={marking}
+            onClick={async () => {
+              setMarking(true);
+              try {
+                await onMarkPrinted(unitNumbers);
+              } finally {
+                setMarking(false);
+              }
+            }}
+          >
+            <Check className="size-3.5" />
+            {marking ? "Marking…" : `Mark ${unitNumbers.length} printed`}
+          </Button>
+        </div>
+      )}
+
+      {editing && !unitMode && <EntryEditor entry={entry} onUpdate={onUpdate} />}
     </li>
   );
+}
+
+/** "1–4, 7, 9–12" from sorted numbers. */
+function compactRanges(numbers: number[]): string {
+  const parts: string[] = [];
+  let i = 0;
+  while (i < numbers.length) {
+    let j = i;
+    while (j + 1 < numbers.length && numbers[j + 1] === numbers[j]! + 1) j += 1;
+    parts.push(j > i ? `${numbers[i]}–${numbers[j]}` : String(numbers[i]));
+    i = j + 1;
+  }
+  return parts.length > 4 ? `${parts.slice(0, 4).join(", ")}…` : parts.join(", ");
 }
 
 export function PrintSheet({
@@ -347,8 +483,8 @@ export function PrintSheet({
       {cart.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
           <div className="flex flex-col items-center gap-1.5 opacity-80">
-            <LabelPreview kind="body" dept="FB" model="FX3" number="1" qrCodeValue="wisconsin-creative" size="md" />
-            <LabelPreview kind="numberTag" dept="" model="" number="12" qrCodeValue="wisconsin-creative-12" className="opacity-60" />
+            <LabelPreview kind="body" dept="FB" model="FX3" number="1" qrCodeValue="wisconsin-creative" height={56} />
+            <LabelPreview kind="battery" dept="" model="" number="12" qrCodeValue="wisconsin-creative-12" className="opacity-60" />
           </div>
           <div>
             <div className="text-sm font-bold">Pick gear to label</div>
@@ -374,7 +510,7 @@ export function PrintSheet({
                     entry={entry}
                     units={entry.family ? unitsBySku[entry.family.skuId] : undefined}
                     unitsFailed={Boolean(entry.family && failed.has(entry.family.skuId))}
-                    downloadedTags={downloaded.has("numberTag")}
+                    downloadedUnits={downloaded.has(entryKind(entry))}
                     onUpdate={(patch) => onUpdate(entry.id, patch)}
                     onRemove={() => onRemove(entry.id)}
                     onMarkPrinted={(numbers) => markPrinted(entry, numbers)}
@@ -394,27 +530,33 @@ export function PrintSheet({
             </p>
           ) : (
             files.map((file, index) => (
-              <Button
-                key={file.kind}
-                variant={index === 0 ? "default" : "outline"}
-                className="h-10 justify-between"
-                disabled={loading}
-                onClick={() => {
-                  download(file.file, file.csv);
-                  setDownloaded((prev) => new Set(prev).add(file.kind));
-                }}
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  {downloaded.has(file.kind) ? <Check className="size-4" /> : <Download className="size-4" />}
-                  <span className="truncate">{file.file}</span>
-                </span>
-                <span className="tabular-nums opacity-80">{plural(file.labels, "label")}</span>
-              </Button>
+              <div key={file.kind} className="flex gap-2">
+                <Button
+                  variant={index === 0 ? "default" : "outline"}
+                  className="h-10 min-w-0 flex-1 justify-between"
+                  disabled={loading}
+                  onClick={() => {
+                    download(file.file, file.csv);
+                    setDownloaded((prev) => new Set(prev).add(file.kind));
+                  }}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    {downloaded.has(file.kind) ? <Check className="size-4" /> : <Download className="size-4" />}
+                    <span className="truncate">{file.file}</span>
+                  </span>
+                  <span className="tabular-nums opacity-80">{plural(file.labels, "label")}</span>
+                </Button>
+                <Button variant="outline" size="icon" className="size-10 shrink-0" asChild>
+                  <a href={file.templateHref} download={file.template} aria-label={`Download the ${file.template} template`} title={`Template: ${file.template}`}>
+                    <FileDown className="size-4" />
+                  </a>
+                </Button>
+              </div>
             ))
           )}
           <p className="text-xs leading-relaxed text-muted-foreground">
-            In P-touch Editor, open the template with the same name, connect the CSV as its database, then print all
-            records.
+            Open the matching template in P-touch Editor (the file button next to each CSV), connect the CSV as its
+            database, then print all records.
           </p>
         </footer>
       )}

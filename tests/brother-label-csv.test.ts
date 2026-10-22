@@ -66,3 +66,12 @@ describe("generators", () => {
     expect(numberRangeRows(1, 3, "#", "text").map((r) => r.model)).toEqual(["#1", "#2", "#3"]);
   });
 });
+
+describe("battery labels", () => {
+  it("match the fields Batteries.lbx is bound to", () => {
+    const csv = buildBrotherCsv("battery", [
+      { kind: "battery", dept: "", model: "", number: "12", qrCodeValue: "BATT-12", copies: 1 },
+    ]);
+    expect(csv.replace(/^﻿/, "").split("\r\n").filter(Boolean)).toEqual(["item_number,qr_code", "12,BATT-12"]);
+  });
+});
