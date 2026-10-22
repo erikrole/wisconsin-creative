@@ -214,6 +214,8 @@ export function workingScheduleCommandLabel(
       const slot = slotFor(command.slotKey);
       return `Assign ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} slot`;
     }
+    case "assignMany":
+      return `Assign ${command.assignments.length} people`;
     case "unassign": {
       const slot = slotFor(command.slotKey);
       return `Unassign ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} worker`;
@@ -282,6 +284,20 @@ export function reconcileWorkingAssignmentSources(
   return changed ? { ...payload, slots } : payload;
 }
 
+/** An event's sport template counts, per area, for both venues. */
+export type WorkingScheduleSportTemplate = {
+  sportCode: string;
+  venue: "home" | "away";
+  rows: Array<{
+    area: ShiftArea;
+    home: Record<ShiftWorkerType, number>;
+    away: Record<ShiftWorkerType, number>;
+  }>;
+};
+
+/** Most open slots one multi-assign save can fill. */
+export const MAX_ASSIGN_MANY = 20;
+
 /** Most positions one area/class pair can hold in a single crew-size edit. */
 export const MAX_SLOTS_PER_AREA_CLASS = 12;
 
@@ -323,6 +339,18 @@ export const workingScheduleCommandSchema = z.discriminatedUnion("type", [
     type: z.literal("assign"),
     slotKey: z.string().min(1),
     userId: z.string().min(1),
+  }),
+  z.object({
+    // Fill several open slots in one save; all or nothing.
+    type: z.literal("assignMany"),
+    assignments: z.array(z.object({
+      slotKey: z.string().min(1),
+      userId: z.string().min(1),
+    })).min(1).max(MAX_ASSIGN_MANY).refine(
+      (picks) => new Set(picks.map((pick) => pick.slotKey)).size === picks.length
+        && new Set(picks.map((pick) => pick.userId)).size === picks.length,
+      "Each slot and each person may appear once.",
+    ),
   }),
   z.object({
     type: z.literal("unassign"),
@@ -433,6 +461,14 @@ export function applyWorkingScheduleCommand(
     endsAt: payload.eventEndsAt,
   },
 ): WorkingSchedulePayload {
+  if (command.type === "assignMany") {
+    let next = payload;
+    for (const pick of command.assignments) {
+      next = applyWorkingScheduleCommand(next, { type: "assign", ...pick }, createKey, defaultWindow);
+    }
+    return next;
+  }
+
   if (command.type === "setSlotCounts") {
     // Reuse the single-slot rules so adds inherit peer call windows and
     // removals only ever take open, never-assigned slots.
