@@ -158,3 +158,29 @@ describe("getBatteryCompatibilitySummaries", () => {
     ]));
   });
 });
+
+describe("camera model matching", () => {
+  const sonyBattery = [{ id: "sony-battery", name: "Sony Battery", availableQuantity: 1 }];
+  const ruleIds = (model: string, brand: string) =>
+    getBatteryCompatibilitySummaries({
+      cameraAssets: [{ brand, model, type: "Camera" }],
+      bulkSkus: [
+        ...sonyBattery,
+        { id: "canon-battery", name: "Canon Battery LP-E6", availableQuantity: 1 },
+      ],
+    }).map((summary) => summary.ruleId);
+
+  it("does not attribute a Canon R50 to the R5 battery family", () => {
+    expect(ruleIds("EOS R50", "Canon")).not.toContain("canon-lp-e6");
+  });
+
+  it("does not attribute a Sony A10 to the A1 battery family", () => {
+    expect(ruleIds("A10", "Sony")).not.toContain("sony-np-fz100");
+  });
+
+  it("still matches real model strings with a suffix or separator", () => {
+    expect(ruleIds("EOS R5 C", "Canon")).toContain("canon-lp-e6");
+    expect(ruleIds("A7IV", "Sony")).toContain("sony-np-fz100");
+    expect(ruleIds("ILME-FX3", "Sony")).toContain("sony-np-fz100");
+  });
+});

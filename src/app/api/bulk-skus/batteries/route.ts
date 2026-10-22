@@ -1,6 +1,6 @@
 import { withAuth } from "@/lib/api";
 import { BATTERY_CAMERA_SEARCH_TERMS, getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
-import { batterySkuCandidateWhere, isBatterySku } from "@/lib/bulk-batteries";
+import { batteryLowThreshold, batterySkuCandidateWhere, isBatterySku } from "@/lib/bulk-batteries";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, buildActiveBulkUnitAllocationMap, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
@@ -167,7 +167,7 @@ export const GET = withAuth(async (req, { user }) => {
     const lost = sku.trackByNumber ? units.filter((unit) => unit.status === "LOST").length : 0;
     const retired = sku.trackByNumber ? units.filter((unit) => unit.status === "RETIRED").length : 0;
     const total = sku.trackByNumber ? units.length : available;
-    const threshold = Math.max(10, sku.minThreshold);
+    const threshold = batteryLowThreshold(sku.minThreshold);
     const labelPrintedCount = sku.trackByNumber
       ? units.filter((unit) => unit.labelPrintedAt !== null).length
       : 0;

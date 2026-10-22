@@ -2,11 +2,11 @@ import type { BulkUnitStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { calendarSourceFailureDetail, getCalendarSyncFailureCounts } from "@/lib/services/calendar-sync-health";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
+import { batteryLowThreshold, batterySkuCandidateWhere, isBatterySku } from "@/lib/bulk-batteries";
 
 const SAMPLE_LIMIT = 5;
 const KIOSK_OFFLINE_AFTER_MINUTES = 15;
 const LICENSE_EXPIRY_WINDOW_DAYS = 30;
-const DEFAULT_BULK_THRESHOLD = 1;
 
 export type AdminFixTodaySeverity = "critical" | "warning" | "info";
 
@@ -105,7 +105,7 @@ function batteryAvailability(sku: BatterySkuRow) {
     sku.units.flatMap((unit) => (unit.allocations ?? []).map((allocation) => [unit.id, allocation] as const)),
   );
   const state = summarizeItemFamilyState(sku, activeAllocationByUnitId);
-  const threshold = Math.max(DEFAULT_BULK_THRESHOLD, sku.minThreshold);
+  const threshold = batteryLowThreshold(sku.minThreshold);
   return { available: state.availableQuantity, threshold };
 }
 
@@ -192,11 +192,7 @@ export async function getAdminFixTodayQueue(now = new Date()): Promise<AdminFixT
     db.bulkSku.findMany({
       where: {
         active: true,
-        OR: [
-          { name: { contains: "battery", mode: "insensitive" } },
-          { category: { contains: "battery", mode: "insensitive" } },
-          { categoryRel: { name: { contains: "battery", mode: "insensitive" } } },
-        ],
+        ...batterySkuCandidateWhere(),
       },
       orderBy: { name: "asc" },
       include: {
@@ -272,7 +268,10 @@ export async function getAdminFixTodayQueue(now = new Date()): Promise<AdminFixT
   const licenseExpiryCount = settledValue(licenseExpiryCountResult, 0, "licenseExpiryCount", partialFailures);
   const licenseExpiryRows = settledValue(licenseExpiryRowsResult, [], "licenseExpiryRows", partialFailures);
 
+  // Same family detection and low-stock rule as Battery Ops, so the two never
+  // disagree about which families need attention.
   const lowBatteryRows = batteryRows
+    .filter(isBatterySku)
     .map((sku) => ({ sku, ...batteryAvailability(sku) }))
     .filter((row) => row.available < row.threshold)
     .sort((a, b) => a.available - b.available || a.sku.name.localeCompare(b.sku.name));

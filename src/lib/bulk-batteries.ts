@@ -19,6 +19,17 @@ const BATTERY_TERM_PATTERNS = BATTERY_TERMS.map((term) =>
   new RegExp(`(^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i"),
 );
 
+/**
+ * Battery families count as low below max(configured minimum, this floor).
+ * Battery Ops, compatibility lows, and Fix Today all use it, so the three
+ * surfaces never disagree about which families need attention.
+ */
+export const BATTERY_LOW_STOCK_FLOOR = 10;
+
+export function batteryLowThreshold(minThreshold: number | null | undefined) {
+  return Math.max(BATTERY_LOW_STOCK_FLOOR, minThreshold ?? 0);
+}
+
 export function isBatterySku(sku: {
   name: string;
   category?: string | null;
