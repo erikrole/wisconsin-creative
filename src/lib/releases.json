@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-22",
+    "title": "A calmer Battery Ops",
+    "type": "improvement",
+    "summary": "Battery Ops is redesigned to show what is on the shelf, what is out, and what needs a look.",
+    "details": [
+      "One summary at the top shows how many batteries are ready to check out, with a bar for out and missing.",
+      "A single Needs attention list gathers low families, missing batteries, stale flags, and batteries out a week or more.",
+      "Each family is one card with its count and where low starts; the unit list stays tucked away until you open it.",
+      "Checked out batteries show who has them, with their photo or initials, and how long."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 613
+  },
+  {
+    "date": "2026-10-22",
     "title": "Extend gear with Siri",
     "type": "feature",
     "summary": "On iPhone, overdue alerts now come through Focus, and you can extend a checkout by asking Siri.",
