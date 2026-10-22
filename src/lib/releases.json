@@ -118,6 +118,22 @@
   },
   {
     "date": "2026-10-21",
+    "title": "One badge notification a day",
+    "type": "improvement",
+    "summary": "Badges you earn on the same day now arrive as one notification instead of one each.",
+    "details": [
+      "When a shift, checkout or return earns you several badges at once, they're listed together, like \"3 badges earned\".",
+      "A badge earned later the same day joins that notification and brings it back to the top.",
+      "Badges a staff member gives you still arrive on their own."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 582
+  },
+  {
+    "date": "2026-10-21",
     "title": "Quieter, more accurate notifications",
     "type": "improvement",
     "summary": "Your unread count now shows what still needs you, and the app stops notifying you about things you just did yourself.",
