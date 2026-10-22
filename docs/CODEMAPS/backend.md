@@ -5,7 +5,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/accountability.ts` | 655 |
+| `src/lib/services/accountability.ts` | 656 |
 | `src/lib/services/app-activity-report.ts` | 508 |
 | `src/lib/services/app-diagnostics.ts` | 47 |
 | `src/lib/services/auto-assign.ts` | 92 |
@@ -17,11 +17,11 @@
 | `src/lib/services/booking-custody.ts` | 82 |
 | `src/lib/services/booking-item-holder.ts` | 174 |
 | `src/lib/services/booking-ref.ts` | 26 |
-| `src/lib/services/booking-reuse.ts` | 220 |
+| `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 738 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle.ts` | 3389 |
+| `src/lib/services/bookings-lifecycle.ts` | 3392 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/budget.ts` | 950 |
@@ -77,7 +77,7 @@
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
-| `src/lib/services/notifications.ts` | 2045 |
+| `src/lib/services/notifications.ts` | 2047 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
@@ -123,7 +123,6 @@
 | File | Lines |
 |---|---:|
 | `src/lib/a11y-resilience.ts` | 116 |
-| `src/lib/accountability-jeers.ts` | 121 |
 | `src/lib/admin-fix-today.ts` | 408 |
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
@@ -151,7 +150,7 @@
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
-| `src/lib/booking-display-title.ts` | 41 |
+| `src/lib/booking-display-title.ts` | 58 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 229 |
@@ -191,7 +190,7 @@
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 155 |
 | `src/lib/errors.ts` | 83 |
-| `src/lib/event-editor.ts` | 107 |
+| `src/lib/event-editor.ts` | 114 |
 | `src/lib/external-url.ts` | 30 |
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
@@ -302,7 +301,7 @@
 | `src/lib/student-availability.ts` | 209 |
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/theme.ts` | 145 |
-| `src/lib/time.ts` | 28 |
+| `src/lib/time.ts` | 43 |
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |

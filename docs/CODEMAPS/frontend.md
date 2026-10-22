@@ -115,6 +115,7 @@
 
 | Route | File |
 |---|---|
+| `/accountability` | `src/app/(app)/accountability/layout.tsx` |
 | `/budget` | `src/app/(app)/budget/layout.tsx` |
 | `/issues` | `src/app/(app)/issues/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
@@ -152,8 +153,8 @@
 | `src/components/booking-wizard/WizardStep1.tsx` | 599 |
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
+| `src/components/event-editor/EventEditorFields.tsx` | 452 |
 | `src/components/AppShell.tsx` | 438 |
-| `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 378 |

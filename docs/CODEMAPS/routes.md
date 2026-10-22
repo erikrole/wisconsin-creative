@@ -111,6 +111,7 @@
 
 ## Layouts
 
+- `/accountability` -> `src/app/(app)/accountability/layout.tsx`
 - `/budget` -> `src/app/(app)/budget/layout.tsx`
 - `/issues` -> `src/app/(app)/issues/layout.tsx`
 - `/kits` -> `src/app/(app)/kits/layout.tsx`

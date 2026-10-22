@@ -34,6 +34,22 @@
   },
  {
     "date": "2026-10-21",
+    "title": "A more balanced Home",
+    "type": "improvement",
+    "summary": "Home's two columns now end at about the same height, and quiet cards take less room.",
+    "details": [
+      "Recent activity sits under Up next for staff, and Team gear out does for students, so the right column no longer runs long.",
+      "Empty cards show a short one-line note instead of a large centered block.",
+      "On tablets and smaller laptops Home is one column, so cards keep a readable width.",
+      "Rows with a Remind, Approve or Claim button no longer repeat the action as text."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 583
+  },
+  {
+    "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
     "summary": "Admins and staff can now keep individual items out of the Big Ten Network and Learfield catalog.",

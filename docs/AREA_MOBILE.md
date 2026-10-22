@@ -45,6 +45,8 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 5. The server-side CSRF origin allowlist may trust the legacy host during rollout, but that fallback should be removed with `AppEnvironment.legacyHost` after old links age out.
 
 ## Dashboard on Mobile
+Web Home's local 2026-10-21 layout polish keeps its existing single-column reading order for personal work at phone widths, then shows the permitted team cards below. Compact empty states retain their actions. A 390px sample-data check found no horizontal overflow and all Home controls at least 40px high. This is web smoke coverage; native iOS Home is unchanged and follows the rules below.
+
 1. Native iOS Home is an action queue, not a small desktop dashboard.
 2. Keep a compact triage strip only when it helps decide what to do next.
 3. Prioritize:
