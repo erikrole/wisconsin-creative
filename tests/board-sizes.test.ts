@@ -150,7 +150,7 @@ describe("Board Sizes review fixes", () => {
   });
 
   it("draws the requested view before following a #zone, so ?d=board#zone is never blank", () => {
-    expect(app).toMatch(/render\(false\);\n  if \(initialHash && !state\.query && !state\.content && !state\.page\) goTo\(initialHash, false, false\);/);
+    expect(app).toMatch(/render\(false\);\n  restoreArts\(\);\n  if \(initialHash && !state\.query && !state\.content && !state\.page\) goTo\(initialHash, false, false\);/);
   });
 
   it("matches art to zones with no recorded position", () => {
