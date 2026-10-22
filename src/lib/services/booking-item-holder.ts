@@ -3,7 +3,17 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { staleBookingError } from "@/lib/booking-concurrency";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
+import { withSerializationRetry } from "@/lib/serialization";
+import { displayBookingTitle } from "@/lib/booking-display-title";
+import type { GearHandover } from "./gear-handover-notify";
 import { nextBookingRef } from "./booking-ref";
+
+type ItemTransferResult = {
+  sourceBookingId: string; targetBookingId: string; targetRefNumber: string | null;
+  targetUserName: string; endsAt: Date; sourceClosed: boolean;
+  /** Absent when a retried request finds the transfer already done. */
+  handover?: GearHandover;
+};
 
 /** Transfer existing custody. Original scan/photo/session records stay immutable. */
 export async function updateBookingItemHolder(args: {
@@ -14,20 +24,21 @@ export async function updateBookingItemHolder(args: {
   reason?: string;
   expectedUpdatedAt: Date;
 }) {
-  return db.$transaction(async (tx) => {
+  return withSerializationRetry(async (): Promise<ItemTransferResult> => db.$transaction(async (tx) => {
     const [source, item, actor, target] = await Promise.all([
       tx.booking.findUnique({
         where: { id: args.bookingId },
         include: {
           events: { orderBy: { ordinal: "asc" } },
           accountabilityExclusion: true,
+          requester: { select: { id: true, name: true } },
         },
       }),
       tx.bookingSerializedItem.findUnique({
         where: { id: args.serializedItemId },
         include: { asset: { select: { assetTag: true } } },
       }),
-      tx.user.findUnique({ where: { id: args.actorUserId }, select: { role: true } }),
+      tx.user.findUnique({ where: { id: args.actorUserId }, select: { name: true, role: true } }),
       args.targetUserId ? tx.user.findUnique({
         where: { id: args.targetUserId },
         select: { id: true, name: true, active: true, hiddenFromRoster: true },
@@ -63,7 +74,8 @@ export async function updateBookingItemHolder(args: {
         throw new HttpError(409, "This item has moved. Refresh the checkout before transferring it again.");
       }
       return { sourceBookingId: source.id, targetBookingId: destination.id, targetRefNumber: destination.refNumber,
-        targetUserName: target.name, endsAt: destination.endsAt, sourceClosed: source.status !== BookingStatus.OPEN };
+        targetUserName: target.name, endsAt: destination.endsAt, sourceClosed: source.status !== BookingStatus.OPEN,
+        handover: undefined };
     }
     // This custody operation uses full timestamp precision, including swaps
     // made within the same second; legacy second-precision edits are separate.
@@ -168,6 +180,14 @@ export async function updateBookingItemHolder(args: {
       entityType: "booking", entityId: receiving.id, action: "serialized_item_transferred_in", before, after });
 
     return { sourceBookingId: source.id, targetBookingId: receiving.id, targetRefNumber: receiving.refNumber,
-      targetUserName: target.name, endsAt: receiving.endsAt, sourceClosed };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 1_000, timeout: 6_000 });
+      targetUserName: target.name, endsAt: receiving.endsAt, sourceClosed,
+      handover: {
+        actor: { id: args.actorUserId, name: actor.name },
+        sourceId: source.id, receivingId: receiving.id, stamp: now.getTime(),
+        title: `${item.asset.assetTag} (${displayBookingTitle(source.title)})`,
+        endsAt: receiving.endsAt,
+        from: source.custodyScope === BookingCustodyScope.PERSON ? source.requester : null,
+        to: { id: target.id, name: target.name }, itemCount: 1, sourceClosed, isCheckout: true,
+      } satisfies GearHandover };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 1_000, timeout: 6_000 }));
 }

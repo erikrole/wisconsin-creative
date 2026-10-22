@@ -115,6 +115,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     createdAt: new Date("2026-06-24T12:00:00.000Z"),
     updatedAt: new Date("2026-06-24T12:00:00.000Z"),
     notificationPrefs: null,
+    sidebarPrefs: null,
     gettingStarted: null,
     athleticsEmail: null,
     startDate: null,

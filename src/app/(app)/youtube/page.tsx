@@ -3,6 +3,8 @@ import { ClapperboardIcon } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { requireAuth } from "@/lib/auth";
+import { chromeFont } from "@/lib/chrome-font";
+import { cn } from "@/lib/utils";
 import { connectionStatus } from "@/lib/youtube/connection";
 import { loadQueue } from "@/lib/youtube/queue";
 import { replayDirectory } from "@/lib/youtube/reader";
@@ -32,7 +34,7 @@ export default async function YouTubePage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="yt-studio mx-auto flex max-w-6xl flex-col gap-5">
-      <header className="flex items-center gap-3">
+      <header data-page-header className={cn(chromeFont.variable, "flex items-center gap-3")}>
         <span className="yt-mark" aria-hidden="true">
           <ClapperboardIcon className="size-5" />
         </span>

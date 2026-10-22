@@ -17,7 +17,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/badges`, `/reports/badges`
 - APIs: `/api/badges/award/[id]`, `/api/badges/award/bulk`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
 - Services: _none matched_
-- Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-mvp-polish.test.ts`, `tests/badges-operations-page.test.ts`, `tests/badges-recent-route.test.ts`
+- Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-claim.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-mvp-polish.test.ts`, `tests/badges-operations-page.test.ts`
 
 ## budget
 
@@ -33,7 +33,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/bulk-inventory/[id]`, `/bulk-inventory/batteries`, `/bulk-inventory`
 - APIs: `/api/bulk-skus/[id]/activity`, `/api/bulk-skus/[id]/adjust`, `/api/bulk-skus/[id]/convert-to-numbered`, `/api/bulk-skus/[id]/favorite`, `/api/bulk-skus/[id]/image`, `/api/bulk-skus/[id]/products/[productId]`, `/api/bulk-skus/[id]/products`, `/api/bulk-skus/[id]/qr-code`, `/api/bulk-skus/[id]`, `/api/bulk-skus/[id]/units/[unitNumber]/product`
 - Services: _none matched_
-- Tests: _none matched_
+- Tests: `tests/admin-fix-today-batteries.test.ts`
 
 ## checkouts
 
@@ -58,6 +58,14 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
 - Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
+
+## error-reporting
+
+- Doc: `docs/AREA_ERROR_REPORTING.md`
+- Pages: _none matched_
+- APIs: _none matched_
+- Services: _none matched_
+- Tests: `tests/error-reporting.test.ts`
 
 ## events
 
@@ -87,7 +95,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_ITEMS.md`
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`
-- APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/retire`, `/api/assets/[id]`
+- APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/report`, `/api/assets/[id]/retire`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
 - Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`
 
@@ -143,15 +151,15 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_REPORTS.md`
 - Pages: `/reports/audit`, `/reports/badges`, `/reports/bulk-losses`, `/reports/checkouts`, `/reports/overdue`, `/reports`, `/reports/scans`, `/reports/usage`
-- APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/checkin-reports/[id]/dismiss`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`, `/api/reports/bulk-losses`
+- APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/reports`, `/api/checkin-reports/[id]/dismiss`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`
 - Services: `src/lib/services/checkin-item-reports.ts`, `src/lib/services/error-reports.ts`, `src/lib/services/reports.ts`
-- Tests: `tests/asset-condition-reports.test.ts`, `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`
+- Tests: `tests/asset-condition-reports.test.ts`, `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/booking-reports-route.test.ts`, `tests/calendar-sync-audit.test.ts`
 
 ## reservations
 
 - Doc: `docs/AREA_RESERVATIONS.md`
 - Pages: `/bookings`, `/reservations/[id]`, `/reservations/new`, `/reservations`, `/settings/bookings`
-- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]/reuse-plan`, `/api/bookings/[id]`, `/api/bookings/[id]/serialized-items/[itemId]/holder`
+- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]/reports`, `/api/bookings/[id]/reuse-plan`, `/api/bookings/[id]`
 - Services: `src/lib/services/bookings-checkin.ts`, `src/lib/services/bookings-helpers.ts`, `src/lib/services/bookings-lifecycle.ts`, `src/lib/services/bookings-queries.ts`, `src/lib/services/bookings.ts`
 - Tests: `tests/bookings-ui-polish-source.test.ts`, `tests/ios-bookings-empty-state.test.ts`, `tests/ios-bookings-power-filters.test.ts`
 

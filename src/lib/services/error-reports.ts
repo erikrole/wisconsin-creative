@@ -5,6 +5,7 @@ import { HttpError } from "@/lib/http";
 import {
   boundBreadcrumbs,
   errorTitle,
+  scrubSecrets,
   versionLabel,
   type Breadcrumb,
   type ErrorReportInput,
@@ -36,6 +37,16 @@ export type ReportActor = { id: string; role: Role | string } | null;
 
 export type RecordResult = { issueId: string; stored: boolean; isNew: boolean; regressed: boolean };
 
+/** Client context is flat and small: at most 20 keys, strings scrubbed and cut. */
+function boundContext(context: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!context) return undefined;
+  return Object.fromEntries(
+    Object.entries(context)
+      .slice(0, 20)
+      .map(([key, value]) => [key.slice(0, 40), typeof value === "string" ? scrubSecrets(value.slice(0, 300)) : value]),
+  );
+}
+
 function json(value: unknown): Prisma.InputJsonValue | undefined {
   return value === undefined || value === null ? undefined : (value as Prisma.InputJsonValue);
 }
@@ -47,14 +58,20 @@ function json(value: unknown): Prisma.InputJsonValue | undefined {
  */
 async function joinServerRenderEvent(input: ErrorReportInput, actor: ReportActor): Promise<RecordResult | null> {
   if (!input.digest || input.platform !== "web") return null;
+  // Next digests hash the error, so two people hitting the same render
+  // failure share one. Only a server event nobody has claimed yet (or this
+  // person already claimed) takes this browser's context; otherwise the report
+  // goes through as its own occurrence, never onto someone else's.
   const match = await db.errorEvent.findFirst({
     where: {
       digest: input.digest,
       platform: "server",
       occurredAt: { gte: new Date(Date.now() - DIGEST_JOIN_WINDOW_MS) },
+      breadcrumbs: { equals: Prisma.DbNull },
+      OR: [{ userId: null }, ...(actor ? [{ userId: actor.id }] : [])],
     },
     orderBy: { occurredAt: "desc" },
-    select: { id: true, issueId: true, userId: true, screen: true, breadcrumbs: true, context: true },
+    select: { id: true, issueId: true, userId: true, screen: true, context: true },
   });
   if (!match) return null;
   const crumbs = boundBreadcrumbs(input.breadcrumbs);
@@ -64,7 +81,7 @@ async function joinServerRenderEvent(input: ErrorReportInput, actor: ReportActor
       userId: match.userId ?? actor?.id ?? null,
       role: actor?.role ? String(actor.role) : undefined,
       screen: match.screen ?? input.screen ?? null,
-      breadcrumbs: match.breadcrumbs ?? json(crumbs),
+      breadcrumbs: json(crumbs),
       context: json({
         ...(match.context && typeof match.context === "object" ? (match.context as Record<string, unknown>) : {}),
         browser: { appBuild: input.appBuild ?? null, osVersion: input.osVersion ?? null, deviceModel: input.deviceModel ?? null },
@@ -109,7 +126,14 @@ async function upsertIssue(input: ErrorReportInput, occurredAt: Date) {
   }
 }
 
-export async function recordErrorReport(input: ErrorReportInput, actor: ReportActor = null): Promise<RecordResult> {
+export async function recordErrorReport(raw: ErrorReportInput, actor: ReportActor = null): Promise<RecordResult> {
+  // Scrubbed before anything else, so titles and fingerprints never carry a secret either.
+  const input: ErrorReportInput = {
+    ...raw,
+    message: scrubSecrets(raw.message),
+    stack: scrubSecrets(raw.stack),
+    screen: scrubSecrets(raw.screen),
+  };
   const joined = await joinServerRenderEvent(input, actor);
   if (joined) return joined;
 
@@ -153,7 +177,7 @@ export async function recordErrorReport(input: ErrorReportInput, actor: ReportAc
       message: (input.message || "(no message)").slice(0, MAX_MESSAGE),
       stack: input.stack?.slice(0, MAX_STACK) ?? null,
       breadcrumbs: json(boundBreadcrumbs(input.breadcrumbs)),
-      context: json(input.context),
+      context: json(boundContext(input.context)),
       callStack: json(input.callStack),
     },
   });

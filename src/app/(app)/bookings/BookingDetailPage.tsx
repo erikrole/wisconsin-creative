@@ -49,6 +49,7 @@ import { formatCountdownCompact, formatDateTime, getUrgency } from "@/lib/format
 import { nextQuarterHourAfter } from "@/lib/quarter-hour";
 
 import BookingEquipmentTab from "./BookingEquipmentTab";
+import BookingReportsCard from "./BookingReportsCard";
 import BookingHistoryTab from "./BookingHistoryTab";
 
 /* ── Main Component ── */
@@ -436,6 +437,8 @@ export default function BookingDetailPage({
           </AlertDescription>
         </Alert>
       )}
+
+      {kind === "CHECKOUT" && booking && <div className="mb-6"><BookingReportsCard bookingId={booking.id} /></div>}
 
       {/* ── Gear first, details tucked below ── */}
       <div className="flex flex-col gap-6">

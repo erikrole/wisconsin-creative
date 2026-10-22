@@ -80,6 +80,8 @@ struct Asset: Codable, Identifiable, Hashable {
     let purchasePrice: String?   // Prisma Decimal serializes as string
     let residualValue: String?
     let isFavorited: Bool
+    /// Held as an open missing-item case. Older servers omit it.
+    var missing: Bool = false
 
     var purchasePriceDecimal: Double? { purchasePrice.flatMap(Double.init) }
 
@@ -109,16 +111,22 @@ struct Asset: Codable, Identifiable, Hashable {
             location: location, category: category, department: department,
             activeBooking: activeBooking, purchaseDate: purchaseDate,
             purchasePrice: purchasePrice, residualValue: residualValue,
-            isFavorited: value
+            isFavorited: value, missing: missing
         )
     }
+
+    /// Held for staff or out of service: the server won't take a new booking.
+    var isHeld: Bool { missing || computedStatus == .maintenance || computedStatus == .retired }
+
+    /// Status shown to people: a held missing item reads Missing, not Maintenance.
+    var statusLabel: String { missing && computedStatus == .maintenance ? "Missing" : computedStatus.label }
 }
 
 extension Asset {
     private enum SafeCodingKeys: String, CodingKey {
         case id, assetTag, name, brand, model, serialNumber, imageUrl, computedStatus
         case location, category, department, activeBooking, purchaseDate, purchasePrice
-        case residualValue, isFavorited
+        case residualValue, isFavorited, missing
     }
 
     init(from decoder: Decoder) throws {
@@ -140,6 +148,7 @@ extension Asset {
         purchasePrice = try c.decodeIfPresent(String.self, forKey: .purchasePrice)
         residualValue = try c.decodeIfPresent(String.self, forKey: .residualValue)
         isFavorited = try c.decodeIfPresent(Bool.self, forKey: .isFavorited) ?? false
+        missing = (try? c.decodeIfPresent(Bool.self, forKey: .missing)) ?? false
     }
 }
 
@@ -417,8 +426,26 @@ struct AssetConditionReport: Identifiable {
     let createdAt: Date
     let lastReportedAt: Date?
     let reporterName: String
-    let bookingId: String
+    /// Nil when the report was filed from the item page rather than a return.
+    let bookingId: String?
     let bookingTitle: String
+    /// `REPAIRED`, `REPLACED`, `WRITTEN_OFF`, `FOUND`, `NO_ISSUE`; nil while the case is open.
+    let resolutionRaw: String?
+    let resolvedAt: Date?
+    let resolutionNote: String?
+    let resolvedByName: String?
+
+    var isOpen: Bool { resolutionRaw == nil }
+
+    /// "Repaired by Name", "Found", ... for a closed case.
+    var outcomeLabel: String? {
+        guard let resolutionRaw else { return nil }
+        let outcome = DamageResolution(rawValue: resolutionRaw)?.pastLabel ?? "Closed"
+        guard let name = resolvedByName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else {
+            return outcome
+        }
+        return "\(outcome) by \(name)"
+    }
 
     var reportedAt: Date { lastReportedAt ?? createdAt }
 
@@ -444,6 +471,7 @@ struct AssetConditionReport: Identifiable {
 extension AssetConditionReport: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, type, description, imageUrl, createdAt, lastReportedAt, reportedBy, booking
+        case resolution, resolvedAt, resolutionNote, resolvedBy
     }
 
     private struct Person: Codable { let name: String }
@@ -472,9 +500,13 @@ extension AssetConditionReport: Codable {
             lastReportedAt = nil
         }
         reporterName = try container.decode(Person.self, forKey: .reportedBy).name
-        let booking = try container.decode(Booking.self, forKey: .booking)
-        bookingId = booking.id
-        bookingTitle = booking.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let booking = try container.decodeIfPresent(Booking.self, forKey: .booking)
+        bookingId = booking?.id
+        bookingTitle = booking?.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        resolutionRaw = try? container.decodeIfPresent(String.self, forKey: .resolution)
+        resolvedAt = (try? container.decodeIfPresent(String.self, forKey: .resolvedAt)).flatMap { $0 }.flatMap(Self.parseDate)
+        resolutionNote = try? container.decodeIfPresent(String.self, forKey: .resolutionNote)
+        resolvedByName = (try? container.decodeIfPresent(Person.self, forKey: .resolvedBy)).flatMap { $0 }?.name
     }
 
     func encode(to encoder: Encoder) throws {
@@ -488,7 +520,17 @@ extension AssetConditionReport: Codable {
             try container.encode(Self.isoString(lastReportedAt), forKey: .lastReportedAt)
         }
         try container.encode(Person(name: reporterName), forKey: .reportedBy)
-        try container.encode(Booking(id: bookingId, title: bookingTitle), forKey: .booking)
+        if let bookingId {
+            try container.encode(Booking(id: bookingId, title: bookingTitle), forKey: .booking)
+        }
+        try container.encodeIfPresent(resolutionRaw, forKey: .resolution)
+        if let resolvedAt {
+            try container.encode(Self.isoString(resolvedAt), forKey: .resolvedAt)
+        }
+        try container.encodeIfPresent(resolutionNote, forKey: .resolutionNote)
+        if let resolvedByName {
+            try container.encode(Person(name: resolvedByName), forKey: .resolvedBy)
+        }
     }
 
     private static func isoString(_ date: Date) -> String {
@@ -539,6 +581,12 @@ struct AssetDetail: Codable, Identifiable, Hashable {
     let residualValue: String?
     let notes: String?
     let isFavorited: Bool
+    var missing: Bool = false
+
+    /// An open case holds the item; outcomes go through the case, not the maintenance toggle.
+    var isHeld: Bool { missing || computedStatus == .maintenance || computedStatus == .retired }
+    var hasOpenCase: Bool { checkinReports.contains(where: \.isOpen) }
+    var statusLabel: String { missing && computedStatus == .maintenance ? "Missing" : computedStatus.label }
 
     var displayName: String { [brand, model].joined(separator: " ") }
 
@@ -583,7 +631,7 @@ extension AssetDetail {
     private enum SafeCodingKeys: String, CodingKey {
         case id, assetTag, name, brand, model, serialNumber, imageUrl, qrCodeValue, linkUrl
         case computedStatus, location, category, department, activeBooking, upcomingReservations, history
-        case parentAsset, accessories, checkinReports, metadata, purchaseDate, purchasePrice, residualValue, notes, isFavorited
+        case parentAsset, accessories, checkinReports, metadata, purchaseDate, purchasePrice, residualValue, notes, isFavorited, missing
     }
 
     init(from decoder: Decoder) throws {
@@ -617,6 +665,7 @@ extension AssetDetail {
         residualValue = try c.decodeIfPresent(String.self, forKey: .residualValue)
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         isFavorited = try c.decodeIfPresent(Bool.self, forKey: .isFavorited) ?? false
+        missing = (try? c.decodeIfPresent(Bool.self, forKey: .missing)) ?? false
     }
 
     func applying(_ update: AssetUpdateConfirmation) -> AssetDetail {
@@ -646,7 +695,46 @@ extension AssetDetail {
             purchasePrice: purchasePrice,
             residualValue: residualValue,
             notes: update.notes,
-            isFavorited: isFavorited
+            isFavorited: isFavorited,
+            missing: missing
         )
+    }
+}
+
+/// Outcome staff record when closing a damage or missing-item case.
+enum DamageResolution: String, CaseIterable, Identifiable {
+    case repaired = "REPAIRED"
+    case replaced = "REPLACED"
+    case writtenOff = "WRITTEN_OFF"
+    case found = "FOUND"
+    case noIssue = "NO_ISSUE"
+
+    var id: String { rawValue }
+
+    /// Choices by report type. Mirrors `damage-cases.ts`.
+    static func options(forMissing isMissing: Bool) -> [DamageResolution] {
+        isMissing ? [.found, .replaced, .writtenOff] : [.repaired, .replaced, .writtenOff, .noIssue]
+    }
+
+    var label: String {
+        switch self {
+        case .repaired: "Repaired"
+        case .replaced: "Replaced"
+        case .writtenOff: "Written off"
+        case .found: "Found"
+        case .noIssue: "No issue"
+        }
+    }
+
+    var pastLabel: String { label }
+
+    var detail: String {
+        switch self {
+        case .repaired: "Fixed and ready to use. The item becomes available."
+        case .replaced: "Swapped for a new one. This item is retired."
+        case .writtenOff: "Not worth fixing or finding. This item is retired."
+        case .found: "It turned up. The item becomes available."
+        case .noIssue: "Nothing was wrong. The item becomes available."
+        }
     }
 }

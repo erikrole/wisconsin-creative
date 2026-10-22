@@ -135,7 +135,15 @@ type KioskCtx<P extends Record<string, string> = Record<string, string>> = {
  * CSRF origin check included for mutating requests.
  */
 export function withKiosk<P extends Record<string, string> = Record<string, string>>(
-  handler: (req: Request, ctx: KioskCtx<P>) => Promise<NextResponse>
+  handler: (req: Request, ctx: KioskCtx<P>) => Promise<NextResponse>,
+  options: {
+    /**
+     * Runs after the CSRF and role-preview checks and before the database
+     * session lookup. Return a response to answer without touching Neon, or
+     * null to continue to `handler`.
+     */
+    withoutDatabase?: (req: Request) => Promise<NextResponse | null>;
+  } = {},
 ) {
   return async (req: Request, context: { params: Promise<P> }): Promise<NextResponse> => {
     try {
@@ -146,6 +154,8 @@ export function withKiosk<P extends Record<string, string> = Record<string, stri
       if (await readRolePreviewFromRequest(req)) {
         throw new HttpError(403, "Kiosk access is unavailable in role preview");
       }
+      const early = options.withoutDatabase ? await options.withoutDatabase(req) : null;
+      if (early) return early;
       const kiosk = await requireKiosk();
       const params = (context?.params ? await context.params : {}) as P;
       const response = await handler(tagRequestJsonParseErrors(req), { kiosk, params });

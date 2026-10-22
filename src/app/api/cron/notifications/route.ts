@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withCron } from "@/lib/cron";
 import { processOverdueNotifications } from "@/lib/services/notifications";
+import { processBatteryLowStock } from "@/lib/services/battery-low-stock";
 import { processLicenseNags, processExpiryWarnings } from "@/lib/services/licenses";
 
 /**
@@ -9,10 +10,11 @@ import { processLicenseNags, processExpiryWarnings } from "@/lib/services/licens
  * No user session required — runs as a system job.
  */
 export const GET = withCron(async () => {
-  const [overdueResult, licenseNagResult, expiryResult] = await Promise.allSettled([
+  const [overdueResult, licenseNagResult, expiryResult, batteryResult] = await Promise.allSettled([
     processOverdueNotifications(),
     processLicenseNags(),
     processExpiryWarnings(),
+    processBatteryLowStock(),
   ]);
 
   const errors: Record<string, string> = {};
@@ -42,11 +44,14 @@ export const GET = withCron(async () => {
   const licenseNags = valueOrFallback("licenseNags", licenseNagResult, { nagged: 0 });
   const licenseExpiry = valueOrFallback("licenseExpiry", expiryResult, { warned: 0 });
 
+  const batteryLowStock = valueOrFallback("batteryLowStock", batteryResult, { families: 0, created: 0 });
+
   return NextResponse.json({
     ok: failedJobs.length === 0,
     ...overdue,
     licenseNags,
     licenseExpiry,
+    batteryLowStock,
     ...(failedJobs.length > 0 ? { partialFailures: failedJobs, errors } : {}),
   });
 });

@@ -5,6 +5,7 @@ vi.mock("@/lib/db", () => ({ db: {
   asset: { findUnique: assetFindUnique, findMany: vi.fn(async () => []) },
   bookingSerializedItem: { findMany: vi.fn(async () => []) },
   assetAllocation: { findMany: vi.fn(async () => []) },
+  checkinItemReport: { findMany: vi.fn(async () => []) },
   favoriteItem: { findUnique: vi.fn(async () => null) },
 } }));
 vi.mock("@/lib/services/status", () => ({ deriveAssetStatus: vi.fn(async () => "MAINTENANCE") }));

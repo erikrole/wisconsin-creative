@@ -48,7 +48,7 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
         actorId: user.id,
         actorRole: user.role,
         entityType: report.assetId ? "asset" : "booking",
-        entityId: report.assetId ?? report.bookingId,
+        entityId: report.assetId ?? report.bookingId ?? id,
         action: "dismissed_checkin_report",
         before: { reportIds: dismissedIds, type: "DAMAGED", dismissedAt: null },
         after: { reportIds: dismissedIds, type: "DAMAGED", dismissedAt },

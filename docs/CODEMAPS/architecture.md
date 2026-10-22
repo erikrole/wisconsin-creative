@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 113 |
-| App layouts | 31 |
-| API route handlers | 423 |
-| Service files | 112 |
-| Component files | 187 |
-| Test files | 842 |
+| App pages | 116 |
+| App layouts | 34 |
+| API route handlers | 431 |
+| Service files | 118 |
+| Component files | 190 |
+| Test files | 861 |
 
 ## Oversized Source Watchlist
 
@@ -22,9 +22,9 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 3392 |
+| `src/lib/services/bookings-lifecycle.ts` | 3409 |
 | `src/lib/services/signatures.ts` | 2366 |
-| `src/lib/services/notifications.ts` | 2047 |
+| `src/lib/services/notifications.ts` | 2051 |
 | `src/app/(app)/schedule/_components/ListView.tsx` | 1989 |
 | `src/lib/services/reports.ts` | 1943 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
@@ -36,7 +36,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1398 |
 | `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/app/(app)/budget/BudgetView.tsx` | 1358 |
-| `src/app/api/assets/route.ts` | 1314 |
+| `src/app/api/assets/route.ts` | 1318 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/hooks/use-schedule-data.ts` | 1270 |
 | `src/app/(app)/settings/app-activity/page.tsx` | 1234 |

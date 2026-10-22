@@ -78,6 +78,7 @@ EventTravelSection.swift               |                             | exempt-sh
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
 AccountabilityView.swift               | accountability              | audit
+DamageCasesView.swift                  | damage-cases                | audit
 AccountabilityPersonView.swift         | accountability              | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit
@@ -108,7 +109,9 @@ ProfileView.swift                      | profile                     | audit
 ProfileNextUp.swift                    | profile                     | audit
 ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
+WrappedView.swift                      | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
+ReportProblemSheet.swift               | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 SharedLoginsView.swift                 | shared-logins               | audit
 GuidesView.swift                       | resources                   | audit

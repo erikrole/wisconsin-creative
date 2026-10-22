@@ -18,6 +18,7 @@
 | `/checkouts/[id]` | `src/app/(app)/checkouts/[id]/page.tsx` |
 | `/checkouts/new` | `src/app/(app)/checkouts/new/page.tsx` |
 | `/checkouts` | `src/app/(app)/checkouts/page.tsx` |
+| `/damage` | `src/app/(app)/damage/page.tsx` |
 | `/events/[id]` | `src/app/(app)/events/[id]/page.tsx` |
 | `/events` | `src/app/(app)/events/page.tsx` |
 | `/gear/admin` | `src/app/(app)/gear/admin/page.tsx` |
@@ -94,6 +95,7 @@
 | `/welcome/availability` | `src/app/(app)/welcome/availability/page.tsx` |
 | `/welcome` | `src/app/(app)/welcome/page.tsx` |
 | `/wishlist` | `src/app/(app)/wishlist/page.tsx` |
+| `/wrapped` | `src/app/(app)/wrapped/page.tsx` |
 | `/youtube` | `src/app/(app)/youtube/page.tsx` |
 | `/about/features` | `src/app/(public)/about/features/page.tsx` |
 | `/about/field-work` | `src/app/(public)/about/field-work/page.tsx` |
@@ -111,6 +113,7 @@
 | `/dev-settings` | `src/app/dev-settings/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
+| `/dev-transfer` | `src/app/dev-transfer/page.tsx` |
 | `/dev-welcome` | `src/app/dev-welcome/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
@@ -129,6 +132,7 @@
 | `/bookings` | `src/app/(app)/bookings/layout.tsx` |
 | `/budget` | `src/app/(app)/budget/layout.tsx` |
 | `/checkouts` | `src/app/(app)/checkouts/layout.tsx` |
+| `/damage` | `src/app/(app)/damage/layout.tsx` |
 | `/events` | `src/app/(app)/events/layout.tsx` |
 | `/import` | `src/app/(app)/import/layout.tsx` |
 | `/issues` | `src/app/(app)/issues/layout.tsx` |
@@ -143,6 +147,7 @@
 | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
 | `/reservations` | `src/app/(app)/reservations/layout.tsx` |
 | `/schedule` | `src/app/(app)/schedule/layout.tsx` |
+| `/scoreboard` | `src/app/(app)/scoreboard/layout.tsx` |
 | `/search` | `src/app/(app)/search/layout.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
@@ -151,6 +156,7 @@
 | `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
 | `/welcome` | `src/app/(app)/welcome/layout.tsx` |
 | `/wishlist` | `src/app/(app)/wishlist/layout.tsx` |
+| `/wrapped` | `src/app/(app)/wrapped/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
 | `/releases` | `src/app/(public)/releases/layout.tsx` |
 | `/` | `src/app/layout.tsx` |
@@ -171,14 +177,14 @@
 | `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
+| `src/components/Sidebar.tsx` | 721 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
-| `src/components/Sidebar.tsx` | 645 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
-| `src/components/AppShell.tsx` | 438 |
+| `src/components/AppShell.tsx` | 439 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 378 |

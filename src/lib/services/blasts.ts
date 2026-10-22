@@ -212,6 +212,7 @@ export async function sendBlastPush(blastId: string): Promise<void> {
           payload: withNotificationHref({ blastId }),
           category: "GT_BLAST",
           interruptionLevel: "active",
+          filterCriteria: "blast",
         },
       ));
     }

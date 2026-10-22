@@ -183,6 +183,9 @@ final class APIClient {
 
     private var baseURL: URL { AppEnvironment.activeAPIBaseURL }
 
+    /// Endpoints whose unreadable response was already reported this launch.
+    private var reportedDecodingPaths: Set<String> = []
+
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
         config.httpCookieStorage = HTTPCookieStorage.shared
@@ -1813,6 +1816,16 @@ final class APIClient {
         return response.data
     }
 
+    /// Creative Wrapped for the signed-in person. Locked until Dec 1; admins
+    /// pass `preview` to see live numbers before then.
+    func wrapped(preview: Bool = false) async throws -> WrappedResponse {
+        let items: [URLQueryItem] = preview ? [.init(name: "preview", value: "1")] : []
+        let response: DataWrapper<WrappedResponse> = try await perform(
+            request(path: "/api/wrapped", queryItems: items)
+        )
+        return response.data
+    }
+
     /// Read-only profile record. The route owns season scope, event counting,
     /// result classification, and visibility; the app only supplies display
     /// filters and pagination.
@@ -1912,15 +1925,106 @@ final class APIClient {
     }
 
     /// Uploads one MetricKit diagnostic payload (crashes, hangs, resource
-    /// exceptions). Carries no user identity; best-effort.
+    /// exceptions) with the recent actions of the last few runs. The server
+    /// ties it to the signed-in person; best-effort.
     func uploadDiagnosticPayload(_ json: Data) async {
-        guard let payload = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
-              let body = try? JSONSerialization.data(withJSONObject: ["platform": "ios", "payload": payload]),
-              body.count <= 2_000_000 else { return }
+        guard let body = DiagnosticUpload.body(platform: "ios", payload: json) else { return }
         struct Stored: Decodable { let stored: Int }
         var req = request(path: "/api/diagnostics", method: "POST")
         req.httpBody = body
         let _: DataWrapper<Stored>? = try? await perform(req, broadcastsSessionExpiry: false)
+    }
+
+    /// Sends a problem report from Settings: what the person wrote, plus the
+    /// app version, device, current screen, and recent actions.
+    func sendProblemReport(message: String) async throws {
+        struct Body: Encodable {
+            let message: String
+            let client: ProblemReportClient
+            let screen: String?
+            let breadcrumbs: [DiagnosticBreadcrumbs.Crumb]
+        }
+        struct Created: Decodable { let id: String }
+        let session = DiagnosticBreadcrumbs.shared.current
+        var req = request(path: "/api/support-reports", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            message: message,
+            client: ProblemReportClient.current,
+            screen: session.screen,
+            breadcrumbs: session.breadcrumbs
+        ))
+        let _: DataWrapper<Created> = try await perform(req)
+    }
+
+    /// A response the app could not read is a bug on one side or the other,
+    /// and the person only sees a generic error. Report each endpoint's first
+    /// failure per launch, without any of the response's values.
+    private func reportDecodingFailure(_ error: Error, for request: URLRequest) {
+        let path = DiagnosticBreadcrumbs.pathTemplate(request.url?.path ?? "")
+        guard !Self.ignoredDiagnosticPaths.contains(path),
+              reportedDecodingPaths.insert(path).inserted else { return }
+        let description = Self.describeDecodingError(error)
+        DiagnosticBreadcrumbs.shared.record(.log, "Could not read \(path): \(description)")
+        let session = DiagnosticBreadcrumbs.shared.current
+        let report: [String: Any] = [
+            "kind": "error",
+            "name": "DecodingError",
+            "message": description,
+            "screen": "\(request.httpMethod ?? "GET") \(path)",
+            "occurredAt": Date.now.ISO8601Format(),
+            "breadcrumbs": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(session.breadcrumbs))) ?? [],
+        ]
+        guard let client = try? JSONSerialization.jsonObject(with: JSONEncoder().encode(ProblemReportClient.current)),
+              let body = try? JSONSerialization.data(withJSONObject: ["client": client, "reports": [report]]) else { return }
+        var errorRequest = self.request(path: "/api/errors", method: "POST")
+        errorRequest.httpBody = body
+        let upload = errorRequest
+        Task {
+            struct Stored: Decodable { let stored: Int }
+            let _: DataWrapper<Stored>? = try? await perform(upload, broadcastsSessionExpiry: false)
+        }
+    }
+
+    /// Endpoints that report problems are never reported or recorded themselves.
+    private static let ignoredDiagnosticPaths: Set<String> = [
+        "/api/diagnostics", "/api/errors", "/api/product-events", "/api/support-reports",
+    ]
+
+    /// `keyNotFound "title" at data.[id].event` — the shape of the mismatch,
+    /// never the values that were in the response.
+    private static func describeDecodingError(_ error: Error) -> String {
+        guard let decoding = error as? DecodingError else { return String(describing: type(of: error)) }
+        func path(_ context: DecodingError.Context) -> String {
+            let keys = context.codingPath.map { $0.intValue.map { _ in "[]" } ?? $0.stringValue }
+            return keys.isEmpty ? "the top level" : keys.joined(separator: ".")
+        }
+        switch decoding {
+        case .keyNotFound(let key, let context):
+            return "Missing \"\(key.stringValue)\" at \(path(context))"
+        case .valueNotFound(let type, let context):
+            return "Missing \(type) value at \(path(context))"
+        case .typeMismatch(let type, let context):
+            return "Expected \(type) at \(path(context))"
+        case .dataCorrupted(let context):
+            return "Unreadable value at \(path(context))"
+        @unknown default:
+            return "Decoding failed"
+        }
+    }
+
+    private func recordAPIBreadcrumb(_ request: URLRequest, response: HTTPURLResponse?) {
+        let path = DiagnosticBreadcrumbs.pathTemplate(request.url?.path ?? "")
+        guard !Self.ignoredDiagnosticPaths.contains(path) else { return }
+        let method = request.httpMethod ?? "GET"
+        guard let response else {
+            DiagnosticBreadcrumbs.shared.record(.api, "\(method) \(path) → no response")
+            return
+        }
+        var data: [String: String]?
+        if response.statusCode >= 400, let id = response.value(forHTTPHeaderField: "x-vercel-id") {
+            data = ["requestId": String(id.prefix(120))]
+        }
+        DiagnosticBreadcrumbs.shared.record(.api, "\(method) \(path) → \(response.statusCode)", data: data)
     }
 
     /// `properties` keys are limited server-side to source, mode, and reason;
@@ -2358,6 +2462,51 @@ final class APIClient {
         let req = request(path: "/api/assets/\(assetId)/maintenance", method: "POST")
         let resp: DataWrapper<AssetStatus> = try await perform(req)
         return resp.data.status == "MAINTENANCE"
+    }
+
+    /// The body is not read; success is the 2xx.
+    private struct DamageCaseAck: Decodable, Sendable {}
+
+    /// Closes a damage or missing-item case. Repaired, found and no issue release
+    /// the item; replaced and written off retire it. Staff and admin only.
+    func resolveDamageCase(reportId: String, resolution: DamageResolution, note: String) async throws {
+        struct Body: Encodable {
+            let resolution: String
+            let note: String?
+        }
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        var req = request(path: "/api/damage-cases/\(reportId)/resolve", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(resolution: resolution.rawValue, note: trimmed.isEmpty ? nil : trimmed))
+        let _: DataWrapper<DamageCaseAck> = try await perform(req)
+    }
+
+    /// The staff triage queue. `view` is `open` or `closed`.
+    func damageCases(view: DamageCaseView) async throws -> DamageCaseList {
+        let req = request(path: "/api/damage-cases", queryItems: [.init(name: "view", value: view.rawValue)])
+        let resp: DataWrapper<DamageCaseList> = try await perform(req)
+        return resp.data
+    }
+
+    /// Files a damage or missing report from the item page (multipart, optional JPEG).
+    func reportAssetProblem(assetId: String, isMissing: Bool, description: String, jpegData: Data?) async throws {
+        let boundary = "WisconsinReport-\(UUID().uuidString)"
+        var body = Data()
+        func field(_ name: String, _ value: String) {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8))
+        }
+        field("type", isMissing ? "LOST" : "DAMAGED")
+        field("description", description)
+        if let jpegData {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"report.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".utf8))
+            body.append(jpegData)
+            body.append(Data("\r\n".utf8))
+        }
+        body.append(Data("--\(boundary)--\r\n".utf8))
+
+        var req = request(path: "/api/assets/\(assetId)/report", method: "POST")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        let _: DataWrapper<DamageCaseAck> = try await perform(req)
     }
 
     // MARK: - Notifications
@@ -3064,12 +3213,16 @@ final class APIClient {
         } catch let error as APIError {
             throw error
         } catch {
+            if !(error is CancellationError), (error as? URLError)?.code != .cancelled {
+                recordAPIBreadcrumb(request, response: nil)
+            }
             throw APIError.networkError(error)
         }
 
         guard let http = response as? HTTPURLResponse else {
             throw APIError.serverError("Invalid response")
         }
+        recordAPIBreadcrumb(request, response: http)
 
         switch http.statusCode {
         case 200...299:
@@ -3079,6 +3232,7 @@ final class APIClient {
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
+                reportDecodingFailure(error, for: request)
                 throw APIError.decodingError(error)
             }
             // Decoding now suspends the main actor. An account change during
@@ -3305,6 +3459,31 @@ private struct AppBuildIdentity {
         guard let receipt = Bundle.main.appStoreReceiptURL else { return "unknown" }
         return receipt.lastPathComponent == "sandboxReceipt" ? "testflight" : "app_store"
         #endif
+    }
+}
+
+/// What the app says about itself in error and problem reports.
+private struct ProblemReportClient: Encodable {
+    let platform = "ios"
+    let appVersion: String?
+    let appBuild: String?
+    let releaseChannel: String?
+    let osVersion: String?
+    let deviceModel: String?
+
+    static var current: ProblemReportClient {
+        let identity = AppBuildIdentity.current
+        // The server accepts only the channels it knows; a missing receipt is
+        // left out rather than reported as "unknown".
+        let channel = ["app_store", "testflight", "development"].contains(identity.releaseChannel)
+            ? identity.releaseChannel : nil
+        return ProblemReportClient(
+            appVersion: identity.appVersion,
+            appBuild: identity.appBuild,
+            releaseChannel: channel,
+            osVersion: identity.osVersion.map { "iOS \($0)" },
+            deviceModel: identity.deviceModel
+        )
     }
 }
 
