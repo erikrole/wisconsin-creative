@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const queries = readFileSync("src/lib/badges/queries.ts", "utf8");
-const migration = readFileSync("prisma/migrations/0191_badge_celebrated_at/migration.sql", "utf8");
+const migration = readFileSync("prisma/migrations/0201_badge_celebrated_at/migration.sql", "utf8");
 
 describe("badge celebration is acknowledged once on the server", () => {
   it("claims unshown awards atomically before returning them", () => {
