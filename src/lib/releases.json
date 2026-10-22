@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Clearer booking actions",
+    "type": "improvement",
+    "summary": "A booking now has one obvious next step at the top, with everything else under Actions.",
+    "details": [
+      "Checked-out gear shows Extend as the main button, reservations show Edit, and finished bookings show Re-reserve.",
+      "Edit details moves into the Actions menu when Extend is the main step.",
+      "The booking summary and the step bar on a new reservation are larger and easier to read."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-22",
     "title": "A calmer Schedule, Reports and Notifications",
     "type": "improvement",
     "summary": "Schedule, Reports, Notifications, Operations, Blasts, Search, Badges, Signatures and Profile now share the fresh look.",
