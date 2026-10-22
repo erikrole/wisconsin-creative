@@ -77,7 +77,9 @@ struct WisconsinApp: App {
     @ViewBuilder
     private var rootContent: some View {
 #if DEBUG
-        if let scenario = AppRuntimeMode.performanceScenario {
+        if ProcessInfo.processInfo.environment["GT_ASSIGN_PICKER_FIXTURE"] != nil {
+            AssignStudentSheet.reviewFixture()
+        } else if let scenario = AppRuntimeMode.performanceScenario {
             PerformanceTestRootView(scenario: scenario)
         } else {
             RootView()

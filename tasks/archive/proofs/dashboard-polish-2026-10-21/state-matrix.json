@@ -1,0 +1,269 @@
+[
+  {
+    "role": "STUDENT",
+    "state": "ready",
+    "overflow": 0,
+    "heading": "Good morning, Maya",
+    "sections": [
+      "Needs attention3",
+      "Up next",
+      "My gear3",
+      "Open trades2",
+      "Working today",
+      "Team gear out14"
+    ],
+    "error": false
+  },
+  {
+    "role": "STUDENT",
+    "state": "empty",
+    "overflow": 0,
+    "heading": "Good morning, Maya",
+    "sections": [
+      "Needs attention",
+      "Up next",
+      "My gear",
+      "Open trades",
+      "Working today",
+      "Team gear out"
+    ],
+    "error": false
+  },
+  {
+    "role": "STUDENT",
+    "state": "loading",
+    "overflow": 0,
+    "heading": "Good morning, Maya",
+    "sections": [
+      "Needs attention",
+      "Up next",
+      "My gear",
+      "Open trades",
+      "Working today",
+      "Team gear out"
+    ],
+    "error": false
+  },
+  {
+    "role": "STUDENT",
+    "state": "partial",
+    "overflow": 0,
+    "heading": "Good morning, Maya",
+    "sections": [
+      "Needs attention3",
+      "Up next",
+      "My gear3",
+      "Open trades",
+      "Working today",
+      "Team gear out14"
+    ],
+    "error": false
+  },
+  {
+    "role": "STUDENT",
+    "state": "error",
+    "overflow": 0,
+    "heading": "Good morning, Maya",
+    "sections": [],
+    "error": true
+  },
+  {
+    "role": "STAFF",
+    "state": "ready",
+    "overflow": 0,
+    "heading": "Good morning, Jordan",
+    "sections": [
+      "Needs attention6",
+      "Up next",
+      "Checked out to you2",
+      "Working today",
+      "Coming up",
+      "Team gear out14",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "STAFF",
+    "state": "empty",
+    "overflow": 0,
+    "heading": "Good morning, Jordan",
+    "sections": [
+      "Needs attention",
+      "Up next",
+      "Checked out to you",
+      "Working today",
+      "Coming up",
+      "Team gear out",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "STAFF",
+    "state": "loading",
+    "overflow": 0,
+    "heading": "Good morning, Jordan",
+    "sections": [
+      "Needs attention",
+      "Up next",
+      "Checked out to you",
+      "Working today",
+      "Coming up",
+      "Team gear out",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "STAFF",
+    "state": "partial",
+    "overflow": 0,
+    "heading": "Good morning, Jordan",
+    "sections": [
+      "Needs attention6",
+      "Up next",
+      "Checked out to you2",
+      "Working today",
+      "Coming up",
+      "Team gear out14",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "STAFF",
+    "state": "error",
+    "overflow": 0,
+    "heading": "Good morning, Jordan",
+    "sections": [],
+    "error": true
+  },
+  {
+    "role": "ADMIN",
+    "state": "ready",
+    "overflow": 0,
+    "heading": "Good morning, Erik",
+    "sections": [
+      "Needs attention8",
+      "Up next",
+      "Checked out to you2",
+      "Working today",
+      "Coming up",
+      "Team gear out14",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "ADMIN",
+    "state": "empty",
+    "overflow": 0,
+    "heading": "Good morning, Erik",
+    "sections": [
+      "Needs attention",
+      "Up next",
+      "Checked out to you",
+      "Working today",
+      "Coming up",
+      "Team gear out",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "ADMIN",
+    "state": "loading",
+    "overflow": 0,
+    "heading": "Good morning, Erik",
+    "sections": [
+      "Needs attention",
+      "Up next",
+      "Checked out to you",
+      "Working today",
+      "Coming up",
+      "Team gear out",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "ADMIN",
+    "state": "partial",
+    "overflow": 0,
+    "heading": "Good morning, Erik",
+    "sections": [
+      "Needs attention8",
+      "Up next",
+      "Checked out to you2",
+      "Working today",
+      "Coming up",
+      "Team gear out14",
+      "Recent activity"
+    ],
+    "error": false
+  },
+  {
+    "role": "ADMIN",
+    "state": "error",
+    "overflow": 0,
+    "heading": "Good morning, Erik",
+    "sections": [],
+    "error": true
+  },
+  {
+    "role": "COLLABORATOR",
+    "state": "ready",
+    "overflow": 0,
+    "heading": "Good morning, Taylor",
+    "sections": [
+      "Up next",
+      "My gear2"
+    ],
+    "error": false
+  },
+  {
+    "role": "COLLABORATOR",
+    "state": "empty",
+    "overflow": 0,
+    "heading": "Good morning, Taylor",
+    "sections": [
+      "Up next",
+      "My gear"
+    ],
+    "error": false
+  },
+  {
+    "role": "COLLABORATOR",
+    "state": "loading",
+    "overflow": 0,
+    "heading": "Good morning, Taylor",
+    "sections": [
+      "Up next",
+      "My gear"
+    ],
+    "error": false
+  },
+  {
+    "role": "COLLABORATOR",
+    "state": "partial",
+    "overflow": 0,
+    "heading": "Good morning, Taylor",
+    "sections": [
+      "Up next",
+      "My gear2"
+    ],
+    "error": false
+  },
+  {
+    "role": "COLLABORATOR",
+    "state": "error",
+    "overflow": 0,
+    "heading": "Good morning, Taylor",
+    "sections": [
+      "Up next",
+      "My gear"
+    ],
+    "error": false
+  }
+]

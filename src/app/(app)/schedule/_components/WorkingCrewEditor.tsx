@@ -36,6 +36,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { CrewPendingReview } from "@/components/shift-detail/CrewPendingReview";
 import { CrewTagEditor } from "@/components/shift-detail/CrewTag";
 import { UserAvatarPicker, type PickerUser } from "@/components/shift-detail/UserAvatarPicker";
+import { CrewSizeDialog } from "./CrewSizeDialog";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatTimeShort } from "@/lib/format";
 import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
@@ -393,6 +394,7 @@ export function WorkingCrewEditor({
   const [internalStudentCallOpen, setInternalStudentCallOpen] = useState(false);
   const studentCallDialogOpen = studentCallOpen ?? internalStudentCallOpen;
   const setStudentCallDialogOpen = onStudentCallOpenChange ?? setInternalStudentCallOpen;
+  const [crewSizeOpen, setCrewSizeOpen] = useState(false);
   const [usersLoadError, setUsersLoadError] = useState<LoadError>(false);
   const [revertOpen, setRevertOpen] = useState(false);
   const [publishNowOpen, setPublishNowOpen] = useState(false);
@@ -1010,8 +1012,9 @@ export function WorkingCrewEditor({
                               Replace
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-2 sm:w-96" align="end">
+                          <PopoverContent className="w-[25rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-0" align="end">
                             <UserAvatarPicker
+                              heading={`Replace ${user?.name ?? "assigned worker"} · ${AREA_LABELS[slot.area] ?? slot.area}`}
                               users={eligibleUsers}
                               loading={usersLoading}
                               loadError={usersLoadError}
@@ -1108,8 +1111,9 @@ export function WorkingCrewEditor({
                                 aria-label={`Assign ${roleLabel.toLowerCase()} slot`}
                               />
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-2 sm:w-96" align="start">
+                            <PopoverContent className="w-[25rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-0" align="start">
                               <UserAvatarPicker
+                                heading={`${roleLabel} slot · ${AREA_LABELS[slot.area] ?? slot.area}`}
                                 users={eligibleUsers}
                                 loading={usersLoading}
                                 loadError={usersLoadError}
@@ -1200,8 +1204,20 @@ export function WorkingCrewEditor({
             </section>
           );
         })}
-        {canManageSchedule && emptyAreas.length > 0 && (
-          <div className={cn("flex items-center", compact ? "py-1" : "py-1.5")}>
+        {canManageSchedule && (
+          <div className={cn("flex flex-wrap items-center gap-1", compact ? "py-1" : "py-1.5")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-10 gap-1.5 px-2 text-xs text-muted-foreground"
+              disabled={actionsDisabled}
+              onClick={() => setCrewSizeOpen(true)}
+            >
+              <UsersRoundIcon className="size-3.5" />
+              Crew size
+            </Button>
+            {emptyAreas.length > 0 && (
             <Popover>
               <PopoverTrigger asChild>
                 <Button type="button" variant="ghost" size="sm" className="h-10 gap-1.5 px-2 text-xs text-muted-foreground">
@@ -1236,9 +1252,20 @@ export function WorkingCrewEditor({
                 ))}
               </PopoverContent>
             </Popover>
+            )}
           </div>
         )}
       </div>
+
+      {canManageSchedule && (
+        <CrewSizeDialog
+          open={crewSizeOpen}
+          onOpenChange={setCrewSizeOpen}
+          slots={data.schedule.slots}
+          saving={actingKey === "crew-size"}
+          onSave={(counts) => mutate({ type: "setSlotCounts", counts }, "crew-size")}
+        />
+      )}
 
       {canManageSchedule && !data.allDay && (
         <SetAllCallTimesEditor

@@ -29,7 +29,6 @@ import {
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { isPasskeyCancellation, passkeyErrorMessage, passkeyStorageLabel } from "@/lib/passkey-client";
 import { SettingsPageShell } from "../SettingsPageShell";
-import { SettingsJumpNav } from "../_components/SettingsJumpNav";
 
 type Session = {
   id: string;
@@ -359,19 +358,11 @@ export default function SecuritySettingsPage() {
 
   return (
     <SettingsPageShell href="/settings/security">
-      <div className="flex flex-col gap-4">
-        <SettingsJumpNav
-          items={[
-            { href: "#passkeys", label: "Passkeys" },
-            { href: "#password", label: "Password" },
-            { href: "#sessions", label: "Sessions" },
-            { href: "#account", label: "Account" },
-          ]}
-        />
+      <div className="flex flex-col gap-7">
         {/* Passkeys */}
-        <Card id="passkeys">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Passkeys</CardTitle>
+        <Card id="passkeys" elevation="flat" className="rounded-xl shadow-xs">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-black">Passkeys</CardTitle>
             <p className="text-sm text-muted-foreground">
               Use Face ID, Touch ID, or your device security to sign in without typing a password.
             </p>
@@ -449,7 +440,7 @@ export default function SecuritySettingsPage() {
               ) : passkeys.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No passkeys have been added yet.</p>
               ) : (
-                <ul className="divide-y rounded-lg border">
+                <ul className="divide-y rounded-xl border">
                   {passkeys.map((passkey) => {
                     const storage = passkeyStorageLabel(passkey.deviceType, passkey.backedUp);
                     return (
@@ -485,9 +476,9 @@ export default function SecuritySettingsPage() {
           </CardContent>
         </Card>
 
-        <Card id="password">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Change password</CardTitle>
+        <Card id="password" elevation="flat" className="rounded-xl shadow-xs">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-black">Change password</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
@@ -558,10 +549,10 @@ export default function SecuritySettingsPage() {
           </CardContent>
         </Card>
 
-        <Card id="sessions">
-          <CardHeader className="pb-3">
+        <Card id="sessions" elevation="flat" className="rounded-xl shadow-xs">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-4">
-              <CardTitle className="text-base">Active sessions</CardTitle>
+              <CardTitle className="text-lg font-black">Active sessions</CardTitle>
               {otherSessions.length > 0 && (
                 <Button className="h-10"
                   variant="outline"
@@ -648,9 +639,9 @@ export default function SecuritySettingsPage() {
           </CardContent>
         </Card>
 
-        <Card id="account">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Delete account</CardTitle>
+        <Card id="account" elevation="flat" className="rounded-xl shadow-xs">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-black">Delete account</CardTitle>
             <p className="text-sm text-muted-foreground">
               Deleting removes your profile and sign-in data, cancels future reservations, revokes every
               device, and signs you out. You must return any checked-out gear first. Historical custody

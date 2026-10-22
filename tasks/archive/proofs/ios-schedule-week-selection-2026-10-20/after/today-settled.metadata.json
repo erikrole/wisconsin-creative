@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "576058716e17649fb34650a61e000e13caf477ae",
+  "sourcePatchSha256": "705b8d629e71928558b87cff9c88b80ce57d1d3eeefd7f3eaa460604ec3b3f35",
+  "settings": {
+    "device": "iPhone 18 Pro Max / iOS 27.0 / 8FA58E18-C447-4C75-8A9F-14E19BCB6AE9",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "ScheduleFixtureAPI at 5760587; Volleyball filter; 2026-10-20 event 11:00-14:00 local",
+    "role": "STAFF",
+    "route": "Schedule, Volleyball, Everyone, All event types",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en_US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-20 local calendar day; compared event past in both runs; status bar overridden to 9:41",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

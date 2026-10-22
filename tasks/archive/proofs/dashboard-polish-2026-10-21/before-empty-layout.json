@@ -1,0 +1,45 @@
+{
+  "height": 1555,
+  "sections": [
+    {
+      "name": "Summary",
+      "top": 173.59375,
+      "height": 101.5
+    },
+    {
+      "name": "Needs attention",
+      "top": 295.09375,
+      "height": 208.0625
+    },
+    {
+      "name": "Up next",
+      "top": 523.15625,
+      "height": 216.0625
+    },
+    {
+      "name": "Checked out to you",
+      "top": 295.09375,
+      "height": 264.0625
+    },
+    {
+      "name": "Working today",
+      "top": 579.15625,
+      "height": 216.0625
+    },
+    {
+      "name": "Recent activity",
+      "top": 815.21875,
+      "height": 216.0625
+    },
+    {
+      "name": "Coming up",
+      "top": 1051.28125,
+      "height": 216.0625
+    },
+    {
+      "name": "Team gear out",
+      "top": 1287.34375,
+      "height": 216.0625
+    }
+  ]
+}

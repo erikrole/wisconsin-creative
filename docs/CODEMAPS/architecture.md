@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 107 |
-| App layouts | 15 |
-| API route handlers | 422 |
+| App pages | 113 |
+| App layouts | 31 |
+| API route handlers | 423 |
 | Service files | 112 |
-| Component files | 184 |
-| Test files | 839 |
+| Component files | 187 |
+| Test files | 842 |
 
 ## Oversized Source Watchlist
 
@@ -22,26 +22,26 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 3389 |
+| `src/lib/services/bookings-lifecycle.ts` | 3392 |
 | `src/lib/services/signatures.ts` | 2366 |
-| `src/lib/services/notifications.ts` | 2045 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 1983 |
-| `src/lib/services/reports.ts` | 1938 |
-| `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+| `src/lib/services/notifications.ts` | 2047 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1989 |
+| `src/lib/services/reports.ts` | 1943 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
 | `src/app/(app)/staff/[id]/UserInfoTab.tsx` | 1581 |
 | `src/app/(app)/resources/page.tsx` | 1578 |
 | `src/lib/services/shift-trades.ts` | 1567 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1398 |
 | `src/components/ActivityTimeline.tsx` | 1388 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1371 |
 | `src/app/(app)/budget/BudgetView.tsx` | 1358 |
 | `src/app/api/assets/route.ts` | 1314 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/hooks/use-schedule-data.ts` | 1270 |
-| `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
 | `src/app/(app)/settings/app-activity/page.tsx` | 1234 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
+| `src/lib/services/schedule-working-copy.ts` | 1208 |
 
 ## High-Level Data Flow
 

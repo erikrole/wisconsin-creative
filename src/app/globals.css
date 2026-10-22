@@ -2306,6 +2306,9 @@ tr.cursor-pointer td {
   --accent-soft: rgba(141, 164, 239, 0.14);
   --btn-primary-bg: #3e63dd;
   --btn-primary-bg-hover: #5472e4;
+  /* Filled buttons keep the saturated blue so white labels stay readable; the
+     lighter accent is for text and focus on the dark page. */
+  --primary: var(--btn-primary-bg);
   --primary-foreground: #ffffff;
   --blue-text: #aebdf5;
   --blue-bg: rgba(141, 164, 239, 0.14);
@@ -2316,4 +2319,26 @@ tr.cursor-pointer td {
   --border: #26282d;
   --text: #ececef;
   --text-secondary: #a8aab2;
+}
+
+/* ===== Settings cards (wc-fresh) =====
+   Admin Settings pages still compose shared Card parts. Inside the Settings
+   wrapper they read as the same soft, flat groups as the rebuilt Personal pages. */
+[data-settings] [data-slot="card"] {
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(28, 32, 36, 0.04);
+}
+[data-settings] [data-slot="card"]:hover {
+  box-shadow: 0 1px 2px rgba(28, 32, 36, 0.04);
+}
+[data-settings] [data-slot="card-header"] {
+  padding-block: 18px 6px;
+}
+[data-settings] [data-slot="card-title"] {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+[data-settings] [data-slot="card-description"] {
+  font-size: 13px;
 }

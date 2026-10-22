@@ -1778,6 +1778,12 @@ final class APIClient {
         return resp.data
     }
 
+    /// Next shift, gear in hand, this week's shifts and returns performance.
+    func userRightNow(userId: String) async throws -> RightNowPayload {
+        let resp: DataWrapper<RightNowPayload> = try await perform(request(path: "/api/users/\(userId)/right-now"))
+        return resp.data
+    }
+
     /// The staff award catalog. `manualOnly` is the same filter the website
     /// uses on `/badges`. Awarding stays on the web.
     func teamBadgeCatalog() async throws -> TeamBadgeCatalog {

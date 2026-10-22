@@ -5,7 +5,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/accountability.ts` | 655 |
+| `src/lib/services/accountability.ts` | 656 |
 | `src/lib/services/app-activity-report.ts` | 508 |
 | `src/lib/services/app-diagnostics.ts` | 47 |
 | `src/lib/services/auto-assign.ts` | 92 |
@@ -17,20 +17,20 @@
 | `src/lib/services/booking-custody.ts` | 82 |
 | `src/lib/services/booking-item-holder.ts` | 174 |
 | `src/lib/services/booking-ref.ts` | 26 |
-| `src/lib/services/booking-reuse.ts` | 220 |
+| `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 738 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle.ts` | 3389 |
+| `src/lib/services/bookings-lifecycle.ts` | 3392 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/budget.ts` | 950 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
-| `src/lib/services/bulk-schedule-assignment.ts` | 971 |
+| `src/lib/services/bulk-schedule-assignment.ts` | 973 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
-| `src/lib/services/calendar-sync.ts` | 754 |
-| `src/lib/services/candidate-scoring.ts` | 509 |
+| `src/lib/services/calendar-sync.ts` | 755 |
+| `src/lib/services/candidate-scoring.ts` | 591 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 618 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
@@ -48,7 +48,7 @@
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
-| `src/lib/services/gear-picks.ts` | 1109 |
+| `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/invite-email.ts` | 82 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
@@ -77,12 +77,12 @@
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
-| `src/lib/services/notifications.ts` | 2045 |
+| `src/lib/services/notifications.ts` | 2047 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
-| `src/lib/services/reports.ts` | 1938 |
+| `src/lib/services/reports.ts` | 1943 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
@@ -91,14 +91,14 @@
 | `src/lib/services/scans.ts` | 168 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 470 |
-| `src/lib/services/schedule-change-history.ts` | 540 |
+| `src/lib/services/schedule-change-history.ts` | 542 |
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 597 |
 | `src/lib/services/schedule-publication.ts` | 1133 |
 | `src/lib/services/schedule-template-review.ts` | 549 |
-| `src/lib/services/schedule-working-copy.ts` | 1206 |
+| `src/lib/services/schedule-working-copy.ts` | 1208 |
 | `src/lib/services/scoreboard.ts` | 282 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
@@ -123,7 +123,6 @@
 | File | Lines |
 |---|---:|
 | `src/lib/a11y-resilience.ts` | 116 |
-| `src/lib/accountability-jeers.ts` | 121 |
 | `src/lib/admin-fix-today.ts` | 408 |
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
@@ -133,12 +132,14 @@
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
 | `src/lib/apps-live-versions.ts` | 204 |
-| `src/lib/apps-page.ts` | 419 |
+| `src/lib/apps-page.ts` | 421 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
-| `src/lib/audit.ts` | 168 |
+| `src/lib/assignment-workload.ts` | 83 |
+| `src/lib/audit-retention.ts` | 8 |
+| `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 459 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
@@ -148,18 +149,18 @@
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 158 |
 | `src/lib/bhphoto-image.ts` | 67 |
-| `src/lib/blob.ts` | 170 |
+| `src/lib/blob.ts` | 168 |
 | `src/lib/booking-action-policy.ts` | 216 |
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
-| `src/lib/booking-display-title.ts` | 41 |
+| `src/lib/booking-display-title.ts` | 58 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 229 |
-| `src/lib/brother-label-csv.ts` | 134 |
+| `src/lib/brother-label-csv.ts` | 170 |
 | `src/lib/bulk-batteries.ts` | 49 |
-| `src/lib/bulk-schedule-assignment-types.ts` | 213 |
+| `src/lib/bulk-schedule-assignment-types.ts` | 221 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |
 | `src/lib/calendar-event-dates.ts` | 191 |
@@ -193,7 +194,7 @@
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 155 |
 | `src/lib/errors.ts` | 83 |
-| `src/lib/event-editor.ts` | 107 |
+| `src/lib/event-editor.ts` | 114 |
 | `src/lib/external-url.ts` | 30 |
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
@@ -220,7 +221,7 @@
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
-| `src/lib/nav-sections.ts` | 326 |
+| `src/lib/nav-sections.ts` | 299 |
 | `src/lib/notification-catalog.ts` | 325 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
@@ -283,7 +284,7 @@
 | `src/lib/schedule-timeline-window.ts` | 88 |
 | `src/lib/schedule-window.ts` | 152 |
 | `src/lib/schedule-working-copy-guard.ts` | 24 |
-| `src/lib/schedule-working-copy.ts` | 558 |
+| `src/lib/schedule-working-copy.ts` | 598 |
 | `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/scoreboard-display.ts` | 27 |
 | `src/lib/scoreboard-explorer.ts` | 152 |
@@ -302,13 +303,14 @@
 | `src/lib/software-vault-crypto.ts` | 11 |
 | `src/lib/software-vault-validation.ts` | 39 |
 | `src/lib/sport-auto-assign-policy.ts` | 60 |
+| `src/lib/sport-color.ts` | 19 |
 | `src/lib/sports.ts` | 99 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 19 |
 | `src/lib/student-availability.ts` | 209 |
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/theme.ts` | 145 |
-| `src/lib/time.ts` | 28 |
+| `src/lib/time.ts` | 43 |
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/unavailable-times.ts` | 185 |
 | `src/lib/url-sync.ts` | 16 |
@@ -594,6 +596,7 @@
 - `/api/gear-picks/admin/export.xlsx`
 - `/api/gear-picks/admin/history`
 - `/api/gear-picks/admin`
+- `/api/gear-picks/me/kit`
 - `/api/gear-picks/me`
 - `/api/gear-picks/users/[userId]`
 

@@ -588,7 +588,7 @@ final class GearOpsModel {
                 scheduleSupplementarySetup(expectedGeneration: generation, token: requestToken)
             } catch GearOpsClientError.unauthorized {
                 guard sessionIsCurrent(generation: generation, token: requestToken) else { return }
-                await signOut(message: "Companion enrollment expired. Sign in again.")
+                await signOut(message: "You were signed out. Sign in again.")
                 return
             } catch {
                 guard sessionIsCurrent(generation: generation, token: requestToken) else { return }

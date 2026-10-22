@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { AlertTriangleIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangleIcon, SparklesIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +38,8 @@ type Props = {
   currentUserId?: string;
   currentUserRole: string;
   eventAllDay?: boolean;
+  eventTitle: string;
+  eventStartsAt: string;
   eventEndsAt: string;
   studentCallTimeAllowed?: boolean;
   studentCallOpen?: boolean;
@@ -49,6 +53,8 @@ export function ShiftCoverageCard({
   currentUserId,
   currentUserRole,
   eventAllDay = false,
+  eventTitle,
+  eventStartsAt,
   eventEndsAt,
   studentCallTimeAllowed = true,
   studentCallOpen,
@@ -59,6 +65,7 @@ export function ShiftCoverageCard({
   const isAdmin = currentUserRole === "ADMIN";
   const groupId = shiftGroup.id;
   const eventHasEnded = new Date(eventEndsAt).getTime() <= Date.now();
+  const [autoAssignOpen, setAutoAssignOpen] = useState(false);
 
   const shiftsByArea = useMemo(() => {
     const map: Record<string, Shift[]> = {};
@@ -236,6 +243,21 @@ export function ShiftCoverageCard({
             </p>
           )}
         </div>
+        {/* Event-scoped Auto assign: the same preview-and-review flow as the
+            Schedule page, pinned to this event. Open slots only. */}
+        {isStaffOrAdmin && !eventHasEnded && coverage && coverage.filled < coverage.total ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10"
+            onClick={() => setAutoAssignOpen(true)}
+            disabled={shiftGroup.hasWorkingCopy}
+            title={shiftGroup.hasWorkingCopy ? "Release or cancel the pending crew changes first" : undefined}
+          >
+            <SparklesIcon className="size-4" />
+            Fill open slots
+          </Button>
+        ) : null}
       </CardHeader>
 
       <CardContent>
@@ -266,6 +288,15 @@ export function ShiftCoverageCard({
             onStudentCallOpenChange={onStudentCallOpenChange}
           />
         ) : crewTable}
+
+        {isStaffOrAdmin && (
+          <AutoAssignDialog
+            open={autoAssignOpen}
+            onOpenChange={setAutoAssignOpen}
+            onApplied={() => onUpdated?.()}
+            event={{ id: eventId, summary: eventTitle, startsAt: eventStartsAt, endsAt: eventEndsAt }}
+          />
+        )}
 
         {isStaffOrAdmin && (
           <EventWorkersCard

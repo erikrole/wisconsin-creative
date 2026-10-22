@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { MotionConfig } from "motion/react";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
@@ -16,6 +17,12 @@ import { AnnouncementSplash } from "@/components/announcements/AnnouncementSplas
 import WebMCPProvider from "@/components/WebMCPProvider";
 import { ErrorReporter } from "@/components/error-reporting/ErrorReporter";
 import { ReportProblemProvider } from "@/components/error-reporting/ReportProblemDialog";
+
+// Safari's native Smart App Banner on iPhone, signed-in pages only (login and kiosk stay clean).
+// Safari remembers a dismissal itself and hides the banner once the app is installed.
+export const metadata: Metadata = {
+  itunes: { appId: "6763456945" },
+};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let user;

@@ -45,6 +45,8 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 5. The server-side CSRF origin allowlist may trust the legacy host during rollout, but that fallback should be removed with `AppEnvironment.legacyHost` after old links age out.
 
 ## Dashboard on Mobile
+Web Home's local 2026-10-21 layout polish keeps its existing single-column reading order for personal work at phone widths, then shows the permitted team cards below. Compact empty states retain their actions. A 390px sample-data check found no horizontal overflow and all Home controls at least 40px high. This is web smoke coverage; native iOS Home is unchanged and follows the rules below.
+
 1. Native iOS Home is an action queue, not a small desktop dashboard.
 2. Keep a compact triage strip only when it helps decide what to do next.
 3. Prioritize:
@@ -105,6 +107,8 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 - [x] AC-15: A long-press action can never reveal data the row it sits on is deliberately hiding.
 - [x] AC-16: Latest Browse screens have local Simulator presentation proof, including native size pickers, large-text layouts, and offline navigation. This does not accept authenticated feature mutations or external sharing; see the 2026-10-17 evidence below.
 
+- [x] AC-17 (local): Schedule keeps the first visible day selected when its rows fit in the viewport, including rubber-banding and a return to Today. A genuinely scrolled long list still follows its last visible day at the bottom. Native regression and iPhone 18 Pro Max visual proof are recorded under `tasks/archive/proofs/ios-schedule-week-selection-2026-10-20/`; inclusion in a distributed build remains pending.
+
 ## Dependencies
 - `AREA_DASHBOARD.md`
 - `AREA_CHECKOUTS.md`
@@ -147,6 +151,8 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 ## Change Log
 
 - 2026-10-22: **Resumable setup and profile photos (local).** Native Welcome consumes account save versions, autosaves validated field groups, preserves dirty answers during refresh, exposes explicit conflict recovery, refreshes on foreground, and records FINISH even when photo is skipped. The photo editor uses system pan/pinch, a circular guide and VoiceOver actions without sliders; failed uploads retain the crop. Profile now owns add/change/remove after onboarding. Uploads send a frozen photo version, actor and upload ID, reconcile lost responses, and refresh the account avatar. Getting started progress syncs with web using account-scoped row-only retries. iPhone 18 Pro Max simulator walkthrough and crop retry pass; authenticated two-way handoff, physical-device photo-library behavior, and release/distribution remain open in `tasks/onboarding-continuity-2026-10-22.md`.
+
+- 2026-10-20: **Schedule week selection stays with the visible day (local, next build pending).** A short list previously counted as being at the bottom while today was still at the top, selecting a later empty week and leaving Today visible after tapping it. The bottom override now requires scrollable content and an offset beyond the top inset; long-list end navigation remains intact. The native regression fails on the pre-fix behavior. All 235 native tests, simulator and generic-device builds, and 59 Schedule source contracts pass. Matched iPhone 18 Pro Max fixture captures: [review](../tasks/archive/proofs/ios-schedule-week-selection-2026-10-20/review.html). App Review build 34 remains unchanged.
 
 - 2026-10-20: **Less main-actor and background work (local, rollout pending).** Successful API response decoding and Brand asset image/SVG preparation move to concurrent workers with cancellation and account/request ownership checks before publication. Foreground refresh has one cancellable owner; App Intents reuse the validated identity. Checkout Live Activities skip availability reads until a checkout is within the existing maximum 60-minute lead window. Removed unused SwiftData seeding and launch container initialization after confirming no active read consumers; ScheduleWindowCache, drafts, widget snapshots, and legacy sign-out cleanup remain. Schedule saves its fetched window once. Native unit tests cover off-main decoding, cancellation, date/key/null compatibility, preview limits, and the Live Activity cutoff. Simulator tests and generic-device compilation pass; stable-runtime comparison and physical-device battery/memory acceptance remain open in `tasks/performance-web-ios-neon-2026-10-20.md`.
 

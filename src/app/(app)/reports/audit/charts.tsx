@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { REPORT_CHART_COLORS, ReportChartCard } from "../report-ui";
+import { REPORT_BAR_COLOR, ReportChartCard } from "../report-ui";
 
 function formatAction(action: string) {
   return action
@@ -52,7 +52,7 @@ export function ActionBreakdownChart({
             <ChartTooltip content={<ChartTooltipContent />} />
             <Bar dataKey="count" name="Events" radius={[0, 4, 4, 0]}>
               {byAction.map((_, i) => (
-                <Cell key={i} fill={REPORT_CHART_COLORS[i % REPORT_CHART_COLORS.length]} />
+                <Cell key={i} fill={REPORT_BAR_COLOR} />
               ))}
             </Bar>
           </BarChart>
@@ -92,7 +92,7 @@ export function EntityTypeBreakdownChart({
             <ChartTooltip content={<ChartTooltipContent />} />
             <Bar dataKey="count" name="Events" radius={[0, 4, 4, 0]}>
               {byEntityType.map((_, i) => (
-                <Cell key={i} fill={REPORT_CHART_COLORS[i % REPORT_CHART_COLORS.length]} />
+                <Cell key={i} fill={REPORT_BAR_COLOR} />
               ))}
             </Bar>
           </BarChart>

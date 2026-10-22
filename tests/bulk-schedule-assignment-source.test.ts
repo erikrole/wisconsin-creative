@@ -6,6 +6,20 @@ const root = process.cwd();
 const read = (file: string) => readFileSync(resolve(root, file), "utf8");
 
 describe("bulk schedule assignment contracts", () => {
+  it("lets Event detail fill one event through the same preview-and-review flow", () => {
+    const service = read("src/lib/services/bulk-schedule-assignment.ts");
+    const dialog = read("src/components/schedule/AutoAssignDialog.tsx");
+    const card = read("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
+
+    expect(service).toContain("scope.eventIds.length > 0 ? { id: { in: scope.eventIds } } : {}");
+    expect(dialog).toContain("eventIds: event ? [event.id] : []");
+    expect(dialog).toContain("const defaultRequireFullCrew = !event");
+    expect(card).toContain("<AutoAssignDialog");
+    expect(card).toContain("Fill open slots");
+    expect(card).toContain("disabled={shiftGroup.hasWorkingCopy}");
+    expect(card).toContain("!eventHasEnded && coverage && coverage.filled < coverage.total");
+  });
+
   it("keeps the mutation behind the working-copy and exact-version release boundary", () => {
     const service = read("src/lib/services/bulk-schedule-assignment.ts");
     const applyRoute = read("src/app/api/schedule/bulk-assignment/apply/route.ts");
@@ -118,7 +132,9 @@ describe("bulk schedule assignment contracts", () => {
     expect(service).toContain("eventsPartiallyCrewed");
     expect(service).toContain("eventsPendingChanges");
     expect(dialog).toContain("Full crews only");
-    expect(dialog).toContain("setRequireFullCrew(true)");
+    // Multi-event scopes default to full crews; a single event defaults to partial.
+    expect(dialog).toContain("useState(defaultRequireFullCrew)");
+    expect(dialog).toContain("const defaultRequireFullCrew = !event");
     expect(dialog).toContain("Events that cannot be filled completely are held back.");
     expect(dialog).toContain("Events may be filled partway.");
     expect(dialog).toContain("Couldn't fill every open slot");
