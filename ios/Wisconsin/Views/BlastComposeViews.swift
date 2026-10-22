@@ -141,6 +141,24 @@ struct ComposeBlastSheet: View {
             .task {
                 guard lockedEvent == nil else { return }
                 await loadEvents()
+#if DEBUG
+                // Capture seeds: fill the form the way a person would, so the
+                // reach preview runs through the real request path.
+                switch ProcessInfo.processInfo.environment["GT_BLAST_VIEW"] {
+                case "compose-crew":
+                    title = "Call time moved to 4:00"
+                    message = "Be at gate 3 by 4:00 instead of 4:30."
+                    severity = .warning
+                    if let first = events.first { eventId = first.id }
+                case "compose-groups":
+                    title = "Batteries back on the shelf"
+                    message = "Please return numbered batteries after your shoot."
+                    audience = .groups
+                    areas = ["VIDEO", "PHOTO"]
+                    workerTypes = ["ST"]
+                default: break
+                }
+#endif
             }
             .task(id: target) {
                 await refreshPreview()

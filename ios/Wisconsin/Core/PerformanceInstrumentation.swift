@@ -67,6 +67,10 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Staff blast surfaces against canned `/api/blasts` responses. The
+        /// screen is chosen by `GT_BLAST_VIEW`: blasts, sent, detail,
+        /// compose-crew, compose-groups, safari.
+        case blastStaff = "blast-staff"
         /// Starts a real checkout-return Live Activity in the simulator, in the
         /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
         /// overdue, returned), so the lock screen and Dynamic Island can be
@@ -205,7 +209,7 @@ enum AppRuntimeMode {
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
-             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
+             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .blastStaff, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
