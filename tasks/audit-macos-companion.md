@@ -30,9 +30,9 @@ The menu-bar glyph is a monochrome SF Symbol that stays `shippingbox` / `shippin
 - Installed/notarized release, cold restart after a new enrollment, VoiceOver/keyboard smoke, and real APNs delivery remain under the Companion delivery gap.
 - When macOS temporarily hides extras to make room for app menus, there is still no Dock icon, but ⌃⌥⌘G now opens the Status window. Whether `occlusionState` reports a space-hidden status item as not visible is unproven on a crowded menu bar; if it does not, the hot key clicks a hidden item and nothing appears.
 - The installed ⌃⌥⌘G path, the real status-item popover, and the overdue count catching up on the next refresh or presentation in an installed menu bar label are unverified. Fixture captures cover the popover content only.
-- `xcodebuild test` hosts the tests in the real, non-fixture app. It shares `UserDefaults` and the Keychain with the installed app, so a successful restore in the host can rotate the installed app's companion credential. A cache the new build writes no longer has `snapshot.partialFailures`, so 1.0.5 drops it as untrusted and refetches if it relaunches before an upgrade. This hazard predates this pass. A fixture-style test host would remove it.
+- ~~`xcodebuild test` hosts the tests in the real, non-fixture app and shares its Keychain.~~ Closed 2026-10-21: under XCTest the host builds `GearOpsTestHost.makeModel()` (fixture stores, no auto refresh) and skips the global shortcut, so a test run can no longer rotate the installed app's credential.
 - The local UI service still cannot target an `LSUIElement` app. Fixture captures use `screencapture -l` on the Debug Status window, and keyboard checks post `CGEvent`s to the fixture PID.
-- Physical 1Password Universal Autofill remains a device gate.
+- 1Password (2026-10-20): macOS AutoFill with 1Password as provider offers the login once the app activates, but fills one field per pick, each with its own Touch ID. An AppKit field pair made it stop filling. The login advances to the password after an email pick and remembers the last email.
 
 ## Proof
 

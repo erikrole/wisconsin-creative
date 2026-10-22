@@ -11,7 +11,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '2.0.0';
+  var VERSION = '2.1.0';
 
   // Byte-mode capacity of a version-40 symbol at each error-correction level.
   var CAPACITY = { L: 2953, M: 2331, Q: 1663, H: 1273 };
@@ -25,12 +25,20 @@
   // A circle backing is shrunk so it covers about as much of the code as the square one.
   var CIRCLE_IMAGE_FACTOR = 0.85;
 
+  // Corner eyes are always drawn square by the library and reshaped by eyeExtension:
+  // the library's own round eyes ("extra-rounded" / "dot") fail finder detection in
+  // common decoders, so they are never used.
   var STYLES = {
-    square: { label: 'Classic', dots: 'square', corner: 'square', cornerDot: 'square' },
-    dots: { label: 'Dots', dots: 'dots', corner: 'extra-rounded', cornerDot: 'dot' },
-    soft: { label: 'Soft', dots: 'extra-rounded', corner: 'extra-rounded', cornerDot: 'dot' },
-    cut: { label: 'Cut', dots: 'classy', corner: 'square', cornerDot: 'square' }
+    square: { label: 'Classic', dots: 'square', eyeShape: 'square' },
+    dots: { label: 'Dots', dots: 'dots', eyeShape: 'rounded' },
+    soft: { label: 'Soft', dots: 'extra-rounded', eyeShape: 'rounded' },
+    cut: { label: 'Cut', dots: 'classy', eyeShape: 'square' }
   };
+
+  var EYE_SHAPES = { square: 'Square', rounded: 'Rounded' };
+  // Corner radii in modules. A one-module outer radius keeps the 1:1:3:1:1 finder
+  // ratio readable; rounder eyes were measured failing OpenCV and jsQR.
+  var EYE_RADIUS = { outer: 1, inner: 0.4, dot: 0.6 };
 
   // Names used by QR Studio 1.x, kept so old library entries and settings still load.
   var STYLE_ALIASES = { rounded: 'dots', 'extra-rounded': 'soft', classy: 'cut', classic: 'square' };
@@ -48,8 +56,12 @@
     plate: 'none',
     plateColor: '#FFFFFF',
     ec: 'auto',
-    quietZone: 4
+    quietZone: 4,
+    eyeShape: 'square',
+    caption: ''             // printed under the code, outside the quiet zone
   };
+
+  var CAPTION_MAX = 40;
 
   var LOGO_SCALE = { min: 12, max: 32 };
   var QUIET_ZONE = { min: 1, max: 8 };
@@ -116,6 +128,16 @@
         { key: 'phone', label: 'Phone', kind: 'tel', maxLength: 32, half: true },
         { key: 'email', label: 'Email', kind: 'email', maxLength: 254, half: true },
         { key: 'website', label: 'Website', kind: 'url', maxLength: 300 }
+      ]
+    },
+    event: {
+      label: 'Event',
+      fields: [
+        { key: 'title', label: 'Event', kind: 'text', placeholder: 'Badgers vs. Iowa', required: true, maxLength: 120 },
+        { key: 'location', label: 'Location', kind: 'text', placeholder: 'Camp Randall Stadium', maxLength: 160 },
+        { key: 'start', label: 'Starts', kind: 'datetime', required: true, half: true },
+        { key: 'end', label: 'Ends', kind: 'datetime', half: true },
+        { key: 'notes', label: 'Notes', kind: 'textarea', maxLength: 400 }
       ]
     },
     text: {
@@ -250,6 +272,24 @@
     return cleaned;
   }
 
+  function icsEscape(text) {
+    return str(text).trim().replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([,;])/g, '\\$1');
+  }
+
+  // datetime-local values ("2026-10-24T14:30") are the visitor's local time.
+  // They are written as UTC so the event lands at the right moment anywhere.
+  function parseLocalDateTime(raw) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(str(raw).trim());
+    if (!m) return null;
+    var date = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+    if (isNaN(date.getTime()) || date.getMonth() !== +m[2] - 1) return null;
+    return date;
+  }
+
+  function icsUtc(date) {
+    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  }
+
   function fail(field, message) {
     var errors = {};
     errors[field] = message;
@@ -341,6 +381,27 @@
       }
       lines.push('END:VCARD');
       return { ok: true, value: lines.join('\r\n'), notes: [] };
+    },
+
+    event: function (c) {
+      var title = str(c.title).trim();
+      if (!title) return fail('title', 'Enter the event name.');
+      if (isBlank(c.start)) return fail('start', 'Choose when it starts.');
+      var start = parseLocalDateTime(c.start);
+      if (!start) return fail('start', 'That start time is not a valid date.');
+      var end = null;
+      if (!isBlank(c.end)) {
+        end = parseLocalDateTime(c.end);
+        if (!end) return fail('end', 'That end time is not a valid date.');
+        if (end <= start) return fail('end', 'The end has to be after the start.');
+      }
+      var lines = ['BEGIN:VEVENT', 'SUMMARY:' + icsEscape(title), 'DTSTART:' + icsUtc(start)];
+      lines.push('DTEND:' + icsUtc(end || new Date(start.getTime() + 2 * 3600 * 1000)));
+      if (!isBlank(c.location)) lines.push('LOCATION:' + icsEscape(c.location));
+      if (!isBlank(c.notes)) lines.push('DESCRIPTION:' + icsEscape(c.notes));
+      lines.push('END:VEVENT');
+      var notes = end ? [] : ['No end time, so calendars will show it as two hours long.'];
+      return { ok: true, value: lines.join('\r\n'), notes: notes };
     },
 
     text: function (c) {
@@ -445,7 +506,41 @@
     var ec = str(input.ec).toUpperCase();
     d.ec = EC_LEVELS.indexOf(ec) === -1 ? 'auto' : ec;
     d.quietZone = clampInt(input.quietZone, QUIET_ZONE.min, QUIET_ZONE.max, DESIGN_DEFAULTS.quietZone);
+    // Older saves have no eye shape; they get the shape their module style used to draw.
+    d.eyeShape = has(EYE_SHAPES, input.eyeShape) ? input.eyeShape : STYLES[d.style].eyeShape;
+    d.caption = cleanCaption(input.caption);
     return { design: d, warnings: warnings };
+  }
+
+  function cleanCaption(value) {
+    return str(value).replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, CAPTION_MAX);
+  }
+
+  // Shared caption geometry for the preview and both export formats: a band under
+  // the square code whose height and type size scale with the code's width.
+  var CAPTION_FONT = 0.065;
+  var CAPTION_BAND = 0.143;
+
+  function captionLayout(size) {
+    var fontSize = Math.round(size * CAPTION_FONT);
+    return { band: Math.round(size * CAPTION_BAND), fontSize: fontSize, baseline: Math.round(fontSize * 0.95), maxWidth: size * 0.88 };
+  }
+
+  function xmlEscape(text) {
+    return str(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Wraps an exported QR SVG in a taller SVG that adds the caption band. `fontSize`
+  // may be smaller than the layout's when the browser measured the text as too wide.
+  function captionedSvg(svgText, design, size, fontSize) {
+    var layout = captionLayout(size);
+    var height = size + layout.band;
+    var inner = str(svgText).replace(/^\s*<\?xml[^>]*\?>\s*/, '');
+    var bg = design.background === 'transparent' ? '' : '<rect width="' + size + '" height="' + height + '" fill="' + design.background + '"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + height + '" viewBox="0 0 ' + size + ' ' + height + '">' +
+      bg + inner.replace(/^<svg\b/, '<svg x="0" y="0"') +
+      '<text x="' + size / 2 + '" y="' + (size + layout.baseline) + '" text-anchor="middle" font-family="Lato, Helvetica, Arial, sans-serif" font-weight="700" font-size="' +
+      (fontSize || layout.fontSize) + '" fill="' + design.fill + '">' + xmlEscape(design.caption) + '</text></svg>';
   }
 
   function resolveEc(design) {
@@ -532,8 +627,8 @@
       image: hasLogo ? opts.logoUrl : undefined,
       qrOptions: { errorCorrectionLevel: resolveEc(design), mode: 'Byte', typeNumber: 0 },
       dotsOptions: { color: design.fill, type: style.dots, roundSize: true },
-      cornersSquareOptions: { color: eye, type: style.corner },
-      cornersDotOptions: { color: eye, type: style.cornerDot },
+      cornersSquareOptions: { color: eye, type: 'square' },
+      cornersDotOptions: { color: eye, type: 'square' },
       backgroundOptions: { color: design.background === 'transparent' ? 'transparent' : design.background },
       imageOptions: {
         // saveAsBlob re-fetches the logo over XHR with no error handler, which hangs
@@ -563,7 +658,9 @@
         if (fixed !== ref) clipped[c].setAttribute('clip-path', fixed);
       }
       // Square modules are separate rects; without this, scaled copies show hairline seams.
-      if (design.style === 'square') svg.setAttribute('shape-rendering', 'crispEdges');
+      if (design.style === 'square' && design.eyeShape !== 'rounded') svg.setAttribute('shape-rendering', 'crispEdges');
+      if (design.eyeShape === 'rounded') roundEyes(svg);
+      if (design.style !== 'dots') closeSeams(svg);
       if (design.plate === 'none' || design.logo === 'none') return;
       var image = svg.querySelector('image');
       if (!image) return;
@@ -593,7 +690,119 @@
       }
       plate.setAttribute('fill', design.plateColor);
       image.parentNode.insertBefore(plate, image);
+      clearUnderPlate(svg, design.plate === 'circle'
+        ? { circle: true, cx: x + w / 2, cy: y + h / 2, r: span * 0.72 }
+        : { x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2 });
     };
+  }
+
+  // The library only hides modules under the logo's square box, so a backing plate
+  // leaves half-covered modules around its edge. Drop every module the plate touches;
+  // error correction H (Auto with a logo) covers them and the scan check confirms it.
+  function moduleGrid(svg) {
+    var corner = svg.querySelector('rect[clip-path*="clip-path-corners-square-color-0-0"]');
+    var dotsClip = svg.querySelector('clipPath[id^="clip-path-dot-color"]');
+    if (!corner || !dotsClip) return null;
+    var grid = {
+      clip: dotsClip,
+      x: parseFloat(corner.getAttribute('x')),
+      y: parseFloat(corner.getAttribute('y')),
+      unit: parseFloat(corner.getAttribute('width')) / 7
+    };
+    return isFinite(grid.x) && isFinite(grid.y) && grid.unit > 0 ? grid : null;
+  }
+
+  // The top-left corner of the module cell a drawn shape belongs to, from the point
+  // the library starts drawing it at (a circle centre, a rect corner or a path's first move).
+  function moduleCell(node, grid) {
+    var name = String(node.localName || node.nodeName).toLowerCase();
+    var px;
+    var py;
+    if (name === 'circle') { px = parseFloat(node.getAttribute('cx')); py = parseFloat(node.getAttribute('cy')); }
+    else if (name === 'rect') { px = parseFloat(node.getAttribute('x')); py = parseFloat(node.getAttribute('y')); }
+    else if (name === 'path') {
+      var start = /^\s*M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/i.exec(node.getAttribute('d') || '');
+      if (start) { px = parseFloat(start[1]); py = parseFloat(start[2]); }
+    }
+    if (!isFinite(px) || !isFinite(py)) return null;
+    return {
+      left: grid.x + Math.floor((px - grid.x) / grid.unit + 1e-6) * grid.unit,
+      top: grid.y + Math.floor((py - grid.y) / grid.unit + 1e-6) * grid.unit
+    };
+  }
+
+  // Touching modules are separate shapes, so anti-aliasing leaves hairline seams
+  // between them. Growing each shape by a sliver about its cell centre closes them.
+  function closeSeams(svg) {
+    var grid = moduleGrid(svg);
+    if (!grid) return;
+    var bleed = 1.04;
+    Array.prototype.slice.call(grid.clip.childNodes).forEach(function (node) {
+      var cell = moduleCell(node, grid);
+      if (!cell) return;
+      var cx = cell.left + grid.unit / 2;
+      var cy = cell.top + grid.unit / 2;
+      var grow = 'translate(' + cx + ',' + cy + ') scale(' + bleed + ') translate(' + (-cx) + ',' + (-cy) + ')';
+      var current = node.getAttribute('transform');
+      node.setAttribute('transform', current ? grow + ' ' + current : grow);
+    });
+  }
+
+  // The library only hides modules under the logo's square box, so a backing plate
+  // leaves half-covered modules around its edge. Drop every module the plate touches;
+  // error correction H (Auto with a logo) covers them and the scan check confirms it.
+  function clearUnderPlate(svg, shape) {
+    var grid = moduleGrid(svg);
+    if (!grid) return;
+    Array.prototype.slice.call(grid.clip.childNodes).forEach(function (node) {
+      var cell = moduleCell(node, grid);
+      if (!cell) return;
+      var left = cell.left;
+      var top = cell.top;
+      var unit = grid.unit;
+      var hit;
+      if (shape.circle) {
+        var nx = Math.max(left, Math.min(shape.cx, left + unit));
+        var ny = Math.max(top, Math.min(shape.cy, top + unit));
+        hit = (nx - shape.cx) * (nx - shape.cx) + (ny - shape.cy) * (ny - shape.cy) < shape.r * shape.r;
+      } else {
+        hit = left < shape.x + shape.w && left + unit > shape.x && top < shape.y + shape.h && top + unit > shape.y;
+      }
+      if (hit) grid.clip.removeChild(node);
+    });
+  }
+
+  function roundedRectPath(x, y, w, r) {
+    var side = w - 2 * r;
+    return 'M' + (x + r) + ',' + y + 'h' + side + 'a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r + 'v' + side +
+      'a' + r + ',' + r + ' 0 0 1 ' + (-r) + ',' + r + 'h' + (-side) + 'a' + r + ',' + r + ' 0 0 1 ' + (-r) + ',' + (-r) +
+      'v' + (-side) + 'a' + r + ',' + r + ' 0 0 1 ' + r + ',' + (-r) + 'z';
+  }
+
+  // Replaces the clip shapes behind each corner eye with softly rounded ones. The
+  // coloured rect that uses each clip gives the eye's exact box, so no geometry is guessed.
+  function roundEyes(svg) {
+    var rects = svg.querySelectorAll('rect[clip-path]');
+    for (var i = 0; i < rects.length; i += 1) {
+      var ref = rects[i].getAttribute('clip-path');
+      var kind = /clip-path-corners-(square|dot)-color/.exec(ref);
+      var id = /#([^'")\s]+)/.exec(ref);
+      if (!kind || !id) continue;
+      var clip = svg.querySelector('[id="' + id[1] + '"]');
+      var x = parseFloat(rects[i].getAttribute('x'));
+      var y = parseFloat(rects[i].getAttribute('y'));
+      var w = parseFloat(rects[i].getAttribute('width'));
+      if (!clip || !isFinite(x) || !isFinite(y) || !(w > 0)) continue;
+      var unit = w / (kind[1] === 'square' ? 7 : 3);
+      var d = kind[1] === 'square'
+        ? roundedRectPath(x, y, w, EYE_RADIUS.outer * unit) + roundedRectPath(x + unit, y + unit, w - 2 * unit, EYE_RADIUS.inner * unit)
+        : roundedRectPath(x, y, w, EYE_RADIUS.dot * unit);
+      while (clip.firstChild) clip.removeChild(clip.firstChild);
+      var path = svg.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('clip-rule', 'evenodd');
+      clip.appendChild(path);
+    }
   }
 
   // Checks that must pass before anything is exported. `moduleCount` is optional.
@@ -746,7 +955,8 @@
     }
     var hint = {
       wifi: content && content.ssid, email: content && content.to, phone: content && content.phone,
-      sms: content && content.phone, contact: content && ((content.firstName || '') + ' ' + (content.lastName || '') || content.org),
+      sms: content && content.phone, contact: content && (((content.firstName || '') + ' ' + (content.lastName || '')).trim() || content.org),
+      event: content && content.title,
       text: content && str(content.text).slice(0, 30)
     }[type];
     return 'qr-' + (type || 'code') + (hint && slugify(hint, '') ? '-' + slugify(hint, '') : '');
@@ -892,6 +1102,7 @@
     EC_RECOVERY: EC_RECOVERY,
     STYLES: STYLES,
     STYLE_ALIASES: STYLE_ALIASES,
+    EYE_SHAPES: EYE_SHAPES,
     PLATES: PLATES,
     DESIGN_DEFAULTS: DESIGN_DEFAULTS,
     LOGO_SCALE: LOGO_SCALE,
@@ -908,6 +1119,9 @@
     normalizeHex: normalizeHex,
     normalizeDesign: normalizeDesign,
     resolveEc: resolveEc,
+    CAPTION_MAX: CAPTION_MAX,
+    captionLayout: captionLayout,
+    captionedSvg: captionedSvg,
     luminance: luminance,
     contrastRatio: contrastRatio,
     colourVerdict: colourVerdict,

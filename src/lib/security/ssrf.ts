@@ -44,9 +44,38 @@ function isPrivateIPv6(addr: string): boolean {
   if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // unique-local
   if (lower.startsWith("ff")) return true; // multicast
   if (lower.startsWith("::ffff:")) {
-    // IPv4-mapped — re-check the v4 portion
+    // IPv4-mapped — re-check the v4 portion. Node may print it dotted
+    // (::ffff:127.0.0.1) or as two hex groups (::ffff:7f00:1).
     const v4 = lower.slice("::ffff:".length);
-    return isPrivateIPv4(v4);
+    if (v4.includes(".")) return isPrivateIPv4(v4);
+    const groups = v4.split(":").map((g) => Number.parseInt(g, 16));
+    if (groups.length !== 2 || groups.some((g) => Number.isNaN(g))) return true;
+    const [hi = 0, lo = 0] = groups;
+    return isPrivateIPv4(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`);
   }
   return false;
+}
+
+const MAX_REDIRECTS = 5;
+
+/**
+ * fetch() that re-validates the destination on every redirect hop. A plain
+ * fetch follows redirects itself, so a public URL that 302s to an internal
+ * address would skip the check made on the first hostname.
+ */
+export async function fetchPublicUrl(url: string, init: RequestInit = {}): Promise<Response> {
+  let current = new URL(url);
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    if (current.protocol !== "http:" && current.protocol !== "https:") {
+      throw new Error("URL must use http or https.");
+    }
+    await assertPublicHost(current.hostname);
+    const response = await fetch(current, { ...init, redirect: "manual" });
+    if (response.status < 300 || response.status >= 400) return response;
+    const location = response.headers.get("location");
+    await response.body?.cancel();
+    if (!location) return response;
+    current = new URL(location, current);
+  }
+  throw new Error("Too many redirects.");
 }

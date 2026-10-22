@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellRing } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
@@ -197,11 +196,10 @@ export function WebPushSettings({ pushEnabled, disabled = false }: WebPushSettin
       : null;
 
   return (
-    <div className="rounded-md bg-muted/40 p-3 mt-2" data-web-push-settings>
+    <div className="px-4 py-3.5" data-web-push-settings>
       <div className="flex items-start gap-3">
-        <BellRing className="size-4 mt-0.5 text-muted-foreground" />
         <div className="min-w-0">
-          <p className="text-sm font-medium m-0">This browser</p>
+          <p className="text-sm font-bold m-0">This browser</p>
           <p className="text-xs text-muted-foreground m-0 mt-0.5">
             {status.subscribed
               ? "This device can receive alerts even when the app is closed."

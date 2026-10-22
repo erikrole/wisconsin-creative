@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
-import { selectAccountabilityJeers } from "@/lib/accountability-jeers";
 import { csvField } from "@/lib/csv";
 import { HttpError, ok } from "@/lib/http";
 import { getAllowedRoles } from "@/lib/permissions";
@@ -113,11 +112,9 @@ export const GET = withAuth(async (req, { user }) => {
     activeOverdue: metrics.activeOverdue,
     totalLateHours: metrics.totalLateHours,
   };
-  const spotlightJeers = selectAccountabilityJeers(report.leaderboard);
 
   return ok({
     ...sharedReport,
-    spotlightJeers,
     metrics: canManageExclusions ? metrics : sharedMetrics,
     capabilities: {
       canExport: canManageExclusions,

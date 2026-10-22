@@ -6,22 +6,11 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
 import OnboardingDialog from "@/components/onboarding/OnboardingDialog";
-import { OperationalMetricCard } from "@/components/OperationalFeedback";
-import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertTriangle,
   ClipboardList,
@@ -35,6 +24,8 @@ import { useFetch } from "@/hooks/use-fetch";
 import { useLastAudit } from "@/hooks/use-last-audit";
 import { LastEditedHint } from "@/components/LastEditedHint";
 import { handleAuthRedirect, classifyError, isAbortError, parseErrorMessage } from "@/lib/errors";
+import { cn } from "@/lib/utils";
+import { SettingsGroup } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 
 type AllowedEmail = {
@@ -97,15 +88,11 @@ export default function AllowedEmailsPage() {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const railItems: OperationalStatusRailItem[] = totalPending > 0 ? [{
-    id: "pending",
-    label: "Pending",
-    value: totalPending,
-    detail: "Allowlist entries waiting for registration.",
-    icon: UserPlus,
-    tone: "info",
-    onSelect: () => setStatusFilter("unclaimed"),
-  }] : [];
+  const filters = [
+    { value: "all", label: "All", count: totalAll },
+    { value: "unclaimed", label: "Pending", count: totalPending },
+    { value: "claimed", label: "Joined", count: totalClaimed },
+  ] as const;
 
   async function handleDelete(item: AllowedEmail) {
     const ok = await confirm({
@@ -137,17 +124,31 @@ export default function AllowedEmailsPage() {
     setDeletingId(null);
   }
 
-  const description = "Manage which email addresses can register for an account. Only pre-approved emails can sign up.";
+  const description = "Only people on this list can create an account. Each address joins with the role you pick.";
+  const actions = (
+    <>
+      <Button asChild variant="outline" className="min-h-10">
+        <Link href="/staff/onboarding-status">
+          <ClipboardList data-icon="inline-start" />
+          Status
+        </Link>
+      </Button>
+      <Button className="min-h-10" onClick={() => setShowOnboarding(true)}>
+        <UserPlus data-icon="inline-start" />
+        Add users
+      </Button>
+    </>
+  );
 
   if (loading) {
     return (
       <SettingsPageShell href="/settings/allowed-emails" description={description} mainClassName="flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 rounded-md border p-4">
-                <Skeleton className="h-5 w-48" />
-                <Skeleton className="h-5 w-16 rounded-full" />
-              </div>
-            ))}
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 rounded-xl border p-4">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+        ))}
       </SettingsPageShell>
     );
   }
@@ -156,168 +157,113 @@ export default function AllowedEmailsPage() {
     const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
       <SettingsPageShell href="/settings/allowed-emails" description={description}>
-            <Card>
-              <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-                <Icon className="size-10 text-muted-foreground" />
-                <div>
-                  <p className="font-semibold">
-                    {error === "network" ? "Connection Failed" : "Something Went Wrong"}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {error === "network"
-                      ? "Could not connect to server. Check your connection."
-                      : "Failed to load allowed emails. Please try again."}
-                  </p>
-                </div>
-                <Button variant="outline" onClick={reload}>
-                  <RefreshCw className="size-4" />
-                  Retry
-                </Button>
-              </CardContent>
-            </Card>
+        <SettingsGroup>
+          <div className="flex flex-col items-center gap-4 px-4 py-12 text-center">
+            <Icon className="size-8 text-muted-foreground" />
+            <div>
+              <p className="m-0 text-sm font-bold">
+                {error === "network" ? "Connection failed" : "Something went wrong"}
+              </p>
+              <p className="m-0 mt-1 text-sm text-muted-foreground">
+                {error === "network"
+                  ? "Could not connect to server. Check your connection."
+                  : "Failed to load allowed emails. Please try again."}
+              </p>
+            </div>
+            <Button variant="outline" onClick={reload}>
+              <RefreshCw className="size-4" />
+              Retry
+            </Button>
+          </div>
+        </SettingsGroup>
       </SettingsPageShell>
     );
   }
 
   return (
-    <SettingsPageShell href="/settings/allowed-emails" description={description} mainClassName="flex flex-col gap-4">
-        {/* Onboarding overview */}
-        <OperationalStatusRail
-          orientation={{
-            label: "Allowlist",
-            value: `${totalAll} ${totalAll === 1 ? "entry" : "entries"}`,
-            icon: ClipboardList,
-          }}
-          items={railItems}
-          allClearLabel={railItems.length === 0 ? "All allowlist entries are claimed" : undefined}
-          details={(
-            <div className="grid gap-2 sm:grid-cols-3">
-              <OperationalMetricCard label="Total" value={totalAll} helper="on the allowlist" onClick={() => setStatusFilter("all")} ariaPressed={statusFilter === "all"} />
-              <OperationalMetricCard label="Pending" value={totalPending} tone={totalPending ? "blue" : "muted"} helper="awaiting sign-up" onClick={() => setStatusFilter("unclaimed")} ariaPressed={statusFilter === "unclaimed"} />
-              <OperationalMetricCard label="Claimed" value={totalClaimed} helper="registered" onClick={() => setStatusFilter("claimed")} ariaPressed={statusFilter === "claimed"} />
-            </div>
-          )}
-        />
-
-        {/* Controls row */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger
-              id="allowed-email-status-filter"
-              name="allowedEmailStatusFilter"
-              className="h-10 w-[160px]"
-              aria-label="Allowed email status filter"
+    <SettingsPageShell href="/settings/allowed-emails" description={description} actions={actions} mainClassName="flex flex-col gap-3">
+      <div
+        role="radiogroup"
+        aria-label="Allowed email status filter"
+        className="inline-flex w-fit rounded-lg bg-muted p-0.5"
+      >
+        {filters.map((filter) => {
+          const selected = statusFilter === filter.value;
+          return (
+            <button
+              key={filter.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => setStatusFilter(filter.value)}
+              className={cn(
+                "flex h-9 items-center gap-1.5 rounded-md px-3 text-sm transition-colors",
+                selected ? "bg-background font-bold text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="unclaimed">Pending</SelectItem>
-              <SelectItem value="claimed">Claimed</SelectItem>
-            </SelectContent>
-          </Select>
+              {filter.label}
+              <span className="tabular-nums text-muted-foreground">{filter.count}</span>
+            </button>
+          );
+        })}
+      </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button className="min-h-10" onClick={() => setShowOnboarding(true)}>
-              <UserPlus data-icon="inline-start" />
-              Add users
-            </Button>
-            <Button asChild variant="outline" className="min-h-10">
-              <Link href="/staff/onboarding-status">
-                <ClipboardList data-icon="inline-start" />
-                Status
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <OnboardingDialog
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+        currentUserRole={currentUserRole}
+        onInvitesChanged={() => reload()}
+      />
 
-        <OnboardingDialog
-          open={showOnboarding}
-          onOpenChange={setShowOnboarding}
-          currentUserRole={currentUserRole}
-          onInvitesChanged={() => reload()}
-        />
-
-        {/* Table */}
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle className="text-base">
-              {statusFilter === "unclaimed"
-                ? "Pending invitations"
-                : statusFilter === "claimed"
-                  ? "Claimed invitations"
-                  : "All allowed emails"}
-            </CardTitle>
-          </CardHeader>
-          {items.length === 0 ? (
-            <CardContent className="py-0">
-              <EmptyState
-                inline
-                icon={statusFilter === "all" ? "users" : "search"}
-                title={statusFilter === "all" ? "No allowed emails yet" : "No emails match this filter"}
-                description={
-                  statusFilter === "all"
-                    ? "Add an address to let someone register with the assigned role."
-                    : "Switch filters to review pending or claimed allowlist entries."
-                }
-              />
-            </CardContent>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Added by</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex flex-col gap-0.5">
-                        <span>{item.email}</span>
-                        <LastEditedHint info={lastEdited[item.id]} />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={ROLE_BADGE_META[item.role].variant} size="sm">
-                        {ROLE_BADGE_META[item.role].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {item.claimedAt ? (
-                        <Badge variant="gray" size="sm">Claimed</Badge>
-                      ) : (
-                        <Badge variant="blue" size="sm">Pending</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {item.createdBy.name}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <OperationalRowActions
-                        label={`Actions for ${item.email}`}
-                        icon={deletingId === item.id ? <Spinner /> : undefined}
-                      >
-                        <DropdownMenuItem
-                          onSelect={() => handleDelete(item)}
-                          disabled={!!item.claimedAt || deletingId === item.id}
-                          variant="destructive"
-                        >
-                          <Trash2 className="size-4" />
-                          {item.claimedAt ? "Claimed entries stay for audit" : "Remove from allowlist"}
-                        </DropdownMenuItem>
-                      </OperationalRowActions>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </Card>
+      <SettingsGroup>
+        {items.length === 0 ? (
+          <EmptyState
+            inline
+            icon={statusFilter === "all" ? "users" : "search"}
+            title={statusFilter === "all" ? "No allowed emails yet" : "Nothing here"}
+            description={
+              statusFilter === "all"
+                ? "Add an address to let someone register with the assigned role."
+                : statusFilter === "unclaimed"
+                  ? "Everyone on the list has joined."
+                  : "Nobody on the list has joined yet."
+            }
+          />
+        ) : (
+          items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="truncate text-sm font-bold text-foreground">{item.email}</span>
+                  <Badge variant={ROLE_BADGE_META[item.role].variant} size="sm">
+                    {ROLE_BADGE_META[item.role].label}
+                  </Badge>
+                </div>
+                <p className="m-0 mt-0.5 text-[13px] text-muted-foreground">
+                  {item.claimedAt
+                    ? `Joined${item.claimedBy ? ` as ${item.claimedBy.name}` : ""}`
+                    : <span className="font-bold text-[var(--blue-text)]">Waiting to sign up</span>}
+                  {" · "}Added by {item.createdBy.name}
+                  {lastEdited[item.id] ? <> · <LastEditedHint info={lastEdited[item.id]} className="text-[13px]" /></> : null}
+                </p>
+              </div>
+              <OperationalRowActions
+                label={`Actions for ${item.email}`}
+                icon={deletingId === item.id ? <Spinner /> : undefined}
+              >
+                <DropdownMenuItem
+                  onSelect={() => handleDelete(item)}
+                  disabled={!!item.claimedAt || deletingId === item.id}
+                  variant="destructive"
+                >
+                  <Trash2 className="size-4" />
+                  {item.claimedAt ? "Claimed entries stay for audit" : "Remove from allowlist"}
+                </DropdownMenuItem>
+              </OperationalRowActions>
+            </div>
+          ))
+        )}
+      </SettingsGroup>
     </SettingsPageShell>
   );
 }

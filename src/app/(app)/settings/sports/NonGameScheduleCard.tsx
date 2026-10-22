@@ -1,21 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { SaveIcon } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { formatMinutes } from "@/lib/format";
 import { AREAS, AREA_LABELS, type Area, type NonGameScheduleDefaults } from "./types";
-
-const CALL_TIME_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240];
-
+import { CallTimeRow, CrewCount } from "./ShiftConfigTable";
+import { SettingsGroup } from "../_components/SettingsGroup";
 
 export default function NonGameScheduleCard() {
   const { data, loading, error, reload } = useFetch<NonGameScheduleDefaults>({
@@ -70,81 +63,72 @@ export default function NonGameScheduleCard() {
     }
   }
 
+  const title = "Non-game events";
+  const description = "Meetings, shoots, and other coverage with no opponent.";
+
   if (loading) return <Skeleton className="h-72 w-full rounded-xl" />;
   if (error || !value) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-between gap-4 py-6">
-          <p className="text-sm text-muted-foreground">Non-game defaults could not be loaded.</p>
+      <SettingsGroup title={title} description={description}>
+        <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+          <p className="m-0 text-sm text-muted-foreground">Non-game defaults could not be loaded.</p>
           <Button variant="outline" onClick={reload}>Retry</Button>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsGroup>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">Non-game</CardTitle>
-              <Badge variant="blue" size="sm">All non-game events</Badge>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">Used when an event has no opponent, including meetings, shoots, and special coverage.</p>
-          </div>
-          {draft ? (
-            <Button className="h-10" disabled={saving} loading={saving} onClick={save}>
-              <SaveIcon data-icon="inline-start" />
-              Save
-            </Button>
-          ) : null}
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4 pt-0">
+    <SettingsGroup title={title} description={description}>
+      <div className="flex flex-col gap-4 px-4 py-4">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm [&_th]:border-b [&_th]:bg-muted/40 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-muted-foreground [&_td]:border-b [&_td]:border-border/40 [&_td]:px-3 [&_td]:py-2 [&_tr:last-child_td]:border-b-0">
-            <thead><tr><th>Area</th><th className="text-center">Staff</th><th className="text-center">Student</th><th className="text-center">Total</th></tr></thead>
+          <table className="border-collapse text-sm [&_td]:py-1 [&_td]:pr-2 [&_th]:pb-1.5 [&_th]:pr-2 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-bold [&_th]:text-muted-foreground">
+            <thead>
+              <tr>
+                <th className="min-w-32">Minimum crew</th>
+                <th className="!text-center">Staff</th>
+                <th className="!text-center">Students</th>
+              </tr>
+            </thead>
             <tbody>
               {AREAS.map((area) => {
                 const row = value.shiftConfigs.find((item) => item.area === area) ?? { area, staffCount: 0, studentCount: 0 };
                 return (
                   <tr key={area}>
-                    <td className="font-medium">{AREA_LABELS[area]}</td>
+                    <td className="font-bold">{AREA_LABELS[area]}</td>
                     {(["staffCount", "studentCount"] as const).map((field) => (
                       <td key={field} className="text-center">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={20}
+                        <CrewCount
                           value={row[field]}
-                          onChange={(event) => updateCount(area, field, Math.max(0, Number.parseInt(event.target.value, 10) || 0))}
-                          className="inline-block w-14 text-center"
-                          aria-label={`Non-game ${AREA_LABELS[area]} ${field === "staffCount" ? "Staff" : "Student"} count`}
+                          onChange={(count) => updateCount(area, field, count)}
+                          disabled={saving}
+                          label={`Non-game ${AREA_LABELS[area]} ${field === "staffCount" ? "Staff" : "Student"} count`}
                         />
                       </td>
                     ))}
-                    <td className="text-center font-semibold tabular-nums">{row.staffCount + row.studentCount}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="text-sm font-medium text-muted-foreground">Student call time</span>
-          {(["shiftStartOffset", "shiftEndOffset"] as const).map((field) => (
-            <div key={field} className="flex items-center gap-2">
-              <Select value={String(value[field])} onValueChange={(next) => updateOffset(field, Number.parseInt(next, 10))}>
-                <SelectTrigger size="sm" className="w-[110px]"><SelectValue /></SelectTrigger>
-                <SelectContent>{CALL_TIME_OPTIONS.map((minutes) => <SelectItem key={minutes} value={String(minutes)}>{formatMinutes(minutes)}</SelectItem>)}</SelectContent>
-              </Select>
-              <span className="text-sm text-muted-foreground">{field === "shiftStartOffset" ? "before" : "after"}</span>
-            </div>
-          ))}
-          <p className="text-xs text-muted-foreground">Staff and collaborators use the event start and end.</p>
-        </div>
-      </CardContent>
-    </Card>
+        <CallTimeRow
+          start={value.shiftStartOffset}
+          end={value.shiftEndOffset}
+          onChange={updateOffset}
+          disabled={saving}
+        />
+        {draft ? (
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" disabled={saving} onClick={() => setDraft(null)}>
+              Discard
+            </Button>
+            <Button disabled={saving} loading={saving} onClick={save}>
+              Save
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </SettingsGroup>
   );
 }

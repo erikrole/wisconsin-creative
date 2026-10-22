@@ -3,10 +3,9 @@
 import { useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { handleAuthRedirect, classifyError, isAbortError, parseJsonSafely } from "@/lib/errors";
+import { SettingsGroup } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 
 type MigrationRow = { name: string; appliedAt: string | null };
@@ -62,210 +61,139 @@ export default function DatabasePage() {
     }
   }
 
+  const checks = result?.checks;
+  const summaryRows = checks
+    ? [
+        {
+          label: "Migrations",
+          ok: checks.migrationTable.exists,
+          detail: checks.migrationTable.exists
+            ? `${checks.migrationTable.migrations.length} recorded`
+            : "Migration table missing",
+          missing: [] as string[],
+        },
+        {
+          label: "Tables",
+          ok: checks.tables.missing.length === 0,
+          detail: checks.tables.missing.length === 0
+            ? `${checks.tables.present.length} present`
+            : `${checks.tables.missing.length} missing`,
+          missing: checks.tables.missing,
+        },
+        {
+          label: "Enums",
+          ok: checks.enums.missing.length === 0,
+          detail: checks.enums.missing.length === 0
+            ? `${checks.enums.present.length} present`
+            : `${checks.enums.missing.length} missing`,
+          missing: checks.enums.missing,
+        },
+        {
+          label: "Extensions",
+          ok: checks.extensions.missing.length === 0,
+          detail: checks.extensions.missing.length === 0
+            ? `${checks.extensions.present.length} installed`
+            : `${checks.extensions.missing.length} missing`,
+          missing: checks.extensions.missing,
+        },
+        {
+          label: "Columns",
+          ok: checks.columns.drift.length === 0,
+          detail: checks.columns.drift.length === 0
+            ? "No drift"
+            : `${checks.columns.drift.length} missing`,
+          missing: checks.columns.drift.map((d) => `${d.table}.${d.column}`),
+        },
+      ]
+    : [];
+
   return (
     <SettingsPageShell
       href="/settings/database"
-      description="Run a bounded baseline check for known tables, enums, columns, extensions, and migration records. Passing does not replace the migration health and deploy checks."
+      description="A bounded baseline check for known tables, enums, columns, extensions, and migration records. Passing it does not replace the migration health and deploy checks."
       actions={
         <Button onClick={runCheck} loading={loading} className="h-10">
-          Run diagnostics
+          {result ? "Run again" : "Run diagnostics"}
         </Button>
       }
+      mainClassName="flex flex-col gap-7"
     >
+      {error && (
+        <SettingsGroup>
+          <p role="alert" className="m-0 px-4 py-3.5 text-sm text-destructive">{error}</p>
+        </SettingsGroup>
+      )}
 
-        {error && (
-          <Card className="mb-1">
-            <CardContent className="text-red">
-              {error}
-            </CardContent>
-          </Card>
-        )}
+      {result && checks && (
+        <>
+          <SettingsGroup>
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              {result.ok
+                ? <CheckCircle2 className="size-5 shrink-0 text-[var(--green)]" aria-hidden="true" />
+                : <XCircle className="size-5 shrink-0 text-destructive" aria-hidden="true" />}
+              <span className="text-sm font-bold">
+                {result.ok ? "Baseline checks passed" : "Issues detected"}
+              </span>
+            </div>
+            {summaryRows.map((row) => (
+              <div key={row.label} className="flex flex-col gap-2 px-4 py-3">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-bold">{row.label}</span>
+                  <span className={row.ok ? "text-muted-foreground" : "font-bold text-destructive"}>{row.detail}</span>
+                </div>
+                {row.missing.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {row.missing.map((item, i) => (
+                      <code key={`${item}-${i}`} className="rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive">
+                        {item}
+                      </code>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </SettingsGroup>
 
-        {result && (
-          <>
-            {/* Overall status */}
-            <Card className="mb-1">
-              <CardContent className="flex items-center gap-3">
-                <span
-                  className={`shrink-0 inline-block size-3 rounded-full ${result.ok ? "bg-[var(--green)]" : "bg-destructive"}`}
-                />
-                <span className="font-semibold text-[length:var(--text-md)]">
-                  {result.ok ? "Baseline checks passed" : "Issues detected"}
-                </span>
-              </CardContent>
-            </Card>
+          {result.remediation.length > 0 && (
+            <SettingsGroup title="How to fix">
+              {result.remediation.map((step, i) => (
+                <p key={i} className="m-0 px-4 py-3 font-mono text-[13px] leading-relaxed">
+                  {step}
+                </p>
+              ))}
+            </SettingsGroup>
+          )}
 
-            {/* Remediation steps */}
-            {result.remediation.length > 0 && (
-              <Card className="mb-1">
-                <CardHeader>
-                  <span className="font-semibold text-sm">Remediation</span>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                  {result.remediation.map((step, i) => (
-                    <div
-                      key={i}
-                      className="text-sm font-mono px-3 py-2 bg-destructive/5 rounded-md leading-relaxed"
-                    >
-                      {step}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+          {checks.migrationTable.migrations.length > 0 && (
+            <SettingsGroup title="Migrations">
+              <div className="max-h-80 overflow-y-auto">
+                {checks.migrationTable.migrations.map((m, i) => (
+                  <div
+                    key={`${m.name}-${m.appliedAt ?? "pending"}-${i}`}
+                    className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-[13px] last:border-b-0"
+                  >
+                    <code className="truncate">{m.name}</code>
+                    <span className="shrink-0 text-muted-foreground tabular-nums">
+                      {m.appliedAt ? new Date(m.appliedAt).toLocaleDateString() : "Not applied"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </SettingsGroup>
+          )}
+        </>
+      )}
 
-            {/* Migration table */}
-            <Card className="mb-1">
-              <CardHeader>
-                <span className="font-semibold text-sm">Migrations</span>
-                <StatusBadge ok={result.checks.migrationTable.exists} label={result.checks.migrationTable.exists ? "Table exists" : "Table missing"} />
-              </CardHeader>
-              {result.checks.migrationTable.migrations.length > 0 && (
-                <CardContent className="px-0 py-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Migration</TableHead>
-                        <TableHead>Applied</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {result.checks.migrationTable.migrations.map((m, i) => (
-                        <TableRow key={`${m.name}-${m.appliedAt ?? "pending"}-${i}`}>
-                          <TableCell>{m.name}</TableCell>
-                          <TableCell>
-                            {m.appliedAt ? new Date(m.appliedAt).toLocaleDateString() : "—"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Tables */}
-            <Card className="mb-1">
-              <CardHeader>
-                <span className="font-semibold text-sm">Tables</span>
-                <StatusBadge
-                  ok={result.checks.tables.missing.length === 0}
-                  label={result.checks.tables.missing.length === 0
-                    ? `${result.checks.tables.present.length} present`
-                    : `${result.checks.tables.missing.length} missing`}
-                />
-              </CardHeader>
-              {result.checks.tables.missing.length > 0 && (
-                <CardContent>
-                  <TagList items={result.checks.tables.missing} variant="danger" />
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Enums */}
-            <Card className="mb-1">
-              <CardHeader>
-                <span className="font-semibold text-sm">Enums</span>
-                <StatusBadge
-                  ok={result.checks.enums.missing.length === 0}
-                  label={result.checks.enums.missing.length === 0
-                    ? `${result.checks.enums.present.length} present`
-                    : `${result.checks.enums.missing.length} missing`}
-                />
-              </CardHeader>
-              {result.checks.enums.missing.length > 0 && (
-                <CardContent>
-                  <TagList items={result.checks.enums.missing} variant="danger" />
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Extensions */}
-            <Card className="mb-1">
-              <CardHeader>
-                <span className="font-semibold text-sm">Extensions</span>
-                <StatusBadge
-                  ok={result.checks.extensions.missing.length === 0}
-                  label={result.checks.extensions.missing.length === 0
-                    ? `${result.checks.extensions.present.length} installed`
-                    : `${result.checks.extensions.missing.length} missing`}
-                />
-              </CardHeader>
-              {result.checks.extensions.missing.length > 0 && (
-                <CardContent>
-                  <TagList items={result.checks.extensions.missing} variant="danger" />
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Column drift */}
-            {result.checks.columns.drift.length > 0 && (
-              <Card className="mb-1">
-                <CardHeader>
-                  <span className="font-semibold text-sm">Column Drift</span>
-                  <StatusBadge ok={false} label={`${result.checks.columns.drift.length} missing`} />
-                </CardHeader>
-                <CardContent className="px-0 py-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Table</TableHead>
-                        <TableHead>Column</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {result.checks.columns.drift.map((d, i) => (
-                        <TableRow key={i}>
-                          <TableCell><code>{d.table}</code></TableCell>
-                          <TableCell><code>{d.column}</code></TableCell>
-                          <TableCell>
-                            <Badge variant="red" size="sm">{d.status}</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
-
-        {!result && !error && !loading && (
-          <Card>
-            <CardContent className="py-0">
-              <EmptyState
-                inline
-                icon="check"
-                title="No diagnostics run yet"
-                description="Run the baseline diagnostic, then use the migration health check for release proof."
-              />
-            </CardContent>
-          </Card>
-        )}
+      {!result && !error && !loading && (
+        <SettingsGroup>
+          <EmptyState
+            inline
+            icon="check"
+            title="No diagnostics run yet"
+            description="Run the baseline diagnostic, then use the migration health check for release proof."
+          />
+        </SettingsGroup>
+      )}
     </SettingsPageShell>
-  );
-}
-
-/* ── Helpers ──────────────────────────────────────────── */
-
-function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <Badge variant={ok ? "green" : "red"} size="sm">
-      {label}
-    </Badge>
-  );
-}
-
-function TagList({ items, variant }: { items: string[]; variant: "danger" | "info" }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {items.map((item, i) => (
-        <Badge key={`${item}-${i}`} variant={variant === "danger" ? "red" : "blue"} size="sm">
-          {item}
-        </Badge>
-      ))}
-    </div>
   );
 }
