@@ -76,9 +76,9 @@ export default function BookingItems({
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 ${isInactive ? "opacity-50" : ""}`}
+                  className={`flex items-center gap-3 px-4 py-3 ${isInactive ? "opacity-50" : ""}`}
                 >
-                  <AssetImage src={item.asset.imageUrl} alt={item.asset.assetTag} size={36} />
+                  <AssetImage src={item.asset.imageUrl} alt={item.asset.assetTag} size={48} />
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/items/${item.asset.id}`}
@@ -139,8 +139,8 @@ export default function BookingItems({
               const showAssignedUnits = item.bulkSku.trackByNumber && assignedUnits.length > 0;
 
               return (
-                <div key={item.id} className="flex items-center gap-3 px-3 py-2.5">
-                  <AssetImage src={item.bulkSku.imageUrl} alt={item.bulkSku.name} size={36} />
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  <AssetImage src={item.bulkSku.imageUrl} alt={item.bulkSku.name} size={48} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold truncate">{item.bulkSku.name}</div>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
