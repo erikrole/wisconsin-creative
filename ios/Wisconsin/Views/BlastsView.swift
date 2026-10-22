@@ -170,7 +170,7 @@ struct BlastsView: View {
             if let sentConfirmation {
                 Section {
                     Label(sentConfirmation, systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.statusText(.green))
                 }
             }
             Section {

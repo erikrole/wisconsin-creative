@@ -107,7 +107,7 @@ struct ComposeBlastSheet: View {
                     Section {
                         Text(sendError)
                             .font(.footnote)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.statusText(.red))
                     }
                 }
             }
@@ -602,7 +602,7 @@ struct SentBlastDetailView: View {
                     Section {
                         Text(actionError)
                             .font(.footnote)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.statusText(.red))
                     }
                 }
                 if !detail.blast.isCancelled {
