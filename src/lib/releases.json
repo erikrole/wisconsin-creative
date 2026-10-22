@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "QR Studio, refreshed",
+    "type": "improvement",
+    "summary": "QR Studio has a calmer look, makes calendar event codes, and can print a short caption under any code.",
+    "details": [
+      "New Event type: scan the code to add a game or shoot to your phone's calendar.",
+      "Add an optional caption like \"Scan for tickets\" under the code, in both PNG and SVG downloads, without affecting scanning.",
+      "Deleting a saved code, or clearing the whole library, can now be undone.",
+      "The theme button shows whether it is following your device, light or dark.",
+      "Badger red is still the accent, with a cleaner layout and Lato type."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 594
+  },
+  {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",
