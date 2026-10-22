@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Calmer Availability and item screens",
+    "type": "improvement",
+    "summary": "Availability, item details, and profiles on iPhone are quieter and easier to scan.",
+    "details": [
+      "My Availability is now a simple list: pick a day, see its times, and swipe a row to edit or delete it.",
+      "Item details show Available next to the name, and Reserve is the one green button on the screen.",
+      "Profiles put the person's photo, name, and role front and center."
+    ],
+    "platforms": [
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-22",
     "title": "Tools in the sidebar",
     "type": "feature",
     "summary": "A new Tools item in the sidebar opens QR Studio, Board Sizes, Golden Hour, Timelapse, and Photo Frame in one click.",
@@ -32,7 +46,7 @@
     ],
     "pr": 586
   },
- {
+  {
     "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",

@@ -119,6 +119,13 @@ enum AppRuntimeMode {
         /// announcements: a banner image with another waiting behind it,
         /// a swipeable set of images, and a text-only notice.
         case announcement
+        /// Full-screen detail captures for the whole-app UI review: the
+        /// real view pushed in a stack against canned payloads.
+        case eventDetail = "event-detail"
+        case itemDetail = "item-detail"
+        case userDetail = "user-detail"
+        case availability
+        case gearPicks = "gear-picks"
         case announcementImages = "announcement-images"
         case announcementPlain = "announcement-plain"
         /// Worst-case content: a long title, four images, many bullets, a block
@@ -206,6 +213,7 @@ enum AppRuntimeMode {
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
              .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
+             .eventDetail, .itemDetail, .userDetail, .availability, .gearPicks,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:

@@ -95,6 +95,16 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .eventDetail:
+            EventDetailHarnessView()
+        case .itemDetail:
+            ItemDetailHarnessView()
+        case .userDetail:
+            NavigationStack { UserDetailHarnessBody() }
+        case .availability:
+            NavigationStack { AvailabilityHarnessBody() }
+        case .gearPicks:
+            GearPicksView()
         case .liveActivity:
             LiveActivityHarnessView()
         case .widgetSeed:
@@ -719,6 +729,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             let assetId = String(path.dropFirst("/api/assets/".count))
             return AssetFixtureAPI.asset(for: assetId)
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
+        case "/api/gear-picks/me": return UIReviewFixtureAPI.gearPicks
+        case let path where path.hasSuffix("/availability") && path.hasPrefix("/api/users/"):
+            return UIReviewFixtureAPI.availability
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
         case "/api/reports/checkouts": return ReportsFixtureAPI.checkouts
         case "/api/reservations": return SearchFixtureAPI.reservations
@@ -2506,3 +2519,92 @@ private extension Calendar {
 }
 
 #endif
+
+
+/// Seeds the staff session, then renders a fixture event's detail.
+struct EventDetailHarnessView: View {
+    @Environment(SessionStore.self) private var session
+    @State private var event: ScheduleEvent?
+
+    var body: some View {
+        NavigationStack {
+            if let event {
+                EventDetailView(event: event, myShift: nil)
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            session.currentUser = ScheduleFixtures.staffUser
+            let events = (try? await APIClient.shared.calendarEvents()) ?? []
+            event = events.first { $0.summary.contains("Ohio State") } ?? events.first
+        }
+    }
+}
+
+struct UserDetailHarnessBody: View {
+    @Environment(SessionStore.self) private var session
+    @State private var seeded = false
+
+    var body: some View {
+        Group {
+            if seeded { UserDetailView(userId: ScoreboardFixtureAPI.userId) } else { Color.clear }
+        }
+        .onAppear {
+            session.currentUser = ScheduleFixtures.staffUser
+            seeded = true
+        }
+    }
+}
+
+struct AvailabilityHarnessBody: View {
+    @Environment(SessionStore.self) private var session
+    @State private var seeded = false
+
+    var body: some View {
+        Group {
+            if seeded { AvailabilityView(userId: ScheduleFixtures.staffUser.id) } else { Color.clear }
+        }
+        .onAppear {
+            session.currentUser = ScheduleFixtures.staffUser
+            seeded = true
+        }
+    }
+}
+
+/// Canned payloads for the UI-review detail captures.
+enum UIReviewFixtureAPI {
+    static var availability: Data {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.dateFormat = "yyyy-MM-dd"
+        func day(_ offset: Int) -> String {
+            fmt.string(from: Calendar.current.date(byAdding: .day, value: offset, to: .now) ?? .now)
+        }
+        return Data("""
+        {"data":[
+          {"id":"a1","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":1,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"09:00","endsAt":"11:30","label":"CHEM 101","semesterLabel":"Fall 2026","semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a2","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"13:00","endsAt":"15:00","label":"Lab","semesterLabel":"Fall 2026","semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a3","kind":"WEEKLY","intent":"PREFER","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"16:00","endsAt":"21:00","label":"Prefer photo shifts","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a5","kind":"WEEKLY","intent":"DISLIKE","status":"APPROVED","dayOfWeek":5,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"17:00","endsAt":"20:00","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a4","kind":"AD_HOC","intent":"TIME_OFF","status":"APPROVED","dayOfWeek":null,"date":"\(day(12))","dateEndsOn":"\(day(15))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":"Family trip","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a6","kind":"AD_HOC","intent":"TIME_OFF","status":"PENDING","dayOfWeek":null,"date":"\(day(30))","dateEndsOn":"\(day(30))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null}
+        ]}
+        """.utf8)
+    }
+
+    static var gearPicks: Data {
+        Data(#"""
+        {"data":{
+          "cycle":{"id":"c1","title":"Fall 2026 gear","deadline":"2026-11-15T05:00:00Z","isOpen":true,"launchedAt":"2026-10-01T05:00:00Z"},
+          "participant":{"id":"p1","fit":"MENS","allowanceCents":30000},
+          "submission":null,
+          "catalog":{"maxQuantity":4,"categories":["Tops","Bottoms","Accessories"],"items":[
+            {"style":"BP-1","name":"Pullover hoodie","fit":"MENS","category":"Tops","priceCents":6500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""},{"code":"BLK","label":"Black","swatch":"#111111","image":""}]},
+            {"style":"BP-2","name":"Quarter zip","fit":"MENS","category":"Tops","priceCents":7500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]},
+            {"style":"BP-3","name":"Staff cap","fit":"MENS","category":"Accessories","priceCents":2800,"sizeLabel":"Size","sizes":["OSFA"],"sizesAreExact":true,"oneSize":true,"defaultSize":"OSFA","kit":{"kind":"CORE_KIT","colorCode":"RED"},"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]}
+          ]}
+        }}
+        """#.utf8)
+    }
+}
