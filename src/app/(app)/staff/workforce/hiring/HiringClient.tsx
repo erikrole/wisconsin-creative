@@ -328,7 +328,7 @@ export default function HiringClient() {
                   <span key={slot.area} className="inline-flex items-center gap-2 text-sm">
                     <span className="size-2 rounded-full" style={{ background: AREA_COLORS[slot.area] ?? "#8b8d98" }} aria-hidden />
                     {AREA_LABEL[slot.area] ?? slot.area}
-                    <b className={cn("tabular-nums", met && "text-[#1b6e47]")}>
+                    <b className={cn("tabular-nums", met && "text-[#1b6e47] dark:text-[#6bd49a]")}>
                       {hired}/{slot.targetCount}
                     </b>
                     <span className="sr-only">hired</span>
@@ -409,7 +409,7 @@ export default function HiringClient() {
                             <span className="truncate text-sm font-bold">{a.name}</span>
                             <span className="flex shrink-0 items-center gap-2">
                               {a.ratingAverage != null && (
-                                <span className="text-xs font-bold text-[#8a5200]" title="Average rating">
+                                <span className="text-xs font-bold text-[#8a5200] dark:text-[#f0c46a]" title="Average rating">
                                   ★ {a.ratingAverage.toFixed(1)}
                                 </span>
                               )}

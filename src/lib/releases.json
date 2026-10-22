@@ -230,6 +230,21 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Staff looks right in dark mode",
+    "type": "fixes",
+    "summary": "Staff tiles, notices and the hiring sheet now use dark-friendly colors instead of light pastels.",
+    "details": [
+      "The Right now tiles, Open schedule and See all links use softer tints and brighter text in dark mode.",
+      "The org chart notice and the hiring sheet banners no longer glow against the dark page.",
+      "Light mode looks the same as before."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 561
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
