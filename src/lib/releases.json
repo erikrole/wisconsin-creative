@@ -36,7 +36,8 @@
     "details": [
       "Items keeps Add item up front and tucks Export, Import, Fill gaps, Cleanup wizard and row density into one More menu.",
       "Available gear shows a small green dot instead of a filled pill, so checked-out gear and the people holding it stand out.",
-      "Kits shows Ready the same quiet way."
+      "Kits shows Ready the same quiet way.",
+      "On a kit, Duplicate stays up front; Archive, Delete and the way back to all kits sit in a More menu."
     ],
     "platforms": [
       "Web"
