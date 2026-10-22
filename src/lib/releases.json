@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Easier-to-read Bookings",
+    "type": "improvement",
+    "summary": "Booking cards on the Bookings page are larger and clearer, in the fresh look.",
+    "details": [
+      "Dates and places use regular type instead of tiny monospace, and the requester's name is bolder next to their avatar.",
+      "Bookings, Checkouts and Reservations share the same fresh theme as Items."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 587
+  },
+  {
+    "date": "2026-10-22",
     "title": "A calmer Items and Kits",
     "type": "improvement",
     "summary": "Items, Kits, Print labels and Import now use the fresh look, with one main action per page.",
