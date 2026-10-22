@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data: blob:; media-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -390,23 +390,45 @@
     /* ---- art preview ---- */
     .btn.ghost { min-height: 32px; padding: 0 10px; border-color: transparent; background: transparent; box-shadow: none; color: var(--ink-2); font-weight: 700; }
     .btn.ghost:hover { background: var(--hover); color: var(--ink); }
-    .art-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 10px 10px 12px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
-    .art-thumb { width: 52px; height: 36px; flex: none; border-radius: 6px; background: var(--well) center / contain no-repeat; box-shadow: inset 0 0 0 1px var(--line); }
-    .art-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; flex: 1 1 260px; min-width: 0; }
-    .art-text b { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
-    .art-text i { font: normal 12px var(--mono); color: var(--ink-3); }
-    .art-note { flex-basis: 100%; font-size: 13px; color: var(--ink-2); }
-    .art-note::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #2e9e5b; vertical-align: 1px; }
-    .art-bar.is-off .art-note::before { background: var(--hot); }
+    /* The tray: one card per piece in a row that scrolls sideways, so a full
+       system of pieces never pushes the board far down the page. */
+    .art-tray { display: grid; gap: 10px; padding: 12px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+    .art-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+    .art-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+    .art-title b { font-size: 14px; font-weight: 900; }
+    .art-sum { font-size: 13px; color: var(--ink-3); }
     .art-tools { display: flex; align-items: center; gap: 4px; margin-left: auto; }
     .art-tools .chip { min-height: 32px; }
+    .art-tools .btn .icon { width: 14px; height: 14px; }
+    .art-list { display: flex; gap: 8px; margin: 0 -12px; padding: 0 12px 2px; overflow-x: auto; list-style: none; scrollbar-width: thin; }
+    .art-item { position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: auto auto; gap: 8px 10px; flex: none; width: 300px; padding: 10px 34px 10px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+    .art-thumb { position: relative; width: 64px; height: 44px; overflow: hidden; border-radius: 6px; background: #0b0d10 center / contain no-repeat; box-shadow: inset 0 0 0 1px var(--line); }
+    .art-thumb video { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .art-kind { position: absolute; left: 4px; bottom: 3px; padding: 1px 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.62); color: #fff; font-size: 9.5px; font-weight: 700; letter-spacing: 0.02em; }
+    .art-text { display: grid; align-content: start; gap: 1px; min-width: 0; }
+    .art-text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 700; }
+    .art-text i { font: normal 11.5px var(--mono); color: var(--ink-3); }
+    .art-note { margin-top: 3px; font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }
+    .art-note::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #2e9e5b; vertical-align: 1px; }
+    .art-item.is-off { border-color: color-mix(in srgb, var(--hot) 35%, var(--line)); }
+    .art-item.is-off .art-note::before { background: var(--hot); }
+    .art-place { grid-column: 1 / -1; min-height: 32px; width: 100%; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-size: 13px; }
+    .art-place:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .art-rm { position: absolute; top: 6px; right: 6px; width: 26px; min-height: 26px; padding: 0; }
+    .art-rm .icon { width: 13px; height: 13px; }
+    svg .art-video { display: block; width: 100%; height: 100%; object-fit: fill; }
+    .zone-hit.is-drop { z-index: 3; background: color-mix(in srgb, var(--accent) 22%, transparent); border: 2px solid var(--accent); }
+    .zone-hit.is-drop .zone-label { visibility: visible; }
     .drawing.hide-zones .zone-hit:not(:hover):not(:focus-visible):not(.is-picked) { border-color: transparent; }
     .drawing.hide-zones .zone-hit:not(:hover):not(:focus-visible):not(.is-picked) .zone-label { visibility: hidden; }
     .drawing.has-art .zone-label { border-radius: 4px; background: color-mix(in srgb, var(--card) 86%, transparent); }
     .drawing.has-art .zone-hit { border-color: color-mix(in srgb, var(--zone) 70%, #fff); }
     .art-target { position: relative; }
-    .art-target::after { content: attr(data-drop); position: absolute; inset: 8px; z-index: 6; display: none; place-items: center; border: 2px dashed var(--accent); border-radius: 12px; background: color-mix(in srgb, var(--card) 82%, transparent); color: var(--accent-ink); font-weight: 900; font-size: 15px; pointer-events: none; }
-    .is-dragging .art-target::after { display: grid; }
+    /* While dragging, a dashed frame with the hint on top; the drawing stays
+       visible so the zone under the pointer can light up. */
+    .art-target::after { content: ""; position: absolute; inset: 0; z-index: 6; display: none; border: 2px dashed var(--accent); border-radius: 12px; pointer-events: none; }
+    .art-target::before { content: attr(data-drop); position: absolute; top: 10px; left: 50%; z-index: 7; display: none; transform: translateX(-50%); max-width: calc(100% - 24px); padding: 5px 12px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+    .is-dragging .art-target::after, .is-dragging .art-target::before { display: block; }
 
     /* ---- Shared tool header (v4): the tool's name top left, Apps top right.
        Shared byte-for-byte by every public tool; colours follow the page's
@@ -467,6 +489,7 @@
       .chips-label { flex: none; min-width: 0; margin-right: 4px; }
       .is-board-view .page-head .actions .art-btn { order: 3; flex: 1; }
       .art-tools { margin-left: 0; width: 100%; }
+      .art-item { width: min(300px, 82vw); }
       .start { padding: 16px 14px 14px; }
       .start-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 0 14px 2px; }
       .start-row::-webkit-scrollbar { display: none; }
@@ -475,7 +498,6 @@
       .start-row:has(.start-more[open]) { flex-wrap: wrap; overflow: visible; }
       .terms { grid-template-columns: 1fr; }
       .terms dd { padding-top: 0; border-top: 0; }
-      .art-target::after { inset: 4px; font-size: 13px; }
     }
     @media (hover: none) { .search kbd { display: none; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; } }
@@ -527,6 +549,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="data.js?v=13aaf0ce7b9d"></script>
-  <script src="app.js?v=821e51fe828c"></script>
+  <script src="app.js?v=6c489cef1c0a"></script>
 </body>
 </html>

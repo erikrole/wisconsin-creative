@@ -164,7 +164,9 @@
     more: '<circle cx="3.5" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="8" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="12.5" cy="8" r=".9" fill="currentColor" stroke="none"/>',
     prev: '<path d="M10 3.5 5.5 8l4.5 4.5"/>',
     next: '<path d="M6 3.5 10.5 8 6 12.5"/>',
-    share: '<path d="M8 10V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-4"/>'
+    share: '<path d="M8 10V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-4"/>',
+    plus: '<path d="M8 3v10M3 8h10"/>',
+    close: '<path d="m4 4 8 8M12 4l-8 8"/>'
   };
   function slug(s) { return s.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
@@ -491,17 +493,32 @@
     svg.appendChild(svgNode('rect', { class: 'canvas', x: 0, y: 0, width: d.w, height: d.h, 'vector-effect': 'non-scaling-stroke' }));
     // Previewed art sits on the board's canvas, under the crops, scrims and
     // seams, so you see what the board will hide.
-    if (opts.art) {
-      opts.art.places.forEach(function (p) {
-        svg.appendChild(svgNode('image', { class: 'art', href: opts.art.url, x: p.x, y: p.y, width: p.w, height: p.h, preserveAspectRatio: 'none' }));
+    // Videos play muted on a loop inside a foreignObject, so they stack in
+    // the same order as images.
+    (opts.art || []).forEach(function (piece) {
+      if (piece.hidden) return;
+      piece.places.forEach(function (p) {
+        if (!piece.art.video) {
+          svg.appendChild(svgNode('image', { class: 'art', href: piece.art.url, x: p.x, y: p.y, width: p.w, height: p.h, preserveAspectRatio: 'none' }));
+          return;
+        }
+        var fo = svgNode('foreignObject', { class: 'art', x: p.x, y: p.y, width: p.w, height: p.h });
+        var vid = document.createElement('video');
+        vid.muted = true; vid.loop = true; vid.autoplay = true; vid.playsInline = true;
+        vid.setAttribute('muted', ''); vid.setAttribute('playsinline', '');
+        vid.className = 'art-video';
+        vid.src = piece.art.url;
+        fo.appendChild(vid);
+        svg.appendChild(fo);
       });
-    }
+    });
+    var hasArt = !!(opts.art && opts.art.length);
     var used = {}, placed = 0;
     (d.overlays || []).forEach(function (o) {
       if (o.kind === 'crop' || o.kind === 'scrim') {
         var g = svgNode('g', { class: 'ov-' + o.kind });
         // Over previewed art, dim what the board hides so the cut reads.
-        if (opts.art) g.appendChild(svgNode('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: '#000', 'fill-opacity': '0.5' }));
+        if (hasArt) g.appendChild(svgNode('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: '#000', 'fill-opacity': '0.5' }));
         g.appendChild(svgNode('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: 'url(#' + id + ')' }));
         svg.appendChild(g);
         used[o.kind] = true;
@@ -564,6 +581,7 @@
       b.type = 'button';
       b.setAttribute('data-zone', d.name + '|' + z.n);
       b.setAttribute('data-area', String(rc.w * rc.h));
+      b.setAttribute('data-row', row.first.id);
       b.style.left = (rc.x / d.w * 100) + '%';
       b.style.top = (rc.y / d.h * 100) + '%';
       b.style.width = (rc.w / d.w * 100) + '%';
@@ -798,10 +816,11 @@
     if (legend) drawing.appendChild(legend);
     if (opts.board) {
       drawing.classList.add('art-target');
-      drawing.setAttribute('data-drop', 'Drop to preview on ' + d.name);
-      if (opts.art) drawing.classList.add('has-art');
-      if (opts.art && !artZones) drawing.classList.add('hide-zones');
-      if (!opts.art) drawing.appendChild(node('p', 'fig-note art-hint', 'Drop or paste an image here to preview it on the board. It stays on this device.'));
+      drawing.setAttribute('data-drop', 'Drop on a zone to pin it there, or anywhere to place by size');
+      var withArt = !!(opts.art && opts.art.length);
+      if (withArt) drawing.classList.add('has-art');
+      if (withArt && !artZones) drawing.classList.add('hide-zones');
+      if (!withArt) drawing.appendChild(node('p', 'fig-note art-hint', 'Drop, paste or pick images or videos to preview them on the board. Several pieces can go on at once, and they stay on this device.'));
     }
     if (!fig.placed && d.zones.length) {
       drawing.appendChild(node('p', 'fig-note', 'The sources give sizes for this display, not zone positions.'));
@@ -1553,85 +1572,239 @@
 
   /* ---------------- art preview ---------------- */
 
-  // An image dropped, pasted or picked in the board view, drawn on the board
-  // at true scale. It never leaves the browser (a blob: URL, revoked when
-  // replaced or removed) and stays while you move between boards.
-  var art = null;
+  // Images and videos dropped, pasted or picked in the board view, drawn on
+  // the board at true scale. Several pieces can sit on one board at once (a
+  // main video, wings and ads), each placed by its size or pinned to a zone.
+  // Nothing leaves the browser: each piece is a blob: URL, revoked when it is
+  // removed, and the set stays while you move between boards.
+  var arts = [];
+  var artSeq = 0;
   var artZones = true;
-  var MAX_ART_BYTES = 80 * 1024 * 1024;
+  var MAX_ART = 12;
+  var MAX_IMAGE_BYTES = 80 * 1024 * 1024;
   var artInput = document.createElement('input');
   artInput.type = 'file';
-  artInput.accept = 'image/*';
+  artInput.accept = 'image/*,video/mp4,video/webm,video/quicktime';
+  artInput.multiple = true;
   artInput.hidden = true;
-  artInput.addEventListener('change', function () { if (artInput.files && artInput.files[0]) setArt(artInput.files[0]); artInput.value = ''; });
+  artInput.addEventListener('change', function () { if (artInput.files) addArt(artInput.files); artInput.value = ''; });
   document.body.appendChild(artInput);
   function pickArt() { artInput.click(); }
-  function setArt(file) {
-    if (!file || !/^image\//.test(file.type || '')) { toast('That isn’t an image. Try a PNG, JPEG or WebP.'); return; }
-    if (file.size > MAX_ART_BYTES) { toast('That image is over 80 MB.'); return; }
-    var url = URL.createObjectURL(file);
-    var img = new Image();
-    img.onload = function () {
-      if (!img.naturalWidth || !img.naturalHeight) { URL.revokeObjectURL(url); toast('Couldn’t read that image.'); return; }
-      clearArt(true);
-      art = { url: url, name: file.name || 'Pasted image', w: img.naturalWidth, h: img.naturalHeight };
-      if (state.display) render(false);
-    };
-    img.onerror = function () { URL.revokeObjectURL(url); toast('Couldn’t read that image.'); };
-    img.src = url;
+  function isVideo(file) { return /^video\//.test(file.type || '') || /\.(mp4|m4v|webm|mov)$/i.test(file.name || ''); }
+  // Adds files in the order given; pin (optional) is a zone row on the open
+  // board, for a piece dropped onto that zone.
+  function addArt(files, pin) {
+    files = Array.prototype.slice.call(files);
+    var usable = files.filter(function (f) { return /^image\//.test(f.type || '') || isVideo(f); });
+    if (!usable.length) { toast('That isn’t an image or video. Try a PNG, JPEG, WebP or MP4.'); return; }
+    if (arts.length + usable.length > MAX_ART) { toast('Up to ' + MAX_ART + ' pieces at once. Remove some first.'); usable = usable.slice(0, Math.max(0, MAX_ART - arts.length)); }
+    usable.forEach(function (file) { loadArt(file, usable.length === 1 ? pin : null); });
   }
-  function clearArt(quiet) {
-    if (art) URL.revokeObjectURL(art.url);
-    art = null;
+  function loadArt(file, pin) {
+    var video = isVideo(file);
+    if (!video && file.size > MAX_IMAGE_BYTES) { toast(file.name + ' is over 80 MB.'); return; }
+    var url = URL.createObjectURL(file);
+    var name = file.name || (video ? 'Pasted video' : 'Pasted image');
+    function fail() { URL.revokeObjectURL(url); toast(video ? 'This browser can’t play ' + name + '. Try an H.264 MP4 or WebM.' : 'Couldn’t read ' + name + '.'); }
+    function done(media, w, h) {
+      if (!w || !h) { fail(); return; }
+      // A piece pinned to a zone replaces whatever was pinned there before.
+      if (pin) arts.filter(function (a) { return a.pin && a.pin.d === pin.d && a.pin.row === pin.row; }).forEach(function (a) { dropArt(a, true); });
+      arts.push({ id: ++artSeq, url: url, name: name, w: w, h: h, video: video, media: media, pin: pin || null });
+      if (state.display) render(false);
+    }
+    if (video) {
+      var v = document.createElement('video');
+      v.muted = true; v.preload = 'auto'; v.playsInline = true;
+      v.onloadeddata = function () { done(v, v.videoWidth, v.videoHeight); };
+      v.onerror = fail;
+      v.src = url;
+    } else {
+      var img = new Image();
+      img.onload = function () { done(img, img.naturalWidth, img.naturalHeight); };
+      img.onerror = fail;
+      img.src = url;
+    }
+  }
+  function dropArt(a, quiet) {
+    URL.revokeObjectURL(a.url);
+    arts = arts.filter(function (x) { return x !== a; });
     if (!quiet && state.display) render(false);
   }
+  function clearArt() {
+    arts.forEach(function (a) { URL.revokeObjectURL(a.url); });
+    arts = [];
+    if (state.display) render(false);
+  }
   function sameShape(aw, ah, bw, bh) { return aw * bh === ah * bw; }
-  // Where the art goes on this board: the whole board at its exact size, a
-  // zone at its exact size (every placement), then the same shape at another
-  // scale, else scaled to fit and flagged.
-  function artPlacement(d) {
-    var whole = [{ x: 0, y: 0, w: d.w, h: d.h }];
-    var rows = groupZones(d.zones).filter(function (r) { return !(r.w === d.w && r.h === d.h); });
-    function placed(row) { return !!(row.first.at && row.first.at.length); }
-    function fit() {
-      var sc = Math.min(d.w / art.w, d.h / art.h), w = Math.round(art.w * sc), h = Math.round(art.h * sc);
+  function artRows(d) { return groupZones(d.zones).filter(function (r) { return !(r.w === d.w && r.h === d.h); }); }
+  // Where every piece goes on this board, in drawing order (whole-board
+  // pieces first, zone pieces over them):
+  // 1. a piece pinned to a zone goes there, stretched if it's the wrong size;
+  // 2. a piece at a zone's exact size takes every free zone of that size, and
+  //    pieces of the same size share them in turn (left wing, right wing);
+  // 3. then the whole board at its exact size, the same shape as the board or
+  //    a zone at another scale, or scaled to fit and flagged.
+  // When two pieces claim the same spot the later one is drawn and the
+  // earlier one says so.
+  function placeArts(d) {
+    var rows = artRows(d);
+    function hasAt(row) { return !!(row.first.at && row.first.at.length); }
+    function fit(a) {
+      var sc = Math.min(d.w / a.w, d.h / a.h), w = Math.round(a.w * sc), h = Math.round(a.h * sc);
       return [{ x: Math.round((d.w - w) / 2), y: Math.round((d.h - h) / 2), w: w, h: h }];
     }
     // Zones with no position on file (most indoor boards) still match by size;
     // the art is drawn fit to the board and the note says why.
-    function at(row) { return placed(row) ? row.first.at.map(function (p) { return { x: p.x, y: p.y, w: row.w, h: row.h }; }) : fit(); }
-    function where(row) {
-      if (!placed(row)) return row.base + ' (no position on file, shown fit to the board)';
-      var n = row.first.at.length; return row.base + (n > 1 ? ' (' + n + ' placements)' : '');
+    function at(a, list) {
+      if (!list.every(hasAt)) return fit(a);
+      return [].concat.apply([], list.map(function (row) { return row.first.at.map(function (p) { return { x: p.x, y: p.y, w: row.w, h: row.h }; }); }));
     }
-    var built = 'Build at ' + pretty(d.w, d.h) + '.';
-    if (art.w === d.w && art.h === d.h) return { places: whole, note: 'Exact size for this board.', ok: true };
-    var exact = rows.filter(function (r) { return r.w === art.w && r.h === art.h; })[0];
-    if (exact) return { places: at(exact), note: 'Exact size for ' + where(exact) + '.', ok: true, row: exact };
-    if (sameShape(art.w, art.h, d.w, d.h)) return { places: whole, note: 'Same shape as the board at ' + Math.round(art.w / d.w * 100) + '% size. ' + built, ok: false };
-    var shape = rows.filter(function (r) { return sameShape(art.w, art.h, r.w, r.h); })[0];
-    if (shape) return { places: at(shape), note: 'Same shape as ' + where(shape) + ' at ' + Math.round(art.w / shape.w * 100) + '% size. Build at ' + pretty(shape.w, shape.h) + '.', ok: false, row: shape };
-    return { places: fit(), note: 'Not a size on this board, so it’s scaled to fit. ' + built, ok: false };
+    function names(list) {
+      var n = list.map(function (r) { return r.base; });
+      var s = n.length > 2 ? n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1] : n.join(' and ');
+      var count = list.reduce(function (k, r) { return k + (hasAt(r) ? r.first.at.length : 1); }, 0);
+      if (!list.every(hasAt)) return s + ' (no position on file, shown fit to the board)';
+      return s + (count > list.length ? ' (' + count + ' placements)' : '');
+    }
+    var out = arts.map(function (a) { return { art: a }; });
+    var taken = {};
+    out.forEach(function (p) {
+      var a = p.art;
+      var row = a.pin && a.pin.d === d.id && rows.filter(function (r) { return r.first.id === a.pin.row; })[0];
+      if (!row) return;
+      var exact = a.w === row.w && a.h === row.h;
+      p.rows = [row]; p.zone = true; p.ok = exact;
+      p.note = exact ? 'Exact size for ' + names([row]) + '.' : 'Stretched onto ' + names([row]) + '. Build at ' + pretty(row.w, row.h) + '.';
+      taken[row.first.id] = p;
+    });
+    var bySize = {};
+    out.forEach(function (p) {
+      if (p.rows) return;
+      var a = p.art;
+      if (!rows.some(function (r) { return r.w === a.w && r.h === a.h; })) return;
+      (bySize[a.w + 'x' + a.h] = bySize[a.w + 'x' + a.h] || []).push(p);
+    });
+    Object.keys(bySize).forEach(function (k) {
+      var group = bySize[k], a0 = group[0].art;
+      var free = rows.filter(function (r) { return r.w === a0.w && r.h === a0.h && !taken[r.first.id]; });
+      group.forEach(function (p, i) {
+        var mine = free.filter(function (r, j) { return j % group.length === i; });
+        p.zone = true;
+        if (!mine.length) { p.rows = []; p.hidden = true; p.ok = false; p.note = 'Every ' + pretty(a0.w, a0.h) + ' zone already has a piece.'; return; }
+        p.rows = mine; p.ok = true; p.note = 'Exact size for ' + names(mine) + '.';
+        mine.forEach(function (r) { taken[r.first.id] = p; });
+      });
+    });
+    var boardPiece = null;
+    out.forEach(function (p) {
+      if (p.rows) return;
+      var a = p.art;
+      if (a.w === d.w && a.h === d.h) {
+        if (boardPiece) { boardPiece.hidden = true; boardPiece.ok = false; boardPiece.note = 'Covered by ' + a.name + '.'; }
+        boardPiece = p; p.places = [{ x: 0, y: 0, w: d.w, h: d.h }]; p.ok = true; p.note = 'Exact size for this board.'; return;
+      }
+      if (sameShape(a.w, a.h, d.w, d.h)) { p.places = [{ x: 0, y: 0, w: d.w, h: d.h }]; p.ok = false; p.note = 'Same shape as the board at ' + Math.round(a.w / d.w * 100) + '% size. Build at ' + pretty(d.w, d.h) + '.'; return; }
+      var shape = rows.filter(function (r) { return sameShape(a.w, a.h, r.w, r.h) && !taken[r.first.id]; })[0];
+      if (shape) { p.rows = [shape]; p.zone = true; p.ok = false; p.note = 'Same shape as ' + names([shape]) + ' at ' + Math.round(a.w / shape.w * 100) + '% size. Build at ' + pretty(shape.w, shape.h) + '.'; taken[shape.first.id] = p; return; }
+      p.places = fit(a); p.ok = false; p.note = 'Not a size on this board, so it’s scaled to fit. Build at ' + pretty(d.w, d.h) + '.';
+    });
+    out.forEach(function (p) { if (!p.places) p.places = p.rows && p.rows.length ? at(p.art, p.rows) : []; });
+    // Larger zones first, so an ad over a wing (the same space in another
+    // layout) is drawn on top, as the hit areas are.
+    function area(p) { return p.places.reduce(function (n, r) { return Math.max(n, r.w * r.h); }, 0); }
+    var zoned = out.filter(function (p) { return p.zone; }).sort(function (a, b) { return area(b) - area(a); });
+    return out.filter(function (p) { return !p.zone; }).concat(zoned);
   }
-  function artBar(d, placed) {
-    var box = node('div', 'art-bar' + (placed.ok ? '' : ' is-off'));
-    box.setAttribute('role', 'status');
-    var thumb = node('span', 'art-thumb');
-    thumb.style.backgroundImage = 'url("' + art.url + '")';
-    box.appendChild(thumb);
-    var text = node('span', 'art-text');
-    var name = node('b', '', art.name);
-    name.title = art.name;
-    text.appendChild(name);
-    text.appendChild(node('i', '', pretty(art.w, art.h)));
-    text.appendChild(node('span', 'art-note', placed.note));
-    box.appendChild(text);
+  function artThumb(a) {
+    var t = node('span', 'art-thumb');
+    if (a.video) {
+      var v = document.createElement('video');
+      v.muted = true; v.preload = 'metadata'; v.src = a.url + '#t=0.1';
+      v.setAttribute('aria-hidden', 'true');
+      t.appendChild(v);
+      t.appendChild(node('span', 'art-kind', 'Video'));
+    } else {
+      t.style.backgroundImage = 'url("' + a.url + '")';
+    }
+    return t;
+  }
+  function artTray(v, d, placed) {
+    var box = node('section', 'art-tray');
+    box.setAttribute('aria-label', 'Preview art');
+    var head = node('div', 'art-head');
+    var off = placed.filter(function (p) { return !p.ok; }).length;
+    var title = node('span', 'art-title');
+    title.appendChild(node('b', '', 'Preview art'));
+    title.appendChild(node('span', 'art-sum', placed.length + (placed.length === 1 ? ' piece' : ' pieces') + (off ? ' · ' + off + ' to check' : ' · all exact')));
+    head.appendChild(title);
     var tools = node('span', 'art-tools');
     tools.appendChild(chip('Zones', artZones, function () { artZones = !artZones; render(false); }));
-    var rb = button('Replace', null, pickArt); rb.classList.add('ghost'); tools.appendChild(rb);
-    var xb = button('Remove', null, function () { clearArt(); }); xb.classList.add('ghost'); tools.appendChild(xb);
-    box.appendChild(tools);
+    var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
+    var mk = button('Mockup PNG', 'download', function () { downloadMockup(v, d, placed); }); mk.classList.add('ghost'); tools.appendChild(mk);
+    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); tools.appendChild(xb);
+    head.appendChild(tools);
+    box.appendChild(head);
+    var list = node('ul', 'art-list');
+    var rows = artRows(d);
+    // Listed in the order they were added, not the drawing order.
+    arts.forEach(function (a) {
+      var p = placed.filter(function (x) { return x.art === a; })[0];
+      var li = node('li', 'art-item' + (p.ok ? '' : ' is-off'));
+      li.appendChild(artThumb(a));
+      var text = node('span', 'art-text');
+      var nm = node('b', '', a.name);
+      nm.title = a.name;
+      text.appendChild(nm);
+      text.appendChild(node('i', '', pretty(a.w, a.h)));
+      text.appendChild(node('span', 'art-note', p.note));
+      li.appendChild(text);
+      // Place on: automatic by size, or pinned to one of this board's zones.
+      var sel = node('select', 'art-place');
+      sel.setAttribute('aria-label', 'Place ' + a.name);
+      sel.appendChild(new Option('By size', ''));
+      rows.forEach(function (r) { sel.appendChild(new Option(r.base + ' · ' + size(r.w, r.h), r.first.id)); });
+      sel.value = a.pin && a.pin.d === d.id ? a.pin.row : '';
+      sel.addEventListener('change', function () { a.pin = sel.value ? { d: d.id, row: sel.value } : null; render(false); });
+      li.appendChild(sel);
+      var rm = node('button', 'btn icon-only ghost art-rm');
+      rm.type = 'button';
+      rm.setAttribute('aria-label', 'Remove ' + a.name);
+      rm.title = 'Remove';
+      rm.appendChild(icon(ICONS.close));
+      rm.addEventListener('click', function () { dropArt(a); });
+      li.appendChild(rm);
+      list.appendChild(li);
+    });
+    box.appendChild(list);
     return box;
+  }
+  // The board with every piece on it, as the board shows it (crops and
+  // scrims blacked out), for sending round before a render. Videos give the
+  // frame they're on.
+  function downloadMockup(v, d, placed) {
+    var sc = Math.min(1, 4096 / d.w, 4096 / d.h);
+    var cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(d.w * sc)); cv.height = Math.max(1, Math.round(d.h * sc));
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.scale(sc, sc);
+    placed.forEach(function (p) {
+      if (p.hidden) return;
+      p.places.forEach(function (r) { try { ctx.drawImage(p.art.media, r.x, r.y, r.w, r.h); } catch (e) { /* a video with no frame yet */ } });
+    });
+    (d.overlays || []).forEach(function (o) {
+      if (o.kind !== 'crop' && o.kind !== 'scrim') return;
+      ctx.fillStyle = o.kind === 'crop' ? '#000' : 'rgba(0,0,0,.6)';
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+    });
+    var name = 'board-sizes_' + d.id.replace(/\//g, '_') + '_mockup.png';
+    cv.toBlob(function (blob) {
+      if (!blob) { toast('Couldn’t make the mockup.'); return; }
+      download(name, blob, 'image/png');
+      toast('Downloaded ' + name);
+    }, 'image/png');
   }
   function boardComps(v, d) {
     var rows = [{ v: v, d: d, label: d.name, w: d.w, h: d.h, count: 1 }];
@@ -1675,7 +1848,7 @@
     });
     acts.push(pager);
     var ab = button('Preview art', 'image', pickArt, 'art-btn');
-    ab.title = 'Preview an image on this board. It stays on this device.';
+    ab.title = 'Preview images or videos on this board. They stay on this device.';
     acts.push(ab);
     acts.push(button('Copy spec', 'copy', function () { copy(specText(v, d, null), 'Copied ' + d.name); }, 'primary'));
     acts.push(moreMenu(withShare([
@@ -1736,10 +1909,10 @@
       fg.appendChild(chip(f[1], filter === f, function () { state.filter = f[0]; render(false); }, n));
     });
     if (fg.querySelectorAll('.chip').length > 1) bar.appendChild(fg);
-    var placed = art ? artPlacement(d) : null;
-    if (placed) bar.appendChild(artBar(d, placed));
+    var placed = arts.length ? placeArts(d) : null;
     if (bar.childNodes.length) el.view.appendChild(bar);
-    el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show, art: placed ? { url: art.url, places: placed.places } : null }).el);
+    if (placed) el.view.appendChild(artTray(v, d, placed));
+    el.view.appendChild(renderDisplay(v, d, null, false, { board: true, show: show, art: placed }).el);
   }
 
   /* ---------------- venue + search views ---------------- */
@@ -1932,19 +2105,32 @@
   function hasFiles(e) { return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1); }
   var dragDepth = 0;
   document.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; dragDepth++; if (state.display && !state.query) document.body.classList.add('is-dragging'); });
-  document.addEventListener('dragleave', function (e) { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove('is-dragging'); });
-  document.addEventListener('dragover', function (e) { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = state.display && !state.query ? 'copy' : 'none'; });
+  document.addEventListener('dragleave', function (e) { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) { document.body.classList.remove('is-dragging'); clearDropZone(); } });
+  document.addEventListener('dragover', function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = state.display && !state.query ? 'copy' : 'none';
+    var hit = e.target.closest && e.target.closest('.is-board-view .zone-hit');
+    if (hit && hit.classList.contains('is-drop')) return;
+    clearDropZone();
+    if (hit) hit.classList.add('is-drop');
+  });
   document.addEventListener('drop', function (e) {
     if (!hasFiles(e)) return;
     e.preventDefault();
     dragDepth = 0;
     document.body.classList.remove('is-dragging');
-    if (state.display && !state.query && e.dataTransfer.files.length) setArt(e.dataTransfer.files[0]);
+    clearDropZone();
+    if (!state.display || state.query || !e.dataTransfer.files.length) return;
+    var hit = e.target.closest && e.target.closest('.is-board-view .zone-hit');
+    addArt(e.dataTransfer.files, hit ? { d: state.display, row: hit.getAttribute('data-row') } : null);
   });
+  // While dragging, light up the zone a drop would pin to.
+  function clearDropZone() { var o = document.querySelector('.zone-hit.is-drop'); if (o) o.classList.remove('is-drop'); }
   document.addEventListener('paste', function (e) {
     if (!state.display || state.query || /^(input|textarea)$/i.test(e.target.tagName || '')) return;
-    var items = (e.clipboardData && e.clipboardData.files) || [];
-    for (var i = 0; i < items.length; i++) if (/^image\//.test(items[i].type)) { e.preventDefault(); setArt(items[i]); return; }
+    var items = Array.prototype.slice.call((e.clipboardData && e.clipboardData.files) || []).filter(function (f) { return /^image\//.test(f.type) || isVideo(f); });
+    if (items.length) { e.preventDefault(); addArt(items); }
   });
 
   var initialHash = safeDecode(window.location.hash.slice(1));

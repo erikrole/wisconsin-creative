@@ -104,12 +104,22 @@ describe("Board Sizes art preview and board comps", () => {
     expect(html).toMatch(/connect-src 'none'/);
   });
 
-  it("places art on the exact board, then the exact zone, then the same shape, else fits and flags it", () => {
-    const place = app.slice(app.indexOf("function artPlacement"), app.indexOf("function artBar"));
-    const order = ["Exact size for this board", "'Exact size for ' + where(exact)", "Same shape as the board", "'Same shape as ' + where(shape)", "Not a size on this board"];
+  it("places pinned pieces first, then exact zones, the exact board, the same shape, else fits and flags", () => {
+    const place = app.slice(app.indexOf("function placeArts"), app.indexOf("function artThumb"));
+    const order = ["'Stretched onto '", "'Exact size for ' + names(mine)", "'Exact size for this board.'", "'Same shape as the board at '", "'Same shape as ' + names([shape])", "Not a size on this board"];
     const at = order.map((t) => place.indexOf(t));
     expect(at.every((i) => i >= 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
+    // Same-size pieces share the zones in turn (left wing, right wing).
+    expect(place).toContain("j % group.length === i");
+  });
+
+  it("takes several pieces, videos included, and makes a mockup without uploading anything", () => {
+    expect(app).toContain("artInput.multiple = true;");
+    expect(app).toContain("artInput.accept = 'image/*,video/mp4,video/webm,video/quicktime';");
+    expect(app).toContain("svgNode('foreignObject'");
+    expect(app).toContain("cv.toBlob(function (blob) {");
+    expect(html).toContain("media-src blob:;");
   });
 
   it("downloads an After Effects comps script for a whole board", () => {
