@@ -84,6 +84,9 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// UA Gear with a launched cycle, a submitted list and a "My kit"
+        /// card mixing In hand, On order, Planned and Add your size.
+        case gearKit = "gear-kit"
         /// Starts a real checkout-return Live Activity in the simulator, in the
         /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
         /// overdue, returned), so the lock screen and Dynamic Island can be
@@ -249,7 +252,7 @@ enum AppRuntimeMode {
              .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome,
              .damageReportProblem, .damageItemsMissing, .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty,
              .damageQueueDetail, .damageQueueRecord, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
-             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
+             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .gearKit, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:

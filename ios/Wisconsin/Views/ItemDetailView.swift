@@ -188,7 +188,7 @@ struct ItemDetailView: View {
         .refreshable { await loadAsset() }
         .sheet(isPresented: $showReport) {
             if let asset {
-                ReportProblemSheet(assetId: asset.id) { message in
+                ItemReportProblemSheet(assetId: asset.id) { message in
                     toast = Toast(message: message, icon: "checkmark.circle.fill", role: .success)
                     Task { await loadAsset() }
                 }
@@ -1180,7 +1180,7 @@ struct RecordOutcomeSheet: View {
 }
 
 /// Anyone but a collaborator can report a problem from the item page.
-private struct ReportProblemSheet: View {
+private struct ItemReportProblemSheet: View {
     let assetId: String
     let onSent: (String) -> Void
     @Environment(\.dismiss) private var dismiss
