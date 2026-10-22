@@ -131,13 +131,15 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 140
+Fields: 142
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
 - `email                         String                           @unique`
 - `passwordHash                  String                           @map("password_hash")`
 - `forcePasswordChange           Boolean                          @default(false) @map("force_password_change")`
+- `onboardingRequired            Boolean                          @default(false) @map("onboarding_required")`
+- `onboardingCompletedAt         DateTime?                        @map("onboarding_completed_at")`
 - `role                          Role`
 - `affiliation                   Affiliation?`
 - `collaboratorProfile           CollaboratorProfile?             @map("collaborator_profile")`

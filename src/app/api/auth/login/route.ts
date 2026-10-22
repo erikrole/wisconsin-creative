@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requiresOnboarding } from "@/lib/profile-completion";
 import { createSession, verifyPassword } from "@/lib/auth";
 import { HttpError, ok } from "@/lib/http";
 import { loginSchema } from "@/lib/validation";
@@ -64,6 +65,9 @@ export const POST = withHandler(async (req) => {
   if (companionLogin && user.forcePasswordChange) {
     throw new HttpError(403, "Change your password in Wisconsin Creative before enrolling this companion.");
   }
+  if (companionLogin && requiresOnboarding(user)) {
+    throw new HttpError(403, "Complete setup in Wisconsin Creative before enrolling this companion.");
+  }
   if (!companionLogin) {
     await createSession(user.id, body.rememberMe ?? false);
   }
@@ -88,6 +92,7 @@ export const POST = withHandler(async (req) => {
     capabilities: capabilitiesForActor(user),
     staffingType: user.staffingType,
     forcePasswordChange: user.forcePasswordChange,
+    onboardingRequired: requiresOnboarding(user),
   };
 
   if (companionLogin) {
@@ -112,6 +117,8 @@ export const POST = withHandler(async (req) => {
         role: true,
         active: true,
         forcePasswordChange: true,
+        onboardingRequired: true,
+        onboardingCompletedAt: true,
       },
     });
     if (
@@ -119,7 +126,9 @@ export const POST = withHandler(async (req) => {
       currentAuthority.passwordHash !== user.passwordHash ||
       currentAuthority.role !== user.role ||
       currentAuthority.active !== user.active ||
-      currentAuthority.forcePasswordChange !== user.forcePasswordChange
+      currentAuthority.forcePasswordChange !== user.forcePasswordChange ||
+      currentAuthority.onboardingRequired !== user.onboardingRequired ||
+      currentAuthority.onboardingCompletedAt?.getTime() !== user.onboardingCompletedAt?.getTime()
     ) {
       throw new HttpError(409, "Account access changed during companion enrollment. Sign in again.");
     }

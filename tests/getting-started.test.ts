@@ -6,6 +6,7 @@ const dbMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
 }));
 
+vi.mock("@/lib/audit", () => ({ createAuditEntryTx: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/rate-limit", () => ({
@@ -90,9 +91,11 @@ describe("/api/me/getting-started", () => {
 describe("web card", () => {
   const card = readFileSync("src/app/(app)/_home/GettingStartedCard.tsx", "utf8");
 
-  it("syncs through the server and keeps the old browser copy", () => {
-    expect(card).toContain('fetch("/api/me/getting-started"');
-    expect(card).toContain("wc-getting-started");
+  it("syncs through the server with a separate retry copy for each account", () => {
+    const hook = readFileSync("src/hooks/use-getting-started.ts", "utf8");
+    expect(hook).toContain('fetch("/api/me/getting-started"');
+    expect(hook).toContain("wc-getting-started:${userId}");
+    expect(hook).toContain("expectedUserId: userId");
     expect(card).toContain("withinGettingStartedWindow(user?.accountCreatedAt)");
   });
 

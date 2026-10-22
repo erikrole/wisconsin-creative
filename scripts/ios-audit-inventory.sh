@@ -167,6 +167,7 @@ Components/Skeleton.swift              |                             | exempt-sh
 Components/StatusPill.swift            |                             | exempt-shared
 Components/Toast.swift                 |                             | exempt-shared
 Components/UserAvatarView.swift        |                             | exempt-shared
+Components/ProfileAvatarEditor.swift   | profile                     | audit
 Search/FloatingSearchButton.swift      |                             | exempt-tiny
 Search/ScanResultHeroCard.swift        |                             | exempt-shared
 Search/SearchResultRow.swift           |                             | exempt-shared

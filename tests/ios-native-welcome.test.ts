@@ -86,9 +86,9 @@ describe("native iOS Welcome flow", () => {
     expect(welcome).toContain("NativeImageProcessor.downsample");
     expect(welcome).toContain("reduceMotion ? .easeOut(duration: 0.12)");
     expect(welcome).toContain("photoLoadError = \"That photo couldn’t be opened.");
-    expect(crop).toContain("DragGesture()");
-    expect(crop).toContain("MagnifyGesture()");
-    expect(imageProcessor).toContain("width: 1024, height: 1024");
+    expect(crop).toContain("UIScrollViewDelegate");
+    expect(crop).toContain("viewForZooming(in scrollView: UIScrollView)");
+    expect(imageProcessor).toContain("width: 512, height: 512");
     expect(imageProcessor).toContain("jpegData(compressionQuality: 0.9)");
     expect(crop).toContain("@Environment(\\.dismiss)");
   });
@@ -110,12 +110,12 @@ describe("native iOS Welcome flow", () => {
     expect(crop).toContain('Text("Save").fontWeight(.semibold)');
   });
 
-  it("keeps a final photo skip local to the current session and ends on the finish screen", () => {
+  it("records a final photo skip on the account before showing the finish screen", () => {
     const welcome = source("ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeView.swift");
     const store = source("ios/Wisconsin/Core/ProfileCompletionStore.swift");
     const skip = welcome.slice(welcome.indexOf("private func skipOptionalStep"), welcome.indexOf("private func snooze"));
 
-    expect(skip).toContain("finishSetup(for: user.id)");
+    expect(skip).toContain("completionStore.finishSetup(for: user)");
     expect(skip).not.toContain("snooze()");
     // The finish screen holds the Welcome route and only Continue hands off to the app.
     expect(store).toContain("if finish?.userId == user.id { return .welcome }");

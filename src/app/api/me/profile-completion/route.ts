@@ -8,10 +8,13 @@ import { getProfileCompletion, isCampusLoginEmail } from "@/lib/profile-completi
 import { profilePhoneSchema } from "@/lib/profile-phone";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
+import { onboardingGroupSchemas, onboardingSaveSchema } from "@/lib/onboarding-save";
+import { onboardingVersions } from "@/lib/onboarding-versions";
+import { withSerializationRetry } from "@/lib/serialization";
 
 const currentYear = new Date().getFullYear();
 
-const patchSchema = z.discriminatedUnion("step", [
+const legacyPatchSchema = z.discriminatedUnion("step", [
   z.object({
     step: z.literal("EMAIL"),
     athleticsEmail: z.string().trim().email().max(255).refine(
@@ -50,6 +53,7 @@ const patchSchema = z.discriminatedUnion("step", [
   }),
   z.object({ step: z.literal("SNOOZE") }),
 ]);
+const patchSchema = z.union([legacyPatchSchema, onboardingSaveSchema, z.object({ step: z.literal("FINISH"), expectedUserId: z.string().min(1) }).strict()]);
 
 const profileSelect = {
   id: true,
@@ -63,6 +67,7 @@ const profileSelect = {
   workPhoneNotApplicable: true,
   wiscardCardNumber: true,
   wiscardIssueCode: true,
+  wiscardNumber: true,
   studentYearOverride: true,
   gradYear: true,
   graduationTerm: true,
@@ -73,21 +78,24 @@ const profileSelect = {
   avatarUrl: true,
   profilePromptSnoozedUntil: true,
   hiddenFromRoster: true,
+  onboardingRequired: true,
+  onboardingCompletedAt: true,
 } as const;
 
 type ProfileClient = Pick<Prisma.TransactionClient, "user">;
 type Profile = NonNullable<Awaited<ReturnType<typeof loadProfile>>>;
-type PatchBody = z.infer<typeof patchSchema>;
+type PatchBody = z.infer<typeof legacyPatchSchema>;
 
-function publicProfile(profile: Profile): Omit<Profile, "hiddenFromRoster"> {
-  const { hiddenFromRoster, ...rest } = profile;
+function publicProfile(profile: Profile): Omit<Profile, "hiddenFromRoster" | "wiscardNumber"> {
+  const { hiddenFromRoster, wiscardNumber, ...rest } = profile;
   void hiddenFromRoster;
+  void wiscardNumber;
   return rest;
 }
 
 function responseData(profile: Awaited<ReturnType<typeof loadProfile>>) {
   if (!profile) throw new HttpError(404, "User not found");
-  return { profile: publicProfile(profile), completion: getProfileCompletion(profile) };
+  return { profile: publicProfile(profile), completion: getProfileCompletion(profile), versions: onboardingVersions(profile) };
 }
 
 function loadProfile(client: ProfileClient, userId: string) {
@@ -154,6 +162,63 @@ export const PATCH = withAuth(async (req, { user }) => {
     throw error;
   }
 
+  if (body.step === "SAVE" || body.step === "FINISH") {
+    if (body.step === "FINISH" && body.expectedUserId !== user.id) throw new HttpError(409, "Your sign-in changed. Reload to continue.");
+    const input = body;
+    const updated = await withSerializationRetry(() => db.$transaction(async (tx) => {
+      const before = await loadProfile(tx, user.id);
+      if (!before) throw new HttpError(404, "User not found");
+      if (input.step === "FINISH") {
+        // A lost response must be safe to reconcile and replay later.
+        if (before.onboardingCompletedAt) return before;
+        if (!getProfileCompletion(before).requiredComplete) {
+          throw new HttpError(409, "Save your required details before finishing setup.", { code: "ONBOARDING_INCOMPLETE" });
+        }
+        const next = await tx.user.update({ where: { id: user.id }, data: {
+          onboardingCompletedAt: new Date(), onboardingRequired: false, profilePromptSnoozedUntil: null,
+        }, select: profileSelect });
+        await createAuditEntryTx(tx, {
+          actorId: user.id, actorRole: user.role, entityType: "user", entityId: user.id,
+          action: "onboarding_completed", before: { onboardingComplete: false },
+          after: { onboardingComplete: true, photoAdded: Boolean(next.avatarUrl) },
+        });
+        return next;
+      }
+      const { group } = input;
+      if (before.role === "COLLABORATOR"
+        || ((group === "STUDENT" || group === "GRADUATION") && before.role !== "STUDENT")
+        || (group === "WORK_PHONE" && before.role === "STUDENT")) {
+        throw new HttpError(400, "This field is not part of your setup.");
+      }
+      if (group === "EMAIL" && !isCampusLoginEmail(before.email)) {
+        throw new HttpError(409, "Ask an administrator to correct your campus login email first.");
+      }
+      const parsed = onboardingGroupSchemas[group].safeParse(input.values);
+      if (!parsed.success) throw new HttpError(400, parsed.error.issues[0]?.message ?? "Complete this field before saving.");
+      const values = parsed.data;
+      const data: Prisma.UserUpdateInput = { ...values };
+      if ("personalPhone" in values) data.phone = values.personalPhone;
+      if ("workPhoneNotApplicable" in values && values.workPhoneNotApplicable) data.workPhone = null;
+      if ("wiscardCardNumber" in values) {
+        data.wiscardNumber = values.wiscardCardNumber && values.wiscardIssueCode
+          ? `${values.wiscardCardNumber}${values.wiscardIssueCode}` : null;
+      }
+      // Include legacy aliases in replay equality, as well as in the version.
+      if (Object.entries(data).every(([key, value]) => (before as unknown as Record<string, unknown>)[key] === value)) return before;
+      if (onboardingVersions(before)[group] !== input.expectedVersion) {
+        throw new HttpError(409, "Your saved details changed elsewhere. Review them before saving your edits.", { code: "ONBOARDING_CONFLICT", group });
+      }
+      const next = await tx.user.update({ where: { id: user.id }, data: { ...data, profilePromptSnoozedUntil: null }, select: profileSelect });
+      await createAuditEntryTx(tx, {
+        actorId: user.id, actorRole: user.role, entityType: "user", entityId: user.id,
+        action: "profile_completion_updated", before: { group },
+        after: { group, fieldsChanged: Object.keys(data), saved: true },
+      });
+      return next;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+    return ok({ data: responseData(updated) });
+  }
+
   if (
     body.step === "PHONES"
     && user.role !== "STUDENT"
@@ -214,6 +279,9 @@ export const PATCH = withAuth(async (req, { user }) => {
     updated = await db.$transaction(async (tx) => {
       const before = await loadProfile(tx, user.id);
       if (!before) throw new HttpError(404, "User not found");
+      if (body.step === "SNOOZE" && getProfileCompletion(before).requiresSetup && !getProfileCompletion(before).requiredComplete) {
+        throw new HttpError(409, "Complete your required setup before continuing. Only your photo is optional.");
+      }
       if (body.step === "EMAIL" && !isCampusLoginEmail(before.email)) {
         throw new HttpError(409, "Your site login must be a @wisc.edu email. Ask an administrator to update it before completing your profile.");
       }
@@ -221,11 +289,20 @@ export const PATCH = withAuth(async (req, { user }) => {
         throw new HttpError(400, "Student details can only be saved for a student profile.");
       }
 
-      const next = await tx.user.update({
+      let next = await tx.user.update({
         where: { id: user.id },
         data,
         select: profileSelect,
       });
+      // Older apps submit whole steps and have no FINISH call. Their final
+      // required step (or photo-only reminder) is the compatibility receipt.
+      if ((before.onboardingRequired || body.step === "SNOOZE") && getProfileCompletion(next).requiredComplete && !before.onboardingCompletedAt) {
+        next = await tx.user.update({
+          where: { id: user.id },
+          data: { onboardingRequired: false, onboardingCompletedAt: new Date(), profilePromptSnoozedUntil: null },
+          select: profileSelect,
+        });
+      }
 
       await createAuditEntryTx(tx, {
         actorId: user.id,
@@ -238,6 +315,7 @@ export const PATCH = withAuth(async (req, { user }) => {
           step: body.step,
           fieldsChanged: changedFields(body.step, before.role),
           ...auditState(next, body.step),
+          ...(before.onboardingRequired && !next.onboardingRequired ? { requiredSetupCompleted: true } : {}),
         },
       });
 

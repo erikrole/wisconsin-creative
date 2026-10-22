@@ -1,4 +1,5 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import { advanceProfileCompletionReads } from "@/lib/profile-completion-cache";
 
 type CachedUserRow = {
   id: string;
@@ -69,4 +70,21 @@ export async function syncCachedUserLists(
     predicate: (query) => isUsersListQueryKey(query.queryKey),
     refetchType: "none",
   });
+}
+
+/** Confirmed photo changes update the account chrome, profile and roster together. */
+export async function syncAvatarCaches(queryClient: QueryClient, userId: string, avatarUrl: string | null) {
+  advanceProfileCompletionReads(queryClient);
+  const keys = [["me"], ["profile-completion"], ["fetch", "/api/me/profile"], ["fetch", `/api/users/${userId}`]];
+  await Promise.all(keys.map((queryKey) => queryClient.cancelQueries({ queryKey })));
+  queryClient.setQueryData<CachedUserRow | null>(["me"], (row) => row?.id === userId ? { ...row, avatarUrl } : row);
+  for (const queryKey of keys.slice(1)) {
+    queryClient.setQueryData<{ profile?: CachedUserRow; data?: CachedUserRow }>(queryKey, (value) => {
+      if (value?.profile?.id === userId) return { ...value, profile: { ...value.profile, avatarUrl } };
+      if (value?.data?.id === userId) return { ...value, data: { ...value.data, avatarUrl } };
+      return value;
+    });
+  }
+  await syncCachedUserLists(queryClient, userId, { avatarUrl });
+  await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 }

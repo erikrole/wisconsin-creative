@@ -6,6 +6,7 @@ import { Role, ShiftWorkerType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
+import { requiresOnboarding } from "@/lib/profile-completion";
 import { randomHex } from "@/lib/crypto";
 import {
   capabilitiesForActor,
@@ -38,6 +39,7 @@ export type AuthUser = {
   staffingType?: ShiftWorkerType;
   avatarUrl: string | null;
   forcePasswordChange?: boolean;
+  onboardingRequired?: boolean;
   preview?: RolePreviewInfo;
 };
 
@@ -240,6 +242,8 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
           staffingType: true,
           avatarUrl: true,
           forcePasswordChange: true,
+          onboardingRequired: true,
+          onboardingCompletedAt: true,
           lastActiveAt: true,
           collaboratorPolicy: { select: collaboratorPolicyActorSelect },
         },
@@ -295,6 +299,7 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
     staffingType: session.user.staffingType,
     avatarUrl: session.user.avatarUrl ?? null,
     forcePasswordChange: session.user.forcePasswordChange,
+    onboardingRequired: requiresOnboarding(session.user),
     preview: preview ? rolePreviewInfo(preview) : undefined,
   };
 }

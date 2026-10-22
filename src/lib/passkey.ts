@@ -11,6 +11,7 @@ import {
 import { PasskeyCeremonyType, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { requiresOnboarding } from "@/lib/profile-completion";
 import { HttpError } from "@/lib/http";
 import { createSession, randomHex, tokenHash, verifyPassword } from "@/lib/auth";
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile, requireActiveCollaboratorPolicy } from "@/lib/collaborator-access";
@@ -360,6 +361,7 @@ export async function verifyPasskeyAuthentication(
       capabilities: capabilitiesForActor(user),
       staffingType: user.staffingType,
       forcePasswordChange: user.forcePasswordChange,
+      onboardingRequired: requiresOnboarding(user),
     },
     credentialId: stored.id,
     ip,

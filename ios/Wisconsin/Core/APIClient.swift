@@ -2857,6 +2857,17 @@ final class APIClient {
 
     // MARK: - Profile completion
 
+    func gettingStarted() async throws -> GettingStartedEnvelope {
+        try await perform(request(path: "/api/me/getting-started"))
+    }
+
+    func updateGettingStarted(_ progress: GettingStartedProgress, expectedUserId: String) async throws -> GettingStartedEnvelope {
+        struct Payload: Encodable { let done: [String]; let dismissed: Bool?; let expectedUserId: String }
+        var req = request(path: "/api/me/getting-started", method: "PATCH")
+        req.httpBody = try JSONEncoder().encode(Payload(done: Array(progress.done), dismissed: progress.dismissed ? true : nil, expectedUserId: expectedUserId))
+        return try await perform(req)
+    }
+
     func profileCompletion() async throws -> ProfileCompletionResponse {
         let response: DataWrapper<ProfileCompletionResponse> = try await perform(
             request(path: "/api/me/profile-completion")
@@ -2871,11 +2882,14 @@ final class APIClient {
         return response.data
     }
 
-    func uploadProfileAvatar(userId: String, jpegData: Data) async throws -> String {
+    func uploadProfileAvatar(userId: String, jpegData: Data, expectedAvatarURL: String?) async throws -> String {
         struct AvatarData: Decodable { let avatarUrl: String }
+        let uploadId = UUID().uuidString.lowercased()
 
         let boundary = "WisconsinAvatar-\(UUID().uuidString)"
         var body = Data()
+        body.append(Data("--\(boundary)\r\n".utf8))
+        body.append(Data("Content-Disposition: form-data; name=\"uploadId\"\r\n\r\n\(uploadId)\r\n".utf8))
         body.append(Data("--\(boundary)\r\n".utf8))
         body.append(Data("Content-Disposition: form-data; name=\"file\"; filename=\"profile.jpg\"\r\n".utf8))
         body.append(Data("Content-Type: image/jpeg\r\n\r\n".utf8))
@@ -2884,9 +2898,41 @@ final class APIClient {
 
         var req = request(path: "/api/users/\(userId)/avatar", method: "POST")
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.setValue(expectedAvatarURL ?? "", forHTTPHeaderField: "x-avatar-url")
+        req.setValue(userId, forHTTPHeaderField: "x-expected-actor-id")
         req.httpBody = body
-        let response: DataWrapper<AvatarData> = try await perform(req)
-        return response.data.avatarUrl
+        do {
+            let response: DataWrapper<AvatarData> = try await perform(req)
+            return response.data.avatarUrl
+        } catch let error as APIError {
+            switch error {
+            case .networkError, .decodingError:
+                struct Receipt: Decodable { let id: String; let avatarUrl: String? }
+                if let receipt: DataWrapper<Receipt> = try? await perform(request(path: "/api/users/\(userId)/avatar")),
+                   receipt.data.id == userId, let url = receipt.data.avatarUrl, url.contains("/\(uploadId)-") { return url }
+                throw error
+            default: throw error
+            }
+        }
+    }
+
+    func removeProfileAvatar(userId: String, expectedAvatarURL: String) async throws {
+        struct AvatarData: Decodable { let avatarUrl: String? }
+        var req = request(path: "/api/users/\(userId)/avatar", method: "DELETE")
+        req.setValue(expectedAvatarURL, forHTTPHeaderField: "x-avatar-url")
+        req.setValue(userId, forHTTPHeaderField: "x-expected-actor-id")
+        do {
+            let _: DataWrapper<AvatarData> = try await perform(req)
+        } catch let error as APIError {
+            switch error {
+            case .networkError, .decodingError:
+                struct Receipt: Decodable { let id: String; let avatarUrl: String? }
+                if let receipt: DataWrapper<Receipt> = try? await perform(request(path: "/api/users/\(userId)/avatar")),
+                   receipt.data.id == userId, receipt.data.avatarUrl == nil { return }
+                throw error
+            default: throw error
+            }
+        }
     }
 
     // MARK: - Gear picks
@@ -3053,6 +3099,9 @@ final class APIClient {
                 ?? "You do not have access to this feature."
             throw APIError.httpError(statusCode: http.statusCode, message: message)
         case 409:
+            if let body = try? decoder.decode(ServerErrorBody.self, from: data), body.code == "ONBOARDING_CONFLICT" {
+                throw APIError.conflict(body.error)
+            }
             if let body = try? decoder.decode(ConflictResponseBody.self, from: data),
                let d = body.data {
                 var parts: [String] = []
@@ -3252,6 +3301,7 @@ private struct AppBuildIdentity {
 
 private struct ServerErrorBody: Decodable {
     let error: String
+    let code: String?
 }
 
 private struct ConflictResponseBody: Decodable {

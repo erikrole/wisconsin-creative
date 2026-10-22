@@ -31,9 +31,12 @@ import { PROFILE_COMPLETION_QUERY_KEY } from "@/hooks/use-profile-completion";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import { formatPhoneInput } from "@/lib/profile-phone";
-import { syncCachedUserLists } from "@/lib/user-list-cache";
+import { AvatarCropDialog } from "@/app/(app)/staff/[id]/AvatarCropDialog";
+import { uploadAvatarPhoto, removeAvatarPhoto } from "@/lib/avatar-upload";
+import { syncAvatarCaches, syncCachedUserLists } from "@/lib/user-list-cache";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isDirty } from "@/lib/utils";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Profile = {
   id: string;
@@ -66,6 +69,7 @@ function toForm(p: Profile): FormState {
 
 export default function ProfileSettingsPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { data: currentUser } = useCurrentUser();
   const isCollaborator = currentUser?.role === "COLLABORATOR";
   const { data: fetched, loading, error, reload } = useFetch<Profile>({
@@ -78,7 +82,15 @@ export default function ProfileSettingsPage() {
   const [prevFetched, setPrevFetched] = useState(fetched);
   if (fetched !== prevFetched) {
     setPrevFetched(fetched);
-    setLocal(null);
+    if (!fetched || fetched.id !== prevFetched?.id || !local) setLocal(null);
+    else {
+      const prior = toForm(prevFetched);
+      const next = toForm(fetched);
+      setLocal(Object.fromEntries(Object.keys(next).map((key) => {
+        const field = key as keyof FormState;
+        return [field, local[field] !== prior[field] ? local[field] : next[field]];
+      })) as FormState);
+    }
   }
 
   const base = fetched ? toForm(fetched) : null;
@@ -90,12 +102,12 @@ export default function ProfileSettingsPage() {
   const savingRef = useRef(false);
 
   // Avatar state managed separately (different endpoint)
-  const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const uploadingAvatarRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const effectiveAvatarUrl = avatarUrl === undefined ? (fetched?.avatarUrl ?? null) : avatarUrl;
+  const effectiveAvatarUrl = fetched?.avatarUrl ?? null;
 
   function syncProfileCache(profile: Profile) {
     queryClient.setQueryData(["fetch", "/api/me/profile"], { data: profile });
@@ -150,7 +162,6 @@ export default function ProfileSettingsPage() {
       await syncCachedUserLists(queryClient, fetched.id, json.data);
       await queryClient.invalidateQueries({ queryKey: PROFILE_COMPLETION_QUERY_KEY });
       setLocal(null);
-      setAvatarUrl(undefined);
       toast.success("Profile saved.");
     } catch (err) {
       if (isAbortError(err)) return;
@@ -161,35 +172,20 @@ export default function ProfileSettingsPage() {
     }
   }
 
-  async function handleAvatarUpload(file: File) {
-    if (!fetched) return;
-    if (uploadingAvatarRef.current) return;
+  async function handleAvatarUpload(file: File, expectedAvatarUrl: string | null, expectedActorId: string | null): Promise<boolean> {
+    if (!fetched || uploadingAvatarRef.current) return false;
     uploadingAvatarRef.current = true;
     setUploadingAvatar(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`/api/users/${fetched.id}/avatar`, { method: "POST", body: fd });
-      if (res.status === 401) { handleAuthRedirect(res, "/settings/profile"); return; }
-      if (!res.ok) {
-        const msg = await parseErrorMessage(res, "Avatar upload failed.");
-        toast.error(msg);
-        return;
-      }
-      const json = await parseJsonSafely<{ data?: { avatarUrl?: string | null } }>(res);
-      if (!json?.data) {
-        toast.error("Photo was uploaded, but the response could not be read. Refresh profile before continuing.");
-        reload();
-        return;
-      }
-      const nextAvatarUrl = json.data.avatarUrl ?? null;
-      setAvatarUrl(nextAvatarUrl);
-      if (fetched) syncProfileCache({ ...fetched, avatarUrl: nextAvatarUrl });
-      await syncCachedUserLists(queryClient, fetched.id, { avatarUrl: nextAvatarUrl });
+      const nextAvatarUrl = await uploadAvatarPhoto(fetched.id, file, expectedAvatarUrl, expectedActorId);
+      if (!nextAvatarUrl) return false;
+      await syncAvatarCaches(queryClient, fetched.id, nextAvatarUrl);
       toast.success("Profile photo updated.");
-    } catch (err) {
-      if (isAbortError(err)) return;
-      toast.error("Upload failed. Check your connection.");
+      return true;
+    } catch (reason) {
+      reload();
+      if (reason instanceof Error) throw reason;
+      throw new Error("Couldn’t save your photo. Your crop is still here.");
     } finally {
       uploadingAvatarRef.current = false;
       setUploadingAvatar(false);
@@ -199,22 +195,18 @@ export default function ProfileSettingsPage() {
   async function handleAvatarRemove() {
     if (!fetched || !effectiveAvatarUrl) return;
     if (uploadingAvatarRef.current) return;
+    if (!await confirm({ title: "Remove your profile photo?", message: "Your initials will appear until you add another photo.", confirmLabel: "Remove photo", variant: "danger" })) return;
+    if (uploadingAvatarRef.current) return;
     uploadingAvatarRef.current = true;
     setUploadingAvatar(true);
     try {
-      const res = await fetch(`/api/users/${fetched.id}/avatar`, { method: "DELETE" });
-      if (res.status === 401) { handleAuthRedirect(res, "/settings/profile"); return; }
-      if (!res.ok) {
-        toast.error("Could not remove photo.");
-        return;
-      }
-      setAvatarUrl(null);
-      syncProfileCache({ ...fetched, avatarUrl: null });
-      await syncCachedUserLists(queryClient, fetched.id, { avatarUrl: null });
+      if (!await removeAvatarPhoto(fetched.id, effectiveAvatarUrl, currentUser?.id ?? null)) return;
+      await syncAvatarCaches(queryClient, fetched.id, null);
       toast.success("Profile photo removed.");
     } catch (err) {
       if (isAbortError(err)) return;
-      toast.error("Remove failed. Check your connection.");
+      toast.error(err instanceof Error ? err.message : "Remove failed. Check your connection.");
+      reload();
     } finally {
       uploadingAvatarRef.current = false;
       setUploadingAvatar(false);
@@ -252,6 +244,7 @@ export default function ProfileSettingsPage() {
 
   return (
     <SettingsPageShell href="/settings/profile">
+      <AvatarCropDialog file={photoFile} avatarUrl={effectiveAvatarUrl} profileName={form.name || "your"} onClose={() => setPhotoFile(null)} onConfirm={handleAvatarUpload} />
       <div className="flex flex-col gap-4">
         {/* Avatar card */}
         <Card>
@@ -291,7 +284,7 @@ export default function ProfileSettingsPage() {
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">JPG, PNG, or WebP. Max 4.5 MB.</p>
+              <p className="text-xs text-muted-foreground">Choose a photo, then crop and preview before saving.</p>
             </div>
 
             <input
@@ -303,7 +296,7 @@ export default function ProfileSettingsPage() {
               className="sr-only"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleAvatarUpload(file);
+                if (file) setPhotoFile(file);
                 e.target.value = "";
               }}
             />

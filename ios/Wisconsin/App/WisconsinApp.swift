@@ -435,6 +435,9 @@ struct RootView: View {
                   !user.forcePasswordChange,
                   !user.isReadOnlyRolePreview else { return }
             Task {
+                await session.refreshCurrentUser()
+                guard session.currentUser?.id == user.id else { return }
+                await profileCompletion.load(for: user, force: true)
                 await APIClient.shared.recordProductEvent(eventName: "app_opened", surface: "home")
                 if user.role != "COLLABORATOR" {
                     await refreshBadgeRewardsForAppOpen(for: user.id)

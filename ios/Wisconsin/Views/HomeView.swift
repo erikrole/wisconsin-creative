@@ -180,6 +180,7 @@ struct HomeView: View {
     @Environment(SessionStore.self) private var session
     @Environment(ReservationDraftStore.self) private var drafts
     @Environment(NetworkMonitor.self) private var network
+    @Environment(\.scenePhase) private var scenePhase
 
     private func rememberSceneDestination(_ destination: String, id: String? = nil) {
         guard let identity = session.currentUser?.shellIdentity else { return }
@@ -527,7 +528,15 @@ struct HomeView: View {
             // happens to still be alive.
             .onChange(of: network.reconnectionToken) { _, _ in
                 guard appState.selectedTab == 0 else { return }
-                Task { await vm.load(appState: appState, requesterId: session.currentUser?.id, forceRefresh: true) }
+                Task {
+                    await gettingStarted.sync()
+                    await vm.load(appState: appState, requesterId: session.currentUser?.id, forceRefresh: true)
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active, let user = session.currentUser {
+                    Task { await gettingStarted.load(for: user, completionStore: profileCompletion) }
+                }
             }
             .refreshable {
                 // Concurrent, not sequential: the blast banner must not wait on the

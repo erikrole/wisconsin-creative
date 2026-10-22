@@ -59,6 +59,9 @@ enum AppRuntimeMode {
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
         case login
+        /// Isolated first-session views; their API traffic stays in the fixture protocol.
+        case onboarding
+        case registration
         /// The branded launch still itself, so the system frame, SwiftUI
         /// handoff, and inactive snapshot can be captured without a session.
         case launchView = "launch-view"
@@ -211,7 +214,7 @@ enum AppRuntimeMode {
              .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
-             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
+             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute, .onboarding, .registration:
             return true
         default:
             return false

@@ -1,0 +1,157 @@
+{
+  "title": "Onboarding that continues with you",
+  "eyebrow": "Wisconsin Creative \u00b7 Web + iOS \u00b7 October 22, 2026",
+  "lede": "Account-backed setup, optional photo completion, and direct photo gestures. Current local evidence for the six-student onboarding rollout.",
+  "stats": [
+    {
+      "k": "Browser recovery",
+      "v": "7 passed",
+      "n": "Real component interactions with fixture APIs."
+    },
+    {
+      "k": "Database continuity",
+      "v": "8 passed",
+      "n": "Disposable PostgreSQL; no hosted student account."
+    },
+    {
+      "k": "Native runtime",
+      "v": "10 + 2 passed",
+      "n": "Model/image XCTest plus two iPhone 18 Pro Max UI scenarios."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Move the photo itself",
+      "note": "After-only evidence. No sliders. A circular guide preserves photo context; iOS uses native pan/pinch and web supports drag, pinch, scroll and keyboard controls. Technical fixture images are used instead of student photos.",
+      "shots": [
+        {
+          "image": "ios-avatar-crop.png",
+          "title": "Native photo crop",
+          "cap": "iPhone 18 Pro Max: system pan/pinch, Cancel, Save and a quiet Reset. VoiceOver offers zoom and movement actions.",
+          "tag": "iOS \u00b7 current"
+        },
+        {
+          "image": "web-avatar-crop.png",
+          "title": "Web photo crop",
+          "cap": "Desktop: direct dragging and cursor-anchored wheel zoom. Small minus/plus buttons and keyboard commands support mouse and keyboard use.",
+          "wide": true,
+          "tag": "Web \u00b7 current"
+        },
+        {
+          "image": "web-avatar-touch.png",
+          "title": "Web touch crop",
+          "cap": "Phone browser: actual two-finger pinch exercised. The same editor is used in onboarding, Settings and roster photo changes.",
+          "tag": "Web \u00b7 touch"
+        }
+      ]
+    },
+    {
+      "heading": "An interrupted upload keeps your crop",
+      "note": "The simulated server failure remains visible. Retry reuses the selected framing; upload bytes are checked against the selected off-center preview region.",
+      "shots": [
+        {
+          "image": "ios-avatar-upload-retry.png",
+          "title": "Native retry",
+          "cap": "The crop stays open and Save becomes available again after an unconfirmed upload.",
+          "tag": "iOS \u00b7 failure recovery"
+        },
+        {
+          "image": "web-avatar-retry.png",
+          "title": "Web retry",
+          "cap": "The actual upload error appears without discarding the photo or its adjustments.",
+          "wide": true,
+          "tag": "Web \u00b7 failure recovery"
+        }
+      ]
+    },
+    {
+      "heading": "Saved answers and explicit conflict recovery",
+      "note": "Valid field groups save to the account; incomplete private text stays in memory and is shown as unsaved. Changes elsewhere never silently overwrite local edits.",
+      "shots": [
+        {
+          "image": "web-apparel-saved.png",
+          "title": "Saved apparel answers",
+          "cap": "Clothing and shoe sizing are independent Men\u2019s/Women\u2019s choices. Custom sizes remain editable.",
+          "wide": true,
+          "tag": "Web \u00b7 saved"
+        },
+        {
+          "image": "web-save-conflict.png",
+          "title": "Saved-answer conflict",
+          "cap": "Choose the saved answers or explicitly save the retained edits using the latest version.",
+          "wide": true,
+          "tag": "Web \u00b7 conflict"
+        },
+        {
+          "image": "ios-required-apparel.png",
+          "title": "Native apparel",
+          "cap": "The refreshed native Welcome design is retained, with save status visible under the header.",
+          "tag": "iOS \u00b7 required setup"
+        },
+        {
+          "image": "ios-apparel-confirmation.png",
+          "title": "Native apparel confirmation",
+          "cap": "The summary reflects the selected clothing and shoe sizes separately.",
+          "tag": "iOS \u00b7 apparel summary"
+        }
+      ]
+    },
+    {
+      "heading": "Photo is optional; Finish is durable",
+      "note": "Both clients send FINISH after required information is complete, including when no photo is selected. A persisted completion receipt prevents a future session from reopening Welcome for the missing photo.",
+      "shots": [
+        {
+          "image": "web-optional-photo.png",
+          "title": "Optional web photo",
+          "cap": "Finish works without a photo; all required answers have already been acknowledged.",
+          "tag": "Web \u00b7 photo step"
+        },
+        {
+          "image": "ios-optional-photo.png",
+          "title": "Optional native photo",
+          "cap": "The photo can be added later from native Profile.",
+          "tag": "iOS \u00b7 photo step"
+        },
+        {
+          "image": "ios-photo-skipped-setup-complete.png",
+          "title": "Finished without photo",
+          "cap": "The native fixture reaches the final Welcome screen after the photo-free completion response.",
+          "tag": "iOS \u00b7 setup complete"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Direct photo gestures",
+      "was": "Separate sliders controlled zoom and each movement axis.",
+      "now": "The image is the interaction surface. System pan/pinch on iOS and drag/pinch/scroll on web keep the photo under direct control."
+    },
+    {
+      "h": "Account-backed continuation",
+      "was": "Complete-step writes and photo-dependent completion could make interrupted setup or skipped photos ambiguous.",
+      "now": "Validated field groups, explicit conflict choices and a durable Finish receipt keep the saved state and completion decision separate."
+    },
+    {
+      "h": "Safer photo replacement",
+      "was": "A request could be interrupted or arrive after another device changed the photo.",
+      "now": "Frozen photo/account versions and upload IDs reject stale replacements and reconcile confirmed uploads. The old image is deleted only after the new pointer and audit commit."
+    }
+  ],
+  "verification": [
+    "TypeScript and app build pass. Lint reports 0 errors; existing repository warnings remain. The crop editor and changed browser test lint cleanly.",
+    "Focused API, profile, avatar, image and audit-inventory tests pass. Disposable PostgreSQL covers partial saves, contention, replay, rollback, legacy compatibility and photo-free FINISH.",
+    "All 780 native source-contract tests pass across 148 files. Native target build and 10 model/image XCTest cases pass, including distinctive off-center crop pixels.",
+    "Both final iPhone 18 Pro Max UI scenarios pass: actual pinch/drag with retained crop on failure, and the required student sequence through photo skip and Finish.",
+    "Xcode project registration, schema validation, 201 migration-prefix checks, docs/codemaps and diff whitespace checks pass.",
+    "Mobbin MCP connected and queried successfully. WHOOP, Me+ and Tripadvisor references informed the circular guide, image context and brief guidance. Their stills establish layout/copy, not live gesture behavior."
+  ],
+  "notes": [
+    "These are current fixture captures with no trustworthy matched pre-change baseline; no before/after size or performance measurement is claimed. Older slider captures in this folder are superseded.",
+    "Authenticated web-to-iOS and iOS-to-web handoff remains pending. D-063 requires this branch\u2019s own Managed preview, obtained after an authorized scoped commit, push and draft PR. No branch environment is currently available.",
+    "Physical iPhone photo-library/permission behavior and shared-backend avatar display remain pending. Simulator and fixture proof do not establish those device/backend outcomes.",
+    "Migration 0200 has not been deployed. No commit, push, PR, production mutation, deployment, email or distribution has occurred.",
+    "Source snapshot, per-file hashes, capture hashes and passing logs are retained alongside this page. Native Swift source in the installed private test snapshot was verified byte-identical; only bundle/app-group identity differs intentionally.",
+    "The browser refused the local file protocol, so the review page was not browser-rendered here. Its HTML structure, embedded images, alt text and every selected source image were inspected directly; Codex queued the local file for viewing."
+  ]
+}

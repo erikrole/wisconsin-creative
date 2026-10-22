@@ -75,6 +75,10 @@ struct PerformanceTestRootView: View {
             ProfileHarnessView()
         case .login:
             LoginView()
+        case .registration:
+            NavigationStack { NativeRegistrationView(initialEmail: "alex.onboarding@wisc.edu") }
+        case .onboarding:
+            OnboardingHarnessView()
         case .launchView:
             LaunchView()
         case .passwordSetup:
@@ -664,6 +668,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         }
         if AppRuntimeMode.performanceScenario == .latestBrowse,
            let body = LatestBrowseFixtureAPI.body(path: path) { return body }
+        if AppRuntimeMode.performanceScenario == .onboarding || AppRuntimeMode.performanceScenario == .registration {
+            return OnboardingFixtureAPI.body(for: request)
+        }
         switch path {
         case "/api/notifications":
             guard AppRuntimeMode.performanceScenario == .notificationsInbox else { return nil }
