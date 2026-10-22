@@ -279,6 +279,21 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Steadier kiosk in the background",
+    "type": "fixes",
+    "summary": "The kiosk does less needless work when you start a checkout, return or pickup, and server errors give clearer advice.",
+    "details": [
+      "Leaving the home screen no longer triggers one extra full refresh of the dashboard.",
+      "A kiosk that was just signed out stops checking in with the server right away.",
+      "If something fails on our side, the kiosk now says to try again in a moment instead of asking for another scan."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 569
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
