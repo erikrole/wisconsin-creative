@@ -38,7 +38,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"h5">) {
   return (
     <h5
       data-slot="alert-title"
-      className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+      className={cn("col-start-2 mb-1 font-medium leading-none tracking-tight", className)}
       {...props}
     />
   )
@@ -51,7 +51,7 @@ function AlertDescription({
   return (
     <div
       data-slot="alert-description"
-      className={cn("text-sm [&_p]:leading-relaxed", className)}
+      className={cn("col-start-2 text-sm [&_p]:leading-relaxed", className)}
       {...props}
     />
   )
