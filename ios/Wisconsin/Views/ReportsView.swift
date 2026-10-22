@@ -220,7 +220,8 @@ struct ReportsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+                .listRowBackground(Color.clear)
             }
 
             if let stale = vm.error, vm.hasAnyData {
@@ -239,6 +240,8 @@ struct ReportsView: View {
             shelfSection
         }
         .listStyle(.insetGrouped)
+        // Icons in link rows stay quiet; color is for numbers that mean something.
+        .tint(Color.secondary)
     }
 
     // MARK: Library
@@ -295,7 +298,7 @@ struct ReportsView: View {
                     metric(
                         value: percentLabel(custody.utilizationRate),
                         label: "Utilization",
-                        tone: .blue
+                        tone: .gray
                     )
                     if !dynamicTypeSize.isAccessibilitySize { Divider().frame(height: 34) }
                 }
@@ -303,7 +306,7 @@ struct ReportsView: View {
                     metric(
                         value: "\(checkouts.totalCheckouts)",
                         label: "Checkouts",
-                        tone: .green,
+                        tone: .gray,
                         delta: deltaLabel(
                             current: checkouts.totalCheckouts,
                             previous: checkouts.previousTotalCheckouts
@@ -340,9 +343,9 @@ struct ReportsView: View {
     private func metric(value: String, label: String, tone: StatusTone, delta: DeltaLabel? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.title3.weight(.semibold))
+                .font(.system(size: 30, weight: .bold))
                 .monospacedDigit()
-                .foregroundStyle(Color.statusText(tone))
+                .foregroundStyle(tone == .red ? AnyShapeStyle(Color.statusText(.red)) : AnyShapeStyle(.primary))
             Text(label.uppercased())
                 .font(.caption2.weight(.semibold))
                 .tracking(0.5)
@@ -352,7 +355,7 @@ struct ReportsView: View {
                     .labelStyle(.titleAndIcon)
                     .font(.caption2.weight(.medium))
                     .monospacedDigit()
-                    .foregroundStyle(Color.statusText(delta.tone))
+                    .foregroundStyle(.secondary)
                     .padding(.top, 1)
             }
         }
@@ -446,7 +449,7 @@ struct ReportsView: View {
                 Button("Clear") { selectedDay = nil }
                     .font(.caption)
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.statusText(.blue))
+                    .foregroundStyle(.primary)
             }
             .monospacedDigit()
         } else {
