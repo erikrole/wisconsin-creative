@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 import { apiClientSource } from "./_helpers/ios-api-client-source";
@@ -31,12 +32,15 @@ describe("iOS system hardening contracts", () => {
     expect(environment).toContain('URL(string: "https://\\(activeAPIHost)") ?? baseURL');
   });
 
-  it("falls back to an in-memory SwiftData cache instead of crashing on store corruption", () => {
-    const gearStore = source("ios/Wisconsin/Core/GearStore.swift");
+  it("has no SwiftData gear cache and purges the legacy store once", () => {
+    const app = source("ios/Wisconsin/App/WisconsinApp.swift");
+    const purge = source("ios/Wisconsin/Core/LegacyGearCache.swift");
 
-    expect(gearStore).not.toContain("try! ModelContainer");
-    expect(gearStore).toContain("isStoredInMemoryOnly: true");
-    expect(gearStore).toContain("Persistent SwiftData cache unavailable");
+    expect(existsSync("ios/Wisconsin/Core/GearStore.swift")).toBe(false);
+    expect(app).not.toContain("GearStore");
+    expect(app).toContain("LegacyGearCache.purgeIfNeeded()");
+    expect(purge).toContain('name.hasPrefix("GearCache")');
+    expect(purge).toContain("WisconsinLegacyGearCachePurged");
   });
 
   it("blocks delayed APNs callbacks and removes user notification state on sign-out", () => {
