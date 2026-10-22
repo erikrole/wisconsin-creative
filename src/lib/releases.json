@@ -7,7 +7,8 @@
     "details": [
       "The new holder gets a notification with the due time.",
       "The old holder sees it come off their record, and gets a notification if staff moved it.",
-      "Transferring a checkout is held while a return is in progress."
+      "Transferring a checkout is held while a return is in progress.",
+      "The transfer windows on the web are redesigned: a searchable list of people, a clear from and to, and a note of what each person will see."
     ],
     "platforms": [
       "Web",
@@ -33,7 +34,7 @@
     ],
     "pr": 586
   },
- {
+  {
     "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
