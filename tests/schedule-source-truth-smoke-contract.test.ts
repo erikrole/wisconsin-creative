@@ -114,11 +114,11 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(assignmentCell).not.toContain("candidate-scores");
     expect(assignmentCell).not.toContain("fetch(");
     expect(workingEditor).toContain("/working-copy/candidate-scores?");
-    for (const label of ["Recommended", "Good fit", "Warning", "Overloaded"]) {
+    for (const label of ["Suggested", "Check first", "Unavailable"]) {
       expect(picker).toContain(label);
     }
     expect(picker).toContain("candidateScores");
-    expect(picker).toContain("Scoring candidates");
+    expect(picker).toContain("Checking availability");
 
     expect(eventCrew).toContain("<WorkingCrewEditor");
     expect(eventCrew).not.toContain("/auto-assign/preview");

@@ -427,6 +427,25 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Fairer, clearer crew assignment",
+    "type": "improvement",
+    "summary": "Picking crew and auto assigning shifts now explain each choice in plain words and spread work more evenly.",
+    "details": [
+      "The crew picker suggests the best fits first and shows why each person fits and how busy their week is. Arrow keys and Return assign without the mouse.",
+      "Auto assign favors people with a lighter week and fewer shifts this season, instead of giving every tie to the same person.",
+      "The Auto assign review shows who goes where and why, and lets you leave single slots open when partial crews are allowed.",
+      "Assign shifts has a calmer month grid and a Student workload panel that shows who is busiest, who has no shifts yet, and highlights one person's shifts when you tap them.",
+      "Event pages have a Fill open slots button with the same review, and Crew size sets every area's Staff and Student positions in one step.",
+      "On iPhone, the crew picker matches the web: Suggested, Check first and Unavailable, with each person's week at a glance."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 575
+  },
+  {
+    "date": "2026-10-21",
     "title": "Tidier App activity people list",
     "type": "improvement",
     "summary": "Settings > App activity now shows each person's devices in a few clear chips and knows about iPhone 1.3.",

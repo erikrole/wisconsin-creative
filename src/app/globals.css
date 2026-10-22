@@ -2328,6 +2328,9 @@ tr.cursor-pointer td {
   --accent-soft: rgba(141, 164, 239, 0.14);
   --btn-primary-bg: #3e63dd;
   --btn-primary-bg-hover: #5472e4;
+  /* Filled buttons keep the saturated blue so white labels stay readable; the
+     lighter accent is for text and focus on the dark page. */
+  --primary: var(--btn-primary-bg);
   --primary-foreground: #ffffff;
   --blue-text: #aebdf5;
   --blue-bg: rgba(141, 164, 239, 0.14);
