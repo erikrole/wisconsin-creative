@@ -486,6 +486,7 @@ private struct ScheduleRootToolbar: ToolbarContent {
     let shiftCalendarTip: ShiftCalendarTip
     @Binding var showTradeBoard: Bool
     @Binding var showAvailability: Bool
+    @Binding var showCantWork: Bool
     @Binding var showCalendarSetup: Bool
 
     /// Only the two actions that open something sit in the bar: Trades and the
@@ -493,6 +494,13 @@ private struct ScheduleRootToolbar: ToolbarContent {
     /// under the week strip, where they can say what they are.
     var body: some ToolbarContent {
         if #available(iOS 27.0, *) {
+            if canManageAvailability {
+                ToolbarItem(placement: .topBarTrailing) {
+                    cantWorkButton
+                }
+                .visibilityPriority(.high)
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
@@ -503,6 +511,12 @@ private struct ScheduleRootToolbar: ToolbarContent {
                 overflowActions
             }
         } else {
+            if canManageAvailability {
+                ToolbarItem(placement: .topBarTrailing) {
+                    cantWorkButton
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
                     .badge(openTradeCount)
@@ -512,6 +526,15 @@ private struct ScheduleRootToolbar: ToolbarContent {
                 moreControl
             }
         }
+    }
+
+    private var cantWorkButton: some View {
+        Button {
+            showCantWork = true
+        } label: {
+            Label("Can’t work", systemImage: "calendar.badge.minus")
+        }
+        .tint(Color.primary)
     }
 
     private var tradeBoardButton: some View {
@@ -646,6 +669,7 @@ private struct InternalScheduleView: View {
     @State private var showTradeBoard = false
     @State private var shiftToPost: TradePostCandidate?
     @State private var showAvailability = false
+    @State private var showCantWork = false
     @State private var scrollTracker = ScheduleScrollTracker()
     @State private var jumpRequest: ScheduleJumpRequest?
     @State private var isMonthExpanded = false
@@ -1040,6 +1064,7 @@ private struct InternalScheduleView: View {
                     shiftCalendarTip: shiftCalendarTip,
                     showTradeBoard: $showTradeBoard,
                     showAvailability: $showAvailability,
+                    showCantWork: $showCantWork,
                     showCalendarSetup: $showCalendarSetup
                 )
             }
@@ -1102,6 +1127,11 @@ private struct InternalScheduleView: View {
             }
             .navigationDestination(isPresented: $showAvailability) {
                 AvailabilityView(userId: session.currentUser?.id ?? "")
+            }
+            .sheet(isPresented: $showCantWork) {
+                CantWorkQuickSheet(userId: session.currentUser?.id ?? "", initialDate: scrollTracker.topDay ?? today) {
+                    Task { await appState.refresh(forceRefresh: true) }
+                }
             }
             .sheet(isPresented: $showCalendarSetup) {
                 ScheduleCalendarSubscriptionSheet()

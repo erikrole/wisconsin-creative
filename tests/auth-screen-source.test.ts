@@ -30,9 +30,9 @@ describe("Unauthenticated screen contracts", () => {
     }
   });
 
-  it("uses the designed login material rather than a plain card", () => {
+  it("uses the flat ink surface that matches the native sign-in", () => {
     const shell = source("src/components/auth/AuthScreen.tsx");
-    expect(shell).toContain("login-card");
+    expect(shell).toContain('data-theme="dark"');
     expect(shell).toContain("login-materialize");
     expect(shell).toContain("login-rise");
     expect(shell).toContain("login-lockup-title");
@@ -56,7 +56,7 @@ describe("Unauthenticated screen contracts", () => {
 
   it("keeps the login scene styles the shell depends on", () => {
     const css = source("src/app/globals.css");
-    for (const cls of [".login-card", ".login-materialize", ".login-rise", ".login-lockup-title"]) {
+    for (const cls of [".login-bg", ".login-cta", ".login-field", ".login-materialize", ".login-rise", ".login-lockup-title"]) {
       expect(css, cls).toContain(cls);
     }
   });

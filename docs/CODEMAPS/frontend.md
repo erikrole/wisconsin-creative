@@ -92,6 +92,7 @@
 | `/staff/workforce/hiring` | `src/app/(app)/staff/workforce/hiring/page.tsx` |
 | `/staff/workforce` | `src/app/(app)/staff/workforce/page.tsx` |
 | `/staff/workforce/planning` | `src/app/(app)/staff/workforce/planning/page.tsx` |
+| `/welcome/availability` | `src/app/(app)/welcome/availability/page.tsx` |
 | `/welcome` | `src/app/(app)/welcome/page.tsx` |
 | `/wishlist` | `src/app/(app)/wishlist/page.tsx` |
 | `/wrapped` | `src/app/(app)/wrapped/page.tsx` |
@@ -113,6 +114,7 @@
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
 | `/dev-transfer` | `src/app/dev-transfer/page.tsx` |
+| `/dev-welcome` | `src/app/dev-welcome/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
 | `/privacy` | `src/app/privacy/page.tsx` |
@@ -152,6 +154,7 @@
 | `/signatures` | `src/app/(app)/signatures/layout.tsx` |
 | `/staff` | `src/app/(app)/staff/layout.tsx` |
 | `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
+| `/welcome` | `src/app/(app)/welcome/layout.tsx` |
 | `/wishlist` | `src/app/(app)/wishlist/layout.tsx` |
 | `/wrapped` | `src/app/(app)/wrapped/layout.tsx` |
 | `/about` | `src/app/(public)/about/layout.tsx` |
@@ -165,12 +168,12 @@
 | `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
+| `src/components/onboarding/OnboardingDialog.tsx` | 1069 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1057 |
-| `src/components/onboarding/OnboardingDialog.tsx` | 1042 |
 | `src/components/TradeBoard.tsx` | 974 |
-| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
+| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 894 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
@@ -201,7 +204,7 @@
 | `src/hooks/use-assignment-grid.ts` | 226 |
 | `src/hooks/use-booking-change-sync.ts` | 174 |
 | `src/hooks/use-copy-feedback.ts` | 62 |
-| `src/hooks/use-current-user.ts` | 53 |
+| `src/hooks/use-current-user.ts` | 56 |
 | `src/hooks/use-dashboard-data.ts` | 244 |
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |

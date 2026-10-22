@@ -67,6 +67,8 @@ struct PerformanceTestRootView: View {
             TradeBoardHarnessView()
         case .home, .homeAllClear:
             HomeHarnessView()
+        case .homeGettingStarted:
+            HomeStudentHarnessView()
         case .scoreboard:
             ScoreboardHarnessView()
         case .teamScoreboard:
@@ -769,6 +771,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
                 : FixtureAPI.myLicense
         case "/api/licenses/my/history": return FixtureAPI.licenseHistory
         case "/api/me":
+            if AppRuntimeMode.performanceScenario == .homeGettingStarted {
+                let created = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3 * 86_400))
+                return Data(#"{"user":{"id":"fixture-student","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","role":"STUDENT","staffingType":"ST","avatarUrl":null,"forcePasswordChange":false,"accountCreatedAt":"\#(created)"}}"#.utf8)
+            }
             return AppRuntimeMode.performanceScenario == .previewChrome
                 ? PreviewChromeFixtures.me
                 : ScheduleFixtureAPI.me
@@ -778,6 +784,17 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/announcements/active": return AnnouncementFixtureAPI.active()
         case let path where path.hasPrefix("/api/announcements/") && path.hasSuffix("/dismiss"):
             return AnnouncementFixtureAPI.dismiss(path: path)
+        case "/api/users/fixture-student/availability":
+            let cal = Calendar.current
+            func day(_ offset: Int) -> String { CantWorkFormat.day.string(from: cal.date(byAdding: .day, value: offset, to: .now) ?? .now) }
+            return Data(#"""
+            {"data":[
+              {"id":"a1","kind":"AD_HOC","intent":"CANNOT_WORK","date":"\#(day(9))","dateEndsOn":"\#(day(12))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":"Family trip"},
+              {"id":"a2","kind":"AD_HOC","intent":"CANNOT_WORK","date":"\#(day(20))","dateEndsOn":"\#(day(20))","allDay":false,"startsAt":"09:00","endsAt":"12:00","label":"CHEM 101 exam"},
+              {"id":"a3","kind":"WEEKLY","intent":"CANNOT_WORK","dayOfWeek":2,"startsAt":"10:00","endsAt":"11:15","label":"CHEM 101"},
+              {"id":"a4","kind":"WEEKLY","intent":"CANNOT_WORK","dayOfWeek":4,"startsAt":"10:00","endsAt":"11:15","label":"CHEM 101"}
+            ]}
+            """#.utf8)
         case "/api/dashboard":
             return AppRuntimeMode.performanceScenario == .homeAllClear
                 ? HomeFixtureAPI.allClearDashboard
@@ -3086,6 +3103,26 @@ enum TeamScoreboardFixtureAPI {
  }
 }
 """#.utf8)
+}
+
+/// Home for a student three days into the account, so the first-weeks card shows.
+struct HomeStudentHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        HomeView()
+            .onAppear {
+                session.currentUser = CurrentUser(
+                    id: "fixture-student",
+                    name: "Avery Nakamura",
+                    email: "avery.nakamura@wisc.edu",
+                    role: "STUDENT",
+                    staffingType: "ST",
+                    avatarUrl: nil,
+                    accountCreatedAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3 * 86_400))
+                )
+            }
+    }
 }
 
 /// Renders the native profile Scoreboard against a canned season payload. The

@@ -53,6 +53,8 @@ done
 read -r -d '' REGISTRY <<'EOF' || true
 # View / sheet                         | audit slug                  | status
 HomeView.swift                         | dashboard                   | audit
+GettingStartedCard.swift               | dashboard                   | audit
+CantWorkCard.swift                     | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
 Booking/BookingActivityView.swift      |                             | exempt-shared
@@ -96,6 +98,7 @@ PasswordSetupView.swift                | login                       | audit
 LaunchView.swift                       |                             | exempt-tiny
 Welcome/ProfileCompletionWelcomeView.swift | welcome                  | audit
 Welcome/ProfilePhotoCropView.swift     | welcome                     | audit
+Welcome/WelcomeFinishView.swift        | welcome                     | audit
 Welcome/ProfileCompletionDraft.swift   |                             | exempt-infra
 Welcome/ProfileCompletionWelcomeComponents.swift |                   | exempt-shared
 UsersView.swift                        | users                       | audit

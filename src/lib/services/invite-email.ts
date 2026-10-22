@@ -35,7 +35,7 @@ export function buildInviteEmail({
   const rendered = renderEmail({
     preheader: reminder
       ? "Sign in and finish your profile so we can schedule you."
-      : "Your account is ready. Finishing your profile takes about three minutes.",
+      : "Your account is ready. Setup takes about three minutes.",
     eyebrow: reminder ? "Quick reminder" : "You're invited",
     headline: reminder ? "Your account is still waiting" : "Welcome to the crew",
     paragraphs: reminder
@@ -48,16 +48,20 @@ export function buildInviteEmail({
     steps: reminder
       ? undefined
       : {
-          heading: "What you'll set up",
+          heading: "What happens next",
           items: [
-            "Contact details so we can reach you",
-            "Student details like year and graduation",
-            "Apparel sizes and a photo for team gear and your badge",
+            "Choose a password for your account",
+            "Add your phone, Wiscard, and student details",
+            "Pick your apparel sizes and add a photo, now or later",
+            "Install the iPhone app to scan gear and get shift reminders",
           ],
         },
     action: { label: reminder ? "Finish setting up" : "Set up your account", url: loginUrl },
     note: `Sign in with ${email}. Use this exact address so we can find your invite.`,
-    footer: ["Questions? Reply to this email. Wasn't expecting this? You can ignore it, nothing happens until you sign in."],
+    footer: [
+      "Forget your password later? Choose Forgot password on the sign-in page and we'll email you a reset link.",
+      "Questions? Reply to this email. Wasn't expecting this? You can ignore it, nothing happens until you sign in.",
+    ],
     showFallbackLink: true,
   });
 

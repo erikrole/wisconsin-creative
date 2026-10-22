@@ -54,7 +54,7 @@
 | `src/lib/services/gear-handover-notify.ts` | 97 |
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
-| `src/lib/services/invite-email.ts` | 78 |
+| `src/lib/services/invite-email.ts` | 82 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
@@ -204,6 +204,7 @@
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
 | `src/lib/format.ts` | 320 |
+| `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
 | `src/lib/guide-keyboard.ts` | 139 |
@@ -240,7 +241,7 @@
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 223 |
+| `src/lib/profile-completion.ts` | 222 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
@@ -314,6 +315,7 @@
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 43 |
 | `src/lib/title-normalization.ts` | 101 |
+| `src/lib/unavailable-times.ts` | 185 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |
@@ -730,6 +732,7 @@
 - `/api/me/blasts/[id]/read`
 - `/api/me/blasts`
 - `/api/me/change-password`
+- `/api/me/getting-started`
 - `/api/me/notification-preferences`
 - `/api/me/passkeys/[id]`
 - `/api/me/passkeys`

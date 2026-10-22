@@ -313,6 +313,25 @@
   },
   {
     "date": "2026-10-21",
+    "title": "A friendlier first-day setup",
+    "type": "improvement",
+    "summary": "New students get a calmer setup after they accept their invite, and a clear place to start when it's done.",
+    "details": [
+      "The sign-in and create-password pages now match the iPhone app: a calm dark surface with a single light button.",
+      "The Welcome setup now shows a simple step bar, one question at a time, and works comfortably on a phone.",
+      "When setup ends, a short list points to where to start. Onboarding Status now flags anyone who hasn't signed in or finished setup after three days, and students who haven't said when they can't work, so staff know who to nudge.",
+      "The invite email now spells out what happens next, including installing the app, and how to reset a forgotten password. Adding one student or staff member can send it right away.",
+      "New students and staff see a Getting started card on Home for their first two weeks, on the web and the iPhone app, and what they check off carries across both.",
+      "Students can add when they can't work, like classes, another job or days out of town, so they aren't scheduled then. It's optional, offered on the Getting started card, and always one tap away from Home and Schedule. If you're already on a shift then, you can post it to the Trade Board right there."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 584
+  },
+  {
+    "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",
     "summary": "Bookings on iPhone is rebuilt to be quieter and easier to scan.",
