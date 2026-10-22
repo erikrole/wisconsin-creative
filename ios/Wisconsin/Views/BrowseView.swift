@@ -4,8 +4,8 @@ struct BrowseView: View {
     @State private var navigationPath = NavigationPath()
     @Environment(AppState.self) private var appState
     @Environment(SessionStore.self) private var session
-    @State private var openTool: FieldTool?
     @State private var openDamageCases = 0
+    @State private var openTool: FieldTool?
 
     private var isStaffOrAdmin: Bool {
         let role = session.currentUser?.role ?? ""

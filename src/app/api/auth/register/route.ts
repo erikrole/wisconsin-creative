@@ -64,6 +64,7 @@ export const POST = withHandler(async (req) => {
           email,
           wiscardNumber: null,
           passwordHash,
+          onboardingRequired: allowedEntry.role !== "COLLABORATOR",
           role: allowedEntry.role, // Use role from allowlist (not hardcoded STUDENT)
           affiliation: allowedEntry.affiliation,
           collaboratorProfile: allowedEntry.collaboratorProfile,
@@ -227,6 +228,7 @@ export const POST = withHandler(async (req) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        onboardingRequired: user.onboardingRequired,
         affiliation: collaboratorPolicy?.affiliationKey ?? user.affiliation,
         collaboratorProfile: compatibilityCollaboratorProfile(collaboratorPolicy, user.collaboratorProfile),
         collaboratorPolicy,

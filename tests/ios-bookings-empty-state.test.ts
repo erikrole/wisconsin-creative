@@ -21,7 +21,7 @@ describe("iOS bookings empty state recovery", () => {
     expect(source).toContain('return vm.scope == .mine ? "checkmark.circle" : "calendar.badge.plus"');
     expect(source).toContain("You don't have any active checkouts or reservations.");
     expect(source).toContain(".buttonStyle(.borderedProminent)");
-    expect(source).toContain(".tint(.green)");
+    expect(source).toContain(".tint(Color.statusText(.green))");
     expect(source).not.toContain("BookingEmptyState");
     expect(source).not.toContain('Label("Show all visible bookings"');
   });

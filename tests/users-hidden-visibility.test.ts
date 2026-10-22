@@ -89,6 +89,8 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: "visible@example.com",
     passwordHash: "hash",
     forcePasswordChange: false,
+    onboardingRequired: false,
+    onboardingCompletedAt: null,
     role: Role.STUDENT,
     affiliation: null,
     collaboratorProfile: null,

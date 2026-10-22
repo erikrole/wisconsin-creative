@@ -58,6 +58,55 @@ describe("loadWrappedGames", () => {
 });
 
 describe("getWrappedRecap", () => {
+  it("keeps historical event totals while omitting hidden crew identities", async () => {
+    const snapshot = (await db.gameSnapshot.findMany())[0];
+    db.gameSnapshot.findMany.mockResolvedValue([1, 2].map((n) => ({
+      ...snapshot, eventId: `e${n}`, crew: [crewMember("me"), crewMember("hidden"), crewMember("visible")],
+    })));
+    db.user.findMany.mockResolvedValue([{ id: "visible", avatarUrl: null }]);
+
+    const result = await getWrappedRecap("me", { now: BEFORE, preview: true });
+    expect(result?.status).toBe("ready");
+    if (result?.status !== "ready") throw new Error("Expected a preview");
+    expect(result.recap.cards.find((card) => card.id === "crew")?.items?.map((item) => item.userId)).toEqual(["visible"]);
+    expect(result.recap.cards.find((card) => card.id === "summary")?.items?.find((item) => item.label === "Top crewmate")?.userId).toBe("visible");
+    expect(JSON.stringify(result.recap)).not.toContain("hidden");
+    expect(db.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ active: true, hiddenFromRoster: false }),
+    }));
+  });
+
+  it("redacts identities that became hidden after a recap was frozen", async () => {
+    const payload = {
+      person: { userId: "me" },
+      cards: [
+        { id: "events", value: "12", sentence: "12 events worked" },
+        { id: "crew", value: "Hidden", sentence: "You and Hidden worked 2 events together.", items: [{ userId: "hidden", label: "Hidden Account", avatarUrl: "https://example.test/hidden.jpg", value: "2 together" }] },
+        { id: "summary", layout: "summary", items: [{ label: "Events", value: "12" }, { label: "Top crewmate", value: "Hidden", userId: "hidden" }, { label: "Top crewmate", value: "Legacy Hidden" }] },
+      ],
+      team: [],
+    };
+    db.wrappedRecap.findUnique.mockResolvedValue({ version: WRAPPED_RECAP_VERSION, payload });
+    db.user.findMany.mockResolvedValue([]);
+
+    const result = await getWrappedRecap("me", { now: AFTER });
+    expect(result?.status).toBe("ready");
+    if (result?.status !== "ready") throw new Error("Expected a frozen recap");
+    expect(result.recap.cards).toEqual([payload.cards[0], { ...payload.cards[2], items: [{ label: "Events", value: "12" }] }]);
+    expect(JSON.stringify(result.recap)).not.toContain("Hidden");
+    expect(db.wrappedRecap.upsert).not.toHaveBeenCalled();
+  });
+
+  it("removes an uncheckable legacy summary name even without any identity cards", async () => {
+    const payload = { person: { userId: "me" }, cards: [{ id: "summary", layout: "summary", items: [{ label: "Events", value: "12" }, { label: "Top crewmate", value: "Hidden Legacy" }] }], team: [] };
+    db.wrappedRecap.findUnique.mockResolvedValue({ version: WRAPPED_RECAP_VERSION, payload });
+    const result = await getWrappedRecap("me", { now: AFTER });
+    if (result?.status !== "ready") throw new Error("Expected a frozen recap");
+    expect(result.recap.cards[0]?.items).toEqual([{ label: "Events", value: "12" }]);
+    expect(JSON.stringify(result.recap)).not.toContain("Hidden");
+    expect(db.wrappedRecap.upsert).not.toHaveBeenCalled();
+  });
+
   it("stays locked before Dec 1 without touching any data", async () => {
     await expect(getWrappedRecap("me", { now: BEFORE })).resolves.toEqual({
       status: "locked",

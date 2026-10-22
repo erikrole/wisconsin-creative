@@ -1,0 +1,197 @@
+{
+  "evidence": "After-only; no matched baseline claimed. Source snapshot and image hashes bind retained evidence; they do not prove authenticated persistence.",
+  "captures": [
+    {
+      "image": "ios-apparel-confirmation.png",
+      "sha256": "fa5fd38102d14cc610d54964bd8ad5cb1230607154e6b15ebfbe2d63ff537b0c",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "device": "iPhone 18 Pro Max",
+        "simulatorId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "runtime": "iOS 27.0",
+        "scenario": "DEBUG onboarding fixture; see OnboardingWalkthroughUITests",
+        "appearance": "light",
+        "statusBarClock": "9:41",
+        "logicalViewport": "not independently recorded; no point measurements or matched comparison claimed",
+        "captureType": "XCTest attachment"
+      }
+    },
+    {
+      "image": "ios-avatar-crop.png",
+      "sha256": "0cc7a8f610903170fc73388a597a265669c65773b28a93870bb781891c967ced",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "device": "iPhone 18 Pro Max",
+        "simulatorId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "runtime": "iOS 27.0",
+        "scenario": "DEBUG onboarding fixture; see OnboardingWalkthroughUITests",
+        "appearance": "light",
+        "statusBarClock": "9:41",
+        "logicalViewport": "not independently recorded; no point measurements or matched comparison claimed",
+        "captureType": "XCTest attachment"
+      }
+    },
+    {
+      "image": "ios-avatar-upload-retry.png",
+      "sha256": "56cb5dc17f539f29bdb7b2f7d3dde5b2f29c5bd5336ecb314312104ff4038562",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "device": "iPhone 18 Pro Max",
+        "simulatorId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "runtime": "iOS 27.0",
+        "scenario": "DEBUG onboarding fixture; see OnboardingWalkthroughUITests",
+        "appearance": "light",
+        "statusBarClock": "9:41",
+        "logicalViewport": "not independently recorded; no point measurements or matched comparison claimed",
+        "captureType": "XCTest attachment"
+      }
+    },
+    {
+      "image": "ios-optional-photo.png",
+      "sha256": "b06a2f8ad8a0518a20e958862324eda7e55984381fbd50bfbbebe73a410d535a",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "device": "iPhone 18 Pro Max",
+        "simulatorId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "runtime": "iOS 27.0",
+        "scenario": "DEBUG onboarding fixture; see OnboardingWalkthroughUITests",
+        "appearance": "light",
+        "statusBarClock": "9:41",
+        "logicalViewport": "not independently recorded; no point measurements or matched comparison claimed",
+        "captureType": "XCTest attachment"
+      }
+    },
+    {
+      "image": "ios-photo-skipped-setup-complete.png",
+      "sha256": "14e2bc227d6b0b4240c05d010390faf78c003cf37c5de7580e7d14f2ec8506aa",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "device": "iPhone 18 Pro Max",
+        "simulatorId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "runtime": "iOS 27.0",
+        "scenario": "DEBUG onboarding fixture; see OnboardingWalkthroughUITests",
+        "appearance": "light",
+        "statusBarClock": "9:41",
+        "logicalViewport": "not independently recorded; no point measurements or matched comparison claimed",
+        "captureType": "XCTest attachment"
+      }
+    },
+    {
+      "image": "ios-required-apparel.png",
+      "sha256": "4c2fe54eebf08c569d2dad5329a7768b93fc25f02107c1fc1dc53f668c7a0194",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "device": "iPhone 18 Pro Max",
+        "simulatorId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "runtime": "iOS 27.0",
+        "scenario": "DEBUG onboarding fixture; see OnboardingWalkthroughUITests",
+        "appearance": "light",
+        "statusBarClock": "9:41",
+        "logicalViewport": "not independently recorded; no point measurements or matched comparison claimed",
+        "captureType": "XCTest attachment"
+      }
+    },
+    {
+      "image": "web-apparel-saved.png",
+      "sha256": "fffaca4cff0988ab64ee91589c57af62c536795cc5da8fe36ee54e4b9a52b92d",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "viewport": {
+          "width": 1280,
+          "height": 1000
+        },
+        "browser": "149.0.7827.55",
+        "clock": "2026-10-22T15:00:00Z",
+        "locale": "en-US",
+        "timezone": "America/Chicago",
+        "fixture": "tests/browser/onboarding-continuity.spec.ts",
+        "evidence": "component fixture; no authenticated account or database"
+      }
+    },
+    {
+      "image": "web-avatar-crop.png",
+      "sha256": "139cb041efbfb02becc94b6274c3484eb703cc9c0f74a6f29afe98ac5dc1260b",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "browser": "149.0.7827.55",
+        "clock": "2026-10-22T15:00:00Z",
+        "locale": "en-US",
+        "timezone": "America/Chicago",
+        "fixture": "tests/browser/onboarding-continuity.spec.ts",
+        "evidence": "component fixture; no authenticated account or database"
+      }
+    },
+    {
+      "image": "web-avatar-retry.png",
+      "sha256": "44d0608ddabf68169ac984883ba322c3e99b3938150c30cc40758a618228432f",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "browser": "149.0.7827.55",
+        "clock": "2026-10-22T15:00:00Z",
+        "locale": "en-US",
+        "timezone": "America/Chicago",
+        "fixture": "tests/browser/onboarding-continuity.spec.ts",
+        "evidence": "component fixture; no authenticated account or database"
+      }
+    },
+    {
+      "image": "web-avatar-touch.png",
+      "sha256": "7ec26d6e11d2eda4219a1f25fe409d3d4389e626fafd94c4adb5695ed31058ff",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "browser": "149.0.7827.55",
+        "clock": "2026-10-22T15:00:00Z",
+        "locale": "en-US",
+        "timezone": "America/Chicago",
+        "fixture": "tests/browser/onboarding-continuity.spec.ts",
+        "evidence": "component fixture; no authenticated account or database"
+      }
+    },
+    {
+      "image": "web-optional-photo.png",
+      "sha256": "37ff496f49e3b1fcd359397dce857aa4cbdff8defa5906fb3b9a9f76f64a4e4d",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "browser": "149.0.7827.55",
+        "clock": "2026-10-22T15:00:00Z",
+        "locale": "en-US",
+        "timezone": "America/Chicago",
+        "fixture": "tests/browser/onboarding-continuity.spec.ts",
+        "evidence": "component fixture; no authenticated account or database"
+      }
+    },
+    {
+      "image": "web-save-conflict.png",
+      "sha256": "8458aec593b2c8adc9bc6e66ac3ee28c99b6f9dc68f0284de975fbbbc5f8af35",
+      "sourceSnapshotSha256": "fb4f1206cbe32c7b10be71e1d4dd506aca4be67353d6a02ce5b2cefefcca621e",
+      "settings": {
+        "viewport": {
+          "width": 1280,
+          "height": 1000
+        },
+        "browser": "149.0.7827.55",
+        "clock": "2026-10-22T15:00:00Z",
+        "locale": "en-US",
+        "timezone": "America/Chicago",
+        "fixture": "tests/browser/onboarding-continuity.spec.ts",
+        "evidence": "component fixture; no authenticated account or database"
+      }
+    }
+  ]
+}

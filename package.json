@@ -47,7 +47,6 @@
     "sharp": "0.35.5",
     "source-map-js": "1.2.2",
     "undici": "7.29.1",
-    "vite": "7.3.7",
     "@workflow/core": {
       "nanoid": "5.1.16"
     },
@@ -184,7 +183,7 @@
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^3.2.6",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^15.5.26",
+    "eslint-config-next": "^15.5.28",
     "plist": "^5.0.0",
     "prisma": "^6.19.3",
     "typescript": "5.9.3",

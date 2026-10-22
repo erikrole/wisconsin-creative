@@ -1,0 +1,74 @@
+
+> creative-ops@2026.04.08.1 ios:xcode:verify
+> bash scripts/ios-xcode-verify.sh
+
+iOS Xcode verification
+Project: ios/Wisconsin.xcodeproj
+Scheme: Wisconsin
+Configuration: Debug
+DerivedData: /private/tmp/wc-ios-fixes-20261022/derived-fixed
+Test destination: platform=iOS Simulator,id=795AB4E9-3E4A-4C13-9D4F-27FD822C190B (IOS_TEST_DESTINATION)
+
+== XcodeGen project drift ==
+
+> creative-ops@2026.04.08.1 ios:project:check
+> node scripts/check-ios-project.mjs
+
+OK: XcodeGen output matches checked-in iOS project files
+
+== iOS drift check ==
+
+> creative-ops@2026.04.08.1 drift:ios
+> bash scripts/ios-drift-check.sh
+
+✓ ios-drift-check: no anti-patterns found across 130 swift files
+
+== iOS gap audit ==
+
+> creative-ops@2026.04.08.1 audit:ios:gaps
+> bash scripts/ios-audit-inventory.sh --gaps
+
+
+═══════════════════════════════════════════════════════════════
+Audit-worthy surfaces:    82
+  ✓ Covered:              82  (100%)
+  ✗ Missing audit:        0
+Exempt (shared/infra):    49
+═══════════════════════════════════════════════════════════════
+✓ no audit gaps
+
+== Xcode simulator build ==
+error: the following command failed with exit code 0 but produced no further output
+SwiftCompile normal arm64 /Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift (in target 'Wisconsin' from project 'Wisconsin')
+/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:460:34: warning: 'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]
+458 |         SpatialTapGesture().onEnded { value in
+459 |             // Left third goes back, the rest goes forward, like stories.
+460 |             let width = UIScreen.main.bounds.width
+    |                                  `- warning: 'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]
+461 |             if value.location.x < width * 0.3 { go(index - 1) } else { go(index + 1) }
+462 |         }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+error: the following command failed with exit code 0 but produced no further output
+SwiftCompile normal x86_64 /Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift (in target 'Wisconsin' from project 'Wisconsin')
+/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:460:34: warning: 'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]
+458 |         SpatialTapGesture().onEnded { value in
+459 |             // Left third goes back, the rest goes forward, like stories.
+460 |             let width = UIScreen.main.bounds.width
+    |                                  `- warning: 'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]
+461 |             if value.location.x < width * 0.3 { go(index - 1) } else { go(index + 1) }
+462 |         }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+
+== XCTest simulator suite ==
+2026-10-22 07:53:28.599 xcodebuild[63812:3276244] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-22 07:53:34.753 xcodebuild[63812:3276244] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-22 07:53:34.754 xcodebuild[63812:3276244] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-22 07:53:34.754 xcodebuild[63812:3276244] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-10-22 07:53:35.023 xcodebuild[63812:3276244] [MT] IDETestOperationsObserverDebug: 6.464 elapsed -- Testing started completed.
+2026-10-22 07:53:35.023 xcodebuild[63812:3276244] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-22 07:53:35.023 xcodebuild[63812:3276244] [MT] IDETestOperationsObserverDebug: 6.464 sec, +6.464 sec -- end
+Testing started
+
+OK: iOS Xcode verification passed for Wisconsin.

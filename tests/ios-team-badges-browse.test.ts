@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const browse = () => source("ios/Wisconsin/Views/BrowseView.swift");
 const view = () => source("ios/Wisconsin/Views/TeamBadgesView.swift");
 const models = () => source("ios/Wisconsin/Models/TeamBadgeModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 
 describe("iOS team badge shelf", () => {
   it("adds a staff-only Badges row and leaves collaborators off it", () => {

@@ -5,17 +5,21 @@ import UIKit
 private struct SelectedProfilePhoto: Identifiable {
     let id = UUID()
     let image: UIImage
+    let expectedAvatarURL: String?
+    let userId: String
 }
 
 struct ProfileCompletionWelcomeView: View {
     @Environment(SessionStore.self) private var session
     @Environment(ProfileCompletionStore.self) private var completionStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var currentStep: ProfileCompletionStep = .unknown
     @State private var direction = 1.0
     @State private var didHydrate = false
-    @State private var draft = ProfileCompletionDraft()
+    private var draft: ProfileCompletionDraft { completionStore.draft }
     @State private var photoSelection: PhotosPickerItem?
     @State private var selectedPhoto: SelectedProfilePhoto?
     @State private var isLoadingPhoto = false
@@ -49,7 +53,9 @@ struct ProfileCompletionWelcomeView: View {
                     WelcomeFailureView(
                         message: error,
                         onRetry: retryLoad,
-                        onContinue: continuePastLoadFailure
+                        onContinue: continuePastLoadFailure,
+                        allowsContinue: user?.onboardingRequired != true,
+                        onSignOut: { Task { await session.logout() } }
                     )
                 } else {
                     WelcomeLoadingView()
@@ -64,6 +70,28 @@ struct ProfileCompletionWelcomeView: View {
             hydrateIfNeeded()
         }
         .onChange(of: completionStore.response) { _, _ in hydrateIfNeeded() }
+        .onChange(of: draft.autosaveValues) { _, _ in
+            if didHydrate, let user { completionStore.draftChanged(for: user) }
+        }
+        .onChange(of: focusedField) { old, new in
+            if old != nil, old != new, let user { Task { _ = await completionStore.flush(for: user) } }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard let user else { return }
+            Task {
+                if phase == .active {
+                    _ = await completionStore.flush(for: user)
+                    await completionStore.load(for: user, force: true)
+                    if !completionStore.hasUnsavedChanges,
+                       let next = completionStore.response?.completion.firstIncompleteStep,
+                       visibleSteps.contains(next) { currentStep = next }
+                } else if completionStore.hasUnsavedChanges {
+                    let background = UIApplication.shared.beginBackgroundTask()
+                    defer { if background != .invalid { UIApplication.shared.endBackgroundTask(background) } }
+                    _ = await completionStore.flush(for: user)
+                }
+            }
+        }
         .onChange(of: currentStep) { _, _ in scheduleInitialFocus() }
         .onChange(of: photoSelection) { _, item in
             guard let item else { return }
@@ -82,10 +110,12 @@ struct ProfileCompletionWelcomeView: View {
             ProfilePhotoCropView(
                 image: selected.image,
                 profileName: profile?.name ?? user?.name ?? "your",
+                saveFailureMessage: { completionStore.error },
                 onSave: { data in
-                    guard let user else { return false }
-                    let saved = await completionStore.uploadAvatar(data, for: user)
+                    guard let user, user.id == selected.userId else { return false }
+                    let saved = await completionStore.uploadAvatar(data, expectedAvatarURL: selected.expectedAvatarURL, for: user)
                     if saved {
+                        session.applyConfirmedAvatar(completionStore.response?.profile.avatarUrl, for: user.id)
                         await session.refreshCurrentUser()
                     }
                     return saved
@@ -104,12 +134,43 @@ struct ProfileCompletionWelcomeView: View {
                 totalCount: data.completion.totalCount
             )
 
+            if !data.versions.isEmpty {
+                Text(completionStore.saveStatus)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                    .accessibilityIdentifier("onboarding-save-status")
+            }
+
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 24) {
+                    if isStudent && !data.profile.email.lowercased().hasSuffix("@wisc.edu") {
+                        Label("Ask an administrator to change your login to your @wisc.edu address. You can save your other details now.", systemImage: "info.circle")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    VStack(alignment: .leading, spacing: 14) {
+                        if !dynamicTypeSize.isAccessibilitySize {
+                            HStack(spacing: 10) {
+                                Image(systemName: stepSymbol)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(Color.brandPrimary)
+                                    .frame(width: 44, height: 44)
+                                    .background(Color.brandPrimary.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                                    .accessibilityHidden(true)
+                                Text(currentStep == .photo ? "MAKE IT YOU" : "YOUR PROFILE")
+                                    .font(.gothamBold(size: 11, relativeTo: .caption2))
+                                    .tracking(1.6)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                         Text(stepTitle)
-                            .font(.title2.weight(.bold))
+                            .font(.gothamBlack(size: 30, relativeTo: .largeTitle))
+                            .tracking(-0.6)
                             .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
                         Text(stepDescription)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -117,6 +178,27 @@ struct ProfileCompletionWelcomeView: View {
                     }
                     .id("heading-\(currentStep.rawValue)")
                     .transition(stepTransition)
+
+                    if !data.versions.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            if completionStore.hasConflicts {
+                                Button("Use saved answers") {
+                                    guard let user else { return }
+                                    Task { await completionStore.useSavedAnswers(for: user) }
+                                }.buttonStyle(.bordered)
+                                Button("Save my answers") {
+                                    guard let user else { return }
+                                    Task { await completionStore.keepMyAnswers(for: user) }
+                                }.buttonStyle(.borderedProminent)
+                            } else if completionStore.error != nil && completionStore.hasUnsavedChanges {
+                                Button("Retry save") {
+                                    guard let user else { return }
+                                    Task { _ = await completionStore.flush(for: user) }
+                                }.buttonStyle(.bordered)
+                            }
+                        }
+                        .accessibilityElement(children: .contain)
+                    }
 
                     stepContent(data)
                         .id("body-\(currentStep.rawValue)")
@@ -130,8 +212,15 @@ struct ProfileCompletionWelcomeView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
+                    if completionStore.photoRefreshNeeded {
+                        Button("Refresh setup", action: retryLoad)
+                            .buttonStyle(.bordered)
+                            .disabled(completionStore.isLoading || completionStore.isSaving)
+                    }
                 }
-                .padding(24)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 28)
                 .frame(maxWidth: 680)
                 .frame(maxWidth: .infinity)
                 .animation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.22), value: currentStep)
@@ -185,14 +274,15 @@ struct ProfileCompletionWelcomeView: View {
 
     private var footer: some View {
         WelcomeFooter(
-            showsReminder: currentStep != .photo,
+            showsReminder: currentStep != .photo && !requiresSetup,
             showsBack: stepIndex > 0,
             primaryTitle: primaryFooterTitle,
             primaryEnabled: canUsePrimaryFooterAction,
             isSaving: completionStore.isSaving,
             onReminder: snooze,
             onBack: moveBack,
-            onPrimary: performPrimaryFooterAction
+            onPrimary: performPrimaryFooterAction,
+            onSignOut: requiresSetup ? { Task { await session.logout() } } : nil
         )
     }
 
@@ -204,7 +294,19 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private var canUsePrimaryFooterAction: Bool {
-        canContinue || isOptionalStep
+        (canContinue || isOptionalStep) && !(currentStep == .photo && data?.completion.requiredComplete != true)
+    }
+
+    private var stepSymbol: String {
+        switch currentStep {
+        case .email: "envelope"
+        case .phones: "phone"
+        case .wiscard: "person.text.rectangle"
+        case .student: "graduationcap"
+        case .apparel: "tshirt"
+        case .photo: "person.crop.circle"
+        case .unknown: "person"
+        }
     }
 
     private var stepTitle: String {
@@ -219,8 +321,8 @@ struct ProfileCompletionWelcomeView: View {
         case .phones: "Identify any number already on your account, then add the other contact number."
         case .wiscard: "Type the card number and issue code printed on your card. This is used for kiosk identification."
         case .student: "Tell us your current year and when you expect to graduate."
-        case .apparel: "Choose the sizing systems that make clothing and shoe orders unambiguous."
-        case .photo: "A clear photo helps teammates recognize you across the roster, schedule, and kiosk."
+        case .apparel: "For team apparel orders. Choose the sizes you normally buy."
+        case .photo: "A clear photo helps teammates recognize you. This step is optional — Finish saves setup with or without a photo."
         case .unknown: ""
         }
     }
@@ -233,7 +335,8 @@ struct ProfileCompletionWelcomeView: View {
         )
     }
 
-    private var isOptionalStep: Bool { currentStep == .apparel || currentStep == .photo }
+    private var requiresSetup: Bool { data?.completion.requiresSetup == true || (user?.onboardingRequired == true && data?.completion.onboardingComplete != true) }
+    private var isOptionalStep: Bool { currentStep == .photo || (currentStep == .apparel && !requiresSetup) }
 
     private var canContinue: Bool {
         guard let profile else { return false }
@@ -242,8 +345,7 @@ struct ProfileCompletionWelcomeView: View {
 
     private func hydrateIfNeeded() {
         guard !didHydrate, let data else { return }
-        draft.hydrate(from: data.profile)
-        currentStep = data.completion.firstIncompleteStep.flatMap { $0 == .unknown ? nil : $0 }
+        currentStep = data.completion.firstIncompleteStep.flatMap { visibleSteps.contains($0) ? $0 : nil }
             ?? visibleSteps.first
             ?? .photo
         didHydrate = true
@@ -266,31 +368,33 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private func continueFromCurrentStep() {
-        guard canContinue, let user, let profile else { return }
+        guard !completionStore.isSaving, canContinue, let user, let profile else { return }
         if currentStep == .photo {
-            completionStore.finishSetup(for: user.id)
-            Haptics.success()
+            finishSetup()
             return
         }
 
-        guard let update = draft.update(for: currentStep, profile: profile) else { return }
-
         Task {
-            guard let next = await completionStore.save(update, for: user) else {
+            let saved: Bool
+            if data?.versions.isEmpty == false {
+                completionStore.draftChanged(for: user)
+                saved = await completionStore.flush(for: user)
+            } else if let update = draft.update(for: currentStep, profile: profile) {
+                saved = await completionStore.save(update, for: user) != nil
+            } else { saved = false }
+            guard saved else {
                 Haptics.error()
                 return
             }
             Haptics.success()
-            if next.completion.profileComplete { return }
-            let nextStep = next.completion.firstIncompleteStep
-                ?? visibleSteps[safe: stepIndex + 1]
-                ?? currentStep
+            let nextStep = visibleSteps[safe: stepIndex + 1] ?? currentStep
             if nextStep != currentStep { move(to: nextStep, direction: 1) }
         }
     }
 
     private func performPrimaryFooterAction() {
-        if isOptionalStep && !canContinue {
+        if currentStep == .photo { finishSetup() }
+        else if isOptionalStep && !canContinue {
             skipOptionalStep()
         } else {
             continueFromCurrentStep()
@@ -298,13 +402,21 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private func skipOptionalStep() {
-        guard isOptionalStep else { return }
+        guard isOptionalStep, !(currentStep == .photo && requiresSetup) else { return }
         if currentStep == .photo {
-            guard let user else { return }
-            completionStore.finishSetup(for: user.id)
-            Haptics.success()
+            finishSetup()
         } else if let next = visibleSteps[safe: stepIndex + 1] {
             move(to: next, direction: 1)
+        }
+    }
+
+    private func finishSetup() {
+        guard let user, data?.completion.requiredComplete == true else { return }
+        Task {
+            if await completionStore.finishSetup(for: user) {
+                await session.refreshCurrentUser()
+                Haptics.success()
+            } else { Haptics.error() }
         }
     }
 
@@ -337,7 +449,7 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private func continuePastLoadFailure() {
-        guard let user else { return }
+        guard let user, !user.onboardingRequired else { return }
         completionStore.continueForSession(for: user.id)
     }
 
@@ -373,7 +485,9 @@ struct ProfileCompletionWelcomeView: View {
                   ) else {
                 throw CocoaError(.fileReadCorruptFile)
             }
-            selectedPhoto = SelectedProfilePhoto(image: image)
+            guard photoSelection == item else { return }
+            guard let user else { return }
+            selectedPhoto = SelectedProfilePhoto(image: image, expectedAvatarURL: profile?.avatarUrl, userId: user.id)
         } catch {
             photoSelection = nil
             photoLoadError = "That photo couldn’t be opened. Choose another photo and try again."

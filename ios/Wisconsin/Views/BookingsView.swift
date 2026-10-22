@@ -450,7 +450,7 @@ struct BookingsView: View {
                     } actions: {
                         Button("Retry") { Task { await vm.load(reset: true, clearExistingRows: true) } }
                             .buttonStyle(.borderedProminent)
-                            .tint(.green)
+                            .tint(Color.statusText(.green))
                     }
                 } else if vm.isEmpty && vm.isLoading {
                     loadingList
@@ -853,7 +853,7 @@ struct BookingsView: View {
                     .popoverTip(newReservationTip, arrowEdge: .top)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.green)
+            .tint(Color.statusText(.green))
         }
     }
 
@@ -953,7 +953,7 @@ private struct BookingRowLink: View {
                 } label: {
                     Label("Extend", systemImage: "clock.arrow.circlepath")
                 }
-                .tint(.green)
+                .tint(Color.statusText(.green))
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {

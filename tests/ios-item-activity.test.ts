@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS item activity", () => {
   const itemDetail = source("ios/Wisconsin/Views/ItemDetailView.swift");
   const screen = source("ios/Wisconsin/Views/ItemActivityView.swift");
   const models = source("ios/Wisconsin/Models/ItemActivityModels.swift");
-  const client = source("ios/Wisconsin/Core/APIClient.swift");
+  const client = apiClientSource();
   const route = source("src/app/api/assets/[id]/activity/route.ts");
   const project = source("ios/Wisconsin.xcodeproj/project.pbxproj");
 

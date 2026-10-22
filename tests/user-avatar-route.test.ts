@@ -7,6 +7,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
+    $transaction: vi.fn(),
     user: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/audit", () => ({
-  createAuditEntry: vi.fn(),
+  createAuditEntryTx: vi.fn(),
 }));
 
 vi.mock("@/lib/blob", () => ({
@@ -25,6 +26,8 @@ vi.mock("@/lib/blob", () => ({
   isBlobUrl: vi.fn(() => true),
   imageExtensionForType: vi.fn((type: string) => (type === "image/webp" ? "webp" : "jpg")),
 }));
+
+vi.mock("@/lib/avatar-image", () => ({ prepareAvatarImage: vi.fn(async () => Buffer.from("normalized-avatar")) }));
 
 vi.mock("@vercel/blob", () => ({
   put: vi.fn(async () => ({ url: "https://blob.example.com/new-avatar.webp" })),
@@ -41,11 +44,11 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { deleteImage } from "@/lib/blob";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { put } from "@vercel/blob";
-import { DELETE, POST } from "@/app/api/users/[id]/avatar/route";
+import { DELETE, GET, POST } from "@/app/api/users/[id]/avatar/route";
 
 const adminUser = {
   id: "admin-1",
@@ -104,6 +107,8 @@ function avatarDeleteRequest(pathId = targetId) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(db.$transaction).mockImplementation(async (fn) => (fn as (tx: typeof db) => Promise<unknown>)(db));
+  vi.mocked(createAuditEntryTx).mockResolvedValue(undefined);
   vi.mocked(requireAuth).mockResolvedValue(adminUser);
   vi.mocked(db.user.findUnique).mockResolvedValue(userResult({
     id: targetId,
@@ -130,7 +135,7 @@ describe("/api/users/[id]/avatar", () => {
       where: { id: targetId },
       data: { avatarUrl: "https://blob.example.com/new-avatar.webp" },
     }));
-    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+    expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({
       actorId: "admin-1",
       actorRole: "ADMIN",
       entityType: "user_avatar",
@@ -150,7 +155,7 @@ describe("/api/users/[id]/avatar", () => {
       where: { id: targetId },
       data: { avatarUrl: null },
     }));
-    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+    expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({
       actorId: "admin-1",
       actorRole: "ADMIN",
       entityType: "user_avatar",
@@ -178,9 +183,35 @@ describe("/api/users/[id]/avatar", () => {
     expect(res.status).toBe(500);
     expect(deleteImage).toHaveBeenCalledWith("https://blob.example.com/new-avatar.webp");
     expect(deleteImage).not.toHaveBeenCalledWith(oldAvatarUrl);
-    expect(createAuditEntry).not.toHaveBeenCalled();
+    expect(createAuditEntryTx).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith(databaseError);
     consoleError.mockRestore();
+  });
+
+  it.each(["POST", "DELETE"])("keeps the previous blob when the %s audit fails", async (method) => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(createAuditEntryTx).mockRejectedValueOnce(new Error("audit unavailable"));
+    const res = method === "POST"
+      ? await POST(avatarPostRequest(), params())
+      : await DELETE(avatarDeleteRequest(), params());
+
+    expect(res.status).toBe(500);
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
+    expect(deleteImage).not.toHaveBeenCalledWith(oldAvatarUrl);
+    if (method === "POST") expect(deleteImage).toHaveBeenCalledWith("https://blob.example.com/new-avatar.webp");
+    else expect(deleteImage).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("rejects a stale upload without overwriting a newer photo", async () => {
+    vi.mocked(db.user.findUnique)
+      .mockResolvedValueOnce(userResult({ id: targetId, avatarUrl: oldAvatarUrl }))
+      .mockResolvedValueOnce(userResult({ id: targetId, avatarUrl: "https://blob.example.com/newer.webp" }));
+    const res = await POST(avatarPostRequest(), params());
+    expect(res.status).toBe(409);
+    expect(db.user.update).not.toHaveBeenCalled();
+    expect(deleteImage).toHaveBeenCalledExactlyOnceWith("https://blob.example.com/new-avatar.webp");
+    expect(createAuditEntryTx).not.toHaveBeenCalled();
   });
 
   it("blocks staff from changing another user's profile photo", async () => {
@@ -194,5 +225,45 @@ describe("/api/users/[id]/avatar", () => {
     expect(enforceRateLimit).not.toHaveBeenCalled();
     expect(db.user.findUnique).not.toHaveBeenCalled();
     expect(db.user.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a replacement chosen against an older photo before storing a new blob", async () => {
+    const req = avatarPostRequest();
+    req.headers.set("x-avatar-url", "https://old.example.test/another-photo.webp");
+    const res = await POST(req, params());
+    expect(res.status).toBe(409);
+    expect(put).not.toHaveBeenCalled();
+    expect(db.user.update).not.toHaveBeenCalled();
+  });
+
+  it("does not remove a newer photo and allows replay after a completed removal", async () => {
+    const req = avatarDeleteRequest(); req.headers.set("x-avatar-url", "https://old.example.test/another-photo.webp");
+    expect((await DELETE(req, params())).status).toBe(409);
+    expect(deleteImage).not.toHaveBeenCalled();
+    vi.mocked(db.user.findUnique).mockResolvedValue(userResult({ id: targetId, avatarUrl: null }));
+    const replay = await DELETE(req, params());
+    expect(replay.status).toBe(200);
+    expect((await replay.json()).data.avatarUrl).toBeNull();
+    expect(createAuditEntryTx).not.toHaveBeenCalled();
+  });
+
+  it("returns the committed receipt for a replay without uploading again", async () => {
+    const uploadId = "12345678-1234-1234-1234-123456789abc";
+    const avatarUrl = `https://test.public.blob.vercel-storage.com/avatars/${targetId}/${uploadId}-suffix.webp`;
+    vi.mocked(db.user.findUnique).mockResolvedValue(userResult({ id: targetId, avatarUrl }));
+    const body = new FormData(); body.append("uploadId", uploadId); body.append("file", new File(["image"], "avatar.webp", { type: "image/webp" }));
+    const res = await POST(new Request(`https://app.example.com/api/users/${targetId}/avatar`, { method: "POST", headers: { origin: "https://app.example.com", "x-avatar-url": oldAvatarUrl }, body }), params());
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.avatarUrl).toBe(avatarUrl);
+    expect(put).not.toHaveBeenCalled();
+    expect(createAuditEntryTx).not.toHaveBeenCalled();
+  });
+
+  it("limits receipt reads to the owner or an administrator and rejects a changed actor", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    expect((await GET(new Request(`https://app.example.com/api/users/${targetId}/avatar`), params())).status).toBe(403);
+    const req = avatarPostRequest(staffUser.id); req.headers.set("x-expected-actor-id", "previous-user");
+    expect((await POST(req, params(staffUser.id))).status).toBe(409);
+    expect(put).not.toHaveBeenCalled();
   });
 });

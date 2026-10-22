@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source, serviceModuleSource } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS checkout return Live Activity source contract", () => {
   it("wires ActivityKit, the widget extension, and booking deep links into the project", () => {
@@ -104,7 +105,7 @@ describe("iOS checkout return Live Activity source contract", () => {
   });
 
   it("uses availability next-need insight to start early, intensify urgency, and gate Extend", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const manager = source("ios/Wisconsin/LiveActivities/CheckoutReturnLiveActivityManager.swift");
     const detail = source("ios/Wisconsin/Views/BookingDetailView.swift");
     const widget = source("ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift");
@@ -203,7 +204,7 @@ describe("iOS checkout return Live Activity source contract", () => {
   });
 
   it("registers push-to-start tokens and keeps the server start route available for Pro/manual schedulers", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
     const session = source("ios/Wisconsin/Core/SessionStore.swift");
     const manager = source("ios/Wisconsin/LiveActivities/CheckoutReturnLiveActivityManager.swift");

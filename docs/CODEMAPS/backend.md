@@ -142,7 +142,7 @@
 | `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/utilization-report.ts` | 444 |
 | `src/lib/services/wishlist.ts` | 193 |
-| `src/lib/services/wrapped.ts` | 249 |
+| `src/lib/services/wrapped.ts` | 278 |
 
 ## Key Library Files
 
@@ -153,7 +153,7 @@
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 154 |
+| `src/lib/api.ts` | 169 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -167,9 +167,11 @@
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
-| `src/lib/auth.ts` | 455 |
+| `src/lib/auth.ts` | 460 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 345 |
+| `src/lib/avatar-image.ts` | 17 |
+| `src/lib/avatar-upload.ts` | 46 |
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 175 |
 | `src/lib/bhphoto-image.ts` | 67 |
@@ -252,16 +254,19 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/notification-meta.ts` | 121 |
 | `src/lib/observability.ts` | 19 |
+| `src/lib/onboarding-save.ts` | 48 |
+| `src/lib/onboarding-versions.ts` | 12 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
 | `src/lib/passkey-client.ts` | 126 |
-| `src/lib/passkey.ts` | 388 |
+| `src/lib/passkey.ts` | 390 |
 | `src/lib/password-rules.ts` | 16 |
 | `src/lib/permissions.ts` | 281 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
+| `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 222 |
+| `src/lib/profile-completion.ts` | 236 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
@@ -339,7 +344,7 @@
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |
-| `src/lib/user-list-cache.ts` | 73 |
+| `src/lib/user-list-cache.ts` | 91 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
 | `src/lib/validation.ts` | 883 |

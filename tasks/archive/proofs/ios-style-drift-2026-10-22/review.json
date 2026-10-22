@@ -1,0 +1,62 @@
+{
+  "title": "Native controls, consistent color",
+  "eyebrow": "Wisconsin Creative \u00b7 style drift verified",
+  "lede": "All 11 outstanding detector findings are resolved. Native buttons preserve row navigation and independent review actions.",
+  "sections": [
+    {
+      "heading": "Matched appearance",
+      "note": "Same iPhone 18 Pro Max / iOS 27.0, synthetic admin, fixture, 440\u00d7956pt viewport, text size, clock and scroll. Installed binary hashes are retained.",
+      "pairs": [
+        {
+          "title": "Light appearance",
+          "before": "trade-light-before.png",
+          "after": "trade-light-after.png",
+          "beforeEvidence": "trade-light-before.capture.json",
+          "afterEvidence": "trade-light-after.capture.json",
+          "beforeCap": "Raw approval green and a row-level tap gesture.",
+          "afterCap": "Shared adaptive green, native detail buttons, and independent decision buttons."
+        },
+        {
+          "title": "Dark appearance",
+          "before": "trade-dark-before.png",
+          "after": "trade-dark-after.png",
+          "beforeEvidence": "trade-dark-before.capture.json",
+          "afterEvidence": "trade-dark-after.capture.json",
+          "beforeCap": "Raw approval green and a row-level tap gesture.",
+          "afterCap": "Shared adaptive green, native detail buttons, and independent decision buttons."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Shared action colors",
+      "was": "Seven literal tints bypassed the app palette; matching trade decision controls used separate literal colors.",
+      "now": "Booking, extension and trade actions use the shared adaptive status tokens."
+    },
+    {
+      "h": "Native row activation",
+      "was": "Home attention and Trade Board details relied on gestures with manually added button traits.",
+      "now": "Native buttons own navigation; Home quick actions and Trade Board Claim/Approve/Decline remain unnested siblings. Full times and warnings stay accessible."
+    },
+    {
+      "h": "A clear formatting boundary",
+      "was": "Trade Board\u2019s private area property already held formatted text but looked like a raw server token to the detector.",
+      "now": "areaLabel names display-ready text. Raw shift areas remain unchanged and are formatted once during projection."
+    }
+  ],
+  "verification": [
+    "Unchanged drift detector: zero findings across 130 Swift files.",
+    "Repository ios:xcode:verify passed: generated project, 82/82 audit coverage, simulator build, 251/251 native tests. Generic-device compilation was intentionally excluded for this Simulator request.",
+    "Focused source checks: 794/794; touched TypeScript test lint, docs/codemaps and git diff --check: passed.",
+    "Six UI cases passed across targeted runs: Home route, staff review, student available, student waiting, native details versus inline decision, extension failure and retry preservation. ui-latest-cases.json identifies the latest passing result for every case.",
+    "Independent source review: no actionable regressions.",
+    "Matched light and dark PNGs inspected; runtime-captures.json verifies installed binary hashes."
+  ],
+  "notes": [
+    "This follow-up supersedes the earlier review\u2019s remaining style-drift boundary. The detector script was not relaxed or edited.",
+    "Synthetic local API fixtures verify rendering and interaction, not authenticated record persistence or physical-device behavior. No production mutations, migration, deployment, distribution, commit or push occurred.",
+    "Unrelated Wrapped UIScreen.main deprecation and Xcode operating-system build diagnostics remain; the build and native test results pass.",
+    "Work remains unstaged on codex/ios-review-fixes; original root and prior feature/onboarding work are preserved."
+  ]
+}

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const detail = () => source("ios/Wisconsin/Views/EventDetailSheet.swift");
 const section = () => source("ios/Wisconsin/Views/EventTravelSection.swift");
 const models = () => source("ios/Wisconsin/Models/EventTravelModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 const project = () => source("ios/Wisconsin.xcodeproj/project.pbxproj");
 
 describe("iOS away-game travel roster", () => {

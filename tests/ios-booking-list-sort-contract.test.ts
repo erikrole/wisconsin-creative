@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 /**
  * The booking list routes default to `startsAt desc`. iOS re-sorted each page
@@ -8,7 +9,7 @@ import { source } from "./_helpers/source";
  * an explicit server sort, and lock that sort key to one the server accepts.
  */
 describe("iOS booking list sort contract", () => {
-  const client = source("ios/Wisconsin/Core/APIClient.swift");
+  const client = apiClientSource();
   const bookingsView = source("ios/Wisconsin/Views/BookingsView.swift");
   const queries = source("src/lib/services/bookings-queries.ts");
 

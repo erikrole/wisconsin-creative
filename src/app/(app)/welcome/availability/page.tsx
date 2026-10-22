@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { markGettingStartedDone } from "@/app/(app)/_home/GettingStartedCard";
+import { markGettingStartedDone } from "@/hooks/use-getting-started";
 import { AvailabilitySetup } from "./AvailabilitySetup";
 
 export default function AvailabilitySetupPage() {
@@ -24,7 +24,7 @@ export default function AvailabilitySetupPage() {
       userId={user.id}
       onDone={() => {
         // Skipping counts as looked-at, so the Home card stops asking.
-        markGettingStartedDone("availability");
+        markGettingStartedDone(user.id, "availability");
         router.replace("/");
       }}
     />

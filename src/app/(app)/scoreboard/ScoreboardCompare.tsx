@@ -17,16 +17,18 @@ import { cn } from "@/lib/utils";
 
 type Stat = {
   label: string;
-  left: number;
-  right: number;
-  format: (value: number) => string;
+  left: number | null;
+  right: number | null;
+  format: (value: number | null) => string;
 };
 
 function MirroredStat({ stat }: { stat: Stat }) {
   const reduced = useReducedMotion();
-  const max = Math.max(stat.left, stat.right, 1);
-  const leftWins = stat.left > stat.right;
-  const rightWins = stat.right > stat.left;
+  const left = stat.left ?? 0;
+  const right = stat.right ?? 0;
+  const max = Math.max(left, right, 1);
+  const leftWins = left > right;
+  const rightWins = right > left;
   const transition = reduced ? { duration: 0 } : { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const };
   return (
     <div>
@@ -41,7 +43,7 @@ function MirroredStat({ stat }: { stat: Stat }) {
             className="h-full rounded-full"
             style={{ background: leftWins ? "var(--accent)" : "var(--text-muted)" }}
             initial={false}
-            animate={{ width: `${(stat.left / max) * 100}%` }}
+            animate={{ width: `${(left / max) * 100}%` }}
             transition={transition}
           />
         </div>
@@ -50,7 +52,7 @@ function MirroredStat({ stat }: { stat: Stat }) {
             className="h-full rounded-full"
             style={{ background: rightWins ? "var(--accent)" : "var(--text-muted)" }}
             initial={false}
-            animate={{ width: `${(stat.right / max) * 100}%` }}
+            animate={{ width: `${(right / max) * 100}%` }}
             transition={transition}
           />
         </div>
@@ -117,9 +119,9 @@ export function ScoreboardCompare({
     { label: "Games", left: left.summary.games, right: right.summary.games, format: String },
     {
       label: "Win rate",
-      left: left.summary.winRate ?? 0,
-      right: right.summary.winRate ?? 0,
-      format: (value) => (value ? rateLabel(value) : "—"),
+      left: left.summary.winRate,
+      right: right.summary.winRate,
+      format: rateLabel,
     },
   ] : [];
 

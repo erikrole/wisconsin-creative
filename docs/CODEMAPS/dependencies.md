@@ -67,7 +67,7 @@
 | `@types/web-push` | `^3.6.4` |
 | `@vitest/coverage-v8` | `^3.2.6` |
 | `eslint` | `^9.39.4` |
-| `eslint-config-next` | `^15.5.26` |
+| `eslint-config-next` | `^15.5.28` |
 | `plist` | `^5.0.0` |
 | `prisma` | `^6.19.3` |
 | `typescript` | `5.9.3` |

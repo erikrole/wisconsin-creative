@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const bookings = readFileSync("ios/Wisconsin/Views/BookingsView.swift", "utf8");
 const detail = readFileSync("ios/Wisconsin/Views/BookingDetailView.swift", "utf8");
 const create = readFileSync("ios/Wisconsin/Views/CreateBookingSheet.swift", "utf8");
-const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+const api = apiClientSource();
 
 describe("iOS booking list actions", () => {
   it("offers state-aware native row actions", () => {

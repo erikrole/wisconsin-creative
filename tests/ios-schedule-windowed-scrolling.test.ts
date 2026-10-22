@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 // Native Schedule reads events in week windows: the future loads ahead of the
 // reader so it feels endless, and the past sits behind a deliberate pull at
 // the top of the list so a status-bar tap or a hard flick stops on today.
 describe("iOS Schedule windowed scrolling", () => {
   const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
   const strip = source("ios/Wisconsin/Views/Schedule/ScheduleWeekStrip.swift");
 
   it("reads events and personal shifts for the same date window", () => {
-    expect(apiClient).toContain("private static func windowQueryItems(_ window: DateInterval?) -> [URLQueryItem]");
+    expect(apiClient).toContain("static func windowQueryItems(_ window: DateInterval?) -> [URLQueryItem]");
     expect(apiClient).toContain('.init(name: "startDate", value: formatter.string(from: window.start))');
     expect(apiClient).toContain("func allCalendarEvents(\n        includePast: Bool = false,\n        window: DateInterval? = nil,");
     expect(apiClient).toContain("func allMyShifts(\n        userId: String? = nil,\n        window: DateInterval? = nil,");
@@ -71,7 +72,7 @@ describe("iOS Schedule windowed scrolling", () => {
 
 describe("iOS Schedule follow-ups", () => {
   const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const eventsRoute = source("src/app/api/calendar-events/route.ts");
   const cache = source("ios/Wisconsin/Core/ScheduleWindowCache.swift");
   const app = source("ios/Wisconsin/App/WisconsinApp.swift");

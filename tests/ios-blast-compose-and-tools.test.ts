@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS blast sending (staff and admins)", () => {
-  const api = source("ios/Wisconsin/Core/APIClient.swift");
+  const api = apiClientSource();
   const models = source("ios/Wisconsin/Models/BlastModels.swift");
   const compose = source("ios/Wisconsin/Views/BlastComposeViews.swift");
   const blasts = source("ios/Wisconsin/Views/BlastsView.swift");

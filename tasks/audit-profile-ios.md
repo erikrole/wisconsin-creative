@@ -82,3 +82,10 @@ Account & Security was opened on a physical iPhone 16 Pro running build 27, sign
 - [x] Hardening
 - [x] Parity (web ↔ iOS)
 - [x] Accessibility (existing `accessibilityLabel`s preserved; new Notifications section adds labels for paused state)
+
+
+## Avatar follow-up — 2026-10-22 (local)
+
+`Views/Components/ProfileAvatarEditor.swift` is owned by the current `Views/ProfileView.swift` header. PhotosPicker, concurrent ImageIO downsampling, the crop sheet, explicit removal confirmation, account-bound requests, stale-photo checks, exact-upload reconciliation and immediate account-avatar refresh now cover add/change/remove outside Welcome. The crop sheet uses a system UIScrollView for pan/pinch with a circular guide, dimmed context and VoiceOver actions; no sliders. Gestures pause during a save; failed saves retain the crop and display the actual recovery message. Profile read-only previews cannot mutate photos. The shared store avoids accepting pre-mutation reads after a save and rejects old-session responses.
+
+Evidence: native target build, model/image tests, web-side Swift contracts and iPhone 18 Pro Max crop-retry UI test. Review: `tasks/archive/proofs/onboarding-continuity-2026-10-22/review.html`. Actual photo-library selection, camera/device permission behavior, an authenticated shared-backend avatar upload and distribution remain pending in the continuity ledger. This supplements the historical audit above; it is not a new whole-Profile runtime audit.

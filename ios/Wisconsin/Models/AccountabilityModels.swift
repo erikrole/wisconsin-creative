@@ -34,7 +34,7 @@ enum AccountabilitySort: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .events: "Late returns"
+        case .events: "Times late"
         case .time: "Late time"
         case .recent: "Most recent"
         }
@@ -61,9 +61,30 @@ struct AccountabilityReport: Decodable, Sendable {
     let metrics: AccountabilityMetrics
     let leaderboard: [AccountabilityPerson]
 
-    func rank(of userId: String) -> Int? {
-        guard let index = leaderboard.firstIndex(where: { $0.userId == userId }) else { return nil }
-        return index + 1
+    /// Checkouts that are still out and late, longest first. Built from the
+    /// leaderboard's active incidents so it needs no extra request.
+    func overdueNow(limit: Int = 5) -> [AccountabilityOverdueNow] {
+        leaderboard
+            .flatMap { person in
+                person.incidents
+                    .filter { $0.state == "active" }
+                    .map { AccountabilityOverdueNow(person: person, incident: $0) }
+            }
+            .sorted { $0.incident.lateHours > $1.incident.lateHours }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    /// People late at least twice, in the server's order. When nobody is,
+    /// everyone is returned so the list is never empty.
+    var repeatPeople: [AccountabilityPerson] {
+        let repeats = leaderboard.filter { $0.lateEventCount >= 2 }
+        return repeats.isEmpty ? leaderboard : repeats
+    }
+
+    /// People late once that the default list hides; empty when it already shows everyone.
+    var lateOnceCount: Int {
+        leaderboard.count - repeatPeople.count
     }
 
     func person(_ userId: String) -> AccountabilityPerson? {
@@ -151,10 +172,38 @@ struct AccountabilityPerson: Decodable, Identifiable, Sendable {
         return "\(onTimeRate)% on time"
     }
 
+    /// Nil until there are enough checkouts for the rate to mean something.
+    var onTimePercentLabel: String? {
+        onTimeRate.map { "\($0)% on time" }
+    }
+
+    var lateReturnsLabel: String {
+        lateEventCount == 1 ? "1 late return" : "\(lateEventCount) late returns"
+    }
+
+    var lateShortLabel: String {
+        lateEventCount == 1 ? "1 late" : "\(lateEventCount) late"
+    }
+
+    /// "Your record" line: late count, plus the on-time rate when there is one.
+    var recordSummary: String {
+        [lateReturnsLabel, onTimePercentLabel].compactMap { $0 }.joined(separator: " · ")
+    }
+
     var stillOutLabel: String? {
         guard activeOverdueCount > 0 else { return nil }
         return activeOverdueCount == 1 ? "1 still out" : "\(activeOverdueCount) still out"
     }
+}
+
+/// One still-out late checkout and who has it, for the "Overdue now" section.
+struct AccountabilityOverdueNow: Identifiable, Sendable {
+    let person: AccountabilityPerson
+    let incident: AccountabilityIncident
+
+    var id: String { incident.incidentId }
+
+    var overdueLabel: String { "\(accountabilityLateDuration(incident.lateHours)) overdue" }
 }
 
 struct AccountabilityIncident: Decodable, Identifiable, Sendable {
@@ -214,17 +263,6 @@ func accountabilityLateDuration(_ hours: Int) -> String {
     let days = safe / 24
     let remainder = safe % 24
     return remainder == 0 ? "\(days)d" : "\(days)d \(remainder)h"
-}
-
-func accountabilityOrdinal(_ rank: Int) -> String {
-    let teen = rank % 100
-    if (11...13).contains(teen) { return "\(rank)th" }
-    switch rank % 10 {
-    case 1: return "\(rank)st"
-    case 2: return "\(rank)nd"
-    case 3: return "\(rank)rd"
-    default: return "\(rank)th"
-    }
 }
 
 func accountabilityWhen(_ iso: String) -> String {

@@ -1,0 +1,173 @@
+
+ RUN  v3.2.7 /Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes
+
+ ✓ tests/ios-native-control-cleanup.test.ts (4 tests) 5ms
+ ✓ tests/ios-app-intents.test.ts (5 tests) 5ms
+ ✓ tests/ios-kiosk-numbered-battery-rendering.test.ts (2 tests) 4ms
+ ✓ tests/ios-accessibility-layout-hardening.test.ts (6 tests) 4ms
+ ✓ tests/ios-crew-row-standardization.test.ts (5 tests) 7ms
+ ✓ tests/ios-kiosk-design-tokens.test.ts (5 tests) 14ms
+ ✓ tests/ios-current-day-rollover.test.ts (4 tests) 47ms
+ ✓ tests/ios-brand-assets-browse.test.ts (3 tests) 10ms
+ ✓ tests/ios-api-contract.test.ts (41 tests) 28ms
+ ✓ tests/ios-domain-cutover-source.test.ts (5 tests) 29ms
+ ✓ tests/ios-create-booking-picker-parity.test.ts (22 tests) 22ms
+ ✓ tests/ios-role-preview-source.test.ts (4 tests) 8ms
+ ✓ tests/ios-checkout-return-live-activity-source.test.ts (8 tests) 15ms
+ ✓ tests/ios-reports-resilience.test.ts (3 tests) 2ms
+ ✓ tests/ios-home-queue-honesty.test.ts (5 tests) 2ms
+ ✓ tests/ios-privacy-manifest.test.ts (3 tests) 12ms
+ ✓ tests/ios-scoreboard-wiring.test.ts (12 tests) 6ms
+ ✓ tests/ios-all-day-calendar-date.test.ts (8 tests) 3ms
+ ✓ tests/ios-bookings-empty-state.test.ts (5 tests) 4ms
+ ✓ tests/ios-notification-delivery-truth.test.ts (2 tests) 2ms
+ ✓ tests/ios-kiosk-scanner-focus.test.ts (5 tests) 6ms
+ ✓ tests/ios-badge-icon-coverage.test.ts (8 tests) 9ms
+ ✓ tests/ios-system-hardening-contract.test.ts (12 tests) 6ms
+ ✓ tests/ios-kit-calling-source.test.ts (2 tests) 7ms
+ ✓ tests/ios-kiosk-reservation-pickup-contract.test.ts (6 tests) 7ms
+ ✓ tests/ios-schedule-staff-authoring-redesign.test.ts (4 tests) 5ms
+ ✓ tests/ios-gear-picks-browse.test.ts (3 tests) 7ms
+ ✓ tests/ios-events-browse.test.ts (4 tests) 6ms
+ ✓ tests/ios-app-web-trust-contract.test.ts (6 tests) 6ms
+ ✓ tests/ios-launch-experience.test.ts (7 tests) 6ms
+ ✓ tests/ios-async-request-ownership.test.ts (10 tests) 6ms
+ ✓ tests/ios-bookings-power-filters.test.ts (8 tests) 6ms
+ ✓ tests/ios-notifications-token-honesty.test.ts (4 tests) 4ms
+ ✓ tests/ios-search-partial-results.test.ts (4 tests) 2ms
+ ✓ tests/ios-licenses-native-page.test.ts (13 tests) 5ms
+ ✓ tests/ios-booking-surface-alignment.test.ts (5 tests) 3ms
+ ✓ tests/ios-notification-categories-profile.test.ts (5 tests) 5ms
+ ✓ tests/ios-kiosk-availability-status.test.ts (2 tests) 3ms
+ ✓ tests/ios-item-detail-hierarchy.test.ts (7 tests) 12ms
+ ✓ tests/ios-system-quality-contract.test.ts (8 tests) 28ms
+ ✓ tests/ios-reservation-drafts-contract.test.ts (24 tests) 5ms
+ ✓ tests/ios-schedule-ui-cleanup.test.ts (5 tests) 5ms
+ ✓ tests/ios-settings-detail-menus.test.ts (6 tests) 6ms
+ ✓ tests/ios-system-correctness-contract.test.ts (4 tests) 4ms
+ ✓ tests/ios-auth-design.test.ts (2 tests) 3ms
+ ✓ tests/ios-booking-actions-edit-reservation-setup.test.ts (6 tests) 3ms
+ ✓ tests/ios-home-trade-board-context.test.ts (3 tests) 3ms
+ ✓ tests/ios-schedule-windowed-scrolling.test.ts (8 tests) 15ms
+ ✓ tests/semantic-tone-sources.test.ts (7 tests) 8ms
+ ✓ tests/ios-guides-native-page.test.ts (4 tests) 4ms
+ ✓ tests/ios-polish-bundle.test.ts (13 tests) 3ms
+ ✓ tests/ios-schedule-working-copy.test.ts (5 tests) 5ms
+ ✓ tests/ios-search-coverage.test.ts (5 tests) 3ms
+ ✓ tests/ios-item-activity.test.ts (4 tests) 3ms
+ ✓ tests/ios-kiosk-custody-robustness.test.ts (2 tests) 4ms
+ ✓ tests/ios-login-recovery-links.test.ts (4 tests) 2ms
+ ✓ tests/ios-devices-route.test.ts (13 tests) 14ms
+ ✓ tests/ios-live-activity-registration-routes.test.ts (8 tests) 12ms
+ ✓ tests/ios-long-press-actions.test.ts (13 tests) 3ms
+ ✓ tests/ios-launch-lifecycle-performance.test.ts (5 tests) 12ms
+ ✓ tests/ios-notifications-tapthrough.test.ts (3 tests) 6ms
+ ✓ tests/ios-kiosk-back-button.test.ts (2 tests) 2ms
+ ✓ tests/ios-notifications-read-recovery.test.ts (5 tests) 6ms
+ ✓ tests/ios-badge-reward-celebration.test.ts (3 tests) 5ms
+ ✓ tests/ios-schedule-mvp-parity.test.ts (5 tests) 8ms
+ ✓ tests/ios-item-list-identity-source.test.ts (3 tests) 10ms
+ ✓ tests/ios-collaborator-published-schedule-redesign.test.ts (6 tests) 15ms
+ ✓ tests/ios-schedule-all-day-display.test.ts (1 test) 9ms
+ ✓ tests/ios-27-native-chrome.test.ts (6 tests) 11ms
+ ✓ tests/ios-passkey-source.test.ts (3 tests) 40ms
+ ✓ tests/ios-home-shifts-deep-link.test.ts (4 tests) 5ms
+ ✓ tests/ios-tabbar-stability.test.ts (4 tests) 9ms
+ ✓ tests/ios-announcement-splash.test.ts (7 tests) 6ms
+ ✓ tests/ios-blasts-and-kiosk-completion.test.ts (2 tests) 4ms
+ ✓ tests/ios-booking-detail-redesign.test.ts (9 tests) 5ms
+ ✓ tests/ios-event-travel.test.ts (3 tests) 6ms
+ ✓ tests/ios-resources-area-consistency.test.ts (9 tests) 4ms
+ ✓ tests/ios-schedule-availability-trade-redesign.test.ts (4 tests) 4ms
+ ✓ tests/ios-kiosk-checkout-kits-interruptions.test.ts (8 tests) 7ms
+ ✓ tests/ios-forced-password.test.ts (5 tests) 3ms
+ ✓ tests/ios-accountability-browse.test.ts (3 tests) 3ms
+ ✓ tests/ios-shared-logins-browse.test.ts (3 tests) 4ms
+ ✓ tests/ios-native-welcome.test.ts (11 tests) 5ms
+ ✓ tests/ios-booking-activity.test.ts (3 tests) 3ms
+ ✓ tests/ios-home-afm-header-source.test.ts (10 tests) 3ms
+ ✓ tests/ios-audit-inventory.test.ts (1 test) 1790ms
+   ✓ iOS audit inventory > fails closed on missing or unregistered audit surfaces  1790ms
+ ✓ tests/ios-search-hig-remediation.test.ts (4 tests) 2ms
+ ✓ tests/ios-kiosk-idle-checkout-list.test.ts (8 tests) 5ms
+ ✓ tests/ios-schedule-venue-parity.test.ts (10 tests) 3ms
+ ✓ tests/ios-tipkit-feature-discovery.test.ts (9 tests) 3ms
+ ✓ tests/ios-offline-and-maintenance.test.ts (9 tests) 2ms
+ ✓ tests/ios-swiftui-performance.test.ts (5 tests) 16ms
+stderr | tests/ios-notification-auth-lifecycle.test.ts > iOS notification authorization lifecycle > reports deactivation when companion access cannot be revoked
+[Companion] failed to revoke deactivated user Error: Redis unavailable
+    at /Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tests/ios-notification-auth-lifecycle.test.ts:231:49
+    at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runFiles (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1787:3)
+
+ ✓ tests/ios-schedule-filters-calendar-management-redesign.test.ts (4 tests) 3ms
+ ✓ tests/ios-notification-auth-lifecycle.test.ts (10 tests) 11ms
+ ✓ tests/ios-settings-first-class.test.ts (5 tests) 3ms
+ ✓ tests/ios-whats-new-browse.test.ts (4 tests) 2ms
+ ✓ tests/ios-kiosk-session-generation.test.ts (3 tests) 3ms
+ ✓ tests/ios-live-activity-redesign.test.ts (5 tests) 3ms
+ ✓ tests/ios-notifications-registration-health.test.ts (3 tests) 3ms
+ ✓ tests/ios-kiosk-reservation-battery-list.test.ts (1 test) 3ms
+ ✓ tests/ios-kiosk-windowing-cleanup.test.ts (3 tests) 4ms
+ ✓ tests/ios-kiosk-idle-sleep-mode.test.ts (3 tests) 3ms
+ ✓ tests/ios-wrapped-wiring.test.ts (3 tests) 3ms
+ ✓ tests/ios-home-screen-widgets.test.ts (11 tests) 5ms
+ ✓ tests/ios-browse-tab.test.ts (5 tests) 4ms
+ ✓ tests/ios-scan-result-retry.test.ts (6 tests) 3ms
+ ✓ tests/ios-login-presentation.test.ts (8 tests) 3ms
+ ✓ tests/ios-kiosk-changes.test.ts (5 tests) 3ms
+ ✓ tests/ios-quick-actions-spotlight.test.ts (11 tests) 4ms
+ ✓ tests/ios-kiosk-return-reports.test.ts (6 tests) 3ms
+ ✓ tests/ios-schedule-calendar-hit-targets.test.ts (1 test) 4ms
+ ✓ tests/ios-trade-cancel-contract.test.ts (2 tests) 4ms
+ ✓ tests/ios-team-badges-browse.test.ts (3 tests) 3ms
+ ✓ tests/ios-inventory-read-source.test.ts (3 tests) 3ms
+ ✓ tests/ios-schedule-edit-times-post-trade-redesign.test.ts (4 tests) 3ms
+ ✓ tests/ios-booking-extend-concurrency-contract.test.ts (2 tests) 3ms
+ ✓ tests/ios-kiosk-intent-routing-contract.test.ts (3 tests) 3ms
+ ✓ tests/ios-kiosk-checkout-details-polish.test.ts (4 tests) 3ms
+ ✓ tests/ios-booking-edit-and-checkout-actions.test.ts (4 tests) 3ms
+ ✓ tests/ios-schedule-dynamic-type.test.ts (4 tests) 2ms
+ ✓ tests/ios-navigation-hig-remediation.test.ts (3 tests) 3ms
+ ✓ tests/ios-action-error-recovery.test.ts (3 tests) 5ms
+ ✓ tests/ios-runtime-warning-cleanup.test.ts (3 tests) 7ms
+ ✓ tests/ios-flat-surface.test.ts (3 tests) 2ms
+ ✓ tests/ios-my-hours.test.ts (4 tests) 2ms
+ ✓ tests/ios-deep-link-routing.test.ts (5 tests) 3ms
+ ✓ tests/ios-appstate-refresh.test.ts (3 tests) 3ms
+ ✓ tests/ios-booking-list-sort-contract.test.ts (6 tests) 3ms
+ ✓ tests/ios-kiosk-actionable-availability.test.ts (3 tests) 2ms
+ ✓ tests/ios-blast-compose-and-tools.test.ts (7 tests) 2ms
+ ✓ tests/ios-kiosk-scan-rejection-sound.test.ts (3 tests) 3ms
+ ✓ tests/ios-kiosk-all-day-contract.test.ts (1 test) 4ms
+ ✓ tests/ios-kit-return-time.test.ts (1 test) 2ms
+ ✓ tests/ios-main-kiosk-target-split.test.ts (2 tests) 2ms
+ ✓ tests/ios-kiosk-home-avatars.test.ts (6 tests) 2ms
+ ✓ tests/ios-kiosk-idle-cancellation.test.ts (1 test) 2ms
+ ✓ tests/ios-trade-board-recovery.test.ts (1 test) 2ms
+ ✓ tests/ios-kiosk-rapid-scan-atomicity.test.ts (3 tests) 2ms
+ ✓ tests/ios-event-detail-temporal-state.test.ts (4 tests) 2ms
+ ✓ tests/ios-items-empty-state-recovery.test.ts (2 tests) 3ms
+ ✓ tests/ios-report-library-contract.test.ts (3 tests) 6ms
+ ✓ tests/ios-item-condition-reports.test.ts (3 tests) 2ms
+ ✓ tests/ios-items-retired-reserve-gating.test.ts (2 tests) 3ms
+ ✓ tests/ios-event-detail-unreleased-claims.test.ts (1 test) 2ms
+ ✓ tests/ios-items-row-accessibility.test.ts (1 test) 1ms
+ ✓ tests/ios-items-error-copy.test.ts (1 test) 2ms
+ ✓ tests/ios-items-favorite-recovery.test.ts (1 test) 1ms
+ ✓ tests/ios-guides-ui-polish.test.ts (1 test) 2ms
+ ✓ tests/ios-booking-pending-pickup-row.test.ts (4 tests) 2ms
+ ✓ tests/ios-xcode-test-gate.test.ts (1 test) 2ms
+ ✓ tests/ios-toolchain-pins.test.ts (2 tests) 4ms
+
+ Test Files  151 passed (151)
+      Tests  794 passed (794)
+   Start at  07:49:21
+   Duration  3.70s (transform 3.08s, setup 3.92s, collect 13.92s, tests 2.67s, environment 42ms, prepare 11.24s)

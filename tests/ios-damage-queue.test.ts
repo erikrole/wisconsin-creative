@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS Damage and loss queue", () => {
   const view = source("ios/Wisconsin/Views/DamageCasesView.swift");
   const models = source("ios/Wisconsin/Models/DamageCaseModels.swift");
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const browse = source("ios/Wisconsin/Views/BrowseView.swift");
   const route = source("src/app/api/damage-cases/route.ts");
   const service = source("src/lib/services/damage-cases.ts");

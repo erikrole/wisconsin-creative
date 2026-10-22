@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const browse = () => source("ios/Wisconsin/Views/BrowseView.swift");
 const library = () => source("ios/Wisconsin/Views/BrandAssetsView.swift");
 const models = () => source("ios/Wisconsin/Models/BrandAssetModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 
 describe("iOS Brand assets browse", () => {
   it("adds a read-only Brand assets row for internal roles and only for collaborators granted BRAND_ASSETS_VIEW", () => {

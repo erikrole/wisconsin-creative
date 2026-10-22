@@ -1079,7 +1079,7 @@ struct EventDetailView: View {
                         } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "hand.raised.fill")
-                                    .foregroundStyle(Color.statusText(.purple))
+                                    .foregroundStyle(Color.statusText(.green))
                                     .frame(width: 24)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(shift.area.shiftAreaLabel)
@@ -1094,7 +1094,7 @@ struct EventDetailView: View {
                                 Spacer()
                                 Text("Claim")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.statusText(.purple))
+                                    .foregroundStyle(Color.statusText(.green))
                                 Image(systemName: "chevron.right")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.tertiary)
@@ -1875,7 +1875,11 @@ struct EventDetailView: View {
         // as one block. At the old near-equal gaps the headings floated between
         // two cards, belonging to neither, and the crew list read as a stack of
         // unrelated islands rather than one roster.
-        VStack(alignment: .leading, spacing: Brand.Space.lg) {
+        // The Crew header already says "Students" and the call window when the
+        // whole crew is student slots, so the rows need not repeat it.
+        let headerNamesWorkerType = callWindowIsHoisted
+            && vm.shiftsByArea.allSatisfy { $0.shifts.allSatisfy { $0.workerType == "ST" } }
+        return VStack(alignment: .leading, spacing: Brand.Space.lg) {
             // Per-area shift blocks (the "Crew" header lives in crewSection).
             ForEach(vm.shiftsByArea, id: \.area) { group in
                 AreaBlock(
@@ -1927,7 +1931,8 @@ struct EventDetailView: View {
                     onReviewClaims: canManageShifts ? { showTradeBoard = true } : nil,
                     hidesShiftTimes: event.displayAllDay,
                     callWindowIsHoisted: callWindowIsHoisted,
-                    studentCallTimeAllowed: studentCallTimeAllowed
+                    studentCallTimeAllowed: studentCallTimeAllowed,
+                    showsWorkerType: !headerNamesWorkerType
                 )
             }
         }
@@ -1963,6 +1968,7 @@ struct AreaBlock: View {
     /// instead of reprinting one identical time per row.
     var callWindowIsHoisted = false
     var studentCallTimeAllowed = true
+    var showsWorkerType = true
 
     var body: some View {
         // Tight: the heading names the card directly under it. `crewList`
@@ -1988,7 +1994,7 @@ struct AreaBlock: View {
                         hidesShiftTimes: hidesShiftTimes,
                         showsCallColumn: showsCallColumn,
                         studentCallTimeAllowed: studentCallTimeAllowed,
-                        showsWorkerType: true,
+                        showsWorkerType: showsWorkerType,
                         onAssign: onAssign,
                         onConvertAndReplace: onConvertAndReplace,
                         onRequest: onRequest,
@@ -2628,9 +2634,16 @@ struct ShiftRow: View {
         // section's real controls and repeated itself once per empty slot.
         if primaryRowAction != nil {
             HStack(spacing: 4) {
+                // With the crew-type column gone, say what the row is.
+                if !showsWorkerType {
+                    Text("Open")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                }
                 Text(openSlotActionTitle)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.statusText(.purple))
+                    .foregroundStyle(Color.statusText(.green))
                     .lineLimit(1)
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))

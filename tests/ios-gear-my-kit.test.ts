@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS UA Gear: My kit", () => {
   const view = source("ios/Wisconsin/Views/GearPicksView.swift");
   const models = source("ios/Wisconsin/Models/GearPickModels.swift");
-  const client = source("ios/Wisconsin/Core/APIClient.swift");
+  const client = apiClientSource();
   const order = source("src/lib/gear-picks/order.ts");
 
   it("reads the kit route and hides the card when it is absent or not allowed", () => {

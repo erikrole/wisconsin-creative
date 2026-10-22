@@ -149,6 +149,7 @@ struct ProfileView: View {
         Section {
             profileIdentity
                 .padding(.vertical, 6)
+            if session.currentUser?.isReadOnlyRolePreview != true { ProfileAvatarEditor() }
         }
         .listRowBackground(Color(.secondarySystemGroupedBackground))
     }

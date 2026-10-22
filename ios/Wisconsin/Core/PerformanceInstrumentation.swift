@@ -39,17 +39,19 @@ enum AppRuntimeMode {
         /// The Trade Board as a student sees it: what they can claim, and what
         /// they have already claimed and are waiting on.
         case tradeBoardStudent
-        /// The Home dashboard, served a canned payload so the action queue,
-        /// its truncation, and the staff follow-up section can be rendered
-        /// without a signed-in session.
+        /// The Home dashboard as an admin sees it, served canned payloads so
+        /// every lane (needs attention, up next, gear, the collapsed team
+        /// sections) can be rendered without a signed-in session.
         case home
-        /// Home with nothing personal outstanding but a staff draft waiting --
-        /// the shape where "You're all set" used to render directly above a
-        /// populated Drafts card.
+        /// Home with nothing overdue, due, or waiting: the all-clear state,
+        /// which has to say what is next.
         case homeAllClear
         /// Home as a student in their first weeks, so the Getting started
         /// checklist can be rendered and screenshotted without a session.
         case homeGettingStarted = "home-getting-started"
+        /// Home as a student sees it: their own gear, a shift today with a
+        /// call time, a pickup, and an open trade they can claim.
+        case homeStudent
         /// The native profile Scoreboard against a canned season payload, so
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
@@ -73,6 +75,9 @@ enum AppRuntimeMode {
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
         case login
+        /// Isolated first-session views; their API traffic stays in the fixture protocol.
+        case onboarding
+        case registration
         /// The branded launch still itself, so the system frame, SwiftUI
         /// handoff, and inactive snapshot can be captured without a session.
         case launchView = "launch-view"
@@ -88,8 +93,7 @@ enum AppRuntimeMode {
         /// screen is chosen by `GT_BLAST_VIEW`: blasts, sent, detail,
         /// compose-crew, compose-groups, safari.
         case blastStaff = "blast-staff"
-        /// UA Gear with a launched cycle, a submitted list and a "My kit"
-        /// card mixing In hand, On order, Planned and Add your size.
+        /// Launched gear cycle and the person’s handout status.
         case gearKit = "gear-kit"
         /// Starts a real checkout-return Live Activity in the simulator, in the
         /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
@@ -163,6 +167,14 @@ enum AppRuntimeMode {
         /// announcements: a banner image with another waiting behind it,
         /// a swipeable set of images, and a text-only notice.
         case announcement
+        /// Full-screen detail captures for the whole-app UI review: the
+        /// real view pushed in a stack against canned payloads.
+        case eventDetail = "event-detail"
+        case itemDetail = "item-detail"
+        case userDetail = "user-detail"
+        case availability
+        case gearPicks = "gear-picks"
+        case sharedLogins = "shared-logins"
         case announcementImages = "announcement-images"
         case announcementPlain = "announcement-plain"
         /// Worst-case content: a long title, four images, many bullets, a block
@@ -249,17 +261,17 @@ enum AppRuntimeMode {
 #if DEBUG
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
-             .schedule, .scheduleLaterFailure, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .homeGettingStarted, .scoreboard, .teamScoreboard, .wrapped, .profile, .staffProfile,
-             .studentBookings,
-             .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome,
-             .damageReportProblem, .damageItemsMissing, .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty,
-             .damageQueueDetail, .damageQueueRecord, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
-             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .gearKit, .blastStaff, .login,
+             .schedule, .scheduleLaterFailure, .tradeBoardStaff, .tradeBoardStudent, .home, .homeAllClear,
+             .homeGettingStarted, .scoreboard, .teamScoreboard, .wrapped, .profile, .staffProfile,
+             .studentBookings, .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel, .itemEdit,
+             .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome, .damageReportProblem, .damageItemsMissing,
+             .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty, .damageQueueDetail, .damageQueueRecord, .createBookingScanner,
+             .createBookingEvents, .search, .searchPartial, .searchIdle, .itemsList, .reports,
+             .accountSecurity, .notifications, .notificationsInbox, .login, .homeStudent, .blastStaff, .gearKit,
+             .eventDetail, .itemDetail, .userDetail, .availability, .gearPicks, .sharedLogins,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
-             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
+             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute, .onboarding, .registration:
             return true
         default:
             return false

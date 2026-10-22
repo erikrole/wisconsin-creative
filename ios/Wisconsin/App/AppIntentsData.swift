@@ -338,6 +338,7 @@ struct NextShiftSnippetView: View {
 /// with what it found and whether it is available, spoken and as a short list.
 /// Read-only; opening an item stays in the app.
 struct SearchGearIntent: AppIntent {
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
     static let title: LocalizedStringResource = "Search Gear"
     static let description = IntentDescription("Find gear by name, tag, or model and see whether it's available.")
 
@@ -373,7 +374,7 @@ private func searchGearMatches(_ term: String) async throws -> ([GearSearchMatch
     try await requireIntentCapability("GEAR_CATALOG_VIEW")
     do {
         let response = try await APIClient.shared.assets(search: term, limit: 5)
-        return (response.data.map(GearSearchMatch.init), response.total)
+        return (response.orderedRows.map(GearSearchMatch.init), response.total)
     } catch {
         throw mapIntentError(error)
     }
@@ -407,13 +408,23 @@ struct GearSearchMatch: Identifiable, Sendable {
     let status: String
     let isAvailable: Bool
 
-    init(_ asset: Asset) {
-        id = asset.id
-        title = asset.itemListPrimaryTitle
-        detail = asset.displayName
-        status = asset.computedStatus.label
-        isAvailable = asset.computedStatus == .available
+    init(_ row: ItemListRow) {
+        switch row {
+        case .asset(let asset):
+            id = asset.id
+            title = asset.itemListPrimaryTitle
+            detail = asset.displayName
+            status = asset.computedStatus.label
+            isAvailable = asset.computedStatus == .available
+        case .family(let family):
+            id = "bulk-\(family.id)"
+            title = family.name
+            detail = family.category
+            status = family.availabilityLabel
+            isAvailable = family.availableQuantity > 0
+        }
     }
+
 }
 
 struct GearSearchSnippetView: View {
