@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreVerticalIcon, FolderInputIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { FolderInputIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import {
   DropdownMenuItem,
@@ -43,7 +43,6 @@ export default function KebabMenu({
   return (
     <OperationalRowActions
       label="Category actions"
-      icon={<MoreVerticalIcon className="size-4" aria-hidden="true" />}
     >
       <DropdownMenuItem onSelect={onRename}>
         <PencilIcon className="size-4" />

@@ -535,7 +535,8 @@ export async function syncCalendarSource(sourceId: string): Promise<SyncResult> 
     // Timeout so a hanging feed can't hold the serverless function (and
     // starve the rest of morning-refresh); size cap so a huge or hostile
     // response can't exhaust memory.
-    const response = await fetch(url, {
+    const { fetchPublicUrl } = await import("@/lib/security/ssrf");
+    const response = await fetchPublicUrl(url, {
       headers: { "User-Agent": "GearTracker/1.0" },
       signal: AbortSignal.timeout(ICS_FETCH_TIMEOUT_MS),
     });

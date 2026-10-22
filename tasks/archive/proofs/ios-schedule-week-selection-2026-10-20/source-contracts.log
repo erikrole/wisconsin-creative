@@ -1,0 +1,21 @@
+
+ RUN  v3.2.7 /Users/role/.codex/worktrees/schedule-week-selection/wisconsin-creative
+
+ ✓ tests/ios-schedule-all-day-display.test.ts (1 test) 2ms
+ ✓ tests/ios-schedule-availability-trade-redesign.test.ts (4 tests) 3ms
+ ✓ tests/ios-schedule-edit-times-post-trade-redesign.test.ts (4 tests) 3ms
+ ✓ tests/ios-schedule-working-copy.test.ts (5 tests) 2ms
+ ✓ tests/ios-schedule-calendar-hit-targets.test.ts (1 test) 1ms
+ ✓ tests/ios-schedule-staff-authoring-redesign.test.ts (4 tests) 3ms
+ ✓ tests/ios-schedule-filters-calendar-management-redesign.test.ts (4 tests) 3ms
+ ✓ tests/ios-schedule-dynamic-type.test.ts (4 tests) 2ms
+ ✓ tests/ios-schedule-mvp-parity.test.ts (5 tests) 5ms
+ ✓ tests/ios-schedule-ui-cleanup.test.ts (5 tests) 4ms
+ ✓ tests/ios-schedule-windowed-scrolling.test.ts (8 tests) 4ms
+ ✓ tests/ios-schedule-venue-parity.test.ts (10 tests) 3ms
+ ✓ tests/ios-current-day-rollover.test.ts (4 tests) 27ms
+
+ Test Files  13 passed (13)
+      Tests  59 passed (59)
+   Start at  16:53:00
+   Duration  256ms (transform 165ms, setup 130ms, collect 246ms, tests 60ms, environment 1ms, prepare 466ms)

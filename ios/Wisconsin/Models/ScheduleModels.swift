@@ -778,10 +778,33 @@ struct CandidateRecommendation: Decodable, Identifiable {
     let blockingConflict: Bool
     let advisoryConflict: Bool
     let advisoryConflictNote: String?
+    let workload: CandidateWorkload?
 
     private enum CodingKeys: String, CodingKey {
         case userId, bucket, score, reasons, warnings
-        case blockingConflict, advisoryConflict, advisoryConflictNote
+        case blockingConflict, advisoryConflict, advisoryConflictNote, workload
+    }
+
+    init(
+        userId: String,
+        bucket: String,
+        score: Int = 0,
+        reasons: [CandidateScoreSignal] = [],
+        warnings: [CandidateScoreSignal] = [],
+        blockingConflict: Bool = false,
+        advisoryConflict: Bool = false,
+        advisoryConflictNote: String? = nil,
+        workload: CandidateWorkload? = nil
+    ) {
+        self.userId = userId
+        self.bucket = bucket
+        self.score = score
+        self.reasons = reasons
+        self.warnings = warnings
+        self.blockingConflict = blockingConflict
+        self.advisoryConflict = advisoryConflict
+        self.advisoryConflictNote = advisoryConflictNote
+        self.workload = workload
     }
 
     init(from decoder: Decoder) throws {
@@ -794,6 +817,7 @@ struct CandidateRecommendation: Decodable, Identifiable {
         blockingConflict = try container.decodeIfPresent(Bool.self, forKey: .blockingConflict) ?? false
         advisoryConflict = try container.decodeIfPresent(Bool.self, forKey: .advisoryConflict) ?? false
         advisoryConflictNote = try container.decodeIfPresent(String.self, forKey: .advisoryConflictNote)
+        workload = try? container.decodeIfPresent(CandidateWorkload.self, forKey: .workload)
     }
 
     var fitLabel: String {
@@ -818,6 +842,63 @@ struct CandidateScoreSignal: Decodable {
     let code: String
     let label: String
     let weight: Int?
+
+    init(code: String, label: String, weight: Int? = nil) {
+        self.code = code
+        self.label = label
+        self.weight = weight
+    }
+}
+
+struct CandidateWorkload: Decodable {
+    let weekAssignments: Int?
+
+    init(weekAssignments: Int?) {
+        self.weekAssignments = weekAssignments
+    }
+
+    private enum CodingKeys: String, CodingKey { case weekAssignments }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        weekAssignments = try? container.decodeIfPresent(Int.self, forKey: .weekAssignments)
+    }
+}
+
+/// Where a candidate sits in the picker. One owner so grouping, the fit dot,
+/// the trailing capsule and the VoiceOver label cannot disagree.
+enum CandidateFit {
+    case suggested, checkFirst, unavailable
+
+    init(_ recommendation: CandidateRecommendation?) {
+        guard let recommendation else { self = .checkFirst; return }
+        if recommendation.blockingConflict {
+            self = .unavailable
+        } else if recommendation.advisoryConflict || !(recommendation.bucket == "recommended" || recommendation.bucket == "good_fit") {
+            self = .checkFirst
+        } else {
+            self = .suggested
+        }
+    }
+}
+
+extension CandidateRecommendation {
+    var fit: CandidateFit { CandidateFit(self) }
+
+    /// Advisory note, else the first warning, else the two strongest reasons.
+    /// The server sorts the implied slot-type `role_fit` reason last.
+    var pickerSummary: String? {
+        if let advisoryConflictNote, !advisoryConflictNote.isEmpty { return advisoryConflictNote }
+        if let warning = warnings.first?.label { return warning }
+        let labels = reasons.filter { $0.code != "role_fit" }.prefix(2).map(\.label)
+        return labels.isEmpty ? nil : labels.joined(separator: " · ")
+    }
+
+    /// Quiet workload capsule text; nil when the server sent no workload.
+    var workloadLabel: String? {
+        guard let count = workload?.weekAssignments else { return nil }
+        return count == 0 ? "Free this week" : "\(count) this week"
+    }
 }
 
 struct ShiftCoverage: Codable {

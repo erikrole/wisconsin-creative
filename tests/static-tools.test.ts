@@ -33,7 +33,12 @@ describe("static tools: routing, headers, and page contracts", () => {
 
   it.each(TOOLS)("%s ships a strict CSP with no inline script or handlers", (tool) => {
     const html = readFileSync(join("public", tool, "index.html"), "utf8");
-    expect(html).toMatch(/<meta http-equiv="Content-Security-Policy" content="default-src 'none';[^"]*connect-src 'none'|<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'/);
+    if (tool === "golden-hour") {
+      // Golden Hour may reach only the free Open-Meteo forecast and archive hosts.
+      expect(html).toMatch(/<meta http-equiv="Content-Security-Policy" content="default-src 'none';[^"]*connect-src https:\/\/api\.open-meteo\.com https:\/\/archive-api\.open-meteo\.com;/);
+    } else {
+      expect(html).toMatch(/<meta http-equiv="Content-Security-Policy" content="default-src 'none';[^"]*connect-src 'none'|<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'/);
+    }
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>/i);
     expect(html).not.toMatch(/\son[a-z]+=/i);
   });
@@ -59,6 +64,10 @@ describe("static tools: routing, headers, and page contracts", () => {
     for (const tool of ["golden-hour", "timelapse", "board-sizes", "qrcode", "frame"]) {
       expect(readFileSync(`public/${tool}/index.html`, "utf8"), tool).toContain('href="/apps"');
     }
+  });
+
+  it("uses the shared tool header: name top left, Apps top right", () => {
+    expect(readFileSync("public/golden-hour/index.html", "utf8")).toMatch(/<header class="topbar">\s*<span class="brand">[\s\S]*?<\/span>\s*<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/header>/);
   });
 
   it("sends the old /tools URL to the apps page", () => {
@@ -166,6 +175,64 @@ describe("Golden Hour core", () => {
     expect(gh.phaseFor(-5).tone).toBe("blue");
     expect(gh.phaseFor(-7).tone).toBe("night");
   });
+
+  it("puts the sun where it rises and sets (Madison, Oct 22, 2026)", () => {
+    const t = gh.sunTimes({ y: 2026, m: 10, d: 22 }, madison.lat, madison.lon);
+    // timeanddate.com: sunrise ~105°, sunset ~255°.
+    expect(gh.sunAzimuth(t.sunrise, madison.lat, madison.lon)).toBeCloseTo(105, -1);
+    expect(gh.sunAzimuth(t.sunset, madison.lat, madison.lon)).toBeCloseTo(255, -1);
+    expect(gh.compassPoint(255)).toBe("WSW");
+    expect(gh.compassPoint(359)).toBe("N");
+    expect(gh.compassPoint(90)).toBe("E");
+  });
+
+  it("only trusts time zones this runtime knows", () => {
+    expect(gh.validTimeZone("America/Los_Angeles")).toBe(true);
+    expect(gh.validTimeZone("Mars/Olympus")).toBe(false);
+    expect(gh.validTimeZone("<script>")).toBe(false);
+    expect(gh.validTimeZone(undefined)).toBe(false);
+  });
+
+  it("asks Open-Meteo for a rounded point and a servable range", () => {
+    const today = { y: 2026, m: 10, d: 22 };
+    const url = gh.weatherUrl(43.070012, -89.412734, today, gh.addDays(today, 6), today);
+    expect(url).toMatch(/^https:\/\/api\.open-meteo\.com\/v1\/forecast\?latitude=43\.07&longitude=-89\.41&/);
+    expect(url).toContain("start_date=2026-10-22&end_date=2026-10-28");
+    expect(url).toContain("timezone=auto");
+    // Too far ahead for the forecast, too wide for one request.
+    expect(gh.weatherUrl(43, -89, gh.addDays(today, 16), gh.addDays(today, 16), today)).toBeNull();
+    expect(gh.weatherUrl(43, -89, gh.addDays(today, -20), gh.addDays(today, 6), today)).toBeNull();
+    // Old dates use the archive, which has no rain probability.
+    const old = gh.weatherUrl(43, -89, { y: 2025, m: 10, d: 22 }, { y: 2025, m: 10, d: 22 }, today);
+    expect(old).toMatch(/^https:\/\/archive-api\.open-meteo\.com\//);
+    expect(old).not.toContain("precipitation_probability");
+  });
+
+  it("reads the forecast hour nearest the middle of a window, on the spot's own clock", () => {
+    const hours = ["2026-10-22T17:00", "2026-10-22T18:00", "2026-10-22T19:00"];
+    const json = {
+      timezone: "America/Chicago",
+      hourly: {
+        time: hours, cloud_cover: [10, 40, 90], cloud_cover_low: [0, 5, 80], cloud_cover_mid: [5, 30, 60],
+        cloud_cover_high: [10, 40, 50], temperature_2m: [66.4, 63.6, 60], weather_code: [0, 2, 3], precipitation_probability: [0, 0, 10],
+      },
+    };
+    // 5:26–6:23 PM CDT: the middle is 5:54 PM, nearest hour 6 PM.
+    const w = gh.weatherAt(json, new Date("2026-10-22T22:26:00Z"), new Date("2026-10-22T23:23:00Z"));
+    expect(w).toMatchObject({ cloud: 40, low: 5, temp: 64, label: "Partly cloudy" });
+    expect(w.outlook.tone).toBe("great");
+    expect(gh.weatherAt(json, new Date("2026-10-23T12:00:00Z"), new Date("2026-10-23T13:00:00Z"))).toBeNull();
+    expect(gh.weatherAt({}, new Date(), new Date())).toBeNull();
+  });
+
+  it("rates the light by which clouds are in the way", () => {
+    expect(gh.lightOutlook({ cloud: 5, low: 0, mid: 0, high: 5, code: 0 }).tone).toBe("good");
+    expect(gh.lightOutlook({ cloud: 55, low: 10, mid: 20, high: 50, code: 2 }).tone).toBe("great");
+    expect(gh.lightOutlook({ cloud: 95, low: 90, mid: 20, high: 10, code: 3 }).text).toMatch(/Low overcast/);
+    expect(gh.lightOutlook({ cloud: 60, low: 10, mid: 10, high: 10, code: 61 }).text).toMatch(/Rain/);
+    expect(gh.lightOutlook({ cloud: 30, low: 10, mid: 10, high: 10, code: 2, rain: 70 }).tone).toBe("flat");
+    expect(gh.lightOutlook({ cloud: 100, low: 0, mid: 100, high: 100, code: 3 }).tone).toBe("flat");
+  });
 });
 
 describe("Timelapse core", () => {
@@ -251,5 +318,43 @@ describe("Timelapse core", () => {
     expect(movie.cardMb).toBeCloseTo((20 * 100) / 8);
     const stills = run({ body: "a7v", method: "iv", ivInterval: 4, rollSeconds: 400, photoFormat: "craw" }).result;
     expect(stills.cardMb).toBe(100 * 35);
+  });
+
+  it("rounds clip lengths across the minute without printing 60s", () => {
+    expect(tl.fmtClip(59.6)).toBe("1m");
+    expect(tl.fmtClip(9.96)).toBe("10s");
+    expect(tl.fmtClip(42)).toBe("42s");
+  });
+
+  it("says why a cadence is out of reach for the current method and format", () => {
+    const k4 = run({ body: "a7v", method: "tl", movieFormat: "s4k-100" }).core;
+    expect(k4.limitReason(8)).toMatch(/HD format/);
+    expect(k4.limitReason(4)).toBe("");
+    expect(run({ body: "fx3", method: "sq" }).core.limitReason(4)).toMatch(/use Interval$/);
+    expect(run({ body: "a7v", method: "iv" }).core.limitReason(300)).toMatch(/intervalometer/);
+  });
+
+  it("explains an S&Q clip that needs a faster rate than the camera offers", () => {
+    const { result } = run({ mode: "clip", clipSeconds: 20, rollSeconds: 10 });
+    expect(errors(result)[0]?.text).toMatch(/tops out at 15 fps/);
+  });
+
+  it("round-trips a plan through a share link", () => {
+    const plan = { ...baseState(), body: "a9iii", method: "tl", mode: "clip", tlInterval: 20, fps: 24, rollSeconds: 5400, clipSeconds: 12.5, movieFormat: "shd" };
+    const back = tl.fromQuery("?" + tl.toQuery(plan));
+    expect(back).toMatchObject({ body: "a9iii", method: "tl", mode: "clip", tlInterval: 20, fps: 24, rollSeconds: 5400, clipSeconds: 12.5, movieFormat: "shd" });
+    expect(tl.fromQuery("")).toBeNull();
+    expect(tl.fromQuery("?utm_source=x")).toBeNull();
+  });
+
+  it("uses the shared tool header: name top left, Apps top right", () => {
+    expect(readFileSync("public/timelapse/index.html", "utf8")).toMatch(/<header class="topbar">\s*<span class="brand">[\s\S]*?<\/span>\s*<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/header>/);
+  });
+
+  it("drops or clamps tampered link and storage values", () => {
+    const bad = tl.fromQuery("?cam=__proto__&m=evil&solve=x&sq=3&tl=7.5&fps=50&roll=1e99&clip=-4&fmt=%3Cscript%3E&file=s4k-100");
+    expect(bad).toEqual({ ...tl.DEFAULTS, rollSeconds: tl.MAX_ROLL });
+    expect(tl.sanitize({ ivInterval: 0.2, clipSeconds: 1e9 })).toMatchObject({ ivInterval: 1, clipSeconds: tl.MAX_CLIP });
+    expect(tl.sanitize("nope")).toEqual(tl.DEFAULTS);
   });
 });

@@ -1,18 +1,22 @@
-import { AlertTriangleIcon } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GridAssignment, GridShift } from "@/hooks/use-assignment-grid";
 import { effectiveCallWindow, formatCallTime } from "@/lib/shift-call-windows";
 import { shiftWorkerSlotLabel } from "@/lib/shift-display";
+import { cn } from "@/lib/utils";
 
 type Props = {
   shifts: GridShift[];
   /** All-day events have no call time, so their rows state none. */
   allDay?: boolean;
+  focusUserId?: string | null;
 };
 
-export function AssignmentCell({ shifts, allDay = false }: Props) {
+function firstName(name: string) {
+  return name.split(" ")[0] ?? name;
+}
+
+export function AssignmentCell({ shifts, allDay = false, focusUserId = null }: Props) {
   const assignedShifts = shifts
     .map((shift) => ({
       shift,
@@ -22,53 +26,65 @@ export function AssignmentCell({ shifts, allDay = false }: Props) {
   const openShifts = shifts.filter((shift) => shift.assignments.length === 0);
 
   return (
-    <td className="border-l border-border/40 px-2 py-2 align-middle transition-colors hover:bg-muted/15">
-      <div className="flex min-h-10 flex-col items-center justify-center gap-1.5">
+    <td className="border-l border-[var(--border)] px-2.5 py-2 align-top">
+      <div className="flex min-h-10 flex-col gap-1">
         {assignedShifts.map(({ shift, assignment }) => {
           const callWindow = allDay ? null : effectiveCallWindow(shift, assignment);
           return (
-            <div key={assignment.id} className="flex min-w-0 flex-col items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <UserAvatar
-                      name={assignment.user.name}
-                      avatarUrl={assignment.user.avatarUrl}
-                      size="sm"
-                      className="ring-2 ring-background"
-                      fallbackClassName={assignment.hasConflict ? "bg-[var(--orange-bg)] text-[var(--orange-text)]" : undefined}
-                    />
-                    <span className="max-w-24 truncate text-xs font-medium">{assignment.user.name}</span>
+            <Tooltip key={assignment.id}>
+              <TooltipTrigger asChild>
+                <span
+                  className={cn(
+                    "flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 transition-opacity",
+                    assignment.hasConflict && "bg-[var(--orange-bg)]",
+                    focusUserId && assignment.user.id !== focusUserId && "opacity-25",
+                    focusUserId === assignment.user.id && "bg-[var(--bg-surface)] ring-1 ring-[var(--border)]",
+                  )}
+                >
+                  <UserAvatar
+                    name={assignment.user.name}
+                    avatarUrl={assignment.user.avatarUrl}
+                    size="xs"
+                    className={cn(assignment.hasConflict && "ring-2 ring-[var(--orange)]")}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[13px] font-bold leading-4">{firstName(assignment.user.name)}</span>
+                    {assignment.hasConflict ? (
+                      <span className="block truncate text-[11px] leading-4 text-[var(--orange-text)]">
+                        {assignment.conflictNote ?? "Schedule conflict"}
+                      </span>
+                    ) : shift.workerType === "ST" && callWindow ? (
+                      <span className="block truncate text-[11px] tabular-nums leading-4 text-[var(--text-muted)]">
+                        Call {formatCallTime(callWindow)}
+                      </span>
+                    ) : null}
                   </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {shiftWorkerSlotLabel(shift.workerType)}
-                  {callWindow ? ` · Call ${formatCallTime(callWindow)}` : ""}
-                </TooltipContent>
-              </Tooltip>
-              {shift.workerType === "ST" && callWindow ? (
-                <span className="text-[10px] tabular-nums text-muted-foreground">
-                  Call {formatCallTime(callWindow)}
                 </span>
-              ) : null}
-              {assignment.hasConflict ? (
-                <Badge variant="orange" size="sm" className="max-w-40 gap-1 text-[10px]">
-                  <AlertTriangleIcon className="size-3 shrink-0" />
-                  <span className="truncate">{assignment.conflictNote ?? "Schedule conflict"}</span>
-                </Badge>
-              ) : null}
-            </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {assignment.user.name} · {shiftWorkerSlotLabel(shift.workerType)}
+                {callWindow ? ` · Call ${formatCallTime(callWindow)}` : ""}
+              </TooltipContent>
+            </Tooltip>
           );
         })}
 
         {openShifts.length > 0 ? (
-          <Badge variant="outline" size="sm" className="text-[10px] text-muted-foreground">
-            {openShifts.length} open · {openShifts.map((shift) => shiftWorkerSlotLabel(shift.workerType)).join(", ")}
-          </Badge>
+          <span
+            className="flex items-center gap-2 rounded-md px-1 py-0.5 text-[12px] text-[var(--text-secondary)]"
+            title={openShifts.map((shift) => shiftWorkerSlotLabel(shift.workerType)).join(", ")}
+          >
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--text-muted)] text-[10px] font-bold tabular-nums">
+              {openShifts.length}
+            </span>
+            <span className="truncate">
+              open{openShifts.length === 1 ? ` ${shiftWorkerSlotLabel(openShifts[0]!.workerType).toLowerCase()}` : ""}
+            </span>
+          </span>
         ) : null}
 
         {shifts.length === 0 ? (
-          <span className="text-xs text-muted-foreground/35" aria-label="No shift configured">—</span>
+          <span className="px-1 text-xs text-[var(--text-muted)]/50" aria-label="No shift configured">—</span>
         ) : null}
       </div>
     </td>

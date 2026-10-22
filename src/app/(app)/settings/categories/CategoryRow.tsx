@@ -11,7 +11,6 @@ import type { LastAuditMap } from "@/hooks/use-last-audit";
 import type { Category, TreeNode } from "./types";
 import KebabMenu from "./KebabMenu";
 import MoveCategoryDialog from "./MoveCategoryDialog";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 export default function CategoryRow({
@@ -136,14 +135,20 @@ export default function CategoryRow({
   // to exactly this category (not descendants), so the count must match.
   const displayCount = node.itemCount;
 
+  const indent = depth > 0 ? 16 + depth * 22 : 16;
+
   return (
     <>
-      <div className="flex items-center justify-between py-3 px-4 border-b border-border min-h-12 last:border-b-0 hover:bg-muted max-md:!pl-3 max-md:!pr-3" style={{ paddingLeft: depth > 0 ? 24 + depth * 24 : 16 }}>
-        <div className={`flex items-center text-base min-w-0 ${isChild ? "font-normal" : "font-semibold"}`}>
-          {isChild && <CornerDownRightIcon className="size-3.5 text-muted-foreground mr-2 shrink-0" />}
+      <div
+        className="flex min-h-12 items-center justify-between gap-3 border-b border-border py-2 pr-2 last:border-b-0 hover:bg-muted/50"
+        style={{ paddingLeft: indent }}
+      >
+        <div className={`flex min-w-0 items-center text-sm ${isChild ? "font-normal" : "font-bold"}`}>
+          {isChild && <CornerDownRightIcon className="size-3.5 text-muted-foreground mr-2 shrink-0" aria-hidden="true" />}
           {renaming ? (
             <Input
               ref={inputRef}
+              aria-label={`Rename ${node.name}`}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onBlur={saveRename}
@@ -152,26 +157,27 @@ export default function CategoryRow({
                 if (e.key === "Escape") { setRenaming(false); setNewName(node.name); }
               }}
               disabled={savingRename}
-              className={`w-[min(200px,100%)] h-8 ${isChild ? "font-normal" : "font-semibold"} ${savingRename ? "opacity-60" : ""}`}
+              className={`h-8 w-[min(220px,100%)] ${isChild ? "font-normal" : "font-bold"} ${savingRename ? "opacity-60" : ""}`}
             />
           ) : (
-            <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex min-w-0 flex-col">
               <Link
                 href={`/items?category=${node.id}`}
-                className="no-underline text-foreground hover:text-[var(--wi-red)] transition-colors"
+                className="truncate no-underline text-foreground hover:text-[var(--wi-red)] transition-colors"
               >
                 {node.name}
               </Link>
-              <LastEditedHint info={lastEdited[node.id]} />
+              <LastEditedHint info={lastEdited[node.id]} className="font-normal" />
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
           {displayCount > 0 && (
-            <Link href={`/items?category=${node.id}`} className="no-underline">
-              <Badge variant="purple" size="sm" className="cursor-pointer hover:opacity-80 transition-opacity">
-                {displayCount} item{displayCount !== 1 ? "s" : ""}
-              </Badge>
+            <Link
+              href={`/items?category=${node.id}`}
+              className="rounded-md px-2 py-1 text-[13px] text-muted-foreground no-underline tabular-nums hover:bg-muted hover:text-foreground"
+            >
+              {displayCount} item{displayCount !== 1 ? "s" : ""}
             </Link>
           )}
           <KebabMenu
@@ -197,21 +203,22 @@ export default function CategoryRow({
       )}
 
       {addingSub && (
-        <div className="flex items-center justify-between py-3 px-4 border-b border-border min-h-12 last:border-b-0 hover:bg-muted" style={{ paddingLeft: 24 + (depth + 1) * 24 }}>
-          <div className="flex items-center text-base min-w-0">
+        <div className="flex min-h-12 items-center border-b border-border py-2 pr-4 last:border-b-0" style={{ paddingLeft: 16 + (depth + 1) * 22 }}>
+          <div className="flex min-w-0 items-center text-sm">
             <CornerDownRightIcon className="size-3.5 text-muted-foreground mr-2 shrink-0" />
             <Input
               ref={subInputRef}
               value={subName}
               onChange={(e) => setSubName(e.target.value)}
-              placeholder="Subcategory name"
+              aria-label={`New subcategory in ${node.name}`}
+              placeholder="Subcategory name, then Enter"
               onBlur={saveSub}
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveSub();
                 if (e.key === "Escape") { setAddingSub(false); setSubName(""); }
               }}
               disabled={savingSub}
-              className={`w-[min(200px,100%)] h-8 ${savingSub ? "opacity-60" : ""}`}
+              className={`h-8 w-[min(220px,100%)] ${savingSub ? "opacity-60" : ""}`}
             />
           </div>
         </div>

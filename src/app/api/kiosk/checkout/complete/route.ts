@@ -17,7 +17,7 @@ import { parseDateRange } from "@/lib/time";
 import { badges, earnedBadgesSince } from "@/lib/badges";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
-import { displayBookingTitle } from "@/lib/booking-display-title";
+import { displayBookingTitle, eventBookingTitle } from "@/lib/booking-display-title";
 import { normalizeCheckoutPolicies } from "@/lib/services/checkout-policies";
 import { loadKitEquipmentPlan } from "@/lib/services/kits";
 import { isSerializationConflict } from "@/lib/serialization";
@@ -116,7 +116,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
                 isHidden: false,
                 archivedAt: null,
               },
-              select: { id: true, summary: true, sportCode: true, endsAt: true },
+              select: { id: true, summary: true, sportCode: true, opponent: true, isHome: true, endsAt: true },
             })
           : null;
         if (body.eventId && !event) {
@@ -138,11 +138,12 @@ export const POST = withKiosk(async (req, { kiosk }) => {
           body.endsAt ?? resolvedDefaultEndsAt.toISOString(),
         );
 
-        const rawTitle = event?.summary ?? customPurpose;
-        if (!rawTitle) {
+        if (!event && !customPurpose) {
           throw new HttpError(400, "Select an event or enter what this checkout is for");
         }
-        const title = normalizeBookingTitle(displayBookingTitle(rawTitle));
+        const title = normalizeBookingTitle(
+          event ? eventBookingTitle(event) : displayBookingTitle(customPurpose ?? ""),
+        );
         // The pickup kiosk is captured on `pickupKioskDeviceId`, so we no longer
         // duplicate it as a note. Keep only a real user-entered purpose.
         const notes = event && customPurpose ? `Purpose: ${customPurpose}` : null;

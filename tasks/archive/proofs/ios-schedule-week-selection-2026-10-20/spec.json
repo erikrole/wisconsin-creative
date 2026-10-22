@@ -1,0 +1,44 @@
+{
+  "title": "Schedule keeps the visible week selected",
+  "eyebrow": "Wisconsin Creative \u00b7 Next-build fix \u00b7 Local verification",
+  "lede": "A Schedule that fits on screen keeps today selected. The bottom override applies after scrollable content moves away from the top.",
+  "sections": [
+    {
+      "heading": "Sparse Schedule, same fixture and viewport",
+      "note": "Before and after use the same native screen, Volleyball fixture, calendar day, role, filters and initial scroll position. Only the selection state and unnecessary Today button change.",
+      "pairs": [
+        {
+          "title": "Today remains selected",
+          "sub": "iPhone 18 Pro Max \u00b7 440 \u00d7 956 pt \u00b7 iOS 27.0",
+          "before": "before/sparse-schedule.png",
+          "beforeCap": "Today is visible, but the tracker follows the later empty week. Today appears even at the top.",
+          "after": "after/sparse-schedule.png",
+          "afterCap": "Today stays selected; the unnecessary Today action is gone.",
+          "beforeEvidence": "before/sparse-schedule.capture.json",
+          "afterEvidence": "after/sparse-schedule.capture.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Treat a fitting list as being at the top",
+      "was": "The bottom check also matched a short list whose first and last rows were both visible.",
+      "now": "The override requires positive scrollable height and an offset beyond the top inset. Existing last-day focus at the bottom of a longer list is retained."
+    }
+  ],
+  "verification": [
+    "235 native tests passed; zero failed or skipped. The new regression fails on the pre-fix behavior.",
+    "59 Schedule source-contract checks passed across 13 files.",
+    "Simulator build, generic-device build, project drift, pattern drift and 79/79 audit coverage passed.",
+    "Sparse Schedule captures passed before and after. A separate long-list UI check scrolled away, tapped Today, and confirmed the Today action disappeared after returning.",
+    "Logical viewport measured by the UI test: 440 \u00d7 956 pt. Captures are 1320 \u00d7 2868 pixels.",
+    "[Verification details](verification.json) \u00b7 [Long-list Today capture](after/long-schedule-today.png)"
+  ],
+  "notes": [
+    "Local fix on codex/schedule-week-selection; inclusion in the next distributed build is pending. Submitted App Review build 34 is unchanged.",
+    "Fixtures prove native layout and navigation. This check makes no new authenticated-server or physical-device claim.",
+    "The device wall clock was not frozen. The compared Volleyball event uses the same 11:00\u201314:00 calendar-day times and was past in both captures; relative fromNow events were excluded by the same filter. The status-bar clock was overridden to 9:41.",
+    "Temporary UI capture code is retained in capture-harness.swift and was removed from the app test source after capture. Hash-bound source snapshots are retained alongside the images."
+  ]
+}

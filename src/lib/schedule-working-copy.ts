@@ -195,6 +195,8 @@ export function workingScheduleCommandLabel(
     ?? before.slots.find((slot) => slot.key === slotKey);
 
   switch (command.type) {
+    case "setSlotCounts":
+      return "Change crew size";
     case "adjustSlots":
       return `${command.delta > 0 ? "Add" : "Remove"} ${scheduleWorkerTypeLabel(command.workerType)} ${titleCaseScheduleWord(command.area)} slot`;
     case "convertSlot": {
@@ -280,7 +282,24 @@ export function reconcileWorkingAssignmentSources(
   return changed ? { ...payload, slots } : payload;
 }
 
+/** Most positions one area/class pair can hold in a single crew-size edit. */
+export const MAX_SLOTS_PER_AREA_CLASS = 12;
+
+const slotCountTargetSchema = z.object({
+  area: z.nativeEnum(ShiftArea),
+  workerType: z.nativeEnum(ShiftWorkerType),
+  count: z.number().int().min(0).max(MAX_SLOTS_PER_AREA_CLASS),
+});
+
 export const workingScheduleCommandSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("setSlotCounts"),
+    // One step for crew size: every area/class pair the editor shows, set at once.
+    counts: z.array(slotCountTargetSchema).min(1).max(12).refine(
+      (counts) => new Set(counts.map((entry) => `${entry.area}:${entry.workerType}`)).size === counts.length,
+      "Each area and class may appear once.",
+    ),
+  }),
   z.object({
     type: z.literal("adjustSlots"),
     area: z.nativeEnum(ShiftArea),
@@ -414,6 +433,27 @@ export function applyWorkingScheduleCommand(
     endsAt: payload.eventEndsAt,
   },
 ): WorkingSchedulePayload {
+  if (command.type === "setSlotCounts") {
+    // Reuse the single-slot rules so adds inherit peer call windows and
+    // removals only ever take open, never-assigned slots.
+    let next = payload;
+    for (const target of command.counts) {
+      const current = next.slots.filter((slot) =>
+        slot.area === target.area && slot.workerType === target.workerType,
+      ).length;
+      const delta = target.count > current ? 1 : -1;
+      for (let i = 0; i < Math.abs(target.count - current); i += 1) {
+        next = applyWorkingScheduleCommand(
+          next,
+          { type: "adjustSlots", area: target.area, workerType: target.workerType, delta },
+          createKey,
+          defaultWindow,
+        );
+      }
+    }
+    return next === payload ? structuredClone(payload) : next;
+  }
+
   const next = structuredClone(payload);
 
   if (command.type === "adjustSlots") {

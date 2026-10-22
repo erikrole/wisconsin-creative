@@ -51,8 +51,8 @@ describe("Detail page header contracts", () => {
     expect(users).toContain('className="h-10 gap-1.5 active:scale-[0.96]"');
 
     const booking = source("src/components/booking-details/BookingHeader.tsx");
-    expect(booking).toContain('<Button variant="outline" className="h-10" onClick={onEdit}>');
-    expect(booking).toContain('<Button variant="outline" className="h-10" onClick={onToggleExtend}>');
+    expect(booking).toContain('<Button className="h-10" onClick={onEdit}>');
+    expect(booking).toContain('<Button className="h-10" onClick={onToggleExtend}>');
 
     const item = source("src/app/(app)/items/[id]/_components/ItemHeader.tsx");
     expect(item).not.toContain('<Button size="sm" variant="default" asChild>');

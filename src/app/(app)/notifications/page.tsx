@@ -8,10 +8,12 @@ import {
   ExternalLink,
   RefreshCw,
   Settings2Icon,
+  MoreHorizontalIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -354,22 +356,32 @@ export default function NotificationsPage() {
         title="Notifications"
         description="Updates that need your attention across gear, bookings, shifts, and trades."
       >
-        <Button className="h-10" variant="outline" asChild>
-          <Link href="/settings/notifications">
-            <Settings2Icon data-icon="inline-start" />
-            Preferences
-          </Link>
-        </Button>
-        <Button className="h-10" variant="outline" onClick={reload} disabled={loading || refreshing}>
-          <RefreshCw data-icon="inline-start" className={refreshing ? "animate-spin" : undefined} />
-          Refresh
-        </Button>
-        {canProcess && (
-          <Button className="h-10" variant="outline" onClick={runProcessing} disabled={processing}>
-            {processing && <Spinner data-icon="inline-start" />}
-            {processing ? "Checking overdue" : "Check overdue"}
-          </Button>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="h-10" variant="outline" aria-label="More notification actions">
+              <MoreHorizontalIcon data-icon="inline-start" />
+              More
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onSelect={reload} disabled={loading || refreshing}>
+              <RefreshCw className={refreshing ? "size-4 animate-spin" : "size-4"} />
+              Refresh
+            </DropdownMenuItem>
+            {canProcess && (
+              <DropdownMenuItem onSelect={runProcessing} disabled={processing}>
+                {processing ? "Checking overdue" : "Check overdue"}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings/notifications">
+                <Settings2Icon className="size-4" />
+                Preferences
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {unreadCount > 0 && (
           <Button className="h-10" onClick={markAllRead} disabled={markingAll}>
             {markingAll && <Spinner data-icon="inline-start" />}
@@ -551,8 +563,8 @@ function NotificationRow({
       <ItemActions className="max-sm:w-full max-sm:flex-row max-sm:justify-end">
         {href && actionLabel && (
           <Button
-            variant="outline"
-            className="h-10 text-xs max-sm:flex-1"
+            variant="ghost"
+            className="h-10 text-xs font-semibold text-[var(--accent)] max-sm:flex-1"
             asChild
           >
             <Link href={href}>
