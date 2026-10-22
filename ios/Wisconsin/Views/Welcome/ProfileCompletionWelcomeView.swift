@@ -40,7 +40,7 @@ struct ProfileCompletionWelcomeView: View {
                     WelcomeFinishView(
                         firstName: firstName(from: profile?.name ?? user?.name),
                         outcome: finish.outcome,
-                        showsNextSteps: (profile?.role ?? user?.role) != "COLLABORATOR",
+                        role: profile?.role ?? user?.role ?? "STUDENT",
                         onContinue: leaveFinish
                     )
                 } else if let data, currentStep != .unknown {

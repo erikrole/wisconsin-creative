@@ -7,6 +7,7 @@ enum StarterDestination {
     case gear
     case guides
     case notifications
+    case availability
 
     @MainActor
     func open(in appState: AppState) {
@@ -18,6 +19,9 @@ enum StarterDestination {
         case .guides:
             appState.pendingBrowseDestination = "guides"
             appState.selectedTab = 2
+        case .availability:
+            appState.pendingSettingsDestination = .availability
+            appState.pendingSettingsRoute = true
         case .notifications:
             // Navigates to the settings screen only; the permission prompt
             // stays an explicit tap there, never an automatic side effect.

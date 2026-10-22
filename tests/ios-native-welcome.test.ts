@@ -145,7 +145,11 @@ describe("native iOS Welcome flow", () => {
     for (const title of ["Check the schedule", "Find your gear", "Read the guides"]) {
       expect(finish).toContain(title);
     }
-    expect(finish).toContain("showsNextSteps");
+    expect(finish).toContain("static func steps(for role: String)");
+    // Role-aware like the web: students add unavailable times first; collaborators get Continue only.
+    expect(finish).toContain('case "COLLABORATOR": []');
+    expect(finish).toContain("Add when you can’t work");
+    expect(finish).toContain("Build crews and see which events still need people.");
     expect(finish).toContain("Text(\"Continue\")");
   });
 
@@ -202,7 +206,8 @@ describe("native iOS Welcome flow", () => {
     expect(card).not.toMatch(/phone|wiscard|topSize|shoeSize|avatarUrl/i);
     expect(home).toContain("GettingStartedCard(model: gettingStarted)");
     // The finish screen and the card open the same screens.
-    expect(welcome).toContain("StarterDestination.schedule.open(in: appState)");
+    expect(welcome).toContain("step.destination.open(in: appState)");
+    expect(welcome).toContain("case .schedule: .schedule");
   });
 
   it("keeps days a student can't work one tap away on Home and Schedule", () => {

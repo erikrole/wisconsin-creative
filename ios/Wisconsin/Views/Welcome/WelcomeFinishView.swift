@@ -1,15 +1,27 @@
 import SwiftUI
 
 /// Where a finish-screen row lands once the app shell appears.
-private enum WelcomeNextStep: CaseIterable, Identifiable {
-    case schedule
+private enum WelcomeNextStep: Identifiable {
+    case availability
+    case schedule(role: String)
     case gear
     case guides
 
-    var id: Self { self }
+    var id: String { title }
+
+    /// Mirrors the web `welcomeNextSteps`, minus the iPhone app row and the
+    /// staff Onboarding Status row (no native destination yet).
+    static func steps(for role: String) -> [WelcomeNextStep] {
+        switch role {
+        case "COLLABORATOR": []
+        case "STUDENT": [.availability, .schedule(role: role), .gear, .guides]
+        default: [.schedule(role: role), .gear, .guides]
+        }
+    }
 
     var title: String {
         switch self {
+        case .availability: "Add when you can’t work"
         case .schedule: "Check the schedule"
         case .gear: "Find your gear"
         case .guides: "Read the guides"
@@ -18,7 +30,11 @@ private enum WelcomeNextStep: CaseIterable, Identifiable {
 
     var detail: String {
         switch self {
-        case .schedule: "See the events you’re on and the ones that need crew."
+        case .availability: "Classes, a job, or days away, so you’re not scheduled then."
+        case .schedule(let role):
+            role == "STUDENT"
+                ? "See the events you’re on and the ones that need crew."
+                : "Build crews and see which events still need people."
         case .gear: "Anything you check out shows up here, with its return time."
         case .guides: "How we shoot, where gear lives, and who to ask."
         }
@@ -26,9 +42,19 @@ private enum WelcomeNextStep: CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
+        case .availability: "clock"
         case .schedule: "calendar"
         case .gear: "shippingbox"
         case .guides: "book.closed"
+        }
+    }
+
+    var destination: StarterDestination {
+        switch self {
+        case .availability: .availability
+        case .schedule: .schedule
+        case .gear: .gear
+        case .guides: .guides
         }
     }
 }
@@ -40,8 +66,10 @@ struct WelcomeFinishView: View {
 
     let firstName: String
     let outcome: WelcomeFinish.Outcome
-    let showsNextSteps: Bool
+    let role: String
     let onContinue: () -> Void
+
+    private var steps: [WelcomeNextStep] { WelcomeNextStep.steps(for: role) }
 
     private var title: String {
         outcome == .complete ? "You’re all set, \(firstName)" : "Welcome, \(firstName)"
@@ -68,12 +96,12 @@ struct WelcomeFinishView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    if showsNextSteps {
+                    if !steps.isEmpty {
                         VStack(spacing: 0) {
-                            ForEach(WelcomeNextStep.allCases) { step in
+                            ForEach(steps) { step in
                                 Button { open(step) } label: { row(step) }
                                     .buttonStyle(.plain)
-                                if step != WelcomeNextStep.allCases.last {
+                                if step.id != steps.last?.id {
                                     Divider().padding(.leading, 64)
                                 }
                             }
@@ -128,28 +156,24 @@ struct WelcomeFinishView: View {
     }
 
     private func open(_ step: WelcomeNextStep) {
-        switch step {
-        case .schedule: StarterDestination.schedule.open(in: appState)
-        case .gear: StarterDestination.gear.open(in: appState)
-        case .guides: StarterDestination.guides.open(in: appState)
-        }
+        step.destination.open(in: appState)
         onContinue()
     }
 }
 
 #if DEBUG
 #Preview("Finish complete") {
-    WelcomeFinishView(firstName: "Erik", outcome: .complete, showsNextSteps: true, onContinue: {})
+    WelcomeFinishView(firstName: "Erik", outcome: .complete, role: "STUDENT", onContinue: {})
         .environment(AppState())
 }
 
 #Preview("Finish later") {
-    WelcomeFinishView(firstName: "Erik", outcome: .later, showsNextSteps: true, onContinue: {})
+    WelcomeFinishView(firstName: "Erik", outcome: .later, role: "STUDENT", onContinue: {})
         .environment(AppState())
 }
 
 #Preview("Finish collaborator") {
-    WelcomeFinishView(firstName: "Erik", outcome: .complete, showsNextSteps: false, onContinue: {})
+    WelcomeFinishView(firstName: "Erik", outcome: .complete, role: "COLLABORATOR", onContinue: {})
         .environment(AppState())
 }
 #endif
