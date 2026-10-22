@@ -430,7 +430,7 @@ export function WizardStep1({
                   {formatDateTime(form.startsAt)} {"\u2192"} {formatDateTime(form.endsAt)}
                 </div>
               </div>
-              <Button type="button" variant="ghost" className="h-9 shrink-0" onClick={() => setAdjusting(true)}>
+              <Button type="button" variant="ghost" className="h-10 shrink-0" onClick={() => setAdjusting(true)}>
                 Adjust
               </Button>
             </div>
@@ -605,7 +605,7 @@ export function WizardStep1({
           )}
 
           {!noteOpen && !form.notes ? (
-            <Button type="button" variant="ghost" className="h-9 self-start px-2 text-muted-foreground" onClick={() => setNoteOpen(true)}>
+            <Button type="button" variant="ghost" className="h-10 self-start px-2 text-muted-foreground" onClick={() => setNoteOpen(true)}>
               Add a note
             </Button>
           ) : (
