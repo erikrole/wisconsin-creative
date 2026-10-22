@@ -15,17 +15,19 @@ enum LegacyGearCache {
     ) {
         guard !defaults.bool(forKey: purgedKey) else { return }
         let fileManager = FileManager.default
-        guard let root = directory ?? fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
-              let names = try? fileManager.contentsOfDirectory(atPath: root.path)
-        else {
+        guard let root = directory ?? fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+        do {
+            let names = try fileManager.contentsOfDirectory(atPath: root.path)
+            // The store plus its SQLite -shm and -wal companions. The fallback
+            // configuration was in memory only and never wrote files.
+            for name in names where name.hasPrefix("GearCache") {
+                try fileManager.removeItem(at: root.appendingPathComponent(name))
+            }
             defaults.set(true, forKey: purgedKey)
+        } catch {
+            // Protected files or transient I/O failures must remain eligible
+            // for cleanup on a later launch.
             return
         }
-        // The store plus its SQLite -shm and -wal companions. The fallback
-        // configuration was in memory only and never wrote files.
-        for name in names where name.hasPrefix("GearCache") {
-            try? fileManager.removeItem(at: root.appendingPathComponent(name))
-        }
-        defaults.set(true, forKey: purgedKey)
     }
 }

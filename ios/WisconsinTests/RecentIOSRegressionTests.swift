@@ -5,6 +5,28 @@ import AppIntents
 
 @Suite @MainActor
 struct RecentIOSRegressionTests {
+    @Test func failedLegacyCacheEnumerationRetriesAndPreservesUnrelatedFiles() throws {
+        let manager = FileManager.default
+        let suiteName = "legacy-cache-review-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let root = manager.temporaryDirectory.appendingPathComponent(suiteName, isDirectory: true)
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+            try? manager.removeItem(at: root)
+        }
+        LegacyGearCache.purgeIfNeeded(defaults: defaults, directory: root)
+        try manager.createDirectory(at: root, withIntermediateDirectories: true)
+        let legacy = root.appendingPathComponent("GearCache.store-wal")
+        let unrelated = root.appendingPathComponent("Other.store")
+        try Data("old account".utf8).write(to: legacy)
+        try Data("keep".utf8).write(to: unrelated)
+
+        LegacyGearCache.purgeIfNeeded(defaults: defaults, directory: root)
+
+        #expect(!manager.fileExists(atPath: legacy.path))
+        #expect(try Data(contentsOf: unrelated) == Data("keep".utf8))
+    }
+
     @Test func gearSearchIncludesAvailableAndUnavailableFamilies() throws {
         let response = try JSONDecoder().decode(AssetsResponse.self, from: RecentIOSReviewFixtures.family)
         let matches = response.orderedRows.map(GearSearchMatch.init)

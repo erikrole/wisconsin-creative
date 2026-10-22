@@ -517,7 +517,19 @@ private struct ItemHeroCard: View {
 
     private var infoBlock: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(heroTitle)
+            Group {
+                if let qr = asset.qrCodeValue, !qr.isEmpty, qr == heroTitle {
+                    Button { onCopyQR(qr) } label: {
+                        Text(heroTitle)
+                            .frame(minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("QR code \(qr), tap to copy")
+                    .accessibilityIdentifier("item-hero-qr-copy")
+                } else {
+                    Text(heroTitle)
+                }
+            }
                 .font(.gothamBlack(size: 26, relativeTo: .title2))
                 .tracking(-0.2)
                 .lineLimit(2)
@@ -548,7 +560,7 @@ private struct ItemHeroCard: View {
             }
 
             // QR sticker code — tap copies the value for the kiosk / relink form.
-            // Skipped when it is the title already: the tag was shown three times.
+            // When the code is the title, that title owns the same copy action.
             if let qr = asset.qrCodeValue, !qr.isEmpty, qr != heroTitle {
                 Button {
                     onCopyQR(qr)

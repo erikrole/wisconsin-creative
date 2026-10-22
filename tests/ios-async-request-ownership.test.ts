@@ -33,7 +33,7 @@ describe("iOS asynchronous request ownership", () => {
     expect(authenticatedData).toMatch(
       /let requestBoundary = authSessionBoundary\.capture\(\)[\s\S]*?session\.data\(for: request\)[\s\S]*?guard authSessionBoundary\.owns\(requestBoundary\) else \{\s*throw APIError\.sessionChanged\s*\}/,
     );
-    expect(perform).toMatch(/catch let error as APIError \{\s*throw error\s*\}/);
+    expect(perform).toMatch(/catch let error as APIError \{\s*(?:try Task\.checkCancellation\(\)\s*)?throw error\s*\}/);
   });
 
   it.each([

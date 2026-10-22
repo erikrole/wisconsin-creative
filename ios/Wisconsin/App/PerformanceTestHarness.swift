@@ -565,7 +565,11 @@ struct ItemDetailHarnessView: View {
         NavigationStack {
             ItemDetailView(assetId: AssetFixtureAPI.assetId)
         }
-        .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+        .onAppear {
+            session.currentUser = ProcessInfo.processInfo.environment["GT_ITEM_ROLE"] == "student"
+                ? ScheduleFixtures.studentUser
+                : ScheduleFixtures.staffUser
+        }
     }
 }
 
@@ -827,6 +831,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/licenses/my/history": return FixtureAPI.licenseHistory
         case "/api/me":
             if AppRuntimeMode.performanceScenario == .homeStudent { return HomeFixtureAPI.studentMe }
+            if AppRuntimeMode.performanceScenario == .itemDetail,
+               ProcessInfo.processInfo.environment["GT_ITEM_ROLE"] == "student" {
+                return HomeFixtureAPI.studentMe
+            }
             return AppRuntimeMode.performanceScenario == .previewChrome
                 ? PreviewChromeFixtures.me
                 : ScheduleFixtureAPI.me

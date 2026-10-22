@@ -377,10 +377,16 @@ final class APIClient {
         do {
             (data, response, requestBoundary) = try await authenticatedData(for: request)
         } catch let error as APIError {
+            try Task.checkCancellation()
             throw error
         } catch {
+            // URLSession reports cancellation as URLError.cancelled. Keep task
+            // cancellation out of view error states for superseded requests.
+            try Task.checkCancellation()
             throw APIError.networkError(error)
         }
+
+        try Task.checkCancellation()
 
         guard let http = response as? HTTPURLResponse else {
             throw APIError.serverError("Invalid response")

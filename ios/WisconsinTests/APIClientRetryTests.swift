@@ -6,6 +6,7 @@ private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     enum Step {
         case status(Int, headers: [String: String] = [:], body: String = "{}")
         case failure(URLError.Code)
+        case pending
     }
 
     private static let lock = NSLock()
@@ -35,6 +36,8 @@ private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         Self.lock.unlock()
 
         switch step {
+        case .pending:
+            break
         case .failure(let code):
             client?.urlProtocol(self, didFailWithError: URLError(code))
         case .status(let code, let headers, let body):
@@ -134,6 +137,29 @@ final class APIClientRetryTests: XCTestCase {
             XCTAssertEqual(statusCode, 503)
         } catch {
             XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertEqual(StubURLProtocol.recordedRequests.count, 1)
+    }
+
+    func testCancellingAnInFlightAudiencePreviewRemainsCancellation() async throws {
+        let client = makeClient([.pending])
+        let preview = Task {
+            try await client.previewBlast(target: .eventCrew(eventId: "event-a"))
+        }
+        defer { preview.cancel() }
+        let deadline = Date().addingTimeInterval(2)
+        while StubURLProtocol.recordedRequests.isEmpty && Date() < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(StubURLProtocol.recordedRequests.count, 1)
+        preview.cancel()
+        do {
+            _ = try await preview.value
+            XCTFail("Cancelled audience previews must not publish a response")
+        } catch is CancellationError {
+            // A replaced audience must not publish a network-error state.
+        } catch {
+            XCTFail("Expected task cancellation, got \(error)")
         }
         XCTAssertEqual(StubURLProtocol.recordedRequests.count, 1)
     }

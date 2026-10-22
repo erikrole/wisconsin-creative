@@ -18,6 +18,31 @@ final class RecentIOSRegressionUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+        let frame = app.windows.firstMatch.frame
+        let viewport = XCTAttachment(string: "viewportPoints=\(frame.width)x\(frame.height)")
+        viewport.name = "\(name)-viewport"
+        viewport.lifetime = .keepAlways
+        add(viewport)
+    }
+
+    func testStudentCanCopyTheQRWhenItIsTheHeroTitle() {
+        let app = launch("item-detail", ["GT_ITEM_ROLE": "student"])
+        let copy = app.buttons["item-hero-qr-copy"]
+        XCTAssertTrue(copy.waitForExistence(timeout: 12))
+        XCTAssertFalse(app.buttons["More item actions"].exists)
+        copy.tap()
+        XCTAssertTrue(app.staticTexts["Copied CAM-014"].waitForExistence(timeout: 5))
+        attach(app, "student-hero-qr-copy")
+    }
+
+    func testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount() {
+        let app = launch("wrapped", ["GT_WRAPPED_CARD": "4"])
+        let card = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label CONTAINS %@ AND label CONTAINS %@ AND label CONTAINS %@",
+            "Jordan Lee: 21 together", "Sam Ortiz: 12 together", "Ava Stone: 5 together"
+        )).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 12))
+        attach(app, "wrapped-accessible-crew-details")
     }
 
     func testHomeUsesPersonalCounts() {

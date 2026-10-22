@@ -1,0 +1,72 @@
+{
+  "title": "PR 605 review follow-up",
+  "eyebrow": "iOS \u00b7 Wisconsin Creative",
+  "lede": "Four follow-up defects closed with native behavioral regressions and matched simulator captures.",
+  "stats": [
+    {
+      "k": "Native tests",
+      "v": "253 passed",
+      "n": "All native unit cases"
+    },
+    {
+      "k": "Source contracts",
+      "v": "815 passed",
+      "n": "153 files"
+    },
+    {
+      "k": "New UI regressions",
+      "v": "2 passed",
+      "n": "Each fails on the pre-fix app"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched simulator captures",
+      "note": "Same iPhone 18 Pro Max, iOS 27.0, fixture, role, light appearance and initial position. Viewport measured by XCTest: 440 \u00d7 956 points.",
+      "pairs": [
+        {
+          "title": "Hero QR copy",
+          "sub": "The code remains the title and now owns its copy action.",
+          "before": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/item-before.png",
+          "after": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/item-after.png",
+          "beforeEvidence": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/item-before.capture.json",
+          "afterEvidence": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/item-after.capture.json",
+          "beforeCap": "Only staff overflow retained a copy action when the QR equaled the title.",
+          "afterCap": "The native title button copies the QR for every role; staff overflow remains."
+        },
+        {
+          "title": "Wrapped crew details",
+          "sub": "Visual hierarchy is retained. Accessibility improvement is verified by the UI tree, not pixels.",
+          "before": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/wrapped-before.png",
+          "after": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/wrapped-after.png",
+          "beforeEvidence": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/wrapped-before-staff.capture.json",
+          "afterEvidence": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/wrapped-after-staff.capture.json",
+          "beforeCap": "The custom VoiceOver label omitted crew rows.",
+          "afterCap": "The label includes all three crew names and counts."
+        }
+      ]
+    },
+    {
+      "heading": "Student copy proof",
+      "note": "After-only interaction attachment; the matched pair above uses Staff on both sides.",
+      "shots": [
+        {
+          "image": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/tasks/archive/proofs/ios-review-followup-2026-10-22/student-copy-after.png",
+          "title": "Student copied QR",
+          "cap": "No staff overflow; tapping CAM-014 confirms \u201cCopied CAM-014\u201d."
+        }
+      ]
+    }
+  ],
+  "verification": [
+    "253 native unit tests pass. Cancellation and cache retry regressions fail on f705184d and pass after the fixes.",
+    "815 source-contract cases pass; project generation, zero style drift, 82/82 audit coverage and shared WisconsinKiosk simulator compilation pass.",
+    "Wrapped UI regression fails before the fix and passes after it. Student QR-copy regression fails before the fix and passes after fixture foreground identity is kept as Student.",
+    "Independent reviewers rechecked the four production fixes and found no remaining actionable defects."
+  ],
+  "notes": [
+    "Fixture simulator proof does not claim authenticated server, camera, Siri, APNs, physical-device or App Store acceptance.",
+    "Remote CI and the current-head automated review remain separate merge gates.",
+    "Managed preview provisioning currently fails at the repository\u2019s nine-preview capacity guard. No cleanup or infrastructure setting was changed."
+  ]
+}
