@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api";
 import { ok, HttpError } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { assertPublicHost } from "@/lib/security/ssrf";
+import { assertPublicHost, fetchPublicUrl } from "@/lib/security/ssrf";
 
 const bodySchema = z.object({
   url: z.string().min(1).max(2048),
@@ -51,7 +51,7 @@ export const POST = withAuth(async (req, { user }) => {
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchPublicUrl(url, {
       headers: { "User-Agent": "GearTracker/1.0 (probe)" },
       signal: controller.signal,
     });

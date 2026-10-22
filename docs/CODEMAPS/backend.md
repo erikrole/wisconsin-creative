@@ -29,7 +29,7 @@
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
-| `src/lib/services/calendar-sync.ts` | 754 |
+| `src/lib/services/calendar-sync.ts` | 755 |
 | `src/lib/services/candidate-scoring.ts` | 509 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 618 |
@@ -145,7 +145,7 @@
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 158 |
 | `src/lib/bhphoto-image.ts` | 67 |
-| `src/lib/blob.ts` | 170 |
+| `src/lib/blob.ts` | 168 |
 | `src/lib/booking-action-policy.ts` | 216 |
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |

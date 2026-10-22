@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Safer calendar and image links",
+    "type": "improvement",
+    "summary": "Links that staff paste for calendar feeds and item photos are now checked more carefully.",
+    "details": [
+      "Feed and photo links that redirect somewhere unexpected are now followed one step at a time and checked at each step.",
+      "Nothing changes for normal links."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 598
+  },
+  {
+    "date": "2026-10-22",
     "title": "Photo Frame, rebuilt",
     "type": "improvement",
     "summary": "Photo Frame is redesigned as a calm editor with the photo on the left and every setting on the right, and it now handles a whole set of photos at once.",
