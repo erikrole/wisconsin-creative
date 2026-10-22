@@ -55,6 +55,25 @@ describe("iOS Accountability browse", () => {
     expect(catalog).not.toContain('name: "users"');
   });
 
+  it("reads as a plain record, not a ranking", () => {
+    const screen = list();
+    const catalog = models();
+
+    expect(screen).toContain('Section("Your record")');
+    expect(screen).toContain('Section("Overdue now")');
+    expect(screen).toContain("NavigationLink(value: BookingRouteId(id: entry.incident.bookingId))");
+    expect(screen).toContain('"Repeat late returns"');
+    expect(screen).toContain(") late once");
+    expect(screen).toContain("Show only repeat late returns");
+    expect(screen).toContain("report.overdueNow()");
+    expect(screen).not.toMatch(/You are /);
+    expect(screen).not.toMatch(/rank|Rank|ordinal|Ordinal|"#\\\(/);
+    expect(catalog).not.toMatch(/accountabilityOrdinal|func rank\(/);
+    expect(catalog).toContain("limit: Int = 5");
+    expect(catalog).toContain("lateEventCount >= 2");
+    expect(catalog).toContain('case .events: "Times late"');
+  });
+
   it("opens a checkout from a person's late returns", () => {
     const screen = person();
 

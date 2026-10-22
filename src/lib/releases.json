@@ -331,6 +331,22 @@
     "pr": 605
   },
   {
+    "date": "2026-10-22",
+    "title": "Simpler Accountability on iOS",
+    "type": "improvement",
+    "summary": "The iOS Accountability screen now matches the web page: gear still out, your own record, and people who are repeatedly late.",
+    "details": [
+      "Overdue now sits at the top; tap a row to open the checkout.",
+      "A Your record row shows your late returns and on-time rate.",
+      "The list shows people late 2 or more times, with a button to include everyone else.",
+      "Rank numbers are gone."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 610
+  },
+  {
     "date": "2026-10-21",
     "title": "My kit for UA gear",
     "type": "feature",
