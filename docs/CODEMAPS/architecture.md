@@ -27,7 +27,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/notifications.ts` | 2047 |
 | `src/app/(app)/schedule/_components/ListView.tsx` | 1989 |
 | `src/lib/services/reports.ts` | 1943 |
-| `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
 | `src/app/(app)/staff/[id]/UserInfoTab.tsx` | 1581 |
 | `src/app/(app)/resources/page.tsx` | 1578 |

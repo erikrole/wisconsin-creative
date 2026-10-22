@@ -1,12 +1,7 @@
 import { Prisma, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 
-/**
- * Audit log retention policy. Single source of truth — referenced by the
- * weekly retention cron and by the audit report page banner so they can
- * never drift.
- */
-export const AUDIT_RETENTION_DAYS = 90;
+export { AUDIT_RETENTION_DAYS } from "@/lib/audit-retention";
 
 type AuditEntry = {
   actorId: string;

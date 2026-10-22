@@ -156,7 +156,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1057 |

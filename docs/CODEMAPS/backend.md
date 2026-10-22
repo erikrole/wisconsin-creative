@@ -138,7 +138,8 @@
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/assignment-workload.ts` | 83 |
-| `src/lib/audit.ts` | 168 |
+| `src/lib/audit-retention.ts` | 8 |
+| `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 454 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |

@@ -1015,6 +1015,21 @@
   },
   {
     "date": "2026-10-19",
+    "title": "Faster audit and resources pages",
+    "type": "improvement",
+    "summary": "The audit report and Resources pages now load noticeably faster, especially on a slow connection.",
+    "details": [
+      "The audit report no longer downloads code it never uses, about a third less than before.",
+      "Resources only loads the file uploader when you start an upload.",
+      "Brand fonts are now kept on your device for a month instead of being rechecked each visit."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 522
+  },
+  {
+    "date": "2026-10-19",
     "title": "Announcements on iPhone",
     "type": "feature",
     "summary": "Announcements posted from Settings now also appear in the iPhone app as a sheet the first time you open it.",
