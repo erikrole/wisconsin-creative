@@ -201,7 +201,7 @@
     .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); cursor: pointer; font-size: 13px; color: var(--ink-2); transition: background-color 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease); }
     .chip:hover { border-color: var(--line-2); color: var(--ink); }
     .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent-ink); font-weight: 700; }
-    .chip-n { font-size: 11.5px; font-variant-numeric: tabular-nums; opacity: 0.8; }
+    .chip-n { font-size: 11.5px; font-variant-numeric: tabular-nums; }
     .draft-tag { background: var(--hot-soft); color: var(--ink); cursor: help; }
     .pager { display: inline-flex; gap: 4px; }
     .pager-btn { width: 38px; justify-content: center; padding: 0; }
@@ -293,7 +293,9 @@
     .overview-head small { font-size: 12px; color: var(--ink-3); }
     .overview-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; }
     .ov-item { display: grid; grid-template-rows: var(--tile-h, 40px) auto; gap: 7px; align-content: start; padding: 9px 8px 10px; border: 0; border-radius: 10px; background: none; cursor: pointer; color: inherit; font: inherit; text-align: left; }
-    .ov-item:hover, .ov-item:focus-visible { background: var(--hover); outline: none; }
+    .ov-item:hover, .ov-item:focus-visible { background: var(--hover); }
+    .ov-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent); }
+    #title:focus { outline: none; }
     .ov-item > .ov-tile { align-self: end; }
     .ov-tile { display: block; border-radius: 1.5px; background: var(--zone-soft); box-shadow: inset 0 0 0 1px var(--zone); transition: background-color 140ms var(--ease), box-shadow 140ms var(--ease); }
     .ov-tile.has-issue { background: var(--warn-soft); box-shadow: inset 0 0 0 1px var(--warn); }
@@ -525,6 +527,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="data.js?v=13aaf0ce7b9d"></script>
-  <script src="app.js?v=9f31a1e99ca6"></script>
+  <script src="app.js?v=821e51fe828c"></script>
 </body>
 </html>

@@ -27,17 +27,21 @@
   function safeDecode(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
 
   var VENUES = DATA.venues;
-  var venueById = {};
+  // Lookups keyed by URL and search text have no prototype, so ?d=constructor
+  // and friends miss instead of throwing.
+  function dict() { return Object.create(null); }
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  var venueById = dict();
   VENUES.forEach(function (v) { venueById[v.id] = v; });
   // Stable ids → where they live, and the production canvas keys built from them.
-  var BY_ID = {};
+  var BY_ID = dict();
   VENUES.forEach(function (v) {
     v.displays.forEach(function (d) {
       BY_ID[d.id] = { v: v, d: d };
       d.zones.forEach(function (z) { BY_ID[z.id] = { v: v, d: d, z: z }; });
     });
   });
-  var KEYS = {};
+  var KEYS = dict();
   DATA.canvases.forEach(function (c) {
     var v = venueById[c.venue];
     var d = v && v.displays.filter(function (x) { return x.name === c.display; })[0];
@@ -46,7 +50,7 @@
     var id = z ? z.id : d.id;
     (KEYS[id] = KEYS[id] || []).push(c.key);
   });
-  var KEY_ID = {};
+  var KEY_ID = dict();
   Object.keys(KEYS).forEach(function (id) { KEYS[id].forEach(function (k) { KEY_ID[k] = id; }); });
   var ISSUE_LABEL = { conflict: 'Sources disagree', tbd: 'Not final', unconfirmed: 'Unconfirmed', naming: 'Names may change' };
   var OPEN_ISSUES = [];
@@ -69,7 +73,7 @@
     ['IPTV / StadiumVision', 'iptv', 'The concourse and suite TVs at Camp Randall, not the LED boards.'],
     ['Id and canvas key', 'ids', 'Stable names for scripts and production tools like the After Effects Board Builder. Turn on Technical details to see them.']
   ];
-  var TERM = {};
+  var TERM = dict();
   TERMS.forEach(function (t) { TERM[t[1]] = t[2]; });
   // Hover hint for a zone or display name, from the first term it uses.
   function termFor(name) {
@@ -92,7 +96,7 @@
   var TECH_KEY = 'boards.tech.v1';
   var showTech = storageGet(TECH_KEY) === '1';
 
-  var CONTENT = {};
+  var CONTENT = dict();
   DATA.content.broad.forEach(function (c) { c.kind = 'broad'; CONTENT[c.id] = c; });
   DATA.content.gameDay.forEach(function (g) { g.items.forEach(function (c) { c.kind = 'gameDay'; c.group = g.name; CONTENT[c.id] = c; }); });
 
@@ -106,7 +110,7 @@
     state.filter = 'all';
     state.venue = d ? BY_ID[d].v.id : venueById[params.get('v')] ? params.get('v') : (venueById[storageGet(VENUE_KEY)] ? storageGet(VENUE_KEY) : VENUES[0].id);
     state.content = CONTENT[params.get('c')] ? params.get('c') : null;
-    state.page = PAGES[params.get('p')] ? params.get('p') : null;
+    state.page = own(PAGES, params.get('p')) ? params.get('p') : null;
     state.query = params.get('q') || '';
     state.narrow = params.get('n') || '';
     state.venueFilter = params.get('f') === 'issues' ? 'issues' : 'all';
@@ -405,7 +409,7 @@
     function has(hay) {
       hay = hay.toLowerCase();
       return words.every(function (w) {
-        return hay.indexOf(w) !== -1 || (SYNONYMS[w] || []).some(function (alt) { return hay.indexOf(alt) !== -1; });
+        return hay.indexOf(w) !== -1 || (own(SYNONYMS, w) ? SYNONYMS[w] : []).some(function (alt) { return hay.indexOf(alt) !== -1; });
       });
     }
     return {
@@ -453,6 +457,9 @@
     if (state.display) state.venue = BY_ID[state.display].v.id;
     storageSet(VENUE_KEY, state.venue);
     render(true, true);
+    // Move focus to the new view's heading so keyboard and screen reader users land on it.
+    el.title.setAttribute('tabindex', '-1');
+    el.title.focus({ preventScroll: true });
   }
   function openContent(id) { go({ content: id }); }
   function openPage(id) { go({ page: id }); }
@@ -777,6 +784,7 @@
     if (fig.ribbon) {
       drawing.classList.add('is-scroll');
       drawing.tabIndex = 0;
+      drawing.setAttribute('role', 'region');
       drawing.setAttribute('aria-label', d.name + ', scroll sideways for the full width');
     }
     // Pin the drawing while the list scrolls, but only when it shows zones.
@@ -878,7 +886,7 @@
 
   function specTags(z) {
     var tags = node('span', 'tags');
-    if (z.stillOnly) { var so = node('span', 'tag', 'Stills only'); so.title = TERM.stills; tags.appendChild(so); }
+    if (z.stillOnly) { var so = node('span', 'tag', 'Stills only'); tags.appendChild(so); }
     if (z.duration) tags.appendChild(node('span', 'tag', z.duration));
     if (z.pad) { var t = node('span', 'tag warn', z.pad + ' px pad'); t.title = 'Keep content ' + z.pad + ' px inside every edge.'; tags.appendChild(t); }
     (z.issues || []).forEach(function (i) { var it = node('span', 'tag warn', ISSUE_LABEL[i.kind] || i.kind); it.title = i.text; tags.appendChild(it); });
@@ -1053,10 +1061,14 @@
     var specs = rows.map(function (r) {
       return [r.v.code + ' | ' + r.label.replace(' › ', ' – ') + (r.count > 1 ? ' (×' + r.count + ')' : '') + ' | ' + size(r.w, r.h), r.w, r.h, fpsFor(r.d), dur];
     });
-    return [
+    var unsure = [];
+    rows.forEach(function (r) { if (fpsConflict(r.d) && unsure.indexOf(r.d) === -1) unsure.push(r.d); });
+    // The BOM makes After Effects read the file as UTF-8, so ·, – and × survive in names.
+    return '\uFEFF' + [
       '// Board Sizes · ' + c.name,
       '// ' + specs.length + ' comps, ' + (c.board ? 'one for the whole board and one per distinct zone size' : 'one per distinct canvas this content needs (×N = placed N times on that board)') + ', in a new project folder.',
-      '// Frame rates follow the venue guide where it states one; otherwise 59.94.',
+      '// Frame rates follow the venue guide where it states one; otherwise 59.94.'
+    ].concat(unsure.map(function (d) { return '// Check the frame rate for ' + d.name + ': sources disagree, so this uses ' + fpsFor(d) + '.'; }), [
       '// Duration ' + dur + ' s' + (c.duration ? ' (from Colosseum’s deliverables sheet)' : ' (placeholder)') + '. Run from File › Scripts › Run Script File.',
       '(function () {',
       '  if (!app.project) app.newProject();',
@@ -1072,7 +1084,7 @@
       '  alert(specs.length + " comps created in " + folder.name + ".");',
       '})();',
       ''
-    ].join('\n');
+    ]).join('\n');
   }
 
   function renderContent(c) {
@@ -1168,7 +1180,7 @@
   function goTo(id, smooth, push) {
     var hit = BY_ID[id];
     if (!hit) return false;
-    if (!(hit.z && state.display === hit.d.id && !state.query)) {
+    if (!(state.display === hit.d.id && !state.query && el.view.childNodes.length)) {
       state.venue = hit.v.id; state.content = null; state.page = null; state.display = null; clearSearch();
       storageSet(VENUE_KEY, hit.v.id);
       render(false, push !== false);
@@ -1579,9 +1591,19 @@
   // scale, else scaled to fit and flagged.
   function artPlacement(d) {
     var whole = [{ x: 0, y: 0, w: d.w, h: d.h }];
-    var rows = groupZones(d.zones).filter(function (r) { return r.first.at && r.first.at.length && !(r.w === d.w && r.h === d.h); });
-    function at(row) { return row.first.at.map(function (p) { return { x: p.x, y: p.y, w: row.w, h: row.h }; }); }
-    function where(row) { var n = row.first.at.length; return row.base + (n > 1 ? ' (' + n + ' placements)' : ''); }
+    var rows = groupZones(d.zones).filter(function (r) { return !(r.w === d.w && r.h === d.h); });
+    function placed(row) { return !!(row.first.at && row.first.at.length); }
+    function fit() {
+      var sc = Math.min(d.w / art.w, d.h / art.h), w = Math.round(art.w * sc), h = Math.round(art.h * sc);
+      return [{ x: Math.round((d.w - w) / 2), y: Math.round((d.h - h) / 2), w: w, h: h }];
+    }
+    // Zones with no position on file (most indoor boards) still match by size;
+    // the art is drawn fit to the board and the note says why.
+    function at(row) { return placed(row) ? row.first.at.map(function (p) { return { x: p.x, y: p.y, w: row.w, h: row.h }; }) : fit(); }
+    function where(row) {
+      if (!placed(row)) return row.base + ' (no position on file, shown fit to the board)';
+      var n = row.first.at.length; return row.base + (n > 1 ? ' (' + n + ' placements)' : '');
+    }
     var built = 'Build at ' + pretty(d.w, d.h) + '.';
     if (art.w === d.w && art.h === d.h) return { places: whole, note: 'Exact size for this board.', ok: true };
     var exact = rows.filter(function (r) { return r.w === art.w && r.h === art.h; })[0];
@@ -1589,8 +1611,7 @@
     if (sameShape(art.w, art.h, d.w, d.h)) return { places: whole, note: 'Same shape as the board at ' + Math.round(art.w / d.w * 100) + '% size. ' + built, ok: false };
     var shape = rows.filter(function (r) { return sameShape(art.w, art.h, r.w, r.h); })[0];
     if (shape) return { places: at(shape), note: 'Same shape as ' + where(shape) + ' at ' + Math.round(art.w / shape.w * 100) + '% size. Build at ' + pretty(shape.w, shape.h) + '.', ok: false, row: shape };
-    var sc = Math.min(d.w / art.w, d.h / art.h), w = Math.round(art.w * sc), h = Math.round(art.h * sc);
-    return { places: [{ x: Math.round((d.w - w) / 2), y: Math.round((d.h - h) / 2), w: w, h: h }], note: 'Not a size on this board, so it’s scaled to fit. ' + built, ok: false };
+    return { places: fit(), note: 'Not a size on this board, so it’s scaled to fit. ' + built, ok: false };
   }
   function artBar(d, placed) {
     var box = node('div', 'art-bar' + (placed.ok ? '' : ' is-off'));
@@ -1881,6 +1902,10 @@
     el['menu-toggle'].setAttribute('aria-expanded', String(open));
     if (open) { var first = el['top-links'].querySelector('button, a'); if (first) first.focus(); }
   });
+  // Tabbing out of the phone menu closes it, like a click outside does.
+  el['top-links'].addEventListener('focusout', function (e) {
+    if (e.relatedTarget && !el['top-links'].contains(e.relatedTarget) && e.relatedTarget !== el['menu-toggle']) closeTopMenu();
+  });
   document.addEventListener('click', function (e) {
     if (!e.target.closest || !e.target.closest('details.menu')) closeMenus();
     if (!e.target.closest || !e.target.closest('#top-links')) closeTopMenu();
@@ -1923,7 +1948,9 @@
   });
 
   var initialHash = safeDecode(window.location.hash.slice(1));
-  if (!(initialHash && !state.query && !state.content && !state.page && goTo(initialHash, false, false))) render(false);
+  // Draw the requested view first, so a #zone on the open board only scrolls to it.
+  render(false);
+  if (initialHash && !state.query && !state.content && !state.page) goTo(initialHash, false, false);
   window.addEventListener('popstate', function () {
     readParams();
     el.search.value = state.query;

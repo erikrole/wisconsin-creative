@@ -118,6 +118,34 @@ describe("Board Sizes art preview and board comps", () => {
   });
 });
 
+describe("Board Sizes review fixes", () => {
+  it("keeps URL and search lookups off Object.prototype", () => {
+    expect(app).toContain("function dict() { return Object.create(null); }");
+    for (const name of ["venueById", "BY_ID", "KEYS", "KEY_ID", "CONTENT", "TERM"]) expect(app).toContain(`var ${name} = dict();`);
+    expect(app).toContain("state.page = own(PAGES, params.get('p'))");
+    expect(app).toContain("(own(SYNONYMS, w) ? SYNONYMS[w] : [])");
+  });
+
+  it("draws the requested view before following a #zone, so ?d=board#zone is never blank", () => {
+    expect(app).toMatch(/render\(false\);\n  if \(initialHash && !state\.query && !state\.content && !state\.page\) goTo\(initialHash, false, false\);/);
+  });
+
+  it("matches art to zones with no recorded position", () => {
+    expect(app).toContain("(no position on file, shown fit to the board)");
+  });
+
+  it("writes the AE script with a BOM and flags disputed frame rates", () => {
+    expect(app).toContain("return '\\uFEFF' + [");
+    expect(app).toContain("sources disagree, so this uses");
+  });
+
+  it("moves focus to the new view and closes the phone menu on focus out", () => {
+    expect(app).toContain("el.title.focus({ preventScroll: true });");
+    expect(app).toContain("el['top-links'].addEventListener('focusout'");
+    expect(app).not.toContain("TERM.stills");
+  });
+});
+
 describe("Board Sizes shared tool header", () => {
   it("uses the shared tool header: name top left, Apps top right", () => {
     expect(html).toMatch(/<header class="topbar">\s*<div class="topbar-in">\s*<span class="brand">[\s\S]*?<span class="brand-name">Board Sizes<\/span>\s*<\/span>[\s\S]*?<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/div>\s*<nav class="venue-tabs"/);
