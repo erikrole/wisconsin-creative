@@ -230,6 +230,9 @@ struct ReturnTimeCalendar: View {
                 DatePicker("Return day", selection: dayBinding, in: dayRange, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .labelsHidden()
+                    // Set on the picker itself; the inherited tint drew the
+                    // picked day black in Extend.
+                    .tint(tint)
                 Divider()
             }
             HStack {
