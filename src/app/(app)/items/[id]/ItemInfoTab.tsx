@@ -130,7 +130,7 @@ function TextInputField({
           placeholder={placeholder}
           disabled={!canEdit || readOnly || saveField.isSaving}
           aria-busy={saveField.isSaving}
-          className={cn("h-8 text-sm", mono && "font-mono")}
+          className={cn("h-8 border-transparent bg-transparent text-sm shadow-none hover:border-input focus-visible:border-input disabled:opacity-100", mono && "font-mono")}
         />
         {dupWarning && (
           <p className="text-xs text-[var(--orange-text)] mt-0.5 px-1">{dupWarning}</p>

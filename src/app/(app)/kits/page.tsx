@@ -119,6 +119,14 @@ function getKitStatus(kit: KitRow) {
 
 function KitStatusBadge({ kit }: { kit: KitRow }) {
   const status = getKitStatus(kit);
+  if (status.label === "Ready") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
+        <span className="size-2 rounded-full bg-[var(--green)]" aria-hidden="true" />
+        Ready
+      </span>
+    );
+  }
   return (
     <Badge
       variant={status.variant}
