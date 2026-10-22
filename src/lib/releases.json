@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "A calmer, shareable Timelapse planner",
+    "type": "improvement",
+    "summary": "The Timelapse planner is redesigned and now lets you share an exact plan with a link.",
+    "details": [
+      "A cleaner layout with light and dark mode, Badger red accents, and the viewfinder readout kept front and center.",
+      "Copy link shares the exact camera, method and settings, and Copy plan includes that link. Reset goes back to the defaults.",
+      "On iPhone, fields no longer zoom in when tapped, and a slim bar keeps the answer in view as you scroll.",
+      "Greyed-out cadences now say why, like 4K Time-lapse needing an HD format past 5 seconds.",
+      "Clearer messages when a clip needs a faster S&Q rate than the camera offers."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 593
+  },
+  {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",
@@ -17,7 +34,7 @@
     ],
     "pr": 586
   },
- {
+  {
     "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",
