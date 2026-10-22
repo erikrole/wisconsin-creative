@@ -66,12 +66,8 @@ describe("static tools: routing, headers, and page contracts", () => {
     }
   });
 
-  it("ships the Wisconsin Creative badge as a single-colour Motion W", () => {
-    const svg = readFileSync("public/brand/wc-badge.svg", "utf8");
-    expect(svg).toContain('fill="currentColor"');
-    expect(svg).not.toMatch(/#[0-9a-f]{3,6}|<script|href=/i);
-    // Top right: Apps then the W, the last thing in the page's top bar.
-    expect(readFileSync("public/golden-hour/index.html", "utf8")).toMatch(/<div class="wc-brand">\s*<a class="wc-apps" href="\/apps">[\s\S]*?<span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"><\/span><\/span>\s*<\/div>\s*<\/header>/);
+  it("uses the shared tool header: name top left, Apps top right", () => {
+    expect(readFileSync("public/golden-hour/index.html", "utf8")).toMatch(/<header class="topbar">\s*<span class="brand">[\s\S]*?<\/span>\s*<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/header>/);
   });
 
   it("sends the old /tools URL to the apps page", () => {
