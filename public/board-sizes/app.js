@@ -16,12 +16,15 @@
   var DATA = window.BOARD_DATA;
   var VENUE_KEY = 'boards.venue.v1';
   var el = {};
-  ['search', 'nav-venues', 'nav-ref', 'tools-link', 'side-foot',
+  ['search', 'nav-venues', 'nav-ref', 'tools-link', 'side-foot', 'menu-toggle', 'top-links',
    'crumbs', 'title', 'actions', 'subtitle', 'props', 'summary', 'view', 'empty', 'footnote', 'toast'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   function storageGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
   function storageSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+  // A hand-typed or truncated link can carry a bad escape like %E0; read it
+  // as typed instead of throwing and leaving the page blank.
+  function safeDecode(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
 
   var VENUES = DATA.venues;
   var venueById = {};
@@ -116,7 +119,11 @@
     image: '<rect x="2.5" y="3.5" width="11" height="9" rx="1"/><path d="m4.5 10.5 2.5-2.5 2 2 1.5-1.5 1.5 1.5"/>',
     arrow: '<path d="M6 3.5 10.5 8 6 12.5"/>',
     json: '<path d="M5.5 2.5c-1.5 0-2 .7-2 2v1.6c0 .9-.5 1.4-1.3 1.9.8.5 1.3 1 1.3 1.9v1.6c0 1.3.5 2 2 2M10.5 2.5c1.5 0 2 .7 2 2v1.6c0 .9.5 1.4 1.3 1.9-.8.5-1.3 1-1.3 1.9v1.6c0 1.3-.5 2-2 2"/>',
-    warn: '<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3.2M8 11.4v.1"/>'
+    warn: '<path d="M8 2.2 14.3 13H1.7z"/><path d="M8 6.5v3.2M8 11.4v.1"/>',
+    more: '<circle cx="3.5" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="8" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="12.5" cy="8" r=".9" fill="currentColor" stroke="none"/>',
+    prev: '<path d="M10 3.5 5.5 8l4.5 4.5"/>',
+    next: '<path d="M6 3.5 10.5 8 6 12.5"/>',
+    share: '<path d="M8 10V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-4"/>'
   };
   function slug(s) { return s.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
@@ -132,8 +139,25 @@
       toast(done);
       if (button) { button.classList.add('is-copied'); setTimeout(function () { button.classList.remove('is-copied'); }, 1200); }
     }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, function () { toast('This browser blocked copying.'); });
-    else toast('Copying needs a secure (https) page.');
+    function fallback() { if (legacyCopy(text)) ok(); else toast('This browser blocked copying.'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback);
+    else fallback();
+  }
+  // For browsers without the async clipboard (plain http, older Safari, some
+  // embedded views): select a hidden textarea and use the old copy command.
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+    var active = document.activeElement;
+    document.body.appendChild(ta);
+    ta.select();
+    var done = false;
+    try { done = document.execCommand('copy'); } catch (e) { done = false; }
+    ta.remove();
+    if (active && active.focus) active.focus({ preventScroll: true });
+    return done;
   }
   function download(filename, text, type) {
     var url = URL.createObjectURL(new Blob([text], { type: type }));
@@ -233,23 +257,54 @@
   function closeMenus(except) {
     Array.prototype.forEach.call(document.querySelectorAll('details.menu[open]'), function (d) { if (d !== except) d.removeAttribute('open'); });
   }
-  function moreMenu(items, name) {
+  // A small menu on <details>. compact draws it as a ⋯ icon (zone rows).
+  // Opening from the keyboard focuses the first item; arrows move, Escape
+  // closes and returns focus to the button.
+  function moreMenu(items, name, compact) {
     var det = node('details', 'menu');
-    var sum = node('summary', 'btn');
+    var sum = node('summary', 'btn' + (compact ? ' dots' : ''));
     sum.setAttribute('aria-label', 'More actions' + (name ? ' for ' + name : ''));
-    sum.appendChild(document.createTextNode('More'));
+    sum.setAttribute('aria-haspopup', 'menu');
+    if (compact) { sum.appendChild(icon(ICONS.more)); sum.title = 'More'; }
+    else sum.appendChild(document.createTextNode('More'));
     det.appendChild(sum);
     var pop = node('div', 'menu-pop');
+    pop.setAttribute('role', 'menu');
     items.forEach(function (item) {
-      var b = node('button', 'menu-item', item.label);
+      var b = node('button', 'menu-item');
       b.type = 'button';
-      b.addEventListener('click', function () { det.removeAttribute('open'); item.onClick(); });
+      b.setAttribute('role', 'menuitem');
+      if (item.icon && ICONS[item.icon]) b.appendChild(icon(ICONS[item.icon]));
+      b.appendChild(document.createTextNode(item.label));
+      b.addEventListener('click', function () { det.removeAttribute('open'); sum.focus({ preventScroll: true }); item.onClick(); });
       pop.appendChild(b);
     });
     det.appendChild(pop);
+    var byKey = false;
+    sum.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') byKey = true;
+      else if (e.key === 'ArrowDown' && !det.open) { e.preventDefault(); byKey = true; det.open = true; }
+    });
     det.addEventListener('click', function (e) { e.stopPropagation(); });
+    pop.addEventListener('keydown', function (e) {
+      var list = Array.prototype.slice.call(pop.querySelectorAll('.menu-item'));
+      var i = list.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length].focus();
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        list[e.key === 'Home' ? 0 : list.length - 1].focus();
+      } else if (e.key === 'Escape') {
+        e.preventDefault(); e.stopPropagation();
+        det.removeAttribute('open'); sum.focus();
+      } else if (e.key === 'Tab') {
+        det.removeAttribute('open');
+      }
+    });
     det.addEventListener('toggle', function () {
-      if (!det.open) return;
+      sum.setAttribute('aria-expanded', String(det.open));
+      if (!det.open) { byKey = false; return; }
       closeMenus(det);
       var r = sum.getBoundingClientRect();
       pop.style.position = 'fixed';
@@ -260,15 +315,17 @@
         var top = r.bottom + 4;
         if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - pop.offsetHeight - 4);
         pop.style.top = top + 'px';
+        if (byKey) { var first = pop.querySelector('.menu-item'); if (first) first.focus(); }
       });
     });
+    sum.setAttribute('aria-expanded', 'false');
     return det;
   }
   function shareItem() {
-    return { label: 'Share link', onClick: function () { copy(shareUrl(), 'Link copied'); } };
+    return { label: 'Copy share link', icon: 'link', onClick: function () { copy(shareUrl(), 'Link copied'); } };
   }
   function withShare(items) {
-    if (DATA.links && DATA.links.aeTemplate) items.push({ label: 'AE template', onClick: function () { window.open(DATA.links.aeTemplate, '_blank', 'noopener'); } });
+    if (DATA.links && DATA.links.aeTemplate) items.push({ label: 'AE template', icon: 'ae', onClick: function () { window.open(DATA.links.aeTemplate, '_blank', 'noopener'); } });
     items.push(shareItem());
     return items;
   }
@@ -317,14 +374,13 @@
 
   /* ---------------- sidebar ---------------- */
 
-  function navButton(label, count, current, onClick) {
+  function navButton(label, count, current, onClick, warn) {
     var li = node('li');
     var b = node('button');
     b.type = 'button';
     b.setAttribute('aria-current', String(!!current));
-    b.appendChild(node('i', 'dot'));
     b.appendChild(node('span', '', label));
-    if (count != null) b.appendChild(node('span', 'count', String(count)));
+    if (count != null) b.appendChild(node('span', 'count' + (warn ? ' is-warn' : ''), String(count)));
     b.addEventListener('click', onClick);
     li.appendChild(b);
     return li;
@@ -340,7 +396,7 @@
     });
     el['nav-ref'].textContent = '';
     [['agents', 'For agents & tools', null], ['issues', 'Open issues', OPEN_ISSUES.length]].forEach(function (pg) {
-      el['nav-ref'].appendChild(navButton(pg[1], pg[2], !searching && state.page === pg[0], function () { openPage(pg[0]); }));
+      el['nav-ref'].appendChild(navButton(pg[1], pg[2], !searching && state.page === pg[0], function () { closeTopMenu(); openPage(pg[0]); }, pg[0] === 'issues' && pg[2] > 0));
     });
   }
 
@@ -647,11 +703,11 @@
     h2.appendChild(boardLink(d.id, d.name, 'board-link'));
     title.appendChild(h2);
     if (showVenue) title.appendChild(node('span', 'venue-of', v.name));
+    title.appendChild(node('span', 'card-meta', ratio(d.w, d.h) + (d.zones.length ? ' · ' + d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's') : '')));
     if (d.processor) title.appendChild(node('span', 'processor', d.processor));
     head.appendChild(title);
     var dims = node('div', 'dims');
     dims.appendChild(sizeButton(d.w, d.h, d.name, specText(v, d, null)));
-    dims.appendChild(node('small', '', ratio(d.w, d.h) + (d.zones.length ? ' · ' + d.zones.length + ' zone' + (d.zones.length === 1 ? '' : 's') : '')));
     head.appendChild(dims);
     if (!opts.board) card.appendChild(head);
 
@@ -710,9 +766,9 @@
       var acts = node('div', 'foot-actions');
       foot.appendChild(acts);
       acts.appendChild(moreMenu([
-        { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
-        { label: 'Guide PNG', onClick: function () { downloadGuide(guideOpts(v, d, null)); } }
-      ], d.name));
+        { label: 'Guide SVG', icon: 'image', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
+        { label: 'Guide PNG', icon: 'image', onClick: function () { downloadGuide(guideOpts(v, d, null)); } }
+      ], d.name, true));
     }
     if (foot.childNodes.length) card.appendChild(foot);
     return { el: card, zones: zones.length };
@@ -838,10 +894,10 @@
     var pngOpts = guideOpts(v, d, row);
     pngOpts.filename = guideName(v, d, row, 'png');
     r.appendChild(moreMenu([
-      { label: 'Copy JSON', onClick: function () { copy(zoneJson(v, d, z, row), 'Copied JSON for ' + z.id); } },
-      { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, pngOpts, { filename: guideName(v, d, row, 'svg') })); } },
-      { label: 'Guide PNG', onClick: function () { downloadGuide(pngOpts); } }
-    ], row.base));
+      { label: 'Copy JSON', icon: 'json', onClick: function () { copy(zoneJson(v, d, z, row), 'Copied JSON for ' + z.id); } },
+      { label: 'Guide SVG', icon: 'image', onClick: function () { downloadSvg(Object.assign({}, pngOpts, { filename: guideName(v, d, row, 'svg') })); } },
+      { label: 'Guide PNG', icon: 'image', onClick: function () { downloadGuide(pngOpts); } }
+    ], row.base, true));
     return r;
   }
 
@@ -983,12 +1039,12 @@
         }).join('\n\n'), 'Copied ' + rows.length + ' specs');
       }, 'primary'),
       moreMenu(withShare([
-        { label: 'AE comps', onClick: function () {
+        { label: 'AE comps script', icon: 'ae', onClick: function () {
           var name = 'board-sizes_' + slug(c.name).toLowerCase() + '.jsx';
           download(name, aeScript(c, rows), 'text/plain');
           toast('Downloaded ' + name + ' (' + rows.length + ' comps)');
         } },
-        { label: 'CSV', onClick: function () {
+        { label: 'Download CSV', icon: 'download', onClick: function () {
           var filename = 'board-sizes_' + slug(c.name).toLowerCase() + '.csv';
           var table = contentCsv(c, rows);
           download(filename, toCsv(table), 'text/csv');
@@ -1328,11 +1384,12 @@
     var prev = neighbor(d.id, -1), next = neighbor(d.id, 1);
     var acts = [];
     var pager = node('span', 'pager');
-    [[prev, '‹', 'Previous board'], [next, '›', 'Next board']].forEach(function (x) {
-      var b = node('button', 'btn pager-btn', x[1]);
+    [[prev, 'prev', 'Previous board', '←'], [next, 'next', 'Next board', '→']].forEach(function (x) {
+      var b = node('button', 'btn pager-btn');
       b.type = 'button';
+      b.appendChild(icon(ICONS[x[1]]));
       b.disabled = !x[0];
-      b.title = x[0] ? x[2] + ': ' + x[0].name + ' (' + (x[1] === '‹' ? '←' : '→') + ')' : x[2];
+      b.title = x[0] ? x[2] + ': ' + x[0].name + ' (' + x[3] + ')' : x[2];
       b.setAttribute('aria-label', b.title);
       if (x[0]) b.addEventListener('click', function () { openBoard(x[0].id); });
       pager.appendChild(b);
@@ -1340,15 +1397,15 @@
     acts.push(pager);
     acts.push(button('Copy spec', 'copy', function () { copy(specText(v, d, null), 'Copied ' + d.name); }, 'primary'));
     acts.push(moreMenu(withShare([
-      { label: 'Guide SVG', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
-      { label: 'Guide PNG', onClick: function () { downloadGuide(guideOpts(v, d, null)); } },
-      { label: 'CSV', onClick: function () {
+      { label: 'Guide SVG', icon: 'image', onClick: function () { downloadSvg(Object.assign({}, guideOpts(v, d, null), { filename: guideName(v, d, null, 'svg') })); } },
+      { label: 'Guide PNG', icon: 'image', onClick: function () { downloadGuide(guideOpts(v, d, null)); } },
+      { label: 'Download CSV', icon: 'download', onClick: function () {
         var filename = 'board-sizes_' + d.id.replace(/\//g, '_') + '.csv';
         var table = displaysCsv(null, d);
         download(filename, toCsv(table), 'text/csv');
         toast('Downloaded ' + filename + ' (' + (table.length - 1) + ' rows)');
       } },
-      { label: 'Copy id', onClick: function () { copy(d.id, 'Copied ' + d.id); } }
+      { label: 'Copy id', icon: 'copy', onClick: function () { copy(d.id, 'Copied ' + d.id); } }
     ]), d.name));
     setActions(acts);
 
@@ -1405,7 +1462,7 @@
     el.title.textContent = match ? '“' + state.query.trim() + '”' : v.name;
     el.subtitle.textContent = match ? 'Matches across every venue.' : v.displays.length + ' display' + (v.displays.length === 1 ? '' : 's') + ' · ' + zones + ' zone' + (zones === 1 ? '' : 's');
     setActions([moreMenu(withShare([
-      { label: 'CSV', onClick: function () {
+      { label: 'Download CSV', icon: 'download', onClick: function () {
         var filename = match ? 'board-sizes_search.csv' : 'board-sizes_' + v.id + '.csv';
         var table = displaysCsv(match);
         download(filename, toCsv(table), 'text/csv');
@@ -1502,12 +1559,6 @@
     document.title = el.title.textContent + ' · Board Sizes';
     syncUrl(push);
     if (scrollTop) window.scrollTo(0, 0);
-    requestAnimationFrame(function () {
-      var sideEl = document.getElementById('side');
-      if (!sideEl) return;
-      if (sideEl.scrollHeight > sideEl.clientHeight + 2) sideEl.tabIndex = 0;
-      else sideEl.removeAttribute('tabindex');
-    });
   }
 
   el.footnote.textContent = 'Manifest ' + DATA.version + ' (updated ' + DATA.updated + '). Copy spec includes the size, aspect ratio, and any safe area the manifest records. Red notes are open questions.';
@@ -1528,7 +1579,25 @@
     if (isDisplay(id)) openBoard(id);
     else { openBoard(BY_ID[id].d.id); goTo(id, true, false); }
   });
-  document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('details.menu')) closeMenus(); });
+  // Phones fold the reference links into a menu beside the brand.
+  function closeTopMenu(focusToggle) {
+    if (!el['top-links'].classList.contains('is-open')) return false;
+    el['top-links'].classList.remove('is-open');
+    el['menu-toggle'].setAttribute('aria-expanded', 'false');
+    if (focusToggle) el['menu-toggle'].focus();
+    return true;
+  }
+  el['menu-toggle'].addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = !el['top-links'].classList.contains('is-open');
+    el['top-links'].classList.toggle('is-open', open);
+    el['menu-toggle'].setAttribute('aria-expanded', String(open));
+    if (open) { var first = el['top-links'].querySelector('button, a'); if (first) first.focus(); }
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('details.menu')) closeMenus();
+    if (!e.target.closest || !e.target.closest('#top-links')) closeTopMenu();
+  });
   window.addEventListener('scroll', function () { closeMenus(); }, true);
   document.addEventListener('keydown', function (event) {
     var typing = /^(input|textarea|select)$/i.test((event.target.tagName || ''));
@@ -1538,19 +1607,20 @@
       if (nb) { event.preventDefault(); openBoard(nb.id); }
     }
     else if (event.key === 'Escape') {
+      if (closeTopMenu(true)) return;
       if (document.querySelector('details.menu[open]')) closeMenus();
       else if (document.querySelector('.is-picked') && document.activeElement !== el.search) clearPicks();
       else if (document.activeElement === el.search && el.search.value) { clearSearch(); render(false); }
     }
   });
 
-  var initialHash = decodeURIComponent(window.location.hash.slice(1));
+  var initialHash = safeDecode(window.location.hash.slice(1));
   if (!(initialHash && !state.query && !state.content && !state.page && goTo(initialHash, false, false))) render(false);
   window.addEventListener('popstate', function () {
     readParams();
     el.search.value = state.query;
-    var hash = decodeURIComponent(window.location.hash.slice(1));
+    var hash = safeDecode(window.location.hash.slice(1));
     if (!(hash && !state.query && !state.content && !state.page && goTo(hash, false, false))) render(true);
   });
-  window.addEventListener('hashchange', function () { goTo(decodeURIComponent(window.location.hash.slice(1)), true, false); });
+  window.addEventListener('hashchange', function () { goTo(safeDecode(window.location.hash.slice(1)), true, false); });
 })();

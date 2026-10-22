@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "A cleaner Board Sizes",
+    "type": "improvement",
+    "summary": "Board Sizes has a calmer new look in Lato with the Badger red kept, a tidier phone layout, and sturdier copy and menus.",
+    "details": [
+      "The venue tabs and dotted background stay. Cards are softer, the main button and selected filters use Badger red, and zones keep their blueprint blue.",
+      "On a phone, the reference links fold into a menu, At a glance scrolls sideways, and filter chips sit on one swipeable row, so the first board shows sooner.",
+      "Each zone row has a lighter size chip to copy and a ⋯ menu for JSON and guides.",
+      "Copying still works in browsers that block the clipboard, More menus work from the keyboard, and a broken link no longer leaves the page blank."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",

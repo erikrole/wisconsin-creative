@@ -64,6 +64,36 @@ describe("Board Sizes routing and page contract", () => {
   });
 });
 
+describe("Board Sizes wc-fresh shell and hardening", () => {
+  it("self-hosts Lato from the shared static-tool font files and keeps the Badger red accent", () => {
+    for (const weight of ["Regular", "Bold", "Black"]) {
+      expect(html).toContain(`url("/Lato-${weight}.woff2")`);
+      expect(readdirSync("public")).toContain(`Lato-${weight}.woff2`);
+    }
+    expect(html).not.toContain("Gotham");
+    expect(html).toContain("--accent: #c5050c");
+    expect(html).toMatch(/font-src 'self'/);
+  });
+
+  it("never lets a malformed #link throw", () => {
+    expect(app).toContain("function safeDecode(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }");
+    expect(app.replace(/function safeDecode[^\n]*/, "")).not.toContain("decodeURIComponent(");
+  });
+
+  it("falls back to a legacy copy when the async clipboard is missing or refused", () => {
+    expect(app).toContain("navigator.clipboard.writeText(text).then(ok, fallback)");
+    expect(app).toContain("document.execCommand('copy')");
+  });
+
+  it("makes the More menus keyboard operable", () => {
+    const menu = app.slice(app.indexOf("function moreMenu"), app.indexOf("function shareItem"));
+    expect(menu).toContain("role', 'menu'");
+    expect(menu).toContain("'ArrowDown'");
+    expect(menu).toMatch(/e\.key === 'Escape'[\s\S]*sum\.focus\(\)/);
+    expect(html).toContain('aria-controls="top-links"');
+  });
+});
+
 describe("Board manifest", () => {
   it("matches the schema and every generated file is fresh", () => {
     expect(validateSchema(manifest, schema)).toEqual([]);
