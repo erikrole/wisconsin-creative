@@ -378,6 +378,21 @@
   },
   {
     "date": "2026-10-20",
+    "title": "Schedule stays on the visible week",
+    "type": "fixes",
+    "summary": "The next iPhone update keeps Schedule on the visible day when only a few events are listed.",
+    "details": [
+      "Short schedules keep the first visible day selected, even when several weeks fit on screen.",
+      "Today returns the list and week selection together after scrolling.",
+      "Longer schedules still follow the last visible day when you reach the bottom."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 542
+  },
+  {
+    "date": "2026-10-20",
     "title": "Swap a Photo Mechanic code",
     "type": "feature",
     "summary": "If your Photo Mechanic code won't activate, you can now get a different one without asking staff.",
