@@ -8,7 +8,7 @@ Web (wc-fresh theme, Lato):
 - New finish screen `WelcomeDone.tsx`: "You're all set" with Schedule, Gear (/bookings), Guides (/resources), iPhone app. Collaborators see only the app row. Stopping early (Remind me tomorrow, or skipping the photo) shows "Setup paused".
 - Anticipated graduation is no longer required (completion math in src/lib/profile-completion.ts, PATCH /api/me/profile-completion accepts year alone). Label unchanged, not marked optional. Students now have 7 required details.
 - Home "Getting started" card for 14 days (`GettingStartedCard.tsx`, `accountCreatedAt` added to GET /api/me). Students: profile, can't work, schedule, guides, app. Staff/admin: profile, build a crew, see who's set up, guides, app. Progress is shared with iOS through `GET/PATCH /api/me/getting-started` (users.getting_started, PATCH only adds); the old per-browser copy is uploaded once.
-- Invite email lists what happens next; login invite notice reworded.
+- Invite email lists what happens next; login invite notice reworded. Adding one student or staff member in the invite dialog now emails the invite right away ("Email the invite now", on by default; bulk and collaborator adds never send). `POST /api/allowed-emails` `sendInvite: true`, audit `invite_sent`.
 - No welcome email after setup (Erik dropped it to avoid email fatigue). Students get one email: the invite. The finish screen and Home card cover next steps.
 - Optional "When can't you work?" page, `/welcome/availability` (Erik: not just classes; other jobs and time out of town too). Two sections: "Every week" (classes, a job, practice: name, day circles, from/to, repeats until, defaulting to an end-of-term guess) and "Days away" (what for, from/through dates, All day switch on by default, times when off). Weekly items save one weekly CANNOT_WORK block per day; days away save one AD_HOC CANNOT_WORK block with `dateEndsOn`, all through the existing `/api/users/[id]/availability`, so scheduling, conflicts and the staff Availability tab read them unchanged. Never required; "Skip for now" marks the Home row handled. Helpers in src/lib/unavailable-times.ts.
 - Getting started card has an "Add when you can't work" row, checked off once any CANNOT_WORK block exists (any device). The student finish screen lists it first.
@@ -36,6 +36,7 @@ iOS (SwiftUI):
 
 ## QA checklist
 - [ ] Invite email (Settings > Allowed Emails > resend): steps list, forgot-password line in the footer, button opens /login?email=... prefilled. Needs RESEND_API_KEY and EMAIL_REPLY_TO in Vercel (Erik has not confirmed).
+- [ ] Add one student with "Email the invite now" ticked: one email arrives, toast says emailed, audit log has invite_sent; unticked sends nothing; bulk add sends nothing.
 - [ ] Login with an invited email shows the invite notice, name + password + confirm, then /welcome.
 - [ ] Student steps: Phone, Wiscard, Student, Apparel, Photo (no email step). Student step continues with year alone; graduation can stay blank. Back and the step bar navigate; Apparel and Photo can be skipped.
 - [ ] Staff/admin also see the Email step. Collaborator: photo only.
