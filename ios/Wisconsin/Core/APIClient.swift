@@ -179,11 +179,26 @@ extension Notification.Name {
 final class APIClient {
     static let shared = APIClient()
 
-    private init() { BrandAssetDownload.removeTemporaryFiles() }
+    private init() {
+        session = Self.makeSession()
+        retryPolicy = .standard
+        BrandAssetDownload.removeTemporaryFiles()
+    }
+
+    /// Tests inject a session backed by a stub `URLProtocol` and a policy with
+    /// no real delays. Production code always uses `shared`.
+    init(session: URLSession, retryPolicy: RequestRetryPolicy = .none) {
+        self.session = session
+        self.retryPolicy = retryPolicy
+    }
 
     private var baseURL: URL { AppEnvironment.activeAPIBaseURL }
 
-    private let session: URLSession = {
+    private let retryPolicy: RequestRetryPolicy
+
+    private let session: URLSession
+
+    private static func makeSession() -> URLSession {
         let config = URLSessionConfiguration.default
         config.httpCookieStorage = HTTPCookieStorage.shared
         config.httpShouldSetCookies = true
@@ -201,7 +216,7 @@ final class APIClient {
         }
 #endif
         return URLSession(configuration: config)
-    }()
+    }
 
     /// Brand asset files can be a large PDF on venue wifi. The shared session
     /// cuts a transfer off at 30 seconds, which is too short for that download.
@@ -2983,11 +2998,40 @@ final class APIClient {
         for request: URLRequest
     ) async throws -> (data: Data, response: URLResponse, boundary: UUID) {
         let requestBoundary = authSessionBoundary.capture()
-        let (data, response) = try await session.data(for: request)
-        guard authSessionBoundary.owns(requestBoundary) else {
-            throw APIError.sessionChanged
+        var attempt = 1
+        while true {
+            let pause: TimeInterval
+            do {
+                let (data, response) = try await session.data(for: request)
+                guard authSessionBoundary.owns(requestBoundary) else {
+                    throw APIError.sessionChanged
+                }
+                guard retryPolicy.allowsRetry(method: request.httpMethod),
+                      let http = response as? HTTPURLResponse,
+                      retryPolicy.isRetryable(statusCode: http.statusCode),
+                      let wait = retryPolicy.delay(
+                        afterAttempt: attempt,
+                        retryAfter: RequestRetryPolicy.retryAfterInterval(
+                            from: http.value(forHTTPHeaderField: "Retry-After")
+                        )
+                      )
+                else {
+                    return (data, response, requestBoundary)
+                }
+                pause = wait
+            } catch let error as URLError {
+                guard retryPolicy.allowsRetry(method: request.httpMethod),
+                      retryPolicy.isRetryable(urlErrorCode: error.code),
+                      let wait = retryPolicy.delay(afterAttempt: attempt)
+                else { throw error }
+                pause = wait
+            }
+            try await Task.sleep(for: .seconds(pause))
+            guard authSessionBoundary.owns(requestBoundary) else {
+                throw APIError.sessionChanged
+            }
+            attempt += 1
         }
-        return (data, response, requestBoundary)
     }
 
     private func broadcastSessionExpiry(for requestBoundary: UUID) {
@@ -3045,6 +3089,11 @@ final class APIClient {
             throw APIError.serverError(message)
         case 404:
             throw APIError.notFound
+        case 429:
+            throw APIError.httpError(
+                statusCode: 429,
+                message: "Too many requests. Wait a moment and try again."
+            )
         case 403:
             if request.url?.path != "/api/me" {
                 NotificationCenter.default.post(name: .collaboratorPolicyMayHaveChanged, object: nil)
