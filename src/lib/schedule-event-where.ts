@@ -9,6 +9,8 @@ type ScheduleEventWhereInput = {
   includeArchived: boolean;
   unmappedOnly?: boolean;
   sportCode: string | null;
+  /** Free-text match on the title, opponent, or location name. */
+  search?: string | null;
   now?: Date;
 };
 
@@ -20,6 +22,7 @@ export function buildScheduleEventWhere({
   includeArchived,
   unmappedOnly = false,
   sportCode,
+  search = null,
   now = new Date(),
 }: ScheduleEventWhereInput): Prisma.CalendarEventWhereInput {
   const where: Prisma.CalendarEventWhereInput = {
@@ -29,6 +32,20 @@ export function buildScheduleEventWhere({
     ...(unmappedOnly ? { locationId: null } : {}),
     ...(sportCode ? { sportCode } : {}),
   };
+
+  // Under AND so it composes with the `OR` the by-id read adds in the route.
+  const term = search?.trim();
+  if (term) {
+    where.AND = [
+      {
+        OR: [
+          { summary: { contains: term, mode: "insensitive" } },
+          { opponent: { contains: term, mode: "insensitive" } },
+          { location: { name: { contains: term, mode: "insensitive" } } },
+        ],
+      },
+    ];
+  }
 
   if (parsedStartDate && parsedEndDate) {
     where.startsAt = { lte: parsedEndDate };

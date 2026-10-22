@@ -46,6 +46,7 @@ const patchAssetSchema = z
     availableForReservation: z.boolean().optional(),
     availableForCheckout: z.boolean().optional(),
     availableForCustody: z.boolean().optional(),
+    collaboratorVisible: z.boolean().optional(),
   })
   .strict();
 
@@ -110,6 +111,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
           id: params.id,
           parentAssetId: null,
           availableForReservation: true,
+          collaboratorVisible: true,
           status: { not: "RETIRED" },
         },
         select: {

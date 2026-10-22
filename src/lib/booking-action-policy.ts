@@ -82,6 +82,7 @@ function collaboratorActionCheck(
 ): ActionCheckResult | null {
   if (actor.role !== "COLLABORATOR") return null;
   if (!isOwner(actor, booking)) {
+    if (action === "view" && actor.capabilities?.includes("TEAM_GEAR_VIEW")) return { allowed: true };
     return { allowed: false, reason: "You do not have permission to access this booking" };
   }
   if (action === "view") return { allowed: true };

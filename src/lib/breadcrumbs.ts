@@ -30,7 +30,7 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string; parentHre
 };
 
 // First-segment labels that match the sidebar. SEGMENT_OVERRIDE is written for nested settings
-// pages (`/settings/bookings` is "Booking extensions"), so it must not rename a top-level section.
+// pages (`/settings/data-export` is "Data exports"), so it must not rename a top-level section.
 const TOP_LEVEL_LABEL: Record<string, string> = {
   bookings: "Bookings",
   checkouts: "Bookings",

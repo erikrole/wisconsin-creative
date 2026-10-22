@@ -1,10 +1,9 @@
 import { gearAttentionItems } from "@/lib/gear-picks/attention";
-import type { GearPicksAdminResponse } from "@/lib/gear-picks/types";
 
 const DOT = { red: "bg-[#C62A2F]", amber: "bg-[#F5B800]", blue: "bg-[#3E63DD]" } as const;
 
 /** A short, ordered list of what to look at next; collapses to a calm line when nothing is wrong. */
-export function NeedsAttention({ data }: { data: Pick<GearPicksAdminResponse, "cycle" | "summary" | "budget" | "students"> }) {
+export function NeedsAttention({ data }: { data: Parameters<typeof gearAttentionItems>[0] }) {
   const items = gearAttentionItems(data);
 
   return (

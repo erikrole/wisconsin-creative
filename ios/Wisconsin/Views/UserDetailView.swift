@@ -4,9 +4,11 @@ struct UserDetailView: View {
     let userId: String
 
     @Environment(SessionStore.self) private var session
+    @Environment(AppState.self) private var appState
 
     @State private var detail: AppUserDetail?
     @State private var badgeProfile: BadgeProfile?
+    @State private var rightNow: RightNowPayload?
     @State private var reservations: [Booking] = []
     @State private var checkouts: [Booking] = []
     @State private var shifts: [MyShift] = []
@@ -41,6 +43,12 @@ struct UserDetailView: View {
                     VStack(spacing: Brand.Space.sm) {
                         profileHeader(detail)
                         if !isCollaboratorDirectoryViewer {
+                            StaffRightNowSection(
+                                payload: rightNow,
+                                badgeProfile: badgeProfile,
+                                openSchedule: { openScheduleTab() },
+                                openBooking: { pushedBookingId = $0 }
+                            )
                             ProfileNextUpCard(
                                 checkouts: checkouts,
                                 reservations: reservations,
@@ -207,6 +215,11 @@ struct UserDetailView: View {
         return "Joined \(date.formatted(.dateTime.month(.abbreviated).year()))"
     }
 
+    /// Schedule is a root tab; the profile sits on the Staff stack, so jump there.
+    private func openScheduleTab() {
+        appState.selectTab(4)
+    }
+
     private var isViewingSelf: Bool {
         session.currentUser?.id == userId
     }
@@ -219,6 +232,7 @@ struct UserDetailView: View {
             if isCollaboratorDirectoryViewer {
                 detail = try await APIClient.shared.user(id: userId)
                 badgeProfile = nil
+                rightNow = nil
                 checkouts = []
                 reservations = []
                 shifts = []
@@ -226,6 +240,7 @@ struct UserDetailView: View {
             }
             async let detailTask = APIClient.shared.user(id: userId)
             async let badgeTask = loadBadgeProfileSafely()
+            async let rightNowTask = try? await APIClient.shared.userRightNow(userId: userId)
             // Active only. The card said "Active Checkouts" while the request
             // asked for every checkout this person had ever made, so a profile
             // routinely listed four rows stamped "Completed" under a heading
@@ -234,6 +249,7 @@ struct UserDetailView: View {
             async let reservationsTask = APIClient.shared.reservationsByUser(userId: userId, activeOnly: true, limit: 5)
             async let shiftsTask = try? await APIClient.shared.myShifts(userId: userId, limit: 5)
             let (d, b, c, r, s) = try await (detailTask, badgeTask, checkoutsTask, reservationsTask, shiftsTask)
+            rightNow = await rightNowTask
             detail = d
             badgeProfile = b
             checkouts = c.data

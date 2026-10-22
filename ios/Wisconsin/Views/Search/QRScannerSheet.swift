@@ -37,6 +37,15 @@ struct QRScannerSheet: View {
         let success: Bool
     }
 
+    /// One line in the session's scan history strip. Kept in memory only: it
+    /// answers "did that one go through?" during a run of scans, and has no
+    /// reason to outlive the sheet.
+    struct ScanHistoryEntry: Identifiable, Equatable {
+        let id = UUID()
+        let label: String
+        let success: Bool
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -48,6 +57,10 @@ struct QRScannerSheet: View {
     @State private var showManualEntry = false
     @State private var lastScanTime: Date = .distantPast
     @State private var torchOn = false
+    @State private var history: [ScanHistoryEntry] = []
+    @State private var showsNoCodeHint = false
+    /// Bumped on every scan attempt so the idle-hint timer restarts.
+    @State private var idleToken = 0
 
     var body: some View {
         ZStack {
@@ -119,11 +132,26 @@ struct QRScannerSheet: View {
                     if let banner {
                         bannerView(banner)
                             .padding(.horizontal, 24)
-                            .padding(.bottom, 108)
+                            .padding(.bottom, 168)
                             .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                    } else if showsNoCodeHint, !isLookingUp, !showManualEntry {
+                        noCodeHint
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 168)
+                            .transition(.opacity)
                     }
                 }
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: banner)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: showsNoCodeHint)
+                // Restarts on every attempt. Six quiet seconds with the camera
+                // open usually means a code that is too far, too close, or
+                // glare-struck, and the viewfinder gives no hint of that.
+                .task(id: idleToken) {
+                    showsNoCodeHint = false
+                    try? await Task.sleep(for: .seconds(6))
+                    guard !Task.isCancelled else { return }
+                    showsNoCodeHint = true
+                }
             } else {
                 unavailableView
                     .background(Color.black.ignoresSafeArea())
@@ -181,6 +209,9 @@ struct QRScannerSheet: View {
     private var bottomControls: some View {
         VStack {
             VStack(spacing: 16) {
+                if !history.isEmpty {
+                    historyStrip
+                }
                 if isLookingUp {
                     HStack(spacing: 8) {
                         ProgressView()
@@ -207,6 +238,48 @@ struct QRScannerSheet: View {
             }
             .padding(.bottom, 32)
         }
+    }
+
+    /// The last few scans of this session, newest first. A scan that did not
+    /// match is listed too, in red, so a skipped item is never silent.
+    private var historyStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(history) { entry in
+                    Label(entry.label, systemImage: entry.success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(
+                            entry.success ? Color.statusText(.green).opacity(0.7) : Color.statusText(.red).opacity(0.7),
+                            in: Capsule()
+                        )
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(entry.success ? "Scanned" : "No match"): \(entry.label)")
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .frame(height: 32)
+        .accessibilityLabel("Recent scans")
+    }
+
+    private var noCodeHint: some View {
+        Label("No code found yet. Hold it steady inside the frame, or type it.", systemImage: "viewfinder")
+            .font(.subheadline)
+            .foregroundStyle(.white)
+            .multilineTextAlignment(.leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .accessibilityElement(children: .combine)
+    }
+
+    private func record(_ label: String, success: Bool) {
+        history.insert(ScanHistoryEntry(label: label, success: success), at: 0)
+        if history.count > 5 { history.removeLast(history.count - 5) }
     }
 
     @ViewBuilder
@@ -339,27 +412,39 @@ struct QRScannerSheet: View {
         guard !rawScan.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         banner = nil
         isLookingUp = true
+        idleToken += 1
         defer { isLookingUp = false }
+        let shortCode = rawScan.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let response = try await APIClient.shared.scannedAssets(rawScan: rawScan)
             let match: QRScannerMatch?
-            if let assetId = response.data.first?.id {
-                match = .asset(assetId)
+            var label = shortCode
+            if let asset = response.data.first {
+                match = .asset(asset.id)
+                label = asset.assetTag.nonBlankText ?? asset.displayName
             } else if let family = response.bulkItems.first {
                 match = .itemFamily(family)
+                label = family.name
             } else {
                 match = nil
             }
             guard let match else {
                 Haptics.warning()
+                record(shortCode, success: false)
                 showBanner(ScanBanner(message: "No item matches this code.", success: false))
                 return
             }
             switch await resolve(match) {
             case .dismiss:
                 Haptics.success()
+                record(label, success: true)
+                // A beat of confirmation before the sheet closes, so the scan
+                // is seen to land rather than the screen simply vanishing.
+                showBanner(ScanBanner(message: label, success: true))
+                try? await Task.sleep(for: .milliseconds(reduceMotion ? 150 : 350))
                 dismiss()
             case .continueScanning(let message, let success):
+                record(label, success: success)
                 if success { Haptics.success() } else { Haptics.warning() }
                 if let message {
                     showBanner(ScanBanner(message: message, success: success))
@@ -367,6 +452,7 @@ struct QRScannerSheet: View {
             }
         } catch {
             Haptics.error()
+            record(shortCode, success: false)
             showBanner(ScanBanner(message: error.localizedDescription, success: false))
         }
     }

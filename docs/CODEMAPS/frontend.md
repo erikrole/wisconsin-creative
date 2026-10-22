@@ -101,7 +101,15 @@
 | `/about/tech-stack` | `src/app/(public)/about/tech-stack/page.tsx` |
 | `/releases` | `src/app/(public)/releases/page.tsx` |
 | `/change-password` | `src/app/change-password/page.tsx` |
+| `/dev-assign-grid` | `src/app/dev-assign-grid/page.tsx` |
+| `/dev-assign-picker` | `src/app/dev-assign-picker/page.tsx` |
+| `/dev-auto-assign` | `src/app/dev-auto-assign/page.tsx` |
+| `/dev-crew-size` | `src/app/dev-crew-size/page.tsx` |
+| `/dev-home` | `src/app/dev-home/page.tsx` |
+| `/dev-labels` | `src/app/dev-labels/page.tsx` |
+| `/dev-settings` | `src/app/dev-settings/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
+| `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
 | `/privacy` | `src/app/privacy/page.tsx` |
@@ -113,15 +121,31 @@
 
 | Route | File |
 |---|---|
+| `/accountability` | `src/app/(app)/accountability/layout.tsx` |
+| `/badges` | `src/app/(app)/badges/layout.tsx` |
+| `/blasts` | `src/app/(app)/blasts/layout.tsx` |
+| `/bookings` | `src/app/(app)/bookings/layout.tsx` |
 | `/budget` | `src/app/(app)/budget/layout.tsx` |
+| `/checkouts` | `src/app/(app)/checkouts/layout.tsx` |
+| `/events` | `src/app/(app)/events/layout.tsx` |
+| `/import` | `src/app/(app)/import/layout.tsx` |
 | `/issues` | `src/app/(app)/issues/layout.tsx` |
+| `/items` | `src/app/(app)/items/layout.tsx` |
 | `/kits` | `src/app/(app)/kits/layout.tsx` |
+| `/labels` | `src/app/(app)/labels/layout.tsx` |
 | `/` | `src/app/(app)/layout.tsx` |
+| `/notifications` | `src/app/(app)/notifications/layout.tsx` |
+| `/operations` | `src/app/(app)/operations/layout.tsx` |
+| `/profile` | `src/app/(app)/profile/layout.tsx` |
 | `/reports` | `src/app/(app)/reports/layout.tsx` |
 | `/reports/usage` | `src/app/(app)/reports/usage/layout.tsx` |
+| `/reservations` | `src/app/(app)/reservations/layout.tsx` |
 | `/resources` | `src/app/(app)/resources/layout.tsx` |
+| `/schedule` | `src/app/(app)/schedule/layout.tsx` |
+| `/search` | `src/app/(app)/search/layout.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/layout.tsx` |
 | `/settings` | `src/app/(app)/settings/layout.tsx` |
+| `/signatures` | `src/app/(app)/signatures/layout.tsx` |
 | `/staff` | `src/app/(app)/staff/layout.tsx` |
 | `/staff/workforce` | `src/app/(app)/staff/workforce/layout.tsx` |
 | `/wishlist` | `src/app/(app)/wishlist/layout.tsx` |
@@ -133,12 +157,12 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/resources/BrandAssetLibrary.tsx` | 1977 |
-| `src/components/TradeBoard.tsx` | 1853 |
-| `src/components/ActivityTimeline.tsx` | 1387 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1978 |
+| `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
+| `src/components/schedule/AutoAssignDialog.tsx` | 1057 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1042 |
-| `src/components/schedule/AutoAssignDialog.tsx` | 966 |
+| `src/components/TradeBoard.tsx` | 974 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 935 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
@@ -147,12 +171,12 @@
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
-| `src/components/Sidebar.tsx` | 621 |
-| `src/components/booking-wizard/WizardStep1.tsx` | 599 |
+| `src/components/Sidebar.tsx` | 645 |
+| `src/components/booking-wizard/WizardStep1.tsx` | 630 |
 | `src/components/CommandPalette.tsx` | 588 |
-| `src/components/booking-details/BookingHeader.tsx` | 472 |
-| `src/components/AppShell.tsx` | 437 |
-| `src/components/event-editor/EventEditorFields.tsx` | 435 |
+| `src/components/booking-details/BookingHeader.tsx` | 494 |
+| `src/components/event-editor/EventEditorFields.tsx` | 452 |
+| `src/components/AppShell.tsx` | 438 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 378 |
@@ -174,7 +198,6 @@
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 53 |
 | `src/hooks/use-dashboard-data.ts` | 244 |
-| `src/hooks/use-dashboard-filters.ts` | 146 |
 | `src/hooks/use-fetch.ts` | 113 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
@@ -185,7 +208,7 @@
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 65 |
-| `src/hooks/use-schedule-data.ts` | 1269 |
+| `src/hooks/use-schedule-data.ts` | 1270 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-url-state.ts` | 129 |
 | `src/hooks/useBookingActions.ts` | 297 |

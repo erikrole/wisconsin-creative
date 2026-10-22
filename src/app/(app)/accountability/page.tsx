@@ -21,7 +21,7 @@ export default async function AccountabilityPage() {
     <>
       <PageHeader
         title="Accountability"
-        description="The leaderboard nobody wants to join. Return gear on time and disappear from it."
+        description="Who returned gear late, and how often. Return on time and you stay off the list."
       />
       <Suspense fallback={<ReportLoadingState metricCount={4} rows={6} />}>
         <AccountabilityClient currentStartYear={getCurrentAcademicYearStart()} />

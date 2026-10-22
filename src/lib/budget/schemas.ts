@@ -61,6 +61,8 @@ const lineFields = {
   unplanned: z.boolean(),
   refundCents: cents.nullable(),
   recurring: z.boolean(),
+  /** The Under Armour allotment year this Creative line tops up, if any. */
+  gearPickCycleId: z.string().trim().min(1).max(64).nullable(),
 };
 
 export const createLineSchema = z.object({
@@ -80,6 +82,7 @@ export const createLineSchema = z.object({
   unplanned: lineFields.unplanned.default(false),
   refundCents: lineFields.refundCents.optional(),
   recurring: lineFields.recurring.default(false),
+  gearPickCycleId: lineFields.gearPickCycleId.optional(),
 });
 
 export const updateLineSchema = z

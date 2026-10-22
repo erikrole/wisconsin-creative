@@ -130,6 +130,8 @@ struct AvailabilityCheckOutcome {
 struct CheckoutReturnInsight {
     let nextNeedAt: Date?
     let hasUpcomingNeed: Bool
+    /// Title of the booking that needs the gear next, when the server names it.
+    var nextNeedTitle: String? = nil
 }
 
 struct TestPushResult: Decodable {
@@ -1100,6 +1102,7 @@ final class APIClient {
         }
         struct UpcomingCommitment: Decodable {
             let startsAt: Date
+            let bookingTitle: String?
         }
         struct CheckResponse: Decodable {
             let upcomingCommitments: [UpcomingCommitment]?
@@ -1129,8 +1132,12 @@ final class APIClient {
               let resp = try? decoder.decode(CheckResponse.self, from: data) else {
             return CheckoutReturnInsight(nextNeedAt: nil, hasUpcomingNeed: false)
         }
-        let nextNeedAt = resp.upcomingCommitments?.map(\.startsAt).min()
-        return CheckoutReturnInsight(nextNeedAt: nextNeedAt, hasUpcomingNeed: nextNeedAt != nil)
+        let next = resp.upcomingCommitments?.min { $0.startsAt < $1.startsAt }
+        return CheckoutReturnInsight(
+            nextNeedAt: next?.startsAt,
+            hasUpcomingNeed: next != nil,
+            nextNeedTitle: next?.bookingTitle?.nonBlankText
+        )
     }
 
     /// Availability conflicts for a shift, keyed by userId → human note (e.g.
@@ -1771,6 +1778,12 @@ final class APIClient {
         return resp.data
     }
 
+    /// Next shift, gear in hand, this week's shifts and returns performance.
+    func userRightNow(userId: String) async throws -> RightNowPayload {
+        let resp: DataWrapper<RightNowPayload> = try await perform(request(path: "/api/users/\(userId)/right-now"))
+        return resp.data
+    }
+
     /// The staff award catalog. `manualOnly` is the same filter the website
     /// uses on `/badges`. Awarding stays on the web.
     func teamBadgeCatalog() async throws -> TeamBadgeCatalog {
@@ -2037,6 +2050,16 @@ final class APIClient {
             .init(name: "startDate", value: formatter.string(from: window.start)),
             .init(name: "endDate", value: formatter.string(from: window.end)),
         ]
+    }
+
+    /// Upcoming events matching a title, opponent, or location, for global search.
+    func searchCalendarEvents(query: String, limit: Int, offset: Int) async throws -> ScheduleEventsResponse {
+        let items: [URLQueryItem] = [
+            .init(name: "q", value: query),
+            .init(name: "limit", value: "\(limit)"),
+            .init(name: "offset", value: "\(offset)"),
+        ]
+        return try await perform(request(path: "/api/calendar-events", queryItems: items))
     }
 
     func calendarEvents(

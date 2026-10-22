@@ -57,6 +57,29 @@ extension CheckoutReturnActivityAttributes.ContentState {
             : "\(minutes) min"
     }
 
+    /// The countdown split into a large figure and a small unit, so the card
+    /// can set the number big and the word quiet. Under an hour it is whole
+    /// minutes; past that it is hours and minutes, which reads faster than
+    /// "95 min" on a lock screen.
+    func countdown(at date: Date) -> (value: String, unit: String) {
+        let seconds = Int(abs(endsAt.timeIntervalSince(date)).rounded())
+        let minutes = max(1, seconds / 60)
+        let overdue = isOverdue(at: date)
+        if minutes < 60 {
+            return ("\(minutes)", overdue ? "min overdue" : "min left")
+        }
+        let value = "\(minutes / 60)h \(String(format: "%02d", minutes % 60))m"
+        return (value, overdue ? "overdue" : "left")
+    }
+
+    /// How much of the final two hours remains, for the thin track under the
+    /// countdown: full at two hours out, empty at the return time. Overdue
+    /// reads as empty rather than negative; the accent colour carries it.
+    func remainingFraction(at date: Date) -> Double {
+        let remaining = endsAt.timeIntervalSince(date)
+        return min(1, max(0, remaining / (2 * 60 * 60)))
+    }
+
     func urgency(at date: Date) -> Urgency {
         if urgency == .returned { return .returned }
         if endsAt <= date { return .overdue }

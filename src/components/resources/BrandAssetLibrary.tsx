@@ -2,7 +2,6 @@
 
 /* eslint-disable @next/next/no-img-element -- private authenticated asset URLs cannot use next/image's public optimizer path. */
 
-import { upload } from "@vercel/blob/client";
 import {
   ArrowDownUpIcon,
   ArrowUpIcon,
@@ -586,6 +585,8 @@ function UploadAssetDialog({
       }>>(prepareResponse);
       if (!prepared?.data) throw new Error("The upload did not return an intent.");
 
+      // Loaded on first upload: the client SDK (and its jose dependency) is ~90 kB the library page never needs to read.
+      const { upload } = await import("@vercel/blob/client");
       await upload(prepared.data.storagePath, item.file, {
         access: "private",
         handleUploadUrl: "/api/resources/assets/upload-token",

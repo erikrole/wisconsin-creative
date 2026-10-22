@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -14,17 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
 import { WifiOff, AlertTriangle, RefreshCw } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, classifyError, isAbortError, parseErrorMessage } from "@/lib/errors";
+import { cn } from "@/lib/utils";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 
 type EscalationRule = {
@@ -224,44 +217,30 @@ export default function EscalationSettingsPage() {
     return `${h}h after due`;
   }
 
-  const description = "Configure when and how overdue checkout notifications are sent. Notifications are deduped per booking, and each trigger fires at most once.";
+  const description = "When overdue reminders go out and who gets them. Each reminder sends at most once per booking.";
 
   if (loading) {
     return (
-      <SettingsPageShell href="/settings/escalation" description={description}>
-          <Card className="mb-1">
-            <CardHeader><CardTitle>Notification Triggers</CardTitle></CardHeader>
-            <div className="px-4 pb-4 flex flex-col gap-3">
-              {/* Table header skeleton */}
-              <div className="flex gap-4">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-16" />
+      <SettingsPageShell href="/settings/escalation" description={description} mainClassName="flex flex-col gap-7">
+        <SettingsGroup title="Reminders">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-24" />
               </div>
-              {/* Table row skeletons */}
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-5 w-9 rounded-full" />
-                  <Skeleton className="h-5 w-9 rounded-full" />
-                  <Skeleton className="h-5 w-9 rounded-full" />
-                </div>
-              ))}
+              <Skeleton className="h-5 w-9 rounded-full" />
             </div>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>Fatigue Controls</CardTitle></CardHeader>
-            <div className="p-4 flex flex-col gap-2">
-              <div className="flex gap-3 items-center">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-9 w-20 rounded-md" />
-              </div>
-              <Skeleton className="h-4 w-80" />
+          ))}
+        </SettingsGroup>
+        <SettingsGroup title="Limits">
+          {[1, 2].map((i) => (
+            <div key={i} className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-9 w-24 rounded-md" />
             </div>
-          </Card>
+          ))}
+        </SettingsGroup>
       </SettingsPageShell>
     );
   }
@@ -270,175 +249,157 @@ export default function EscalationSettingsPage() {
     const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
       <SettingsPageShell href="/settings/escalation" description={description}>
-          <Card>
-            <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 text-center">
-              <Icon className="size-10 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-semibold">
-                  {error === "network" ? "Connection Failed" : "Something Went Wrong"}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {error === "network"
-                    ? "Could not connect to the server. Check your internet connection and try again."
-                    : "Something went wrong. Please try again."}
-                </p>
-              </div>
-              <Button variant="outline" onClick={reload}>
-                <RefreshCw className="size-4" />
-                Retry
-              </Button>
+        <SettingsGroup>
+          <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 text-center">
+            <Icon className="size-8 text-muted-foreground" />
+            <div>
+              <p className="m-0 text-sm font-bold">
+                {error === "network" ? "Connection failed" : "Something went wrong"}
+              </p>
+              <p className="m-0 mt-1 text-sm text-muted-foreground">
+                {error === "network"
+                  ? "Could not connect to the server. Check your internet connection and try again."
+                  : "Something went wrong. Please try again."}
+              </p>
             </div>
-          </Card>
+            <Button variant="outline" onClick={reload}>
+              <RefreshCw className="size-4" />
+              Retry
+            </Button>
+          </div>
+        </SettingsGroup>
       </SettingsPageShell>
     );
   }
 
   return (
-    <SettingsPageShell href="/settings/escalation" description={description}>
-        {/* Rules table */}
-        <Card className="mb-1">
-          <CardHeader>
-            <CardTitle>Notification Triggers</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1 m-0">
-              Toggle requester and admin notifications. Gear ops is fixed by overdue policy, not a switch. Timings follow product spec D-009.
-            </p>
-          </CardHeader>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Trigger</TableHead>
-                <TableHead>Timing</TableHead>
-                <TableHead>Requester</TableHead>
-                <TableHead>Gear ops</TableHead>
-                <TableHead>Admins</TableHead>
-                <TableHead>Enabled</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules.map((rule) => (
-                <TableRow key={rule.id}>
-                  <TableCell>{rule.title}</TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground text-xs font-medium">
-                      {formatHours(rule)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={rule.notifyRequester}
-                      onCheckedChange={() => toggleRule(rule.id, "notifyRequester", rule.notifyRequester)}
-                      disabled={anySaving}
-                      aria-label={`Toggle requester notifications for ${rule.title}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs text-muted-foreground">
-                      {rule.type === "checkout_overdue_4h" || rule.type === "checkout_overdue_24h" ? "Always" : "Never"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={rule.notifyAdmins}
-                      onCheckedChange={() => toggleRule(rule.id, "notifyAdmins", rule.notifyAdmins)}
-                      disabled={anySaving}
-                      aria-label={`Toggle admin notifications for ${rule.title}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={rule.enabled}
-                      onCheckedChange={() => toggleRule(rule.id, "enabled", rule.enabled)}
-                      disabled={anySaving}
-                      aria-label={`Toggle ${rule.title} escalation trigger`}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-
-        {/* Fatigue controls */}
-        <Card className="mb-1">
-          <CardHeader><CardTitle>Fatigue Controls</CardTitle></CardHeader>
-          <div className="p-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="requester-cap" className="text-sm font-semibold">
-                Requester stages per due date
-              </label>
-              <Select
-                value={String(config.maxRequesterNotificationsPerDueDate)}
-                onValueChange={(v) => updateCap("maxRequesterNotificationsPerDueDate", Number(v))}
-                disabled={anySaving}
-              >
-                <SelectTrigger id="requester-cap" className="mt-2 w-24" aria-label="Requester notification cap per due date">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[3, 4, 5, 10, 20].map((n) => (
-                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-2 m-0">Counts stages sent to the borrower, not staff fanout rows.</p>
-            </div>
-            <div>
-              <label htmlFor="operations-cap" className="text-sm font-semibold">
-                Operations rows per due date
-              </label>
-              <Select
-                value={String(config.maxOperationalNotificationsPerDueDate)}
-                onValueChange={(v) => updateCap("maxOperationalNotificationsPerDueDate", Number(v))}
-                disabled={anySaving}
-              >
-                <SelectTrigger id="operations-cap" className="mt-2 w-24" aria-label="Operations notification cap per due date">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[5, 10, 20, 50, 100].map((n) => (
-                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-2 m-0">Caps responder and admin inbox rows without silencing the requester.</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Overdue Responders</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1 m-0">
-              These staff receive the 4-hour and 24-hour operational escalation for each checkout location. If none are selected, the active staff creator is used, then active admins.
-            </p>
-          </CardHeader>
-          <div className="p-4 grid gap-5 lg:grid-cols-2">
-            {locations.map((location) => (
-              <section key={location.id} aria-labelledby={`responders-${location.id}`}>
-                <h3 id={`responders-${location.id}`} className="text-sm font-semibold mb-2">{location.name}</h3>
-                <div className="grid gap-2">
-                  {responderCandidates.map((candidate) => {
-                    const checked = location.responderUserIds.includes(candidate.id);
-                    return (
-                      <label key={candidate.id} className="flex items-start gap-2 rounded-md border p-2.5 text-sm">
-                        <Checkbox
-                          checked={checked}
-                          disabled={anySaving}
-                          onCheckedChange={(value) => toggleResponder(location, candidate.id, value === true)}
-                          aria-label={`${checked ? "Remove" : "Add"} ${candidate.name} as ${location.name} overdue responder`}
-                        />
-                        <span className="min-w-0">
-                          <span className="block font-medium">{candidate.name}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{candidate.role === "ADMIN" ? "Admin" : "Staff"} · {candidate.email}</span>
-                        </span>
-                      </label>
-                    );
-                  })}
+    <SettingsPageShell href="/settings/escalation" description={description} mainClassName="flex flex-col gap-7">
+      <SettingsGroup
+        title="Reminders"
+        description="Turn each reminder on or off, then pick who it reaches. The gear room team always gets the 4-hour and 24-hour overdue alerts."
+      >
+        {rules.map((rule) => {
+          const gearOps = rule.type === "checkout_overdue_4h" || rule.type === "checkout_overdue_24h";
+          return (
+            <div key={rule.id} className="flex flex-col gap-2.5 px-4 py-3.5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="m-0 text-sm font-bold text-foreground">{rule.title}</p>
+                  <p className="m-0 mt-0.5 text-[13px] text-muted-foreground">{formatHours(rule)}</p>
                 </div>
-              </section>
-            ))}
-          </div>
-        </Card>
+                <Switch
+                  checked={rule.enabled}
+                  onCheckedChange={() => toggleRule(rule.id, "enabled", rule.enabled)}
+                  disabled={anySaving}
+                  aria-label={`Toggle ${rule.title} escalation trigger`}
+                />
+              </div>
+              <div
+                className={cn(
+                  "flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]",
+                  !rule.enabled && "opacity-50",
+                )}
+              >
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={rule.notifyRequester}
+                    onCheckedChange={() => toggleRule(rule.id, "notifyRequester", rule.notifyRequester)}
+                    disabled={anySaving || !rule.enabled}
+                    aria-label={`Toggle requester notifications for ${rule.title}`}
+                  />
+                  Borrower
+                </label>
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={rule.notifyAdmins}
+                    onCheckedChange={() => toggleRule(rule.id, "notifyAdmins", rule.notifyAdmins)}
+                    disabled={anySaving || !rule.enabled}
+                    aria-label={`Toggle admin notifications for ${rule.title}`}
+                  />
+                  Admins
+                </label>
+                {gearOps ? <span className="text-muted-foreground">Gear room team always</span> : null}
+              </div>
+            </div>
+          );
+        })}
+      </SettingsGroup>
+
+      <SettingsGroup
+        title="Limits"
+        description="Caps how many overdue notifications one due date can create, so nobody gets buried."
+      >
+        <SettingsRow
+          label="Borrower reminders per due date"
+          htmlFor="requester-cap"
+          description="Counts reminders sent to the borrower, not staff alerts."
+        >
+          <Select
+            value={String(config.maxRequesterNotificationsPerDueDate)}
+            onValueChange={(v) => updateCap("maxRequesterNotificationsPerDueDate", Number(v))}
+            disabled={anySaving}
+          >
+            <SelectTrigger id="requester-cap" className="w-full" aria-label="Requester notification cap per due date">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[3, 4, 5, 10, 20].map((n) => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingsRow>
+        <SettingsRow
+          label="Staff alerts per due date"
+          htmlFor="operations-cap"
+          description="Caps responder and admin inbox rows. The borrower still gets theirs."
+        >
+          <Select
+            value={String(config.maxOperationalNotificationsPerDueDate)}
+            onValueChange={(v) => updateCap("maxOperationalNotificationsPerDueDate", Number(v))}
+            disabled={anySaving}
+          >
+            <SelectTrigger id="operations-cap" className="w-full" aria-label="Operations notification cap per due date">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[5, 10, 20, 50, 100].map((n) => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingsRow>
+      </SettingsGroup>
+
+      <section className="flex flex-col gap-4">
+        <div className="px-1">
+          <h3 className="m-0 text-sm">Who follows up</h3>
+          <p className="m-0 mt-0.5 text-sm text-muted-foreground text-pretty">
+            These staff get the 4-hour and 24-hour overdue alerts for gear checked out from each location. With nobody picked, the staff member who made the checkout gets it, then admins.
+          </p>
+        </div>
+        {locations.map((location) => (
+          <SettingsGroup key={location.id} title={location.name} className="gap-2">
+            {responderCandidates.map((candidate) => {
+              const checked = location.responderUserIds.includes(candidate.id);
+              return (
+                <label key={candidate.id} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted/40">
+                  <Checkbox
+                    checked={checked}
+                    disabled={anySaving}
+                    onCheckedChange={(value) => toggleResponder(location, candidate.id, value === true)}
+                    aria-label={`${checked ? "Remove" : "Add"} ${candidate.name} as ${location.name} overdue responder`}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold">{candidate.name}</span>
+                    <span className="block truncate text-[13px] text-muted-foreground">{candidate.role === "ADMIN" ? "Admin" : "Staff"} · {candidate.email}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </SettingsGroup>
+        ))}
+      </section>
     </SettingsPageShell>
   );
 }

@@ -6,7 +6,7 @@ describe("iOS Guides list presentation", () => {
     const view = source("ios/Wisconsin/Views/GuidesView.swift");
     const row = view.slice(
       view.indexOf("private struct GuideRow"),
-      view.indexOf("private struct GuideReaderView"),
+      view.indexOf("struct GuideReaderView"),
     );
 
     expect(row).toContain("HStack(alignment: .center, spacing: 12)");

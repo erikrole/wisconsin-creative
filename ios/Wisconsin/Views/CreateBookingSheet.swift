@@ -22,7 +22,6 @@ struct CreateBookingSheet: View {
     @State private var consolidatedBookingId: String?
     @State private var showExitOptions = false
     @State private var showScanner = false
-    @State private var showNotesField = false
     /// Step 1 is two screens: what it's for, then when it's due back.
     @State private var detailsPage = 1
     @State private var showPickupEditor = false
@@ -31,7 +30,6 @@ struct CreateBookingSheet: View {
     /// else whatever is next on the calendar.
     @State private var suggestedEventId: String?
     @State private var suggestionFromShift = false
-    @FocusState private var notesFocused: Bool
     @Environment(SessionStore.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -540,7 +538,6 @@ struct CreateBookingSheet: View {
             if vm.linkedEventCount > 0 {
                 eventPlanCard
                 pickupAndKitCard
-                notesField
             }
             if vm.hasInvalidReusedEventSelection {
                 Label("Choose a different event when re-reserving", systemImage: "exclamationmark.triangle.fill")
@@ -557,7 +554,6 @@ struct CreateBookingSheet: View {
         pageHeading("When's it due back?")
         timesCard
         pickupAndKitCard
-        notesField
     }
 
     private var timesCard: some View {
@@ -649,32 +645,6 @@ struct CreateBookingSheet: View {
                 }
             }
             .presentationDetents([.large])
-        }
-    }
-
-    @ViewBuilder
-    private var notesField: some View {
-        if vm.notes.isEmpty && !showNotesField {
-            Button {
-                showNotesField = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(80))
-                    notesFocused = true
-                }
-            } label: {
-                Label("Add note", systemImage: "square.and.pencil")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.statusText(.purple))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-        } else {
-            FormCard {
-                TextField("Notes (optional)", text: $vm.notes, axis: .vertical)
-                    .lineLimit(3...6)
-                    .font(.body)
-                    .focused($notesFocused)
-            }
         }
     }
 
@@ -831,9 +801,6 @@ struct CreateBookingSheet: View {
                 }
                 if let kit = selectedKit {
                     LabeledContent("Gameday Kit", value: vm.kitPickerLabel(kit))
-                }
-                if !vm.notes.isEmpty {
-                    LabeledContent("Note", value: vm.notes)
                 }
             } header: {
                 reviewSectionHeader(title: "Schedule", editStep: 1)

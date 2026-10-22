@@ -384,7 +384,7 @@ private struct GuideRow: View {
     }
 }
 
-private struct GuideReaderView: View {
+struct GuideReaderView: View {
     let guide: GuideListItem
 
     @State private var loadedGuide: GuideListItem?

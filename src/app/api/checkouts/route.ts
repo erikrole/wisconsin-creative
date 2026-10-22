@@ -1,3 +1,4 @@
+import { seesTeamGear } from "@/lib/collaborator-access";
 import { BookingKind, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { startOfDayInAppTz } from "@/lib/app-time";
@@ -35,8 +36,7 @@ export const GET = withAuth(async (req, { user }) => {
         ? { status: "OPEN" as never, endsAt: { gte: todayStart, lt: todayEnd } }
         : undefined;
 
-  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
-  const restrictTo = user.role === "COLLABORATOR" && !collaboratorPreview
+  const restrictTo = user.role === "COLLABORATOR" && !seesTeamGear(user)
     ? user.id
     : undefined;
   const result = await listBookings(BookingKind.CHECKOUT, searchParams, extraWhere, restrictTo);

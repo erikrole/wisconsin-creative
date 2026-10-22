@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("settings venue mappings location picker state", () => {
   it("does not silently degrade failed location loads to an empty picker", () => {
-    const source = readFileSync("src/app/(app)/settings/venue-mappings/page.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/settings/locations/VenueMappings.tsx", "utf8");
 
     expect(source).toContain("error: locationsError");
     expect(source).toContain("reload: reloadLocations");

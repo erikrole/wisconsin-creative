@@ -100,6 +100,11 @@ function InternalSchedulePage() {
   const isStaff = data.currentUserRole === "STAFF" || data.currentUserRole === "ADMIN";
   const canReviewClaims = data.currentUserRole === "ADMIN";
   const { loadData, setExpandedRowId, setTradeSheetOpen } = data;
+  // ?trades=open (Home, trade notifications) opens the board in use-schedule-data.
+  // ?tradeBoard=1 is kept for notifications sent before that link existed.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tradeBoard") === "1") setTradeSheetOpen(true);
+  }, [setTradeSheetOpen]);
   const { queue, setQueue } = data.filters;
   const queueUnavailable = data.healthUnavailable && queue !== null
     && !["my-calls-today", "stale-source", "trade-approval"].includes(queue);
@@ -413,15 +418,6 @@ function InternalSchedulePage() {
         <PageHeader title="Schedule">
           {isStaff ? (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10"
-                onClick={() => setNewEventOpen(true)}
-              >
-                <PlusIcon data-icon="inline-start" />
-                Add event
-              </Button>
               <Button size="sm" className="h-10" onClick={() => setAutoAssignOpen(true)}>
                 <SparklesIcon data-icon="inline-start" />
                 Auto assign
@@ -434,6 +430,10 @@ function InternalSchedulePage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onSelect={() => setNewEventOpen(true)}>
+                    <PlusIcon className="size-4" />
+                    Add event
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => { setCombineInitialEventIds(null); setCombineEventsOpen(true); }}>
                     <MergeIcon className="size-4" />
                     Combine events
