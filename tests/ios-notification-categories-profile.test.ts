@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function bodyBetween(text: string, startNeedle: string, endNeedle: string) {
   const start = text.indexOf(startNeedle);
@@ -85,7 +86,7 @@ describe("iOS notification category preferences", () => {
     const detail = source("ios/Wisconsin/Views/NotificationSettingsView.swift");
     const preferences = source("ios/Wisconsin/Core/Preferences.swift");
     const models = source("ios/Wisconsin/Models/Models.swift");
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
 
     // Levels come from the role-filtered catalog; older servers fall back to toggles.
     expect(models).toContain("enum NotificationPushLevel: String, Codable, CaseIterable, Identifiable");

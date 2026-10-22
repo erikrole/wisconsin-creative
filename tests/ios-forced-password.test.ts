@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS forced password setup", () => {
   it("decodes forcePasswordChange without breaking older auth payloads", () => {
@@ -10,7 +11,7 @@ describe("iOS forced password setup", () => {
   });
 
   it("uses the allowed self-service password route and refreshes current user state", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const sessionStore = source("ios/Wisconsin/Core/SessionStore.swift");
 
     expect(apiClient).toContain("func changePassword(currentPassword: String, newPassword: String, revokeOtherSessions: Bool = true)");

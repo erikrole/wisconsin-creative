@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS booking surface alignment", () => {
   const bookings = readFileSync("ios/Wisconsin/Views/BookingsView.swift", "utf8");
@@ -56,7 +57,7 @@ describe("iOS booking surface alignment", () => {
 
   it("names the booking that needs the gear next on detail", () => {
     const detail = readFileSync("ios/Wisconsin/Views/BookingDetailView.swift", "utf8");
-    const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+    const api = apiClientSource();
     expect(api).toContain("nextNeedTitle: next?.bookingTitle?.nonBlankText");
     expect(detail).toContain("if let title = returnInsight.nextNeedTitle");
     expect(detail).toContain('return "\\(title) needs this gear \\(when). Extend only to a return time by then."');

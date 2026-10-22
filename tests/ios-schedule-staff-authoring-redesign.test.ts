@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native Schedule staff authoring redesign", () => {
   it("makes Add Shift event-aware with explicit slot and schedule decisions", () => {
@@ -34,7 +35,7 @@ describe("native Schedule staff authoring redesign", () => {
   });
 
   it("decodes the existing candidate-score envelope tolerantly", () => {
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
     const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
     const route = source("src/app/api/shifts/[id]/candidate-scores/route.ts");
 

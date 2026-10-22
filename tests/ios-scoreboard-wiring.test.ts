@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native Scoreboard wiring", () => {
   it("loads the universal aggregate route without a People capability gate", () => {
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
     const appTabs = source("ios/Wisconsin/Views/AppTabView.swift");
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
     const teamView = source("ios/Wisconsin/Views/TeamScoreboardView.swift");
@@ -35,7 +36,7 @@ describe("native Scoreboard wiring", () => {
   });
 
   it("uses the authenticated profile Scoreboard route with server-owned filters", () => {
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
 
     expect(client).toContain('path: "/api/users/\\(userId)/scoreboard"');
     expect(client).toContain("season: String? = nil");
@@ -47,7 +48,7 @@ describe("native Scoreboard wiring", () => {
   });
 
   it("offers the same site filter the web profile Scoreboard offers", () => {
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
     const view = source("ios/Wisconsin/Views/ScoreboardView.swift");
 
     expect(client).toContain("site: String? = nil");

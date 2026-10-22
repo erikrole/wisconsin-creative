@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function appTabViewShell() {
   return source("ios/Wisconsin/Views/AppTabView.swift").split("// MARK: - Profile")[0] ?? "";
@@ -7,7 +8,7 @@ function appTabViewShell() {
 
 describe("iOS native Licenses page", () => {
   it("uses the existing license API routes without inventing a native-only contract", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const models = source("ios/Wisconsin/Models/Models.swift");
     const route = source("src/app/api/licenses/route.ts");
 
