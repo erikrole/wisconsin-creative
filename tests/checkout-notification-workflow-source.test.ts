@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 describe("checkout notification workflow source contract", () => {
   it("schedules the durable workflow anywhere return Live Activity timing is scheduled", () => {
@@ -9,7 +9,7 @@ describe("checkout notification workflow source contract", () => {
 
   it("rechecks the expected due date and processes stages through durable steps", () => {
     const workflow = source("src/workflows/checkout-overdue-notifications.ts");
-    const service = source("src/lib/services/notifications.ts");
+    const service = serviceModuleSource("notifications");
     expect(workflow).toContain('"use workflow"');
     expect(workflow).toContain('"use step"');
     expect(workflow).toContain("expectedEndsAtIso");

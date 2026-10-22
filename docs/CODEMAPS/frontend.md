@@ -215,7 +215,7 @@
 | `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 77 |
 | `src/hooks/use-mobile.ts` | 20 |
-| `src/hooks/use-onboarding-save.ts` | 243 |
+| `src/hooks/use-onboarding-save.ts` | 245 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 83 |
 | `src/hooks/use-schedule-data.ts` | 1270 |

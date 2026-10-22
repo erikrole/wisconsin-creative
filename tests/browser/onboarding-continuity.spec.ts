@@ -110,10 +110,12 @@ test("serializes edits typed during an in-flight save", async () => {
   await page.getByLabel("Other top size", { exact: true }).fill("Custom XS");
   await expect.poll(() => Boolean(state.releaseWrite)).toBe(true);
   await page.getByLabel("Other top size", { exact: true }).fill("Custom XL");
+  // One Continue must wait for the newest edit, including the second save it
+  // needs after the in-flight response arrives.
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   state.releaseWrite!();
-  await expect.poll(() => state.profile.topSize).toBe("Custom XL");
-  await expect(page.getByLabel("Other top size", { exact: true })).toHaveValue("Custom XL");
-  await expect(page.getByText("Saved to your account", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Add a profile photo", exact: true })).toBeVisible();
+  expect(state.profile.topSize).toBe("Custom XL");
   expect(state.writes.at(-1)?.expectedVersion).toBe("1".padStart(64, "0"));
   await page.close();
 });

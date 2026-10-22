@@ -93,68 +93,73 @@ export function useOnboardingSave(options: Options) {
     let reschedule = false;
     const run = async () => {
       if (!userId) return false;
-      for (const group of groups) {
-        if (!dirty.current.has(group) || conflicts.current.has(group)) continue;
-        const initial = baseline.current[group];
-        const parsed = onboardingGroupSchemas[group].safeParse(groupValues(latest.current.values, group));
-        if (!initial || !parsed.success) continue;
-        const values = parsed.data;
-        if (sameGroup(values, initial.values)) { dirty.current.delete(group); continue; }
-        setState("saving");
-        setMessage("");
-        mutationEpoch.current++;
-        advanceProfileCompletionReads(query);
-        await query.cancelQueries({ queryKey: PROFILE_COMPLETION_QUERY_KEY });
-        try {
-          const response = await fetch("/api/me/profile-completion", {
-            method: "PATCH", keepalive,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ step: "SAVE", group, expectedVersion: initial.version, values }),
-          });
-          if (!alive.current || owner.current !== userId || handleAuthRedirect(response)) return false;
-          const body = await parseJsonSafely<{ data?: ProfileCompletionResponse; error?: string; code?: string }>(response);
-          if (!response.ok || !body?.data?.profile) {
-            if (response.status === 409 && body?.code === "ONBOARDING_CONFLICT") {
-              conflicts.current.add(group);
-              setState("conflict");
-              setMessage("Saved answers changed elsewhere. Your edits are still here.");
-              await refresh();
-              return false;
-            }
-            throw new Error(body?.error ?? "Couldn’t save. Check your connection and retry.");
-          }
-          const next = body.data;
+      // A caller waiting on flush (Continue/Finish) must also wait for edits
+      // made while its current request was in flight.
+      do {
+        reschedule = false;
+        for (const group of groups) {
+          if (!dirty.current.has(group) || conflicts.current.has(group)) continue;
+          const initial = baseline.current[group];
+          const parsed = onboardingGroupSchemas[group].safeParse(groupValues(latest.current.values, group));
+          if (!initial || !parsed.success) continue;
+          const values = parsed.data;
+          if (sameGroup(values, initial.values)) { dirty.current.delete(group); continue; }
+          setState("saving");
+          setMessage("");
           mutationEpoch.current++;
           advanceProfileCompletionReads(query);
-          const version = next.versions?.[group];
-          if (!version) throw new Error("Your answer was saved, but setup needs to refresh.");
-          baseline.current[group] = { values: groupValues(next.profile, group), version };
-          const current = onboardingGroupSchemas[group].safeParse(groupValues(latest.current.values, group));
-          if (current.success && sameGroup(current.data, values)) {
-            dirty.current.delete(group);
-            latest.current.applyGroup(group, next.profile);
-          } else { reschedule = true; }
           await query.cancelQueries({ queryKey: PROFILE_COMPLETION_QUERY_KEY });
-          if (owner.current !== userId) return false;
-          query.setQueryData(PROFILE_COMPLETION_QUERY_KEY, next);
-        } catch (error) {
-          if (owner.current !== userId) return false;
-          // The request may have committed even when its response was lost.
           try {
-            const next = await refresh();
-            if (next && next.profile.id === userId && sameGroup(groupValues(next.profile, group), values)) {
-              baseline.current[group] = { values, version: next.versions?.[group] ?? initial.version };
-              const current = onboardingGroupSchemas[group].safeParse(groupValues(latest.current.values, group));
-              if (current.success && sameGroup(current.data, values)) dirty.current.delete(group);
-              else reschedule = true;
-              continue;
+            const response = await fetch("/api/me/profile-completion", {
+              method: "PATCH", keepalive,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ step: "SAVE", group, expectedVersion: initial.version, values }),
+            });
+            if (!alive.current || owner.current !== userId || handleAuthRedirect(response)) return false;
+            const body = await parseJsonSafely<{ data?: ProfileCompletionResponse; error?: string; code?: string }>(response);
+            if (!response.ok || !body?.data?.profile) {
+              if (response.status === 409 && body?.code === "ONBOARDING_CONFLICT") {
+                conflicts.current.add(group);
+                setState("conflict");
+                setMessage("Saved answers changed elsewhere. Your edits are still here.");
+                await refresh();
+                return false;
+              }
+              throw new Error(body?.error ?? "Couldn’t save. Check your connection and retry.");
             }
-          } catch { /* Keep the unacknowledged answers and their original baseline. */ }
-          setState("error");
-          setMessage(error instanceof Error ? error.message : "Couldn’t save. Retry to keep these answers.");
-          return false;
+            const next = body.data;
+            mutationEpoch.current++;
+            advanceProfileCompletionReads(query);
+            const version = next.versions?.[group];
+            if (!version) throw new Error("Your answer was saved, but setup needs to refresh.");
+            baseline.current[group] = { values: groupValues(next.profile, group), version };
+            const current = onboardingGroupSchemas[group].safeParse(groupValues(latest.current.values, group));
+            if (current.success && sameGroup(current.data, values)) {
+              dirty.current.delete(group);
+              latest.current.applyGroup(group, next.profile);
+            } else { reschedule = true; }
+            await query.cancelQueries({ queryKey: PROFILE_COMPLETION_QUERY_KEY });
+            if (owner.current !== userId) return false;
+            query.setQueryData(PROFILE_COMPLETION_QUERY_KEY, next);
+          } catch (error) {
+            if (owner.current !== userId) return false;
+            // The request may have committed even when its response was lost.
+            try {
+              const next = await refresh();
+              if (next && next.profile.id === userId && sameGroup(groupValues(next.profile, group), values)) {
+                baseline.current[group] = { values, version: next.versions?.[group] ?? initial.version };
+                const current = onboardingGroupSchemas[group].safeParse(groupValues(latest.current.values, group));
+                if (current.success && sameGroup(current.data, values)) dirty.current.delete(group);
+                else reschedule = true;
+                continue;
+              }
+            } catch { /* Keep the unacknowledged answers and their original baseline. */ }
+            setState("error");
+            setMessage(error instanceof Error ? error.message : "Couldn’t save. Retry to keep these answers.");
+            return false;
+          }
         }
-      }
+      } while (reschedule && alive.current && owner.current === userId && !conflicts.current.size);
       if (conflicts.current.size) { setState("conflict"); return false; }
       const saved = dirty.current.size === 0;
       setState(saved ? "saved" : "unsaved");
@@ -164,9 +169,6 @@ export function useOnboardingSave(options: Options) {
     const task = run().finally(() => {
       if (pending.current === task) pending.current = null;
       if (alive.current && owner.current === userId) setReconcileTick((value) => value + 1);
-      if (reschedule && owner.current === userId && !conflicts.current.size) {
-        timer.current = setTimeout(() => { void flushRef.current(); }, 0);
-      }
     });
     pending.current = task;
     return task;

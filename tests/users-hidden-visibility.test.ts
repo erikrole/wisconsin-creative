@@ -354,7 +354,7 @@ describe("hidden smoke user visibility", () => {
       "src/lib/services/auto-fill-preview.ts",
       "src/app/api/shifts/[id]/conflicts/route.ts",
       "src/app/api/users/org-chart/route.ts",
-      "src/lib/services/notifications.ts",
+      "src/lib/services/booking-notifications.ts",
       "src/lib/services/licenses.ts",
       "src/lib/services/calendar-sync-health.ts",
       "src/lib/services/firmware-watch.ts",

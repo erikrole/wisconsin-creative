@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS checkout return Live Activity source contract", () => {
@@ -194,7 +194,7 @@ describe("iOS checkout return Live Activity source contract", () => {
   });
 
   it("pushes Live Activity updates for server-known checkout changes without requiring app launch", () => {
-    const lifecycle = source("src/lib/services/bookings-lifecycle.ts");
+    const lifecycle = serviceModuleSource("bookings-lifecycle");
     const service = source("src/lib/services/live-activities.ts");
 
     expect(lifecycle).toContain("updateCheckoutReturnLiveActivities({");
@@ -246,7 +246,7 @@ describe("iOS checkout return Live Activity source contract", () => {
     const scheduler = source("src/lib/live-activity-workflow.ts");
     const workflow = source("src/workflows/checkout-return-live-activity.ts");
     const service = source("src/lib/services/live-activities.ts");
-    const lifecycle = source("src/lib/services/bookings-lifecycle.ts");
+    const lifecycle = serviceModuleSource("bookings-lifecycle");
     const kioskComplete = source("src/app/api/kiosk/checkout/complete/route.ts");
     const kioskCheckout = source("src/app/api/kiosk/checkout/[id]/route.ts");
 

@@ -73,11 +73,12 @@ describe("student shift claim surfaces", () => {
 
   it("fans out every claim-review notification only to active admins", () => {
     const pickup = source("src/app/api/shift-assignments/pickup/handler.ts");
-    const notifications = source("src/lib/services/notifications.ts");
+    const notifications = source("src/lib/services/shift-notifications.ts");
     const claimReviewNotifications = source("src/lib/services/claim-review-notifications.ts");
+    const fanoutStart = notifications.indexOf("export async function notifyPickupRequestReviewers");
     const reviewerFanout = notifications.slice(
-      notifications.indexOf("export async function notifyPickupRequestReviewers"),
-      notifications.indexOf("export async function createPublishedShiftGroupNotifications"),
+      fanoutStart,
+      notifications.indexOf("export async function", fanoutStart + 1),
     );
 
     expect(pickup).toContain("notifyPickupRequestReviewers(assignment.id)");
