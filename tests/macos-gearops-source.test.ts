@@ -227,8 +227,29 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(login).toContain(".textContentType(.password)");
     expect(login.indexOf("TextField(\"you@wisc.edu\", text: $email)"))
       .toBeLessThan(login.indexOf("SecureField(\"Enter your password\", text: $password)"));
+    // AutoFill fills one field per pick: move to the password suggestion,
+    // then sign in once a picked password lands.
+    expect(login).toContain("if old.isEmpty, new.count > 1, password.isEmpty { focusedField = .password }");
+    expect(login).toContain("DispatchQueue.main.async { submit() }");
+    // Each AutoFill pick asks for Touch ID, so a return sign-in starts in the
+    // password field with the last email filled.
+    expect(login).toContain('@AppStorage("GearOps.lastSignInEmail") private var rememberedEmail = ""');
+    expect(login).toContain("focusedField = email.isEmpty ? .email : .password");
+    expect(login).toContain("if model.user != nil { rememberedEmail = submittedEmail }");
     expect(login).toContain('Text(primaryTitle)');
     expect(login).toContain('showPassword ? "eye.slash" : "eye"');
+
+    // 1Password Universal Autofill fills the frontmost app, and its picker
+    // closes the extra. Signed out, the extra activates the app on each
+    // presentation and offers the Status window, which stays open.
+    const view = popover();
+    const app = source("macos/GearOps/GearOpsApp.swift");
+    expect(view).toContain("if model.user == nil { NSApplication.shared.activate() }");
+    expect(view).toContain("GearOpsLoginView(model: model, isMenuBarExtra: isMenuBarExtra)");
+    expect(app).toContain("MenuBarContentView(model: model, isMenuBarExtra: false)");
+    expect(login).toContain("if isMenuBarExtra {");
+    expect(login).toContain("openWindow(id: GearOpsWindow.status)");
+    expect(login).toContain("Sign in in a window");
 
     // Enrollment stays the only Neon-backed call.
     expect(login).not.toContain("discoverAuth");
@@ -563,7 +584,8 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(view).toContain("WisconsinCreativeIcon(size: 30)");
     expect(view).toContain("Label(model.healthLabel(at: now), systemImage: model.healthSeverity(at: now).symbol)");
     expect(view).toContain('title: model.kioskAccess == .available ? "Kiosks" : "Kiosk access"');
-    expect(view).toContain('return "\\(device.location.name) · Last seen');
+    expect(view).toContain('return locationPrefix + "Last seen');
+    expect(view).toContain("device.name.localizedCaseInsensitiveContains(location)");
     expect(view).toContain("device.pendingPickupCount");
     expect(view).toContain("device.openCheckoutCount");
     expect(view).toContain("freshnessLabel(at: now)");
@@ -640,7 +662,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("KioskAccessState(rawValue:");
     expect(health).toContain("if age <= 5 * 60 { return .online }");
     expect(health).toContain("if age <= 24 * 60 * 60 { return .stale }");
-    expect(health).toContain('.caseInsensitiveCompare("Sim iPad")');
+    expect(health).toContain('["test", "testing", "sim", "simulator", "demo"]');
     expect(model).toContain(".filter(\\.isIncludedInMonitoring)");
     expect(model).toContain("cached.isTrustworthy");
     expect(model).toContain("try projection.validate()");
@@ -684,6 +706,9 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toMatch(/guard !restoreInFlight else \{ return \}\s*\n\s*if shouldRetryCredentialRestore/);
     expect(model).toContain("if !isRefreshing { await refresh() }");
     expect(view).toContain("guard model.user != nil, searchIsFocused else { return false }");
+    // Opening the extra must not park a caret in search; ⌘F focuses it.
+    expect(view).not.toContain("if selectedRoute == nil, model.user != nil { searchIsFocused = true }");
+    expect(view).toContain("DispatchQueue.main.async { searchIsFocused = false }");
     expect(model).toContain("if let lastConfirmedAt, now.timeIntervalSince(lastConfirmedAt) < interval { return }");
     expect(model).toContain("now.timeIntervalSince(lastConfirmedAt ?? snapshot.receivedAt) > Self.staleSnapshotAge");
     expect(model).toContain("static let presentationRefreshInterval: TimeInterval = 60");
@@ -737,7 +762,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(shortcut).toContain("button.performClick(nil)");
     expect(app).toContain("Window(GearOpsApp.statusWindowTitle, id: GearOpsWindow.status)");
     expect(app).toContain("GlobalShortcut.shared.setEnabled(enabled)");
-    expect(app).toContain("if GearOpsFixture.isActive { return }");
+    expect(app).toContain("if GearOpsFixture.isActive || GearOpsTestHost.isActive { return }");
     // A TimelineView inside the MenuBarExtra label re-renders the status
     // button endlessly and hangs launch.
     const label = app.slice(app.indexOf("} label: {"), app.indexOf(".menuBarExtraStyle"));

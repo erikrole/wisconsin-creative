@@ -693,6 +693,24 @@
   },
   {
     "date": "2026-10-20",
+    "title": "Mac app: 1Password sign-in and cleaner glance",
+    "type": "fixes",
+    "summary": "Password managers like 1Password can fill the sign-in form in the Mac menu bar app.",
+    "details": [
+      "The menu bar app now comes to the front when you open it signed out, so 1Password and Apple Passwords can offer your saved login.",
+      "Picking your login fills the email and jumps to the password; the app remembers your email, so signing in again takes one pick and one Touch ID.",
+      "If your password manager's picker closes the menu, choose Sign in in a window to sign in from a window that stays open.",
+      "The message after the server ends your session now just says you were signed out.",
+      "Test, demo and simulator iPads no longer appear in System Health or turn it Critical.",
+      "Long booking titles wrap to two lines, borrower names stay whole, kiosk rows skip a location their name already says, and search waits for Command-F instead of grabbing focus on open."
+    ],
+    "platforms": [
+      "macOS"
+    ],
+    "pr": 543
+  },
+  {
+    "date": "2026-10-20",
     "title": "Consistent booking titles",
     "type": "improvement",
     "summary": "Bookings now read the same everywhere: sport name, vs or at, then the opponent.",
