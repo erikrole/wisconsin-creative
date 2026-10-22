@@ -115,10 +115,10 @@
       display: flex; align-items: center; gap: 12px; width: min(760px, calc(100% - 32px)); margin: 0 auto;
       padding: max(16px, env(safe-area-inset-top)) 0 0;
     }
-    .brand { display: flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; padding-left: 12px; border-left: 1px solid var(--glass-line); }
-    .brand-mark { width: 22px; height: 22px; flex: none; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--glass-line); }
-    .brand-mark svg { display: block; width: 22px; height: 22px; }
-    .brand-name { font-weight: 700; font-size: 15px; letter-spacing: -0.005em; white-space: nowrap; color: var(--ink-2); }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-mark { width: 28px; height: 28px; flex: none; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--glass-line); }
+    .brand-mark svg { display: block; width: 28px; height: 28px; }
+    .brand-name { font-weight: 900; font-size: 17px; letter-spacing: -0.01em; white-space: nowrap; }
     .ghost {
       display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 13px;
       border-radius: 10px; color: var(--ink); font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer;
@@ -283,19 +283,22 @@
     .footnote kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--glass-line); border-radius: 5px; }
     @media (hover: none) { .keys { display: none; } }
     /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
-       The Motion W and wordmark sit first in the top bar, top left, in the
-       page's own text colour. Phones keep just the W. ---- */
-    .wc-badge {
-      display: inline-flex; align-items: center; gap: 8px; flex: none; border-radius: 8px;
-      color: inherit; text-decoration: none; font-size: 14px; font-weight: 900; letter-spacing: -0.005em; line-height: 1;
-      transition: opacity 150ms ease;
-    }
-    .wc-badge:hover { opacity: 0.8; }
+       An Apps button and the Motion W, last in the top bar (top right, W in
+       the corner), in the page's own text colour. The tool's name is top left. ---- */
+    .wc-brand { display: inline-flex; align-items: center; gap: 12px; flex: none; margin-left: auto; color: inherit; }
+    .wc-badge { display: block; width: 30px; height: 30px; flex: none; }
     .wc-badge-w {
-      width: 28px; height: 28px; flex: none; background: currentColor;
+      display: block; width: 100%; height: 100%; background: currentColor;
       -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
     }
-    @media (max-width: 479px) { .wc-badge-name { display: none; } }
+    .wc-apps {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border-radius: 8px;
+      color: inherit; text-decoration: none; font-size: 13px; font-weight: 700; line-height: 1;
+      background: color-mix(in srgb, currentColor 8%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+      transition: background 150ms ease;
+    }
+    .wc-apps:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
+    .wc-apps svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.8; }
 
     /* ---- entrance ---- */
     .rise { opacity: 0; transform: translateY(8px); animation: rise 650ms var(--ease) forwards; }
@@ -327,15 +330,14 @@
   <div class="sky" aria-hidden="true"><div class="sky-night"></div><div class="sky-blue"></div><div class="sky-gold"></div><div class="sky-day"></div></div>
 
   <header class="topbar">
-    <a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>
     <span class="brand">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 30 30"><defs><linearGradient id="bm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3f73"/><stop offset=".62" stop-color="#c8646f"/><stop offset="1" stop-color="#f5a64a"/></linearGradient></defs><rect width="30" height="30" fill="url(#bm)"/><circle cx="15" cy="19.5" r="6" fill="#ffe3a1"/><rect y="19.5" width="30" height="11" fill="#23204a" opacity=".62"/><path d="M3 19.5h24" stroke="#fff" stroke-width="1.3"/></svg></span>
       <span class="brand-name">Golden Hour</span>
     </span>
-    <a class="ghost glass" href="/apps">
-      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>
-      Apps
-    </a>
+    <div class="wc-brand">
+      <a class="wc-apps" href="/apps"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>Apps</a>
+      <span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"></span></span>
+    </div>
   </header>
 
   <main>
