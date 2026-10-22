@@ -764,6 +764,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             let assetId = String(path.dropFirst("/api/assets/".count))
             return AssetFixtureAPI.asset(for: assetId)
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
+        case let path where path.hasPrefix("/api/shift-groups/") && path.hasSuffix("/working-copy")
+            && request.httpMethod == "GET":
+            let groupId = path.dropFirst("/api/shift-groups/".count).dropLast("/working-copy".count)
+            return ScheduleFixtureAPI.workingCopy(shiftGroupId: String(groupId))
         case "/api/me/notification-preferences": return NotificationFixtureAPI.preferencesPayload()
         case "/api/gear-picks/me": return UIReviewFixtureAPI.gearPicks
         case let path where path.hasSuffix("/availability") && path.hasPrefix("/api/users/"):
@@ -2573,7 +2577,8 @@ struct EventDetailHarnessView: View {
         .task {
             session.currentUser = ScheduleFixtures.staffUser
             let events = (try? await APIClient.shared.calendarEvents()) ?? []
-            event = events.first { $0.summary.contains("Ohio State") } ?? events.first
+            // `e1` is the fixture event that has a crew plan (filled and open slots).
+            event = events.first { $0.id == "e1" } ?? events.first
         }
     }
 }
@@ -2645,6 +2650,37 @@ enum UIReviewFixtureAPI {
             {"style":"BP-3","name":"Staff cap","fit":"MENS","category":"Accessories","priceCents":2800,"sizeLabel":"Size","sizes":["OSFA"],"sizesAreExact":true,"oneSize":true,"defaultSize":"OSFA","kit":{"kind":"CORE_KIT","colorCode":"RED"},"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]}
           ]}
         }}
+        """.utf8)
+    }
+}
+
+
+extension ScheduleFixtureAPI {
+    /// The staff working-copy editor for a crew plan, published and unchanged,
+    /// so Event detail loads its crew the way a real session does instead of
+    /// falling back to "Showing the published crew" on a 404.
+    static func workingCopy(shiftGroupId: String) -> Data? {
+        let eventId = shiftGroupId.hasPrefix("sg-") ? String(shiftGroupId.dropFirst(3)) : shiftGroupId
+        guard let plan = crewPlans[eventId] else { return nil }
+        let users = plan.shifts.enumerated().compactMap { index, shift -> String? in
+            guard let worker = shift.worker else { return nil }
+            return #"{"id":"u-\#(index)","name":"\#(worker)","role":"STUDENT","staffingType":"ST","primaryArea":"\#(shift.area)","avatarUrl":null}"#
+        }.joined(separator: ",")
+        let slots = plan.shifts.enumerated().map { index, shift -> String in
+            let assignment = shift.worker == nil
+                ? "null"
+                : #"{"sourceAssignmentId":"a-\#(eventId)-\#(index)","userId":"u-\#(index)","status":"CONFIRMED","callStartsAt":null,"callEndsAt":null,"callNote":null,"crewLabel":null,"crewHalf":null,"activeTradeId":null,"bookingCount":0}"#
+            return #"{"key":"s-\#(eventId)-\#(index)","sourceShiftId":"s-\#(eventId)-\#(index)","area":"\#(shift.area)","workerType":"ST","startsAt":"\#(plan.startsAt)","endsAt":"\#(plan.endsAt)","callStartsAt":"\#(plan.callStartsAt)","callEndsAt":null,"notes":null,"assignmentHistoryCount":0,"assignment":\#(assignment)}"#
+        }.joined(separator: ",")
+        return Data("""
+        {"data":{"shiftGroupId":"\(shiftGroupId)","publicationState":"PUBLISHED","publishedAt":"\(plan.startsAt)",
+          "publishedVersion":1,"workingVersion":1,"basePublishedVersion":1,"hasWorkingCopy":false,
+          "updatedAt":null,"updatedById":null,"autoReleaseAt":null,"autoReleaseRunId":null,"autoReleaseError":null,
+          "canUndo":false,"canRedo":false,
+          "changes":{"addedSlots":0,"removedSlots":0,"convertedSlots":0,"assignmentChanges":0,"callWindowChanges":0,"total":0},
+          "affectedWorkerCount":0,"assignedUsers":[\(users)],"defaultWindow":null,
+          "schedule":{"eventStartsAt":"\(plan.startsAt)","eventEndsAt":"\(plan.endsAt)","slots":[\(slots)]},
+          "draftId":null,"pendingClaims":[]}}
         """.utf8)
     }
 }

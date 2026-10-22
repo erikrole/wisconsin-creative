@@ -3,13 +3,16 @@
     "date": "2026-10-22",
     "title": "Calmer iPhone screens",
     "type": "improvement",
-    "summary": "Home, UA Gear, Availability, item details, and profiles on iPhone are quieter and easier to scan.",
+    "summary": "Home, UA Gear, Availability, Notifications, Reports, event crews, item details, and profiles on iPhone are quieter and easier to scan.",
     "details": [
       "Home leads with your name and photo, then one line of counts: only overdue is red.",
       "UA Gear is a photo grid with your allowance at the top, and one green Review button once you have picks.",
       "My Availability is now a simple list: pick a day, see its times, and swipe a row to edit or delete it.",
       "Item details show Available next to the name, and Reserve is the one green button on the screen.",
-      "Profiles put the person's photo, name, and role front and center."
+      "Profiles put the person's photo, name, and role front and center.",
+      "Notification settings put Pause alerts in one menu and drop the repeated status lines.",
+      "Reports shows plain numbers, with red only for overdue.",
+      "Event crew lists drop the repeated Student label, and Assign is green."
     ],
     "platforms": [
       "iOS"
