@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "Photo Frame, rebuilt",
+    "type": "improvement",
+    "summary": "Photo Frame is redesigned as a calm editor with the photo on the left and every setting on the right, and it now handles a whole set of photos at once.",
+    "details": [
+      "Fixed photos that showed only ISO on the frame: shutter, aperture and focal length now come through from every kind of file, including iPhone HEIC photos in Safari.",
+      "Drop up to 12 photos, give them one look, and export them all. Each keeps its own camera settings and caption.",
+      "On iPhone, Share sends the framed photos straight to Photos or Messages. Copy puts one on the clipboard.",
+      "Saves as JPEG by default (a fraction of the size), with PNG still offered.",
+      "New Border (Slim, Regular, Wide) and Text (Split or Centered) options, a light and dark look that follows the Apps page, and a warning when a long caption gets cut short.",
+      "Everything still happens in your browser. Nothing is uploaded, and location data from the original never carries over."
+    ],
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
     "type": "improvement",

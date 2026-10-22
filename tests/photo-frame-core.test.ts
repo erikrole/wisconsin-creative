@@ -91,7 +91,9 @@ describe("Photo Frame core", () => {
     expect(core.cameraName("SONY", "ILCE-1")).toBe("Sony A1");
     expect(core.cameraName("SONY", "ILME-FX3")).toBe("Sony FX3");
     expect(core.cameraName("Canon", "Canon EOS R5")).toBe("Canon EOS R5");
-    expect(core.cameraName("NIKON CORPORATION", "NIKON Z 9")).toBe("NIKON Z 9");
+    expect(core.cameraName("NIKON CORPORATION", "NIKON Z 9")).toBe("Nikon Z 9");
+    expect(core.cameraName("Apple", "iPhone 16 Pro")).toBe("iPhone 16 Pro");
+    expect(core.cameraName("SONY", "ILCE-7CM2")).toBe("Sony A7C II");
     expect(core.cameraName("FUJIFILM", "X-T5")).toBe("Fujifilm X-T5");
   });
 
@@ -99,5 +101,59 @@ describe("Photo Frame core", () => {
     expect(core.inkFor("#000000").ink).toBe("#f4f2ed");
     expect(core.inkFor("#a00000").ink).toBe("#f4f2ed");
     expect(core.inkFor("#ffffff").ink).toBe("#15151a");
+  });
+
+  it("reads exposure written as doubles, and falls back to the APEX values", () => {
+    // Same shell as above, but with the rationals rewritten as type 12 (double) like some exporters do.
+    const buf = jpegWithExif();
+    const view = new DataView(buf);
+    const tiff = 12;
+    const exifAt = tiff + view.getUint32(tiff + 4, true) + 2 + 3 * 12 + 4;
+    const n = view.getUint16(exifAt, true);
+    for (let i = 0; i < n; i++) {
+      const at = exifAt + 2 + i * 12;
+      if (view.getUint16(at + 2, true) !== 5) continue;
+      const off = tiff + view.getUint32(at + 8, true);
+      const value = view.getUint32(off, true) / view.getUint32(off + 4, true);
+      view.setUint16(at + 2, 12, true);
+      view.setFloat64(off, value, true);
+    }
+    expect(core.readExif(buf)).toMatchObject({ focal: "200 mm", aperture: "f/2.8", shutter: "1/1600 s" });
+    // APEX: Av 3 is f/2.8, Tv 10 is 1/1024 s.
+    expect(core.summarize({ 0x9202: 3, 0x9201: 10 })).toMatchObject({ aperture: "f/2.8", shutter: "1/1024 s" });
+  });
+
+  it("finds EXIF in containers it does not parse, like HEIC", () => {
+    const jpeg = new Uint8Array(jpegWithExif());
+    // Wrap the TIFF block the way a HEIC Exif item stores it: junk, then "Exif\0\0", then TIFF.
+    const tiff = jpeg.slice(12, jpeg.length - 2);
+    const heic = new Uint8Array([0, 0, 0, 24, ...[..."ftypheic"].map((c) => c.charCodeAt(0)), ...new Array(40).fill(7), 0, 0, 0, 6, 0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff]);
+    expect(core.readExif(heic.buffer)).toMatchObject({ camera: "Sony A1 II", iso: "3200" });
+  });
+
+  it("fills lens and credit from fallback tags", () => {
+    expect(core.formatLensSpec([24, 70, 2.8, 2.8])).toBe("24-70mm F2.8");
+    expect(core.formatLensSpec([35, 35, 1.4, 1.4])).toBe("35mm F1.4");
+    expect(core.summarize({ 0xa432: [70, 200, 2.8, 2.8] }).lens).toBe("70-200mm F2.8");
+    expect(core.creditFromCopyright("© 2026 Jane Doe. All rights reserved.")).toBe("Jane Doe");
+    expect(core.creditFromCopyright("Copyright (c) 2025-2026 UW Athletics")).toBe("UW Athletics");
+    expect(core.summarize({ 0x8298: "Photo by Sam Lee" }).artist).toBe("Sam Lee");
+    expect(core.summarize({ 0x013b: "Pat Kim", 0x8298: "© Someone Else" }).artist).toBe("Pat Kim");
+  });
+
+  it("names exports safely", () => {
+    expect(core.exportName("DSC01234.ARW.jpg", "jpg")).toBe("DSC01234.ARW-framed.jpg");
+    expect(core.exportName("../../evil:name?.png", "png")).toBe("evilname-framed.png");
+    expect(core.exportName("", "png")).toBe("photo-framed.png");
+  });
+});
+
+describe("Photo Frame page", () => {
+  const html = readFileSync("public/frame/index.html", "utf8");
+
+  it("carries the shared Wisconsin Creative badge, and its CSP allows the badge mask", () => {
+    expect(html).toContain('<a class="wc-badge" href="/apps"><span class="wc-badge-w" aria-hidden="true"></span>Wisconsin Creative</a>');
+    expect(html).toContain("img-src 'self' data:;");
+    expect(html).toContain("connect-src 'none'");
   });
 });

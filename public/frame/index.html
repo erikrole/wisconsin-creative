@@ -4,142 +4,295 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#08090a">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fbfbfc" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
   <meta name="robots" content="noindex">
   <title>Photo Frame</title>
-  <meta name="description" content="Drop in a photo and get a clean frame with its camera settings and photographer credit, ready to export as a PNG.">
+  <meta name="description" content="Drop in photos and get clean frames with their camera settings and photographer credit, ready to post.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.5' fill='%2308090a'/%3E%3Crect x='3' y='2.5' width='10' height='8' rx='1' fill='none' stroke='%23fff' stroke-width='1.2'/%3E%3Crect x='3' y='12' width='5' height='1.4' fill='%23a00000'/%3E%3C/svg%3E">
   <style>
-    @font-face { font-family: "Gotham"; src: url("/Gotham-Black.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+    /* UI is wc-fresh (Lato). The frame itself is drawn in Gotham, the brand face on the exported image. */
+    @font-face { font-family: "Lato"; src: url("/Lato-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+    @font-face { font-family: "Lato"; src: url("/Lato-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+    @font-face { font-family: "Lato"; src: url("/Lato-Black.woff2") format("woff2"); font-weight: 900; font-display: swap; }
     @font-face { font-family: "Gotham"; src: url("/Gotham-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
     @font-face { font-family: "Gotham"; src: url("/Gotham-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
     @font-face { font-family: "Gotham"; src: url("/Gotham-Book.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 
     :root {
-      --body: #08090a;
-      --glass: rgba(22, 23, 26, 0.86);
-      --line: rgba(255, 255, 255, 0.09);
-      --line-2: rgba(255, 255, 255, 0.16);
-      --ink: #f4f2ed;
-      --ink-2: #b4b3ae;
-      --ink-3: #7d7d78;
-      --red: #a00000;
-      --red-hi: #c40a0a;
-      --danger: #ff7b7b;
-      --font: "Gotham", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --bg: #fbfbfc;
+      --surface: #ffffff;
+      --surface-2: #f4f5f7;
+      --stage: #f0f0f3;
+      --border: #e8e8ec;
+      --border-2: #d9d9e0;
+      --text: #1c2024;
+      --text-2: #60646c;
+      --text-3: #8b8d98;
+      /* Badger red is the accent here, not the wc-fresh blue: the tools keep the brand. */
+      --accent: #a00000;
+      --accent-hover: #c40a0a;
+      --accent-soft: #fbeceb;
+      --on-accent: #ffffff;
+      --danger: #ce2c31;
+      --knob: #ffffff;
+      --on: #1c2024;
+      --on-knob: #ffffff;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 32px -12px rgba(16, 24, 40, 0.18);
+      --photo-shadow: 0 1px 2px rgba(16, 24, 40, 0.08), 0 24px 60px -24px rgba(16, 24, 40, 0.35);
+      --font: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --ease: cubic-bezier(0.2, 0, 0, 1);
+      --radius: 10px;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #111113; --surface: #18191b; --surface-2: #212225; --stage: #0b0b0c; --border: #2a2c30; --border-2: #3a3d42;
+        --text: #edeef0; --text-2: #b0b4ba; --text-3: #7b7f88; --accent: #d42a2a; --accent-hover: #e8453f; --accent-soft: rgba(212, 42, 42, 0.16);
+        --danger: #ff8589; --knob: #edeef0; --on: #edeef0; --on-knob: #111113; --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+        --photo-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 30px 70px -30px rgba(0, 0, 0, 0.9);
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #111113; --surface: #18191b; --surface-2: #212225; --stage: #0b0b0c; --border: #2a2c30; --border-2: #3a3d42;
+      --text: #edeef0; --text-2: #b0b4ba; --text-3: #7b7f88; --accent: #d42a2a; --accent-hover: #e8453f; --accent-soft: rgba(212, 42, 42, 0.16);
+      --danger: #ff8589; --knob: #edeef0; --on: #edeef0; --on-knob: #111113; --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+      --photo-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 30px 70px -30px rgba(0, 0, 0, 0.9);
       color-scheme: dark;
     }
+
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    html { background: var(--body); }
-    body { margin: 0; min-width: 300px; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; background: var(--body); }
+    html { background: var(--bg); }
+    body { margin: 0; min-width: 300px; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; background: var(--bg); }
     button, input { font: inherit; color: inherit; }
-    :focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 6px; }
-
-    .topbar { display: flex; align-items: center; gap: 12px; height: 56px; padding: env(safe-area-inset-top) clamp(16px, 4vw, 28px) 0; }
-    .brand { margin-right: auto; font-weight: 700; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }
-    .brand i { display: inline-block; width: 7px; height: 7px; margin-right: 10px; border-radius: 50%; background: var(--red-hi); }
-    .back { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); text-decoration: none; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; transition: color 140ms var(--ease); }
-    .back:hover { color: var(--ink); }
-    .back svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-
-    main { flex: 1; display: grid; grid-template-rows: 1fr auto; justify-items: center; min-height: 0; padding: 0 clamp(14px, 4vw, 40px) calc(20px + env(safe-area-inset-bottom)); gap: 18px; }
-    .stage { position: relative; display: grid; place-items: center; width: 100%; max-width: 1100px; min-height: 0; padding: 8px 0; }
-    #canvas { display: none; max-width: 100%; max-height: calc(100dvh - 190px); width: auto; height: auto; border-radius: 6px; box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.07); }
-    .stage.has-photo #canvas { display: block; }
-
-    .drop { display: grid; justify-items: center; gap: 6px; width: min(440px, 100%); padding: 64px 24px; text-align: center; border-radius: 22px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.025); cursor: pointer; transition: border-color 160ms var(--ease), background 160ms var(--ease); }
-    .drop:hover, .stage.dragging .drop { border-color: var(--line-2); background: rgba(255, 255, 255, 0.05); }
-    .drop svg { width: 30px; height: 30px; margin-bottom: 14px; fill: none; stroke: var(--ink-2); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-    .drop strong { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
-    .drop span { font-size: 13px; color: var(--ink-3); }
-    .stage.has-photo .drop { display: none; }
-    .stage.dragging #canvas { opacity: 0.4; }
-
-    .dock { position: relative; width: min(100%, 900px); display: grid; justify-items: center; gap: 10px; }
-    .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; padding: 8px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.9); }
-    .seg { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
-    .seg-button { min-height: 32px; padding: 0 13px; border: 0; border-radius: 999px; background: none; color: var(--ink-2); font-size: 12px; font-weight: 500; cursor: pointer; transition: background 140ms var(--ease), color 140ms var(--ease); }
-    .seg-button:hover { color: var(--ink); }
-    .seg-button[aria-pressed="true"] { background: #fff; color: #08090a; font-weight: 700; }
-    .swatches { display: inline-flex; gap: 8px; align-items: center; padding: 0 4px; }
-    .swatch, .custom { width: 24px; height: 24px; padding: 0; border-radius: 50%; background: var(--c); border: 1px solid var(--line-2); cursor: pointer; transition: transform 140ms var(--ease); }
-    .swatch:hover, .custom:hover { transform: scale(1.12); }
-    .swatch[aria-pressed="true"], .custom.active { box-shadow: 0 0 0 2px #121316, 0 0 0 3.5px #fff; }
-    .custom { position: relative; overflow: hidden; background: conic-gradient(from 0deg, #f33, #fd3, #3d6, #3cf, #93f, #f33); }
-    .custom.active { background: var(--c); }
-    .custom input { position: absolute; inset: -6px; width: 40px; height: 40px; opacity: 0; cursor: pointer; }
-    .pill { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 16px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--ink); font-size: 12px; font-weight: 500; cursor: pointer; transition: background 140ms var(--ease); }
-    .pill:hover { background: rgba(255, 255, 255, 0.14); }
-    .pill[aria-expanded="true"] { background: rgba(255, 255, 255, 0.16); }
-    .pill.primary { background: var(--red); color: #fff; font-weight: 700; }
-    .pill.primary:hover { background: var(--red-hi); }
-    .pill:disabled { opacity: 0.35; cursor: not-allowed; }
-    .pill svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-
-    .details { position: absolute; left: 0; right: 0; bottom: calc(100% + 10px); padding: 14px; border-radius: 20px; background: var(--glass); border: 1px solid var(--line); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.95); max-height: min(60dvh, 460px); overflow: auto; }
-    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
-    @media (max-width: 620px) { .fields { grid-template-columns: 1fr; } }
-    .field { display: grid; grid-template-columns: 20px 78px minmax(0, 1fr); align-items: center; gap: 8px; }
-    .field label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: var(--ink-3); white-space: nowrap; }
-    .field input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--red-hi); cursor: pointer; }
-    .field input[type="text"] { width: 100%; height: 36px; padding: 0 11px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid transparent; font-size: 13px; transition: border-color 140ms var(--ease), background 140ms var(--ease); }
-    .field input[type="text"]:hover { background: rgba(255, 255, 255, 0.08); }
-    .field input[type="text"]:focus { border-color: var(--line-2); outline: none; background: rgba(255, 255, 255, 0.08); }
-    .field input[type="text"]::placeholder { color: #55554f; }
-    .field.off label, .field.off input[type="text"] { opacity: 0.4; }
-
-    .status { min-height: 18px; margin: 0; font-size: 12px; color: var(--ink-3); text-align: center; }
-    .status.error { color: var(--danger); }
+    button { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
     .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    /* ---- top bar ---- */
+    .topbar { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: env(safe-area-inset-top) clamp(16px, 3vw, 24px) 0; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .back { display: inline-flex; align-items: center; gap: 4px; margin-left: -6px; padding: 6px; color: var(--text-2); text-decoration: none; font-size: 13px; border-radius: 8px; transition: color 140ms var(--ease), background 140ms var(--ease); }
+    .back:hover { color: var(--text); background: var(--surface-2); }
+    .back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .divider { width: 1px; height: 18px; background: var(--border); }
+    .title { display: inline-flex; align-items: center; gap: 9px; margin: 0 auto 0 0; font-size: 15px; font-weight: 900; letter-spacing: -0.01em; }
+    .title i { width: 8px; height: 8px; border-radius: 50%; background: #c40a0a; }
+    .private { display: inline-flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; }
+    .private svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 520px) { .private span { display: none; } }
+
+    /* ---- buttons ---- */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 140ms var(--ease), border-color 140ms var(--ease), color 140ms var(--ease); }
+    .btn:hover { background: var(--surface-2); border-color: var(--border-2); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .btn.primary { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn.quiet { border-color: transparent; background: none; color: var(--text-2); font-weight: 400; }
+    .btn.quiet:hover { background: var(--surface-2); color: var(--text); }
+    .btn.big { min-height: 44px; font-size: 14px; }
+    .link { padding: 0; border: 0; background: none; color: var(--accent); font-size: 12px; cursor: pointer; }
+    .link:hover { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 2px; }
+
+    /* ---- workspace ---- */
+    main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: 0; }
+    /* Desktop: one screen, the settings scroll inside their panel. */
+    @media (min-width: 861px) { body { height: 100vh; height: 100dvh; overflow: hidden; } }
+    main.empty { grid-template-columns: 1fr; }
+    main.empty .panel { display: none; }
+    .stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; background: var(--stage); }
+    .canvas-wrap { --gap: clamp(20px, 4vw, 48px); position: relative; display: grid; place-items: center; min-height: 0; padding: var(--gap); }
+    #canvas { position: absolute; inset: var(--gap); margin: auto; display: block; max-width: calc(100% - 2 * var(--gap)); max-height: calc(100% - 2 * var(--gap)); width: auto; height: auto; border-radius: 4px; box-shadow: var(--photo-shadow); transition: opacity 160ms var(--ease); }
+    main.empty #canvas, main.empty .strip { display: none; }
+    .stage.dragging::after { content: ""; position: absolute; inset: 12px; border: 2px dashed var(--accent); border-radius: 16px; background: var(--accent-soft); opacity: 0.7; pointer-events: none; }
+
+    /* filmstrip */
+    .strip { display: flex; gap: 8px; align-items: center; justify-content: center; padding: 0 16px 20px; overflow-x: auto; scrollbar-width: none; }
+    .strip::-webkit-scrollbar { display: none; }
+    .thumb { position: relative; flex: none; width: 56px; height: 56px; padding: 0; border-radius: 8px; border: 0; background: var(--surface-2); cursor: pointer; overflow: hidden; opacity: 0.62; transition: opacity 140ms var(--ease), box-shadow 140ms var(--ease); }
+    .thumb canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .thumb:hover { opacity: 0.9; }
+    .thumb[aria-current="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--stage), 0 0 0 4px var(--on); }
+    .add-thumb { display: grid; place-items: center; width: 56px; height: 56px; flex: none; border-radius: 8px; border: 1px dashed var(--border-2); background: none; color: var(--text-3); cursor: pointer; transition: color 140ms var(--ease), border-color 140ms var(--ease); }
+    .add-thumb:hover { color: var(--text); border-color: var(--text-3); }
+    .add-thumb svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+
+    /* empty state */
+    .drop { display: none; justify-items: center; gap: 4px; width: min(480px, 100%); padding: 56px 28px 44px; text-align: center; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+    main.empty .drop { display: grid; }
+    .drop .icon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 14px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); }
+    .drop .icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .drop h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.02em; }
+    .drop p { margin: 0 0 18px; color: var(--text-2); font-size: 14px; }
+    .drop small { margin-top: 18px; color: var(--text-3); font-size: 12px; }
+
+    /* ---- inspector ---- */
+    .panel { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border); background: var(--bg); }
+    .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+    .section:last-child { border-bottom: 0; }
+    .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+    .head h2 { margin: 0; font-size: 13px; font-weight: 700; }
+    .meta { margin: -6px 0 12px; color: var(--text-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 10px; }
+    .row + .row { margin-top: 10px; }
+    .row > .label { color: var(--text-2); font-size: 13px; }
+
+    .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 2px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--border); }
+    .seg-button { min-height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font-size: 12.5px; cursor: pointer; transition: background 140ms var(--ease), color 140ms var(--ease), box-shadow 140ms var(--ease); }
+    .seg-button:hover { color: var(--text); }
+    .seg-button[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 700; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1), 0 0 0 1px var(--border); }
+
+    .swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .swatch, .custom { position: relative; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: var(--c); border: 1px solid rgba(127, 127, 140, 0.35); cursor: pointer; transition: transform 140ms var(--ease); }
+    .swatch:hover, .custom:hover { transform: scale(1.08); }
+    .swatch[aria-pressed="true"], .custom.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--on); }
+    .custom { overflow: hidden; background: conic-gradient(from 0deg, #f33, #fd3, #3d6, #3cf, #93f, #f33); }
+    .custom.active { background: var(--c); }
+    .custom input { position: absolute; inset: -8px; width: 44px; height: 44px; opacity: 0; cursor: pointer; }
+
+    /* text fields with show/hide switches */
+    .fields { display: grid; gap: 2px; }
+    .field { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; }
+    .field label { color: var(--text-2); font-size: 13px; }
+    .field input[type="text"] { width: 100%; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease), opacity 140ms var(--ease); }
+    .field input[type="text"]:hover { border-color: var(--border-2); }
+    .field input[type="text"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .field input[type="text"]::placeholder { color: var(--text-3); opacity: 0.8; }
+    .field.off label, .field.off input[type="text"] { opacity: 0.45; }
+    .switch { appearance: none; -webkit-appearance: none; position: relative; width: 32px; height: 20px; margin: 0; border-radius: 999px; background: var(--border-2); cursor: pointer; transition: background 160ms var(--ease); }
+    .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--knob); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: transform 160ms var(--ease); }
+    .switch:checked { background: var(--on); }
+    .switch:checked::after { transform: translateX(12px); background: var(--on-knob); }
+    .hint { margin: 10px 0 0; color: var(--text-3); font-size: 12px; }
+
+    /* export footer */
+    .actions { display: grid; gap: 10px; padding: 16px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--bg); }
+    .actions .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .actions .pair.solo { grid-template-columns: 1fr; }
+    .status { min-height: 17px; margin: 0; color: var(--text-3); font-size: 12px; text-align: center; }
+    .status.error { color: var(--danger); }
+    .status.warn { color: var(--text-2); }
+
+    /* ---- phones and narrow windows: photo on top, settings below, export pinned ---- */
+    @media (max-width: 860px) {
+      main { display: block; }
+      .stage { min-height: 0; }
+      .canvas-wrap { --gap: 16px; padding: 20px 16px 16px; }
+      #canvas { position: static; max-width: 100%; max-height: 58dvh; }
+      main.empty .stage { display: grid; min-height: calc(100dvh - 57px); }
+      .strip { justify-content: flex-start; padding: 0 16px 16px; }
+      .panel { border-left: 0; }
+      .scroll { overflow: visible; }
+      .section { padding: 18px 16px; }
+      /* Export sits right under the photo on phones; the settings follow below. */
+      .actions { order: -1; padding: 4px 16px 18px; border-top: 0; border-bottom: 1px solid var(--border); background: var(--stage); }
+      .scroll { padding-bottom: env(safe-area-inset-bottom); }
+    }
+    /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool ---- */
+    .wc-badge {
+      position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+      display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px 6px 9px; border-radius: 999px;
+      color: inherit; opacity: 0.78; text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; line-height: 1;
+      background: color-mix(in srgb, currentColor 9%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: opacity 150ms ease;
+    }
+    .wc-badge:hover { opacity: 1; }
+    .wc-badge-w {
+      width: 16px; height: 15px; flex: none; background: currentColor;
+      -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
+    }
+    @media (max-width: 1023px) { .wc-badge { position: relative; right: auto; bottom: auto; display: flex; width: max-content; margin: 0 auto calc(20px + env(safe-area-inset-bottom)); } }
+    /* The badge sits in the settings column's corner on desktop, so the footer leaves room under it. */
+    @media (min-width: 1024px) { .actions { padding-bottom: calc(60px + env(safe-area-inset-bottom)); } }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <span class="brand"><i aria-hidden="true"></i>Photo Frame</span>
     <a class="back" href="/apps">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
       Apps
     </a>
+    <span class="divider" aria-hidden="true"></span>
+    <p class="title"><i aria-hidden="true"></i>Photo Frame</p>
+    <span class="private" title="Photos are framed in this browser tab and never uploaded.">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+      <span>Stays on this device</span>
+    </span>
   </header>
 
-  <main>
-    <div class="stage" id="stage">
-      <label class="drop" id="drop" for="file" tabindex="0">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="5" width="24" height="22" rx="3"/><path d="M4 21l7-6 6 5 4-3 7 6"/><circle cx="21.5" cy="11.5" r="1.8"/></svg>
-        <strong>Drop a photo</strong>
-        <span>or click to choose one. You can also paste.</span>
-      </label>
-      <canvas id="canvas" role="img" aria-label="Framed preview"></canvas>
-      <input class="visually-hidden" id="file" type="file" accept="image/jpeg,image/png,image/webp" tabindex="-1">
-    </div>
-
-    <div class="dock">
-      <div class="details" id="details" hidden>
-        <div class="fields" id="fields"></div>
-      </div>
-      <div class="bar" id="toolbar">
-        <div class="seg" id="formats" role="group" aria-label="Size"></div>
-        <div class="swatches" id="swatches" role="group" aria-label="Frame color">
-          <label class="custom" id="custom" title="Pick any color"><input type="color" id="color" value="#000000" aria-label="Custom frame color"></label>
+  <main class="empty" id="main">
+    <section class="stage" id="stage" aria-label="Preview">
+      <div class="canvas-wrap">
+        <div class="drop" id="drop">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="4" y="5" width="24" height="22" rx="3"/><path d="M4 21l7-6 6 5 4-3 7 6"/><circle cx="21.5" cy="11.5" r="1.8"/></svg></span>
+          <h1>Frame a photo</h1>
+          <p>Drop photos here, or paste one.</p>
+          <button class="btn primary big" id="choose" type="button">Choose photos</button>
+          <small>JPEG, PNG, WebP or HEIC. Up to 12 at a time.</small>
         </div>
-        <button class="pill" id="details-toggle" type="button" aria-expanded="false" aria-controls="details">Details</button>
-        <button class="pill" id="change" type="button" hidden>
-          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 0 1 9.4-3.9L13.5 5.5M13.5 2.5v3h-3M13.5 8a5.5 5.5 0 0 1-9.4 3.9L2.5 10.5M2.5 13.5v-3h3"/></svg>
-          Change photo
-        </button>
-        <button class="pill primary" id="export" type="button" disabled>Export PNG</button>
+        <canvas id="canvas" role="img" aria-label="Framed preview"></canvas>
       </div>
-      <p class="status" id="status" role="status"></p>
-    </div>
+      <div class="strip" id="strip" role="group" aria-label="Photos"></div>
+      <input class="visually-hidden" id="file" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple tabindex="-1" aria-hidden="true">
+    </section>
+
+    <aside class="panel" aria-label="Frame settings">
+      <div class="scroll">
+        <section class="section">
+          <div class="head"><h2>Frame</h2></div>
+          <div class="row"><span class="label" id="lbl-size">Size</span><div class="seg" id="formats" role="group" aria-labelledby="lbl-size"></div></div>
+          <div class="row"><span class="label" id="lbl-border">Border</span><div class="seg" id="borders" role="group" aria-labelledby="lbl-border"></div></div>
+          <div class="row"><span class="label" id="lbl-layout">Text</span><div class="seg" id="layouts" role="group" aria-labelledby="lbl-layout"></div></div>
+          <div class="row"><span class="label" id="lbl-color">Color</span>
+            <div class="swatches" id="swatches" role="group" aria-labelledby="lbl-color">
+              <label class="custom" id="custom" title="Pick any color"><input type="color" id="color" value="#000000" aria-label="Custom frame color"></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="head"><h2>Credit</h2></div>
+          <div class="fields" id="fields-credit"></div>
+          <p class="hint">The credit is remembered for next time.</p>
+        </section>
+
+        <section class="section">
+          <div class="head"><h2>Camera settings</h2><button class="link" id="reset" type="button">Reset to photo</button></div>
+          <p class="meta" id="meta"></p>
+          <div class="fields" id="fields-camera"></div>
+        </section>
+      </div>
+
+      <div class="actions">
+        <div class="row"><span class="label" id="lbl-type">Save as</span><div class="seg" id="types" role="group" aria-labelledby="lbl-type"></div></div>
+        <button class="btn primary big" id="export" type="button" disabled>Export</button>
+        <div class="pair" id="secondary">
+          <button class="btn" id="share" type="button" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10V2M5 4.5L8 1.5l3 3M4 7H3v7.5h10V7h-1"/></svg>
+            Share
+          </button>
+          <button class="btn" id="copy" type="button" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>
+            Copy
+          </button>
+          <button class="btn" id="export-all" type="button" hidden>Export all</button>
+          <button class="btn quiet" id="remove" type="button">Remove photo</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </div>
+    </aside>
   </main>
 
-  <script src="core.js?v=3c69bf5c3da9"></script>
-  <script src="app.js?v=e6f9bc7a0584"></script>
+  <a class="wc-badge" href="/apps"><span class="wc-badge-w" aria-hidden="true"></span>Wisconsin Creative</a>
+
+  <script src="core.js?v=15d8721e3503"></script>
+  <script src="app.js?v=c93bd7bcd2b2"></script>
 </body>
 </html>
