@@ -76,9 +76,6 @@
 
     /* ---- top bar ---- */
     .topbar { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: env(safe-area-inset-top) clamp(16px, 3vw, 24px) 0; border-bottom: 1px solid var(--border); background: var(--bg); }
-    .back { display: inline-flex; align-items: center; gap: 4px; margin-left: -6px; padding: 6px; color: var(--text-2); text-decoration: none; font-size: 13px; border-radius: 8px; transition: color 140ms var(--ease), background 140ms var(--ease); }
-    .back:hover { color: var(--text); background: var(--surface-2); }
-    .back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .divider { width: 1px; height: 18px; background: var(--border); }
     .title { display: inline-flex; align-items: center; gap: 9px; margin: 0 auto 0 0; font-size: 15px; font-weight: 900; letter-spacing: -0.01em; }
     .title i { width: 8px; height: 8px; border-radius: 50%; background: #c40a0a; }
@@ -195,30 +192,25 @@
       .scroll { padding-bottom: env(safe-area-inset-bottom); }
     }
     /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
-       It sits in the page flow after the content, so it never covers anything:
-       bottom-right on wide screens, centred on phones. ---- */
+       The Motion W and wordmark sit first in the top bar, top left, in the
+       page's own text colour. Phones keep just the W. ---- */
     .wc-badge {
-      position: relative; z-index: 20; display: flex; align-items: center; gap: 7px; width: max-content;
-      margin: 8px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) auto; padding: 6px 11px 6px 9px; border-radius: 999px;
-      color: inherit; opacity: 0.78; text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; line-height: 1;
-      background: color-mix(in srgb, currentColor 9%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: opacity 150ms ease;
+      display: inline-flex; align-items: center; gap: 8px; flex: none; border-radius: 8px;
+      color: inherit; text-decoration: none; font-size: 14px; font-weight: 900; letter-spacing: -0.005em; line-height: 1;
+      transition: opacity 150ms ease;
     }
-    .wc-badge:hover { opacity: 1; }
+    .wc-badge:hover { opacity: 0.8; }
     .wc-badge-w {
-      width: 16px; height: 15px; flex: none; background: currentColor;
+      width: 28px; height: 28px; flex: none; background: currentColor;
       -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
     }
-    @media (max-width: 699px) { .wc-badge { margin-left: auto; margin-right: auto; } }
+    @media (max-width: 479px) { .wc-badge-name { display: none; } }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <a class="back" href="/apps">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
-      Apps
-    </a>
+    <a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>
     <span class="divider" aria-hidden="true"></span>
     <p class="title"><i aria-hidden="true"></i>Photo Frame</p>
     <span class="private" title="Photos are framed in this browser tab and never uploaded.">
@@ -289,8 +281,6 @@
       </div>
     </aside>
   </main>
-
-  <a class="wc-badge" href="/apps"><span class="wc-badge-w" aria-hidden="true"></span>Wisconsin Creative</a>
 
   <script src="core.js?v=15d8721e3503"></script>
   <script src="app.js?v=c93bd7bcd2b2"></script>
