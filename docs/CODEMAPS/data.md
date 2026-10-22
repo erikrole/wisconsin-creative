@@ -19,7 +19,7 @@
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
-| `Asset` | 43 | 8 |
+| `Asset` | 44 | 8 |
 | `FirmwareWatchTarget` | 17 | 3 |
 | `Booking` | 44 | 15 |
 | `BookingAccountabilityExclusion` | 11 | 4 |
