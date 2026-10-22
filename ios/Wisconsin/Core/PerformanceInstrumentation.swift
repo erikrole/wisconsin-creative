@@ -93,6 +93,8 @@ enum AppRuntimeMode {
         /// screen is chosen by `GT_BLAST_VIEW`: blasts, sent, detail,
         /// compose-crew, compose-groups, safari.
         case blastStaff = "blast-staff"
+        /// Launched gear cycle and the person’s handout status.
+        case gearKit = "gear-kit"
         /// Starts a real checkout-return Live Activity in the simulator, in the
         /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
         /// overdue, returned), so the lock screen and Dynamic Island can be
@@ -265,7 +267,7 @@ enum AppRuntimeMode {
              .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome, .damageReportProblem, .damageItemsMissing,
              .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty, .damageQueueDetail, .damageQueueRecord, .createBookingScanner,
              .createBookingEvents, .search, .searchPartial, .searchIdle, .itemsList, .reports,
-             .accountSecurity, .notifications, .notificationsInbox, .login, .homeStudent, .blastStaff,
+             .accountSecurity, .notifications, .notificationsInbox, .login, .homeStudent, .blastStaff, .gearKit,
              .eventDetail, .itemDetail, .userDetail, .availability, .gearPicks, .sharedLogins,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,

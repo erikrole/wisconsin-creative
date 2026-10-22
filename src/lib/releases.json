@@ -347,6 +347,22 @@
     "pr": 610
   },
   {
+    "date": "2026-10-22",
+    "title": "Send blasts from your iPhone",
+    "type": "feature",
+    "summary": "Staff and admins can send a blast from the iPhone app and see who has acknowledged it. Browse also gets the team's Tools.",
+    "details": [
+      "Message Crew on an event sends a blast to everyone on its published crew.",
+      "Before you send, you see how many people it reaches and who they are.",
+      "Sent shows who is still waiting, who acknowledged, and lets you cancel the banner.",
+      "Golden Hour, Photo Frame, QR Studio, Board Sizes and Timelapse open from Browse."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 600
+  },
+  {
     "date": "2026-10-21",
     "title": "My kit for UA gear",
     "type": "feature",
@@ -984,6 +1000,22 @@
       "macOS"
     ],
     "pr": 546
+  },
+  {
+    "date": "2026-10-21",
+    "title": "My kit for UA gear on iPhone",
+    "type": "feature",
+    "summary": "UA gear in the iPhone app now shows your kit and where each piece stands.",
+    "details": [
+      "Each piece lists its size and whether it is planned, on order with a due date, or in your hands.",
+      "A piece with no size says Add your size and takes you to your profile.",
+      "Students on the student list see their kit there too.",
+      "Your kit stays hidden until gear picks are opened to everyone."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 579
   },
   {
     "date": "2026-10-20",
