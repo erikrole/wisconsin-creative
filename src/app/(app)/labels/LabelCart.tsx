@@ -1,32 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import {
-  LABEL_KINDS,
-  buildBrotherCsv,
-  numberRangeRows,
-  parseAssetTag,
-  sdCardRows,
-  type LabelKind,
-  type LabelRow,
-} from "@/lib/brother-label-csv";
-
-/** One label in the print cart, editable in the review step before export. */
-export type CartEntry = LabelRow & {
-  id: string;
-  title: string;
-  name: string;
-  primaryScanCode?: string;
-};
+import { Textarea } from "@/components/ui/textarea";
+import { LABEL_KINDS, numberRangeRows, sdCardRows, type LabelRow } from "@/lib/brother-label-csv";
+import { cn } from "@/lib/utils";
+import type { CartEntry } from "./label-sheet";
 
 const STORAGE_KEY = "labels.cart.v2";
-const KIND_ORDER = Object.keys(LABEL_KINDS) as LabelKind[];
+const MAX_SD_CARDS = 100;
 
 const isText = (value: unknown) => typeof value === "string";
+
+function isFamilySource(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+  const family = value as Record<string, unknown>;
+  return (
+    isText(family.skuId) &&
+    isText(family.binQrCodeValue) &&
+    typeof family.trackByNumber === "boolean" &&
+    typeof family.onHand === "number" &&
+    (family.mode === "family" || family.mode === "units") &&
+    (family.unitScope === "unprinted" || family.unitScope === "all" || family.unitScope === "pick") &&
+    (family.unitPick === undefined || isText(family.unitPick)) &&
+    (family.unitKind === undefined || family.unitKind === "battery" || family.unitKind === "numberTag")
+  );
+}
 
 /** Drops stored rows from older builds or hand-edited storage instead of crashing the page. */
 function isCartEntry(value: unknown): value is CartEntry {
@@ -41,7 +44,8 @@ function isCartEntry(value: unknown): value is CartEntry {
     isText(entry.qrCodeValue) &&
     typeof entry.copies === "number" &&
     typeof entry.kind === "string" &&
-    entry.kind in LABEL_KINDS
+    entry.kind in LABEL_KINDS &&
+    isFamilySource(entry.family)
   );
 }
 
@@ -55,34 +59,6 @@ function readStoredCart(): CartEntry[] {
   }
 }
 
-/** Lenses and SD cards get their own templates; everything else prints as a body label. */
-export function kindForCategory(category: string | null | undefined): LabelKind {
-  const name = (category ?? "").toLowerCase();
-  if (name.includes("lens")) return "lens";
-  if (name.includes("sd card")) return "sd";
-  return "body";
-}
-
-export function newCartEntry(item: {
-  id: string;
-  title: string;
-  name: string;
-  qrCodeValue: string;
-  primaryScanCode?: string;
-  category?: string | null;
-}): CartEntry {
-  return {
-    id: item.id,
-    title: item.title,
-    name: item.name,
-    primaryScanCode: item.primaryScanCode,
-    kind: kindForCategory(item.category),
-    ...parseAssetTag(item.title),
-    qrCodeValue: item.qrCodeValue,
-    copies: 1,
-  };
-}
-
 let generatedSeq = 0;
 function generatedEntries(rows: LabelRow[]): CartEntry[] {
   const stamp = Date.now().toString(36);
@@ -93,7 +69,7 @@ function generatedEntries(rows: LabelRow[]): CartEntry[] {
   });
 }
 
-/** Cart persisted per browser so it survives searches, navigation and reloads. */
+/** Print sheet persisted per browser so it survives searches, navigation and reloads. */
 export function useLabelCart() {
   const [cart, setCart] = useState<CartEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -108,7 +84,7 @@ export function useLabelCart() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
     } catch {
-      // Storage blocked: the cart still works for this visit.
+      // Storage blocked: the sheet still works for this visit.
     }
   }, [cart, hydrated]);
 
@@ -135,38 +111,30 @@ export function useLabelCart() {
   return { cart, hydrated, has, add, remove, update, clear };
 }
 
-export function labelTotal(cart: CartEntry[]) {
-  return cart.reduce((sum, entry) => sum + Math.max(1, entry.copies), 0);
-}
-
-function download(filename: string, csv: string) {
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-function kindTotal(cart: CartEntry[], kind: LabelKind) {
-  return labelTotal(cart.filter((entry) => entry.kind === kind));
-}
-
-function GeneratorRow({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-wrap items-end gap-2">{children}</div>;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+    <label className={cn("flex flex-col gap-1.5 text-xs font-medium text-muted-foreground", className)}>
       {label}
       {children}
     </label>
   );
 }
 
+function GeneratorBlock({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-4 first:border-t-0">
+      <div>
+        <div className="text-sm font-bold">{title}</div>
+        <div className="text-xs text-muted-foreground">{hint}</div>
+      </div>
+      <div className="flex flex-wrap items-end gap-2">{children}</div>
+    </div>
+  );
+}
+
 /** SD card grids, free-text labels and number runs, none of which come from items. */
 export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => void }) {
+  const [open, setOpen] = useState(false);
   const [sdCamera, setSdCamera] = useState("");
   const [sdDept, setSdDept] = useState("");
   const [sdCount, setSdCount] = useState(4);
@@ -177,20 +145,28 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
   const [prefix, setPrefix] = useState("");
 
   return (
-    <Card className="no-print mb-4 overflow-hidden" elevation="flat">
-      <CardHeader className="border-b border-border/70">
-        <div className="font-semibold">Add labels that aren&apos;t items</div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4 p-3">
-        <GeneratorRow>
-          <Field label="SD camera">
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="no-print overflow-hidden rounded-[var(--radius)] border border-border bg-card"
+    >
+      <CollapsibleTrigger className="flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+        <span>
+          <span className="block text-sm font-bold">Labels that aren&apos;t items</span>
+          <span className="block text-xs text-muted-foreground">SD card sets, plain text and number runs</span>
+        </span>
+        <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-t border-border/70">
+        <GeneratorBlock title="SD cards" hint="One label per card and slot, like FX3 1A, 1B, 2A.">
+          <Field label="Camera">
             <Input className="w-28" value={sdCamera} onChange={(e) => setSdCamera(e.target.value)} placeholder="FX3" />
           </Field>
           <Field label="Dept">
             <Input className="w-20" value={sdDept} onChange={(e) => setSdDept(e.target.value)} placeholder="FB" />
           </Field>
           <Field label="Cards">
-            <Input className="w-20" type="number" min={1} value={sdCount} onChange={(e) => setSdCount(Math.max(1, Number(e.target.value) || 1))} />
+            <Input className="w-20" type="number" min={1} max={MAX_SD_CARDS} value={sdCount} onChange={(e) => setSdCount(Math.min(MAX_SD_CARDS, Math.max(1, Number(e.target.value) || 1)))} />
           </Field>
           <Field label="Slots">
             <Input className="w-24" value={sdSlots} onChange={(e) => setSdSlots(e.target.value)} placeholder="A,B" />
@@ -212,15 +188,15 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
               )
             }
           >
-            <Plus className="mr-1.5 size-4" />
-            SD cards
+            <Plus className="size-4" />
+            Add
           </Button>
-        </GeneratorRow>
+        </GeneratorBlock>
 
-        <GeneratorRow>
-          <Field label="Generic labels (one per line)">
-            <textarea
-              className="min-h-10 w-64 rounded-md border border-input bg-transparent px-3 py-2 text-sm normal-case tracking-normal"
+        <GeneratorBlock title="Text labels" hint="One label per line, no QR.">
+          <Field label="Lines" className="min-w-0 flex-1">
+            <Textarea
+              className="min-h-10 w-full sm:w-72"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={"FB\nMBB"}
@@ -241,13 +217,13 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
               setText("");
             }}
           >
-            <Plus className="mr-1.5 size-4" />
-            Labels
+            <Plus className="size-4" />
+            Add
           </Button>
-        </GeneratorRow>
+        </GeneratorBlock>
 
-        <GeneratorRow>
-          <Field label="Numbers from">
+        <GeneratorBlock title="Number run" hint="Plain numbers, up to 500 at a time.">
+          <Field label="From">
             <Input className="w-20" type="number" value={from} onChange={(e) => setFrom(Number(e.target.value) || 0)} />
           </Field>
           <Field label="To">
@@ -262,141 +238,11 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
             disabled={Math.abs(to - from) > 499}
             onClick={() => onAdd(generatedEntries(numberRangeRows(from, to, prefix, "text")))}
           >
-            <Plus className="mr-1.5 size-4" />
-            Numbers
+            <Plus className="size-4" />
+            Add
           </Button>
-        </GeneratorRow>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function LabelCartReview({
-  cart,
-  onUpdate,
-  onRemove,
-  onClear,
-}: {
-  cart: CartEntry[];
-  onUpdate: (id: string, patch: Partial<CartEntry>) => void;
-  onRemove: (id: string) => void;
-  onClear: () => void;
-}) {
-  if (cart.length === 0) return null;
-  const kinds = KIND_ORDER.filter((kind) => cart.some((entry) => entry.kind === kind));
-
-  return (
-    <Card className="no-print mb-4 overflow-hidden" elevation="flat">
-      <CardHeader className="flex flex-col gap-3 border-b border-border/70">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <div className="font-semibold">Review print cart</div>
-            <div className="text-xs text-muted-foreground">
-              Each label type downloads as its own CSV, named for its P-touch template. Open the
-              template, drop the CSV on the database bar, then print all records.
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" className="h-10" onClick={onClear}>
-            Clear cart
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {kinds.map((kind) => (
-            <Button
-              key={kind}
-              size="sm"
-              className="h-10"
-              onClick={() => download(LABEL_KINDS[kind].file, buildBrotherCsv(kind, cart))}
-            >
-              <Download className="mr-1.5 size-4" />
-              {LABEL_KINDS[kind].file} ({kindTotal(cart, kind)})
-            </Button>
-          ))}
-        </div>
-      </CardHeader>
-      <CardContent className="max-h-[480px] overflow-y-auto p-0">
-        {kinds.map((kind) => (
-          <div key={kind}>
-            <div className="sticky top-0 z-10 border-b border-border/60 bg-muted/60 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground backdrop-blur">
-              {LABEL_KINDS[kind].label} · {LABEL_KINDS[kind].template}
-            </div>
-            {cart
-              .filter((entry) => entry.kind === kind)
-              .map((entry) => {
-                const missingQr = LABEL_KINDS[entry.kind].needsQr && !entry.qrCodeValue;
-                return (
-                  <div
-                    key={entry.id}
-                    className="flex flex-wrap items-center gap-2 border-b border-border/40 px-3 py-2 last:border-0"
-                  >
-                    <div className="min-w-0 basis-full sm:basis-48 sm:flex-1">
-                      <div className="truncate text-sm font-medium">{entry.title}</div>
-                      <div className={missingQr ? "text-[11px] text-destructive" : "truncate font-mono text-[11px] text-muted-foreground"}>
-                        {missingQr ? "No QR — skipped in CSV" : entry.qrCodeValue || entry.name}
-                      </div>
-                    </div>
-                    <select
-                      className="h-10 rounded-md border border-input bg-transparent px-2 text-sm"
-                      value={entry.kind}
-                      onChange={(e) => onUpdate(entry.id, { kind: e.target.value as LabelKind })}
-                      aria-label={`Label type for ${entry.title}`}
-                    >
-                      {KIND_ORDER.map((option) => (
-                        <option key={option} value={option}>
-                          {LABEL_KINDS[option].label}
-                        </option>
-                      ))}
-                    </select>
-                    {entry.kind !== "text" && (
-                      <Input
-                        className="w-16"
-                        value={entry.dept}
-                        onChange={(e) => onUpdate(entry.id, { dept: e.target.value })}
-                        placeholder="Dept"
-                        aria-label={`Dept for ${entry.title}`}
-                      />
-                    )}
-                    {entry.kind !== "numberTag" && (
-                      <Input
-                        className="w-32"
-                        value={entry.model}
-                        onChange={(e) => onUpdate(entry.id, { model: e.target.value })}
-                        placeholder={entry.kind === "text" ? "Text" : entry.kind === "sd" ? "Camera" : "Model"}
-                        aria-label={`Label text for ${entry.title}`}
-                      />
-                    )}
-                    {entry.kind !== "text" && (
-                      <Input
-                        className="w-16"
-                        value={entry.number}
-                        onChange={(e) => onUpdate(entry.id, { number: e.target.value })}
-                        placeholder="No."
-                        aria-label={`Number for ${entry.title}`}
-                      />
-                    )}
-                    <Input
-                      className="w-16"
-                      type="number"
-                      min={1}
-                      value={entry.copies}
-                      onChange={(e) => onUpdate(entry.id, { copies: Math.max(1, Number(e.target.value) || 1) })}
-                      aria-label={`Copies of ${entry.title}`}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-10"
-                      onClick={() => onRemove(entry.id)}
-                      aria-label={`Remove ${entry.title} from print cart`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                );
-              })}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+        </GeneratorBlock>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
