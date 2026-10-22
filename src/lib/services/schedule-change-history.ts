@@ -236,6 +236,8 @@ function workingScheduleActionMeta(row: AuditRow): { kind: ScheduleChangeKind; l
     }
     case "removeSlot":
       return { kind: "shift_deleted", label: "Removed shift", detail: "Working copy" };
+    case "setSlotCounts":
+      return { kind: "shift_updated", label: "Changed crew size", detail: "Working copy" };
     case "convertSlot":
       return { kind: "shift_updated", label: "Converted shift", detail: "Working copy" };
     default:

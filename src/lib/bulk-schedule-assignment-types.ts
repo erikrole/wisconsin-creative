@@ -43,6 +43,14 @@ export const bulkAssignmentScopeSchema = z.object({
    * that is short a position.
    */
   requireFullCrew: z.boolean().default(false),
+  /**
+   * Narrow to specific events (Event detail's Auto assign). Empty means every
+   * event in the window. The window and sport filters still apply.
+   */
+  eventIds: z.array(z.string().trim().min(1).max(64))
+    .max(50)
+    .default([])
+    .transform((ids) => unique(ids).sort()),
   /** Label only -- the window itself is always the explicit range above. */
   period: z.enum(ASSIGNMENT_PERIOD_VALUES).default("custom"),
 }).superRefine((scope, ctx) => {

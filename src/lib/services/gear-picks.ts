@@ -14,7 +14,8 @@ import {
   isItemAllowedForFit,
   type GearPickFitKey,
 } from "@/lib/gear-picks/catalog";
-import { buildOrderPlan } from "@/lib/gear-picks/order";
+import { buildOrderPlan, participantPieces, studentPieces } from "@/lib/gear-picks/order";
+import { pieceKey } from "@/lib/gear-picks/handout";
 import { isGearPickCycleOpen, priceGearPickLines, type GearPickLineInput } from "@/lib/gear-picks/pricing";
 import type {
   GearPickAdminParticipant,
@@ -23,6 +24,7 @@ import type {
   GearPickBudgetDto,
   GearPickTopUpDto,
   GearPastCycleDto,
+  GearMyKitDto,
   GearPickCycleDto,
   GearPickHandoutDto,
   GearPickReceiptDto,
@@ -1105,4 +1107,85 @@ export async function archiveCurrentGearCycle(actor: Actor) {
     }, SERIALIZABLE),
   );
   return { cycleId: data.cycle.id, items: items.size, people: people.length };
+}
+
+/**
+ * The signed-in person's own kit: standard issue, core kit and picks (staff) or the student kit, each
+ * with its handout state. Like the pick list it stays hidden from non-admins until the cycle is launched.
+ */
+export async function getMyGearKit(viewer: Actor): Promise<GearMyKitDto | null> {
+  const [cycle, participant, student, handouts] = await Promise.all([
+    db.gearPickCycle.findUnique({
+      where: { id: GEAR_PICK_CYCLE_ID },
+      select: { title: true, launchedAt: true, orderPlacedAt: true, poNumber: true, orderNumber: true, expectedAt: true },
+    }),
+    db.gearPickParticipant.findUnique({
+      where: { cycleId_userId: { cycleId: GEAR_PICK_CYCLE_ID, userId: viewer.id } },
+      select: {
+        id: true,
+        fit: true,
+        allowanceCents: true,
+        submission: { select: submissionSelect },
+        user: { select: { id: true, name: true, email: true, active: true, topSize: true, shoeSize: true } },
+      },
+    }),
+    db.gearPickStudent.findUnique({
+      where: { cycleId_userId: { cycleId: GEAR_PICK_CYCLE_ID, userId: viewer.id } },
+      select: { id: true, user: { select: { id: true, name: true, active: true, topSize: true, topSizeFit: true, shoeSize: true } } },
+    }),
+    db.gearPickHandout.findMany({
+      where: { cycleId: GEAR_PICK_CYCLE_ID, userId: viewer.id },
+      select: { sku: true, size: true, source: true, handedOutAt: true },
+    }),
+  ]);
+  if (!cycle || !(cycle.launchedAt || isSignedInAdmin(viewer))) return null;
+
+  const pieces = participant
+    ? participantPieces(
+        {
+          id: participant.id,
+          fit: participant.fit,
+          allowanceCents: participant.allowanceCents,
+          user: participant.user,
+          status: participant.submission?.submittedAt ? "SUBMITTED" : "DRAFT",
+          submission: submissionDto(participant.submission),
+        },
+        GEAR_CATALOG.kits,
+      )
+    : student
+      ? studentPieces({
+          id: student.id,
+          user: { id: student.user.id, name: student.user.name, active: student.user.active },
+          topSize: student.user.topSize,
+          topSizeFit: student.user.topSizeFit,
+          shoeSize: student.user.shoeSize,
+          needsSize: !student.user.topSize,
+        })
+      : null;
+  if (!pieces) return null;
+
+  const handedAt = new Map(handouts.map((handout) => [pieceKey(handout.sku, handout.size, handout.source as GearMyKitDto["pieces"][number]["source"]), handout.handedOutAt]));
+  return {
+    cycleTitle: cycle.title,
+    group: participant ? "Staff" : "Student",
+    order: {
+      placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
+      poNumber: cycle.poNumber,
+      orderNumber: cycle.orderNumber,
+      expectedAt: cycle.expectedAt?.toISOString() ?? null,
+    },
+    pieces: pieces.map((piece) => {
+      const at = handedAt.get(pieceKey(piece.sku, piece.size, piece.source)) ?? null;
+      return {
+        sku: piece.sku,
+        itemName: piece.itemName,
+        colorLabel: piece.colorLabel,
+        source: piece.source,
+        size: piece.size,
+        quantity: piece.quantity,
+        handed: at !== null,
+        handedOutAt: at?.toISOString() ?? null,
+      };
+    }),
+  };
 }

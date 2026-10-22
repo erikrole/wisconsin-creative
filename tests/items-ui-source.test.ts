@@ -14,7 +14,7 @@ describe("Items design-language contracts", () => {
     expect(facetedFilter).toContain('className="h-10 border-dashed"');
     expect(facetedFilter).not.toContain('className="h-9 border-dashed"');
     expect(facetedFilter).toContain('<PlusCircleIcon className="size-4" />');
-    expect(page).toContain('className="hidden size-10 sm:flex"');
+    expect(page).toContain('aria-label="More item actions"');
     expect(page.match(/className="h-10" onClick=\{options\.retry\}/g)).toHaveLength(3);
     expect(columns).toContain('className="-m-3 flex size-10 items-center justify-center"');
     expect(columns).toContain('className="size-10"');

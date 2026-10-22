@@ -97,7 +97,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   await enforceRateLimit(`shift:working-copy:${user.id}`, { max: 120, windowMs: 60_000 });
   const rawBody = await req.json();
   const body = z.union([mutateSchema, historySchema]).parse(rawBody);
-  if ("command" in body && body.command.type === "adjustSlots" && body.command.delta === 1) {
+  if ("command" in body && (
+    (body.command.type === "adjustSlots" && body.command.delta === 1) || body.command.type === "setSlotCounts"
+  )) {
     requirePermission(user.role, "shift", "manage_positions");
   }
   const eventHasEnded = (await getWorkingScheduleEventEndsAt(params.id)).getTime() <= Date.now();

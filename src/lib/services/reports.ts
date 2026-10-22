@@ -1031,11 +1031,13 @@ type AuditReportFilters = {
   startDate?: string | null,
   endDate?: string | null,
   action?: string | null,
+  entityType?: string | null,
 };
 
 function buildAuditReportWhere({
   action,
   endDate,
+  entityType,
   startDate,
 }: AuditReportFilters) {
   const where: Prisma.AuditLogWhereInput = {};
@@ -1044,6 +1046,7 @@ function buildAuditReportWhere({
   if (endDate) dateFilter.lte = new Date(endDate);
   if (Object.keys(dateFilter).length > 0) where.createdAt = dateFilter;
   if (action) where.action = action;
+  if (entityType) where.entityType = entityType;
 
   return where;
 }
@@ -1071,8 +1074,9 @@ export async function getAuditReport(
   startDate?: string | null,
   endDate?: string | null,
   action?: string | null,
+  entityType?: string | null,
 ) {
-  const where = buildAuditReportWhere({ startDate, endDate, action });
+  const where = buildAuditReportWhere({ startDate, endDate, action, entityType });
 
   const auditResults = await Promise.allSettled([
     db.auditLog.findMany({
@@ -1157,8 +1161,9 @@ export async function getAuditReportExport(
   startDate?: string | null,
   endDate?: string | null,
   action?: string | null,
+  entityType?: string | null,
 ) {
-  const where = buildAuditReportWhere({ startDate, endDate, action });
+  const where = buildAuditReportWhere({ startDate, endDate, action, entityType });
   const [data, total] = await Promise.all([
     db.auditLog.findMany({
       where,

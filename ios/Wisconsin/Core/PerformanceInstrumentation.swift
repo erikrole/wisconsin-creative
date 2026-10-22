@@ -55,6 +55,9 @@ enum AppRuntimeMode {
         /// payloads. The Scoreboard entry lives between Next Up and the badge
         /// shelf, and a row's treatment can only be judged beside its neighbours.
         case profile
+        /// A teammate's staff profile (UserDetailView): Right now, This week,
+        /// Performance, and the badge shelf against canned payloads.
+        case staffProfile
         /// The signed-out entry screens. Neither needs a session or a fixture
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
@@ -204,7 +207,7 @@ enum AppRuntimeMode {
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .homeGettingStarted, .scoreboard, .profile,
+             .home, .homeAllClear, .homeGettingStarted, .scoreboard, .profile, .staffProfile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,

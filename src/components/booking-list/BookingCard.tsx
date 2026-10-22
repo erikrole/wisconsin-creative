@@ -99,21 +99,20 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
           aria-hidden="true"
         />
 
-        <div className="relative z-0 p-4 pl-5">
+        <div className="relative z-0 p-5 pl-6">
           {/* Top row: status badge + ref number + duration */}
           <div className="flex items-center justify-between gap-2 mb-2.5 pr-20">
             <div className="flex min-w-0 items-center gap-2">
               <Badge variant={sv.variant} size="sm">{sv.label}</Badge>
               {item.refNumber && (
                 <span
-                  className="truncate text-[10px] tabular-nums text-muted-foreground/60"
-                  style={{ fontFamily: "var(--font-mono)" }}
+                  className="truncate text-[11px] tabular-nums text-muted-foreground/70"
                 >
                   #{item.refNumber}
                 </span>
               )}
             </div>
-            <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+            <span className="shrink-0 text-[12px] text-muted-foreground tabular-nums">
               {duration}
             </span>
           </div>
@@ -121,7 +120,7 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
           {/* Title */}
           <h3
             className={cn(
-              "text-[14.5px] leading-snug mb-2 line-clamp-2 pr-6",
+              "text-[16px] leading-snug mb-1.5 line-clamp-2 pr-6",
               sv.titleClass,
             )}
             style={{ fontFamily: "var(--font-heading)", fontWeight: 700 }}
@@ -131,8 +130,7 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
 
           {/* Date + location */}
           <div
-            className="flex items-center gap-2 text-[11px] text-muted-foreground/60 mb-3"
-            style={{ fontFamily: "var(--font-mono)" }}
+            className="flex items-center gap-2 text-[13px] text-muted-foreground mb-3.5"
           >
             <span className="whitespace-nowrap">
               {formatCardDate(item.startsAt)} · {formatCardTime(item.startsAt)}
@@ -146,7 +144,7 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
           </div>
 
           {/* Bottom row: user + gear */}
-          <div className="flex items-center justify-between pt-2.5 border-t border-border/40">
+          <div className="flex items-center justify-between pt-3 border-t border-border/40">
             <div className="flex items-center gap-1.5 min-w-0">
               {item.custodyScope === "SHARED" ? (
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
@@ -161,8 +159,8 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
                 />
               )}
               <span
-                className="text-[12px] truncate"
-                style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}
+                className="text-[13px] truncate"
+                style={{ fontFamily: "var(--font-heading)", fontWeight: 700 }}
               >
                 {item.custodyScope === "SHARED" ? (item.kind === "RESERVATION" ? "Shared travel case" : "Shared checkout") : item.requester?.name ?? "Unknown"}
               </span>

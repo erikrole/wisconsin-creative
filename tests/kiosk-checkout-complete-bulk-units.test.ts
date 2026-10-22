@@ -366,7 +366,7 @@ describe("kiosk checkout complete bulk units", () => {
         isHidden: false,
         archivedAt: null,
       }),
-      select: { id: true, summary: true, sportCode: true, endsAt: true },
+      select: { id: true, summary: true, sportCode: true, opponent: true, isHome: true, endsAt: true },
     }));
     expect(mocks.bookingCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -443,6 +443,27 @@ describe("kiosk checkout complete bulk units", () => {
     const createdEndsAt = mocks.bookingCreate.mock.calls[0]![0].data.endsAt as Date;
     expect(createdEndsAt.getTime()).toBeGreaterThanOrEqual(startedAt + 5 * 24 * 60 * 60 * 1000);
     expect(createdEndsAt.getTime()).toBeLessThanOrEqual(Date.now() + 5 * 24 * 60 * 60 * 1000);
+  });
+
+  it("titles a game checkout with the sport name and a clean opponent", async () => {
+    mocks.calendarEventFindFirst.mockResolvedValue({
+      id: "event-1",
+      summary: "MSOC vs #3 Evansville - Senior Night",
+      sportCode: "MSOC",
+      opponent: "#3 Evansville - Senior Night",
+      isHome: true,
+      endsAt: new Date("2026-06-16T21:00:00.000Z"),
+    });
+
+    const res = await runCompleteKioskCheckout(completeRequest(
+      [{ assetId: "asset-1" }],
+      { eventId: "event-1", customPurpose: undefined },
+    ));
+
+    expect(res.status).toBe(200);
+    expect(mocks.bookingCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ title: "Men's Soccer vs Evansville" }),
+    });
   });
 
   it("defaults linked-event return time to 90 minutes after the event ends", async () => {

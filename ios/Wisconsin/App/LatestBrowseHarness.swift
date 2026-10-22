@@ -72,9 +72,6 @@ enum LatestBrowseFixtureAPI {
     "canExport": true,
     "canManageExclusions": true
   },
-  "spotlightJeers": [
-    "The gear shelf appreciates a little less suspense."
-  ],
   "locations": [
     {
       "id": "loc_1",
