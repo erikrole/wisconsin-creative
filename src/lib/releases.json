@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-22",
+    "title": "Schedule shows open shifts plainly",
+    "type": "improvement",
+    "summary": "Each event in the Schedule list now says Covered or how many shifts are open, with a color dot for the sport.",
+    "details": [
+      "Replaces the 1/1 badge with Covered or N open.",
+      "Sport color dots match the ones in the new reservation event picker."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 596
+  },
+  {
+    "date": "2026-10-22",
     "title": "Clearer booking actions",
     "type": "improvement",
     "summary": "A booking now has one obvious next step at the top, with everything else under Actions.",
