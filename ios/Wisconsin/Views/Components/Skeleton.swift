@@ -45,27 +45,13 @@ struct StatCardSkeleton: View {
 
 struct BookingRowSkeleton: View {
     var body: some View {
-        HStack(spacing: 12) {
-            Skeleton(cornerRadius: 20).frame(width: 40, height: 40)
-            VStack(alignment: .leading, spacing: 7) {
-                HStack {
-                    Skeleton().frame(width: 150, height: 14)
-                    Spacer()
-                    Skeleton(cornerRadius: 9).frame(width: 58, height: 18)
-                }
-                Skeleton().frame(width: 120, height: 12)
-                Skeleton().frame(width: 96, height: 10)
-            }
+        VStack(alignment: .leading, spacing: 7) {
+            Skeleton().frame(width: 170, height: 15)
+            Skeleton().frame(width: 130, height: 12)
+            Skeleton().frame(width: 100, height: 10)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 0.5)
-        )
     }
 }
 
@@ -167,42 +153,42 @@ struct ItemDetailSkeleton: View {
 
 struct BookingDetailSkeleton: View {
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+        List {
+            Section {
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Skeleton(cornerRadius: 10).frame(width: 88, height: 22)
-                        Spacer()
-                        Skeleton().frame(width: 60, height: 12)
-                    }
-                    Skeleton().frame(width: 200, height: 14)
-                    Skeleton().frame(width: 160, height: 14)
-                    Skeleton().frame(width: 220, height: 28)
-                }
-                Divider()
-                VStack(alignment: .leading, spacing: 6) {
-                    Skeleton().frame(width: 72, height: 10)
-                    Skeleton().frame(width: 140, height: 14)
+                    Skeleton().frame(width: 220, height: 26)
+                    Skeleton().frame(width: 150, height: 16)
                     Skeleton().frame(width: 180, height: 12)
                 }
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    Skeleton().frame(width: 80, height: 10)
-                    ForEach(0..<3, id: \.self) { _ in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Skeleton().frame(width: 150, height: 13)
-                                Skeleton().frame(width: 80, height: 10)
-                            }
-                            Spacer()
-                            Skeleton(cornerRadius: 8).frame(width: 60, height: 18)
+                .padding(.vertical, 6)
+            }
+            .listRowBackground(Color.clear)
+            Section {
+                ForEach(0..<3, id: \.self) { _ in
+                    HStack {
+                        Skeleton().frame(width: 70, height: 13)
+                        Spacer()
+                        Skeleton().frame(width: 130, height: 13)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            Section {
+                ForEach(0..<3, id: \.self) { _ in
+                    HStack(spacing: 10) {
+                        Skeleton(cornerRadius: 8).frame(width: 40, height: 40)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Skeleton().frame(width: 150, height: 13)
+                            Skeleton().frame(width: 80, height: 10)
                         }
                     }
                 }
             }
-            .padding()
         }
+        .listStyle(.insetGrouped)
         .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading booking")
     }
 }
 
