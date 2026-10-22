@@ -128,6 +128,13 @@ describe("Board Sizes art preview and board comps", () => {
     expect(app).toContain("function artView() { return !!((state.display || state.content) && !state.query && !state.page); }");
   });
 
+  it("keeps pieces through a reload in IndexedDB only, and forgets them on remove", () => {
+    expect(app).toContain("var ART_DB = 'board-sizes-art';");
+    expect(app).toContain("st.put({ id: a.key, order: a.id, name: a.name, type: a.file.type || '', blob: a.file, pin: a.pin });");
+    expect(app).toMatch(/function dropArt\(a, quiet\) \{\n    URL\.revokeObjectURL\(a\.url\);\n    forgetArt\(a\);/);
+    expect(app).toContain("render(false);\n  restoreArts();");
+  });
+
   it("downloads an After Effects comps script for a whole board", () => {
     expect(app).toContain("aeScript({ name: v.name + ' ' + d.name, board: true }, rows)");
     expect(app).toContain("one for the whole board and one per distinct zone size");

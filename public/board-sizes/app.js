@@ -1606,7 +1606,9 @@
     if (arts.length + usable.length > MAX_ART) { toast('Up to ' + MAX_ART + ' pieces at once. Remove some first.'); usable = usable.slice(0, Math.max(0, MAX_ART - arts.length)); }
     usable.forEach(function (file) { loadArt(file, usable.length === 1 ? pin : null); });
   }
-  function loadArt(file, pin) {
+  // saved is the stored record when a piece comes back after a reload.
+  function loadArt(file, pin, saved) {
+    var seq = saved ? saved.order : ++artSeq;
     var video = isVideo(file);
     if (!video && file.size > MAX_IMAGE_BYTES) { toast(file.name + ' is over 80 MB.'); return; }
     var url = URL.createObjectURL(file);
@@ -1616,7 +1618,11 @@
       if (!w || !h) { fail(); return; }
       // A piece pinned to a zone replaces whatever was pinned there before.
       if (pin) arts.filter(function (a) { return a.pin && a.pin.d === pin.d && a.pin.row === pin.row; }).forEach(function (a) { dropArt(a, true); });
-      arts.push({ id: ++artSeq, url: url, name: name, w: w, h: h, video: video, media: media, pin: pin || null });
+      var a = { id: seq, key: saved ? saved.id : seq + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8), url: url, name: name, w: w, h: h, video: video, media: media, pin: pin || null, file: file };
+      arts.push(a);
+      // Files load at different speeds; keep the order they were added in.
+      arts.sort(function (x, y) { return x.id - y.id; });
+      if (!saved) saveArt(a);
       if (artView()) render(false);
     }
     if (video) {
@@ -1634,13 +1640,48 @@
   }
   function dropArt(a, quiet) {
     URL.revokeObjectURL(a.url);
+    forgetArt(a);
     arts = arts.filter(function (x) { return x !== a; });
     if (!quiet && artView()) render(false);
   }
   function clearArt() {
-    arts.forEach(function (a) { URL.revokeObjectURL(a.url); });
+    arts.forEach(function (a) { URL.revokeObjectURL(a.url); forgetArt(a); });
     arts = [];
     if (artView()) render(false);
+  }
+  // Pieces are kept in this browser's IndexedDB (never sent anywhere), so
+  // they're still there after a reload or a new visit; Remove and Clear
+  // delete them. Files over 250 MB stay for this visit only. Any storage
+  // failure (private windows, blocked storage) just means nothing is kept.
+  var ART_DB = 'board-sizes-art';
+  var MAX_SAVED_BYTES = 250 * 1024 * 1024;
+  function artStore(mode, fn) {
+    try {
+      var req = indexedDB.open(ART_DB, 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore('pieces', { keyPath: 'id' }); };
+      req.onsuccess = function () {
+        var db = req.result;
+        try { var tx = db.transaction('pieces', mode); fn(tx.objectStore('pieces')); tx.oncomplete = tx.onerror = tx.onabort = function () { db.close(); }; } catch (e) { db.close(); }
+      };
+    } catch (e) { /* no IndexedDB here */ }
+  }
+  function saveArt(a) {
+    if (!a.file || a.file.size > MAX_SAVED_BYTES) return;
+    artStore('readwrite', function (st) { st.put({ id: a.key, order: a.id, name: a.name, type: a.file.type || '', blob: a.file, pin: a.pin }); });
+  }
+  function forgetArt(a) { artStore('readwrite', function (st) { st['delete'](a.key); }); }
+  function restoreArts() {
+    artStore('readonly', function (st) {
+      var req = st.getAll();
+      req.onsuccess = function () {
+        (req.result || []).sort(function (x, y) { return x.order - y.order; }).slice(0, MAX_ART).forEach(function (rec) {
+          if (!rec.blob) return;
+          artSeq = Math.max(artSeq, rec.order);
+          var file = rec.blob instanceof File ? rec.blob : new File([rec.blob], rec.name, { type: rec.type });
+          loadArt(file, rec.pin, rec);
+        });
+      };
+    });
   }
   function sameShape(aw, ah, bw, bh) { return aw * bh === ah * bw; }
   function artRows(d) { return groupZones(d.zones).filter(function (r) { return !(r.w === d.w && r.h === d.h); }); }
@@ -1748,7 +1789,7 @@
     tools.appendChild(chip('Zones', artZones, function () { artZones = !artZones; render(false); }));
     var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
     var mk = button('Mockup PNG', 'download', function () { downloadMockup(v, d, placed); }); mk.classList.add('ghost'); tools.appendChild(mk);
-    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); tools.appendChild(xb);
+    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); xb.title = 'Remove every piece from this browser'; tools.appendChild(xb);
     head.appendChild(tools);
     box.appendChild(head);
     var list = node('ul', 'art-list');
@@ -1771,7 +1812,7 @@
       sel.appendChild(new Option('By size', ''));
       rows.forEach(function (r) { sel.appendChild(new Option(r.base + ' · ' + size(r.w, r.h), r.first.id)); });
       sel.value = a.pin && a.pin.d === d.id ? a.pin.row : '';
-      sel.addEventListener('change', function () { a.pin = sel.value ? { d: d.id, row: sel.value } : null; render(false); });
+      sel.addEventListener('change', function () { a.pin = sel.value ? { d: d.id, row: sel.value } : null; saveArt(a); render(false); });
       li.appendChild(sel);
       var rm = node('button', 'btn icon-only ghost art-rm');
       rm.type = 'button';
@@ -1812,7 +1853,7 @@
     head.appendChild(title);
     var tools = node('span', 'art-tools');
     var add = button('Add', 'plus', pickArt); add.classList.add('ghost'); tools.appendChild(add);
-    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); tools.appendChild(xb);
+    var xb = button('Clear', null, clearArt); xb.classList.add('ghost'); xb.title = 'Remove every piece from this browser'; tools.appendChild(xb);
     head.appendChild(tools);
     box.appendChild(head);
     var meter = node('div', 'art-meter' + (covered === rows.length ? ' is-done' : ''));
@@ -2227,6 +2268,7 @@
   var initialHash = safeDecode(window.location.hash.slice(1));
   // Draw the requested view first, so a #zone on the open board only scrolls to it.
   render(false);
+  restoreArts();
   if (initialHash && !state.query && !state.content && !state.page) goTo(initialHash, false, false);
   window.addEventListener('popstate', function () {
     readParams();
