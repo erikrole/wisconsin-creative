@@ -338,8 +338,11 @@ struct GearPicksView: View {
         }
         if model.phase == .ready {
             ToolbarItem(placement: .topBarTrailing) {
-                if model.pickCount > 0 {
-                    Button("\(model.canEdit ? "Review" : "Your picks") (\(model.pickCount))") { showReview = true }
+                if model.canEdit && model.pickCount > 0 {
+                    // The one primary action: review what you have picked.
+                    Button("Review (\(model.pickCount))") { showReview = true }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.statusText(.green))
                 } else {
                     Button(model.canEdit ? "Review" : "Your picks") { showReview = true }
                 }
@@ -381,16 +384,14 @@ struct GearPicksView: View {
 
     private var readyList: some View {
         let sections = model.sections()
-        return List {
-            summary
-            if model.catalog == nil {
-                Section {
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: Brand.Space.lg) {
+                summary
+                if model.catalog == nil {
                     Text("The catalog didn't load, so you can review a saved list but not add gear.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                }
-            } else if sections.isEmpty {
-                Section {
+                } else if sections.isEmpty {
                     ContentUnavailableView {
                         Label("No gear matches", systemImage: "tshirt")
                     } description: {
@@ -400,56 +401,60 @@ struct GearPicksView: View {
                             Button("Clear search") { model.searchText = "" }
                         }
                     }
-                }
-            } else {
-                ForEach(sections, id: \.category) { section in
-                    Section(section.category) {
-                        ForEach(section.items) { item in
-                            NavigationLink(value: GearPickStyleRoute(style: item.style)) {
-                                GearPickCatalogRow(item: item, picked: model.pickCount(for: item.style))
+                } else {
+                    ForEach(sections, id: \.category) { section in
+                        VStack(alignment: .leading, spacing: Brand.Space.sm) {
+                            Text(section.category)
+                                .font(.title3.weight(.bold))
+                                .accessibilityAddTraits(.isHeader)
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: 14, alignment: .top),
+                                          GridItem(.flexible(), spacing: 14, alignment: .top)],
+                                spacing: 18
+                            ) {
+                                ForEach(section.items) { item in
+                                    NavigationLink(value: GearPickStyleRoute(style: item.style)) {
+                                        GearPickCatalogTile(item: item, picked: model.pickCount(for: item.style))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
                     }
                 }
+                Text(footerText)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
+            .padding(.horizontal, Brand.Space.md)
+            .padding(.top, Brand.Space.xs)
+            .padding(.bottom, Brand.Space.lg)
         }
-        .listStyle(.insetGrouped)
+        .scrollDismissesKeyboard(.interactively)
+        .background(Color(.systemGroupedBackground))
         .searchable(text: $model.searchText, prompt: "Search gear")
     }
 
     private var summary: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(GearPickFitLabel.name(model.participant?.fit))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    statusPill
-                }
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .firstTextBaseline, spacing: 20) {
-                        allowanceRemaining
-                        Spacer(minLength: 0)
-                        allowanceUsed
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        allowanceRemaining
-                        allowanceUsed
-                    }
-                }
-                ProgressView(value: min(Double(model.totalCents), Double(max(model.participant?.allowanceCents ?? 0, 1))),
-                             total: Double(max(model.participant?.allowanceCents ?? 0, 1)))
-                    .tint(model.remainingCents < 0 ? Color.statusText(.red) : Color.statusText(.purple))
-                    .accessibilityLabel("Allowance used")
-                    .accessibilityValue(GearPickMoney.format(model.totalCents))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                allowanceRemaining
+                Spacer(minLength: 12)
+                statusPill
+            }
+            ProgressView(value: min(Double(model.totalCents), Double(max(model.participant?.allowanceCents ?? 0, 1))),
+                         total: Double(max(model.participant?.allowanceCents ?? 0, 1)))
+                .tint(model.remainingCents < 0 ? Color.statusText(.red) : Color(.secondaryLabel))
+                .accessibilityLabel("Allowance used")
+                .accessibilityValue(GearPickMoney.format(model.totalCents))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(GearPickFitLabel.name(model.participant?.fit)) · \(GearPickMoney.format(model.totalCents)) of \(GearPickMoney.format(model.participant?.allowanceCents ?? 0)) picked")
                 if let deadline = GearPickDate.label(model.cycle?.deadline) {
-                    Label("\(model.cycle?.isOpen == true ? "Open until" : "Closed") \(deadline)", systemImage: "calendar")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    Text("\(model.cycle?.isOpen == true ? "Open until" : "Closed") \(deadline)")
                 }
             }
-            .padding(.vertical, 4)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
             if let message = model.conflictMessage ?? model.saveMessage {
                 Text(message)
                     .font(.subheadline)
@@ -463,8 +468,6 @@ struct GearPicksView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-        } footer: {
-            Text(footerText)
         }
     }
 
@@ -475,16 +478,6 @@ struct GearPicksView: View {
                 .foregroundStyle(model.remainingCents < 0 ? Color.statusText(.red) : Color.primary)
             Text(model.remainingCents < 0 ? "Over allowance" : "Left to spend")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var allowanceUsed: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("\(GearPickMoney.format(model.totalCents)) picked")
-                .font(.subheadline.weight(.medium).monospacedDigit())
-            Text("of \(GearPickMoney.format(model.participant?.allowanceCents ?? 0))")
-                .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
     }
@@ -516,17 +509,31 @@ private extension GearPicksModel {
     }
 }
 
-private struct GearPickCatalogRow: View {
+private struct GearPickCatalogTile: View {
     let item: GearPickPhoneItem
     let picked: Int
 
-    @ViewBuilder
     var body: some View {
-        HStack(spacing: 12) {
-            GearPickThumbnail(path: item.colors.first?.image, size: 52)
+        VStack(alignment: .leading, spacing: 8) {
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .overlay { GearPickThumbnail(path: item.colors.first?.image, size: nil) }
+                .overlay(alignment: .topTrailing) {
+                    if picked > 0 {
+                        Text("\(picked)")
+                            .font(.footnote.weight(.bold).monospacedDigit())
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 24, minHeight: 24)
+                            .background(Color.statusText(.green), in: Circle())
+                            .padding(8)
+                            .accessibilityLabel("\(picked) picked")
+                    }
+                }
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
-                    .font(.body)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
                 Text(GearPickMoney.format(item.priceCents))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -536,21 +543,15 @@ private struct GearPickCatalogRow: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            Spacer(minLength: 8)
-            if picked > 0 {
-                Text("\(picked)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel("\(picked) picked")
-            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 }
 
 private struct GearPickThumbnail: View {
     let path: String?
-    let size: CGFloat
+    let size: CGFloat?
 
     @ViewBuilder
     var body: some View {
@@ -562,13 +563,13 @@ private struct GearPickThumbnail: View {
                     .fill(Color(.secondarySystemFill))
                     .overlay {
                         Image(systemName: "photo")
-                            .font(size > 100 ? .largeTitle : .body)
+                            .font((size ?? 0) > 100 || size == nil ? .largeTitle : .body)
                             .foregroundStyle(.tertiary)
                     }
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: size == nil ? 14 : 8, style: .continuous))
     }
 }
 

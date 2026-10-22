@@ -95,6 +95,16 @@ struct PerformanceTestRootView: View {
             AccountSecurityHarnessView()
         case .notifications:
             NotificationSettingsHarnessView()
+        case .eventDetail:
+            EventDetailHarnessView()
+        case .itemDetail:
+            ItemDetailHarnessView()
+        case .userDetail:
+            NavigationStack { UserDetailHarnessBody() }
+        case .availability:
+            NavigationStack { AvailabilityHarnessBody() }
+        case .gearPicks:
+            GearPicksView()
         case .liveActivity:
             LiveActivityHarnessView()
         case .widgetSeed:
@@ -165,10 +175,32 @@ struct NotificationSettingsHarnessView: View {
         }
         .onAppear {
             session.currentUser = ScheduleFixtures.staffUser
-            prefsVM.prefs = NotificationFixtureAPI.pausedPreferences
+            // `GT_NOTIF_STATE`: `healthy` (default: registered, not paused) or
+            // `attention` (paused alerts and a failed registration).
+            let attention = ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+            prefsVM.prefs = NotificationFixtureAPI.preferences(paused: attention)
             prefsVM.catalog = NotificationFixtureAPI.staffCatalog
-            appState.pushRegistrationState = .failed
+            applyRegistrationState(attention: attention)
             seeded = true
+        }
+        // App launch resets the registration state once it has read the real
+        // permission, so seed it again after that settles.
+        .task {
+            try? await Task.sleep(for: .seconds(1.5))
+            applyRegistrationState(
+                attention: ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+            )
+        }
+    }
+}
+
+extension NotificationSettingsHarnessView {
+    fileprivate func applyRegistrationState(attention: Bool) {
+        if attention {
+            appState.pushRegistrationState = .failed
+        } else {
+            UserDefaults.standard.set("fixture-apns-token", forKey: PushTokenStorage.currentTokenKey)
+            appState.pushRegistrationState = .registered
         }
     }
 }
@@ -320,11 +352,24 @@ enum NotificationFixtureAPI {
         return Data(#"{"data":[\#(rows.joined(separator: ","))],"total":\#(rows.count),"limit":20,"offset":0,"unreadCount":3}"#.utf8)
     }
 
-    static var pausedPreferences: NotificationPreferences {
+    static var pausedPreferences: NotificationPreferences { preferences(paused: true) }
+
+    /// The `/api/me/notification-preferences` answer, so the screen's own
+    /// reloads (scene activation, retry) succeed instead of 404ing.
+    static func preferencesPayload() -> Data {
+        struct Payload: Encodable {
+            let data: NotificationPreferences
+            let catalog: [NotificationCategoryEntry]
+        }
+        let attention = ProcessInfo.processInfo.environment["GT_NOTIF_STATE"] == "attention"
+        return (try? JSONEncoder().encode(Payload(data: preferences(paused: attention), catalog: staffCatalog))) ?? Data()
+    }
+
+    static func preferences(paused: Bool) -> NotificationPreferences {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return NotificationPreferences(
-            pausedUntil: formatter.string(from: Date.now.addingTimeInterval(60 * 60)),
+            pausedUntil: paused ? formatter.string(from: Date.now.addingTimeInterval(60 * 60)) : nil,
             channels: NotificationPreferences.Channels(email: true, push: true),
             badges: true,
             categories: NotificationPreferences.Categories(
@@ -719,6 +764,14 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             let assetId = String(path.dropFirst("/api/assets/".count))
             return AssetFixtureAPI.asset(for: assetId)
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
+        case let path where path.hasPrefix("/api/shift-groups/") && path.hasSuffix("/working-copy")
+            && request.httpMethod == "GET":
+            let groupId = path.dropFirst("/api/shift-groups/".count).dropLast("/working-copy".count)
+            return ScheduleFixtureAPI.workingCopy(shiftGroupId: String(groupId))
+        case "/api/me/notification-preferences": return NotificationFixtureAPI.preferencesPayload()
+        case "/api/gear-picks/me": return UIReviewFixtureAPI.gearPicks
+        case let path where path.hasSuffix("/availability") && path.hasPrefix("/api/users/"):
+            return UIReviewFixtureAPI.availability
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
         case "/api/reports/checkouts": return ReportsFixtureAPI.checkouts
         case "/api/reservations": return SearchFixtureAPI.reservations
@@ -2506,3 +2559,128 @@ private extension Calendar {
 }
 
 #endif
+
+
+/// Seeds the staff session, then renders a fixture event's detail.
+struct EventDetailHarnessView: View {
+    @Environment(SessionStore.self) private var session
+    @State private var event: ScheduleEvent?
+
+    var body: some View {
+        NavigationStack {
+            if let event {
+                EventDetailView(event: event, myShift: nil)
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            session.currentUser = ScheduleFixtures.staffUser
+            let events = (try? await APIClient.shared.calendarEvents()) ?? []
+            // `e1` is the fixture event that has a crew plan (filled and open slots).
+            event = events.first { $0.id == "e1" } ?? events.first
+        }
+    }
+}
+
+struct UserDetailHarnessBody: View {
+    @Environment(SessionStore.self) private var session
+    @State private var seeded = false
+
+    var body: some View {
+        Group {
+            if seeded { UserDetailView(userId: ScoreboardFixtureAPI.userId) } else { Color.clear }
+        }
+        .onAppear {
+            session.currentUser = ScheduleFixtures.staffUser
+            seeded = true
+        }
+    }
+}
+
+struct AvailabilityHarnessBody: View {
+    @Environment(SessionStore.self) private var session
+    @State private var seeded = false
+
+    var body: some View {
+        Group {
+            if seeded { AvailabilityView(userId: ScheduleFixtures.staffUser.id) } else { Color.clear }
+        }
+        .onAppear {
+            session.currentUser = ScheduleFixtures.staffUser
+            seeded = true
+        }
+    }
+}
+
+/// Canned payloads for the UI-review detail captures.
+enum UIReviewFixtureAPI {
+    static var availability: Data {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.dateFormat = "yyyy-MM-dd"
+        func day(_ offset: Int) -> String {
+            fmt.string(from: Calendar.current.date(byAdding: .day, value: offset, to: .now) ?? .now)
+        }
+        return Data("""
+        {"data":[
+          {"id":"a1","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":1,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"09:00","endsAt":"11:30","label":"CHEM 101","semesterLabel":"Fall 2026","semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a2","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"13:00","endsAt":"15:00","label":"Lab","semesterLabel":"Fall 2026","semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a3","kind":"WEEKLY","intent":"PREFER","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"16:00","endsAt":"21:00","label":"Prefer photo shifts","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a5","kind":"WEEKLY","intent":"DISLIKE","status":"APPROVED","dayOfWeek":5,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"17:00","endsAt":"20:00","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a4","kind":"AD_HOC","intent":"TIME_OFF","status":"APPROVED","dayOfWeek":null,"date":"\(day(12))","dateEndsOn":"\(day(15))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":"Family trip","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a6","kind":"AD_HOC","intent":"TIME_OFF","status":"PENDING","dayOfWeek":null,"date":"\(day(30))","dateEndsOn":"\(day(30))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null}
+        ]}
+        """.utf8)
+    }
+
+    static var gearPicks: Data {
+        // `GT_GEAR_PICKS=picked` seeds a saved draft so the review bar shows.
+        let submission = ProcessInfo.processInfo.environment["GT_GEAR_PICKS"] == "picked"
+            ? #"{"version":1,"totalCents":9300,"submittedAt":null,"updatedAt":"2026-10-20T15:00:00Z","lines":[{"sku":"BP-1-RED-M","style":"BP-1","colorCode":"RED","size":"M","quantity":1,"unitPriceCents":6500,"lineTotalCents":6500,"itemName":"Pullover hoodie","colorLabel":"Cardinal","category":"Tops"},{"sku":"BP-3-RED-OSFA","style":"BP-3","colorCode":"RED","size":"OSFA","quantity":1,"unitPriceCents":2800,"lineTotalCents":2800,"itemName":"Staff cap","colorLabel":"Cardinal","category":"Accessories"}]}"#
+            : "null"
+        return Data("""
+        {"data":{
+          "cycle":{"id":"c1","title":"Fall 2026 gear","deadline":"2026-11-15T05:00:00Z","isOpen":true,"launchedAt":"2026-10-01T05:00:00Z"},
+          "participant":{"id":"p1","fit":"MENS","allowanceCents":30000},
+          "submission":\(submission),
+          "catalog":{"maxQuantity":4,"categories":["Tops","Bottoms","Accessories"],"items":[
+            {"style":"BP-1","name":"Pullover hoodie","fit":"MENS","category":"Tops","priceCents":6500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""},{"code":"BLK","label":"Black","swatch":"#111111","image":""}]},
+            {"style":"BP-2","name":"Quarter zip","fit":"MENS","category":"Tops","priceCents":7500,"sizeLabel":"Size","sizes":["S","M","L","XL"],"sizesAreExact":true,"oneSize":false,"defaultSize":null,"kit":null,"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]},
+            {"style":"BP-3","name":"Staff cap","fit":"MENS","category":"Accessories","priceCents":2800,"sizeLabel":"Size","sizes":["OSFA"],"sizesAreExact":true,"oneSize":true,"defaultSize":"OSFA","kit":{"kind":"CORE_KIT","colorCode":"RED"},"colors":[{"code":"RED","label":"Cardinal","swatch":"#A00000","image":""}]}
+          ]}
+        }}
+        """.utf8)
+    }
+}
+
+
+extension ScheduleFixtureAPI {
+    /// The staff working-copy editor for a crew plan, published and unchanged,
+    /// so Event detail loads its crew the way a real session does instead of
+    /// falling back to "Showing the published crew" on a 404.
+    static func workingCopy(shiftGroupId: String) -> Data? {
+        let eventId = shiftGroupId.hasPrefix("sg-") ? String(shiftGroupId.dropFirst(3)) : shiftGroupId
+        guard let plan = crewPlans[eventId] else { return nil }
+        let users = plan.shifts.enumerated().compactMap { index, shift -> String? in
+            guard let worker = shift.worker else { return nil }
+            return #"{"id":"u-\#(index)","name":"\#(worker)","role":"STUDENT","staffingType":"ST","primaryArea":"\#(shift.area)","avatarUrl":null}"#
+        }.joined(separator: ",")
+        let slots = plan.shifts.enumerated().map { index, shift -> String in
+            let assignment = shift.worker == nil
+                ? "null"
+                : #"{"sourceAssignmentId":"a-\#(eventId)-\#(index)","userId":"u-\#(index)","status":"CONFIRMED","callStartsAt":null,"callEndsAt":null,"callNote":null,"crewLabel":null,"crewHalf":null,"activeTradeId":null,"bookingCount":0}"#
+            return #"{"key":"s-\#(eventId)-\#(index)","sourceShiftId":"s-\#(eventId)-\#(index)","area":"\#(shift.area)","workerType":"ST","startsAt":"\#(plan.startsAt)","endsAt":"\#(plan.endsAt)","callStartsAt":"\#(plan.callStartsAt)","callEndsAt":null,"notes":null,"assignmentHistoryCount":0,"assignment":\#(assignment)}"#
+        }.joined(separator: ",")
+        return Data("""
+        {"data":{"shiftGroupId":"\(shiftGroupId)","publicationState":"PUBLISHED","publishedAt":"\(plan.startsAt)",
+          "publishedVersion":1,"workingVersion":1,"basePublishedVersion":1,"hasWorkingCopy":false,
+          "updatedAt":null,"updatedById":null,"autoReleaseAt":null,"autoReleaseRunId":null,"autoReleaseError":null,
+          "canUndo":false,"canRedo":false,
+          "changes":{"addedSlots":0,"removedSlots":0,"convertedSlots":0,"assignmentChanges":0,"callWindowChanges":0,"total":0},
+          "affectedWorkerCount":0,"assignedUsers":[\(users)],"defaultWindow":null,
+          "schedule":{"eventStartsAt":"\(plan.startsAt)","eventEndsAt":"\(plan.endsAt)","slots":[\(slots)]},
+          "draftId":null,"pendingClaims":[]}}
+        """.utf8)
+    }
+}

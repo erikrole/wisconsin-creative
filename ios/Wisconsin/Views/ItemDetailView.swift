@@ -57,13 +57,20 @@ struct ItemDetailView: View {
                         if let parent = asset.parentAsset {
                             ParentLinkCard(parent: parent)
                         }
-                        ItemHeroCard(asset: asset, onCopyQR: copyQR)
+                        let nextReservation = asset.upcomingReservations.min(by: { $0.startsAt < $1.startsAt })
+                        // A plain "Available" is a fact about the item, not a
+                        // card of its own: it rides in the hero. Every other
+                        // state keeps its card because it has more to say.
+                        let availableInHero = asset.activeBooking == nil
+                            && asset.computedStatus == .available
+                            && nextReservation == nil
+                        ItemHeroCard(asset: asset, showsAvailable: availableInHero, onCopyQR: copyQR)
                         if let booking = asset.activeBooking {
                             ActiveBookingCard(booking: booking)
-                        } else {
+                        } else if !availableInHero {
                             ItemAvailabilityCard(
                                 status: asset.computedStatus,
-                                nextReservation: asset.upcomingReservations.min(by: { $0.startsAt < $1.startsAt })
+                                nextReservation: nextReservation
                             )
                         }
                         if asset.computedStatus != .retired {
@@ -240,8 +247,7 @@ private struct ReserveButton: View {
     let action: () -> Void
 
     var body: some View {
-        // Matches the scan hero sheet's primary action: solid black
-        // prominent button, so "reserve" reads the same everywhere.
+        // The screen's one primary action, so it takes the one green.
         Button(action: action) {
             Label(title, systemImage: "calendar.badge.plus")
                 .font(.subheadline.weight(.semibold))
@@ -250,7 +256,7 @@ private struct ReserveButton: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .tint(Color.statusText(.purple))
+        .tint(Color.statusText(.green))
         .accessibilityLabel(title)
     }
 }
@@ -403,6 +409,7 @@ struct EditAssetSheet: View {
 
 private struct ItemHeroCard: View {
     let asset: AssetDetail
+    var showsAvailable = false
     let onCopyQR: (String) -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -518,8 +525,8 @@ private struct ItemHeroCard: View {
 
             if let sub = subtitle {
                 Text(sub)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
 
@@ -528,8 +535,21 @@ private struct ItemHeroCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
+            if showsAvailable {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.statusText(.green))
+                        .frame(width: 8, height: 8)
+                    Text("Available")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .padding(.top, 2)
+                .accessibilityElement(children: .combine)
+            }
+
             // QR sticker code — tap copies the value for the kiosk / relink form.
-            if let qr = asset.qrCodeValue, !qr.isEmpty {
+            // Skipped when it is the title already: the tag was shown three times.
+            if let qr = asset.qrCodeValue, !qr.isEmpty, qr != heroTitle {
                 Button {
                     onCopyQR(qr)
                 } label: {

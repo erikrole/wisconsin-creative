@@ -57,21 +57,19 @@ describe("iOS Home header source contract", () => {
     expect(home).toContain('Label("Search or Scan", systemImage: "magnifyingglass")');
   });
 
-  it("shows only actionable metrics as compact disclosure rows", () => {
+  it("shows only actionable metrics as one quiet summary line", () => {
     const home = source("ios/Wisconsin/Views/HomeView.swift");
     const brand = source("ios/Wisconsin/Core/Brand.swift");
 
     expect(home).toContain("private var activeItems: [StatItem]");
     expect(home).toContain("if stats.dueToday > 0");
     expect(home).toContain('StatItem(id: "due-today"');
-    expect(home).toContain("private struct StatRow: View");
+    expect(home).toContain("private struct StatSummaryButton: View");
     expect(home).toContain("tone: .orange");
-    // Flat number tiles: the numeral is the point, so no icon square or chevron.
-    expect(home).not.toContain("Color.statusIconBackground(item.tone)");
-    expect(home).toContain(".font(.system(size: 34, weight: .heavy))");
-    expect(home).toContain(".flatCard(padding: Brand.Space.md, radius: Brand.Radius.md)");
+    // One line of counts: red only for overdue, everything else plain secondary text.
+    expect(home).toContain('.foregroundStyle(item.tone == .red ? AnyShapeStyle(Color.statusText(.red)) : AnyShapeStyle(.secondary))');
+    expect(home).not.toContain("private struct StatRow");
     expect(home).not.toContain("private struct StatCard");
-    expect(home).toContain(".foregroundStyle(.secondary)");
     expect(brand).toContain("// #d97706");
     expect(brand).toContain("// #fff7ed");
     expect(brand).toContain("// #ffedd5");
