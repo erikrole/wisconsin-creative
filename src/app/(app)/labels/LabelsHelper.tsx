@@ -181,6 +181,19 @@ export default function LabelsHelper() {
     }
   }, [didPreselect, hydrated, preselectedItems, items, add]);
 
+  // Sheets saved by the first print cart stored families as plain labels; give
+  // them their family settings back so unit and quantity controls show up.
+  useEffect(() => {
+    if (!hydrated || !items) return;
+    for (const entry of cart) {
+      if (entry.family || !entry.id.startsWith("bulk-")) continue;
+      const item = items.find((candidate) => candidate.id === entry.id);
+      if (!item || item.kind === "serialized") continue;
+      const fresh = item.entry();
+      update(entry.id, { family: fresh.family, original: fresh.original });
+    }
+  }, [hydrated, items, cart, update]);
+
   const counts = useMemo(() => {
     const list = items ?? [];
     const serialized = list.filter((item) => item.kind === "serialized").length;

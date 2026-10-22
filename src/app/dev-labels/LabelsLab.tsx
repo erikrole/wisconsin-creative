@@ -44,6 +44,9 @@ function installFetchMock() {
   window.fetch = async (input, init) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.origin);
     const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
+    if (url.pathname === "/api/me") {
+      return json({ user: { id: "dev", name: "Dev Staff", email: "staff@creative.local", role: "STAFF" } });
+    }
     if (url.pathname === "/api/assets") {
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       const data = ASSETS.filter((a) => !q || `${a.assetTag} ${a.brand} ${a.model}`.toLowerCase().includes(q));

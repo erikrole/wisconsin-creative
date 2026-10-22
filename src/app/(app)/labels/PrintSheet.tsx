@@ -10,6 +10,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LABEL_KINDS, type LabelKind } from "@/lib/brother-label-csv";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import { LabelPreview } from "./LabelPreview";
 import {
@@ -36,6 +37,9 @@ import {
 } from "./label-sheet";
 
 const unitsKey = (skuId: string) => ["label-units", skuId] as const;
+
+/** Matches the `unitNumbers` cap in markBulkUnitLabelsSchema. */
+const MARK_BATCH = 500;
 
 async function readUnits(skuId: string, signal?: AbortSignal): Promise<SheetUnit[]> {
   const res = await fetch(`/api/bulk-skus/${skuId}/units`, { signal });
@@ -72,7 +76,8 @@ function download(filename: string, csv: string) {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  // Revoking in the same tick can cancel the download in Safari and Firefox.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function plural(count: number, word: string) {
@@ -201,7 +206,8 @@ function SheetEntry({
   entry: CartEntry;
   units: SheetUnit[] | undefined;
   unitsFailed: boolean;
-  downloadedUnits: boolean;
+  /** Unit numbers in the CSV that was downloaded for this entry, still unmarked. Null when there is nothing to mark. */
+  downloadedUnits: number[] | null;
   onUpdate: (patch: Partial<CartEntry>) => void;
   onRemove: () => void;
   onMarkPrinted: (numbers: number[]) => Promise<void>;
@@ -221,7 +227,8 @@ function SheetEntry({
   const unprinted = active.filter((unit) => !unit.labelPrintedAt).length;
   const firstUnit = unitNumbers[0];
   const edited = textEdited(entry);
-  const canMark = unitMode && downloadedUnits && unitNumbers.some((n) => !units?.find((u) => u.unitNumber === n)?.labelPrintedAt);
+  const toMark = (downloadedUnits ?? []).filter((n) => !units?.find((u) => u.unitNumber === n)?.labelPrintedAt);
+  const canMark = unitMode && toMark.length > 0;
 
   const meta = unitMode
     ? !units
@@ -327,7 +334,6 @@ function SheetEntry({
                 placeholder="7, or 12-18, or 3, 9, 20-24"
                 inputMode="numeric"
                 aria-label={`Unit numbers of ${entry.title} to print`}
-                autoFocus={!family!.unitPick}
               />
               {(pickInvalid.length > 0 || unknown.length > 0) && (
                 <p className="text-xs text-destructive">
@@ -388,14 +394,14 @@ function SheetEntry({
             onClick={async () => {
               setMarking(true);
               try {
-                await onMarkPrinted(unitNumbers);
+                await onMarkPrinted(toMark);
               } finally {
                 setMarking(false);
               }
             }}
           >
             <Check className="size-3.5" />
-            {marking ? "Marking…" : `Mark ${unitNumbers.length} printed`}
+            {marking ? "Marking…" : `Mark ${toMark.length} printed`}
           </Button>
         </div>
       )}
@@ -434,6 +440,11 @@ export function PrintSheet({
   const queryClient = useQueryClient();
   const { unitsBySku, loading, failed } = useSheetUnits(cart);
   const [downloaded, setDownloaded] = useState<Set<LabelKind>>(new Set());
+  // Exactly which units went out in a downloaded CSV, per family, so "Mark printed"
+  // never covers units that were added or re-picked after the download.
+  const [exportedUnits, setExportedUnits] = useState<Record<string, number[]>>({});
+  const { data: me } = useCurrentUser();
+  const canMarkPrinted = me?.role === "ADMIN" || me?.role === "STAFF";
   const rows = useMemo(() => sheetRows(cart, unitsBySku), [cart, unitsBySku]);
   const files = useMemo(() => templateFiles(rows), [rows]);
   const total = printableCount(rows);
@@ -444,20 +455,45 @@ export function PrintSheet({
 
   const markPrinted = async (entry: CartEntry, unitNumbers: number[]) => {
     const skuId = entry.family!.skuId;
+    let updated = 0;
     try {
-      const res = await fetch(`/api/bulk-skus/${skuId}/units/labels`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ unitNumbers, printed: true }),
+      // The route takes at most MARK_BATCH unit numbers per call.
+      for (let i = 0; i < unitNumbers.length; i += MARK_BATCH) {
+        const res = await fetch(`/api/bulk-skus/${skuId}/units/labels`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ unitNumbers: unitNumbers.slice(i, i + MARK_BATCH), printed: true }),
+        });
+        if (handleAuthRedirect(res)) return;
+        if (!res.ok) throw new Error("server");
+        const json = await parseJsonSafely<{ data?: { updated?: number } }>(res);
+        updated += json?.data?.updated ?? 0;
+      }
+      toast.success(`${plural(updated, "unit")} of ${entry.title} marked printed`);
+      setExportedUnits((prev) => {
+        const next = { ...prev };
+        delete next[skuId];
+        return next;
       });
-      if (handleAuthRedirect(res)) return;
-      if (!res.ok) throw new Error("server");
-      const json = await parseJsonSafely<{ data?: { updated?: number } }>(res);
-      toast.success(`${plural(json?.data?.updated ?? unitNumbers.length, "unit")} of ${entry.title} marked printed`);
-      await queryClient.invalidateQueries({ queryKey: unitsKey(skuId) });
     } catch {
-      toast.error("Could not mark those labels printed. Try again.");
+      toast.error(
+        updated > 0
+          ? `Marked ${plural(updated, "unit")}, then stopped. Try again for the rest.`
+          : "Could not mark those labels printed. Try again.",
+      );
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: unitsKey(skuId) });
     }
+  };
+
+  const recordExport = (kind: LabelKind) => {
+    const exported: Record<string, number[]> = {};
+    for (const entry of cart) {
+      if (!printsUnits(entry) || entryKind(entry) !== kind) continue;
+      const skuId = entry.family!.skuId;
+      exported[skuId] = Array.from(new Set([...(exported[skuId] ?? []), ...selectedUnitNumbers(entry, unitsBySku[skuId])]));
+    }
+    setExportedUnits((prev) => ({ ...prev, ...exported }));
   };
 
   return (
@@ -510,7 +546,9 @@ export function PrintSheet({
                     entry={entry}
                     units={entry.family ? unitsBySku[entry.family.skuId] : undefined}
                     unitsFailed={Boolean(entry.family && failed.has(entry.family.skuId))}
-                    downloadedUnits={downloaded.has(entryKind(entry))}
+                    downloadedUnits={
+                      canMarkPrinted && entry.family && printsUnits(entry) ? exportedUnits[entry.family.skuId] ?? null : null
+                    }
                     onUpdate={(patch) => onUpdate(entry.id, patch)}
                     onRemove={() => onRemove(entry.id)}
                     onMarkPrinted={(numbers) => markPrinted(entry, numbers)}
@@ -538,6 +576,7 @@ export function PrintSheet({
                   onClick={() => {
                     download(file.file, file.csv);
                     setDownloaded((prev) => new Set(prev).add(file.kind));
+                    recordExport(file.kind);
                   }}
                 >
                   <span className="flex min-w-0 items-center gap-2">

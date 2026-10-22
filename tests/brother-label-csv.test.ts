@@ -55,11 +55,11 @@ describe("generators", () => {
   it("builds the SD card grid", () => {
     const csv = buildBrotherCsv("sd", sdCardRows("FX3", "", 2, ["A", "B"]));
     expect(body(csv)).toEqual([
-      "Dept,Camera,Card,Label",
-      ',FX3,1A,"\nFX3\n1A"',
-      ',FX3,1B,"\nFX3\n1B"',
-      ',FX3,2A,"\nFX3\n2A"',
-      ',FX3,2B,"\nFX3\n2B"',
+      "Dept,Camera,Card,Size,",
+      ',FX3,1A,,"\nFX3\n1A"',
+      ',FX3,1B,,"\nFX3\n1B"',
+      ',FX3,2A,,"\nFX3\n2A"',
+      ',FX3,2B,,"\nFX3\n2B"',
     ]);
   });
   it("builds number ranges with a prefix", () => {

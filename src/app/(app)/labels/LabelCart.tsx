@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { CartEntry } from "./label-sheet";
 
 const STORAGE_KEY = "labels.cart.v2";
+const MAX_SD_CARDS = 100;
 
 const isText = (value: unknown) => typeof value === "string";
 
@@ -165,7 +166,7 @@ export function LabelGenerators({ onAdd }: { onAdd: (entries: CartEntry[]) => vo
             <Input className="w-20" value={sdDept} onChange={(e) => setSdDept(e.target.value)} placeholder="FB" />
           </Field>
           <Field label="Cards">
-            <Input className="w-20" type="number" min={1} value={sdCount} onChange={(e) => setSdCount(Math.max(1, Number(e.target.value) || 1))} />
+            <Input className="w-20" type="number" min={1} max={MAX_SD_CARDS} value={sdCount} onChange={(e) => setSdCount(Math.min(MAX_SD_CARDS, Math.max(1, Number(e.target.value) || 1)))} />
           </Field>
           <Field label="Slots">
             <Input className="w-24" value={sdSlots} onChange={(e) => setSdSlots(e.target.value)} placeholder="A,B" />

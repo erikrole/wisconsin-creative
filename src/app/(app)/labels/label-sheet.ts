@@ -195,7 +195,8 @@ export function entryRows(entry: CartEntry, units: SheetUnit[] | undefined): Lab
     return unitTagRows(
       entry.family.binQrCodeValue,
       selectedUnitNumbers(entry, units),
-      clampCopies(entry.copies),
+      // One label per unit; the copies stepper belongs to the family label.
+      1,
       unitKindOf(entry),
     );
   }

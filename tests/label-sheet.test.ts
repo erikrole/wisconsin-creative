@@ -85,6 +85,11 @@ describe("print sheet rows", () => {
     expect(lines(file!.csv)).toEqual(["item_number,qr_code", "2,BATT-2", "3,BATT-3"]);
   });
 
+  it("prints one label per unit even if the family label had copies", () => {
+    const entry: CartEntry = { ...asUnits(numbered, "all"), copies: 3 };
+    expect(printableCount(sheetRows([entry], { batt: units }))).toBe(3);
+  });
+
   it("can print unit labels on Number-Tag.lbx instead", () => {
     const entry: CartEntry = { ...numbered, family: { ...numbered.family!, mode: "units", unitScope: "all", unitKind: "numberTag" } };
     const [file] = templateFiles(sheetRows([entry], { batt: units }));

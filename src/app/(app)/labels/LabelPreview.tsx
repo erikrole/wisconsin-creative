@@ -6,7 +6,7 @@ import type { LabelKind } from "@/lib/brother-label-csv";
 import { cn } from "@/lib/utils";
 
 // Stand-in for Gotham XNarrow, the templates' face; Macs with Gotham installed use the real one.
-const condensed = Barlow_Condensed({ subsets: ["latin"], weight: ["700", "800"], display: "swap" });
+const condensed = Barlow_Condensed({ subsets: ["latin"], weight: ["700", "900"], display: "swap" });
 
 /** 12 mm TZe tape on the PT-D610BT: 33.6pt across, white ink on black. */
 export const TAPE_WIDTH_PT = 33.6;
@@ -22,7 +22,7 @@ type TemplateLayout = {
     y?: number;
     height?: number;
     size: number;
-    weight: 700 | 800;
+    weight: 700 | 900;
     align: "center" | "top";
     /** Batteries.lbx turns its number a quarter turn. */
     rotated?: boolean;
@@ -49,7 +49,7 @@ export const TEMPLATE_LAYOUTS: Record<LabelKind, TemplateLayout> = {
   numberTag: { start: 5.5, text: { width: 10.2, y: 9.8, height: 13.2, size: 11, weight: 700, align: "top" }, qr: { gap: 2.8, y: 6.3, size: 20 }, end: 5.6 },
   // Batteries.lbx: 57.6pt fixed; Text6 x 7.3 y 4.2 w 14.4 h 25.2 at 12pt heavy, turned 270° (P-touch turns clockwise,
   // so it reads bottom to top); Barcode2 x 20.5 y 1.8 30×30.
-  battery: { length: 57.6, start: 7.3, text: { width: 14.4, y: 4.2, height: 25.2, size: 12, weight: 800, align: "center", rotated: true }, qr: { gap: -1.2, y: 1.8, size: 30 }, end: 7.1 },
+  battery: { length: 57.6, start: 7.3, text: { width: 14.4, y: 4.2, height: 25.2, size: 12, weight: 900, align: "center", rotated: true }, qr: { gap: -1.2, y: 1.8, size: 30 }, end: 7.1 },
 };
 
 /** The text lines a template prints for a row, blank lines included (they hold the layout). */

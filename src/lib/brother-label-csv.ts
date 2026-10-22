@@ -47,7 +47,9 @@ export const LABEL_KINDS: Record<
     label: "SD cards",
     file: "SD Cards.csv",
     template: "SD Cards.lbx",
-    headers: ["Dept", "Camera", "Card", "Label"],
+    // SD Cards.lbx is bound to Dept, Camera, Card, Size and an unnamed fifth
+    // column (P-touch calls it F5) that holds the three-line label.
+    headers: ["Dept", "Camera", "Card", "Size", ""],
     needsQr: false,
   },
   text: {
@@ -122,7 +124,7 @@ function cells(row: LabelRow): string[] {
     case "lens":
       return [row.dept, row.model, row.number, label, row.qrCodeValue];
     case "sd":
-      return [row.dept, row.model, row.number, label];
+      return [row.dept, row.model, row.number, "", label];
     case "text":
       return [row.model];
     case "numberTag":
