@@ -48,6 +48,14 @@ enum AppRuntimeMode {
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
         case scoreboard
+        /// The shared team Scoreboard against a canned season: fact cards,
+        /// leaderboard, head to head and the explorer, with the signed-in
+        /// fixture user on the board so the "You" row shows.
+        case teamScoreboard = "team-scoreboard"
+        /// Creative Wrapped against a canned recap. `GT_WRAPPED_CARD` picks the
+        /// card to open on, and auto-advance is off, so every card can be
+        /// captured without tapping the simulator.
+        case wrapped
         /// The current user's Profile against canned identity, badge, and shift
         /// payloads. The Scoreboard entry lives between Next Up and the badge
         /// shelf, and a row's treatment can only be judged beside its neighbours.
@@ -204,7 +212,7 @@ enum AppRuntimeMode {
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile, .staffProfile,
+             .home, .homeAllClear, .scoreboard, .teamScoreboard, .wrapped, .profile, .staffProfile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,

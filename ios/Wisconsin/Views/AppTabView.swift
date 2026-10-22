@@ -375,6 +375,7 @@ struct AppTabView: View {
             }
             .modifier(AppTabShellStyle(usesSidebarAdaptableStyle: showsSidebarDestinations))
             .modifier(AppTabStatusOverlays(isReadOnlyPreview: isReadOnlyPreview))
+            .modifier(WrappedInvitation(role: session.currentUser?.role, isEnabled: !isReadOnlyPreview))
             .animation(reduceMotion ? nil : .easeInOut, value: network.isConnected)
     }
 

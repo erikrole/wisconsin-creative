@@ -539,6 +539,25 @@
   },
   {
     "date": "2026-10-21",
+    "title": "A Scoreboard you can play with",
+    "type": "feature",
+    "summary": "The Scoreboard is redesigned on the web and iPhone to be fun to explore: the team record up top, facts you can tap, and a leaderboard you can dig into.",
+    "details": [
+      "Did you know cards surface stories in the season, like who has worked the most events, the team's record when someone is on crew, home versus away, and your own spot. Tap one to jump to that person or view.",
+      "Switch the leaderboard between events, wins and win rate and watch people move to their new places. Tap anyone to see their sports and record without leaving the page.",
+      "Head to head compares any two people, starting with you and the leader.",
+      "Explore lets you tap a sport, venue, opponent or site to zoom the whole Scoreboard into it. Sport chips sit at the top, and the other filters are under More filters.",
+      "Games that ended more than four months ago now stay in the season record instead of dropping out.",
+      "Every finished game is now saved with its result and crew, so the season can be replayed and recapped later even if a schedule changes."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 564
+  },
+  {
+    "date": "2026-10-21",
     "title": "Staff looks right in dark mode",
     "type": "fixes",
     "summary": "Staff tiles, notices and the hiring sheet now use dark-friendly colors instead of light pastels.",

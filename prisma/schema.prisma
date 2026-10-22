@@ -1309,6 +1309,56 @@ enum ScheduleFollowSource {
  * assignment; Schedule, published crews, My Shifts, trades, and ICS never read
  * this table.
  */
+/// One durable row per finished season game, written nightly by morning-refresh.
+/// Season replay and the December recap read these instead of live rows, so a
+/// later shift removal, worker removal, source deletion, archive, or result
+/// correction cannot rewrite history. No foreign key on purpose: the snapshot
+/// outlives the event it describes.
+model GameSnapshot {
+  id               String              @id @default(cuid())
+  eventId          String              @unique @map("event_id")
+  seasonKey        String              @map("season_key")
+  startsAt         DateTime            @map("starts_at")
+  endsAt           DateTime            @map("ends_at")
+  sportCode        String?             @map("sport_code")
+  opponent         String?
+  site             CalendarEventSite?
+  venue            String?
+  title            String
+  /// The feed's raw title, kept verbatim so a score in it can be parsed later.
+  rawSummary       String?             @map("raw_summary")
+  status           CalendarEventStatus
+  official         Boolean
+  result           CalendarEventResult?
+  resultRecordedAt DateTime?           @map("result_recorded_at")
+  /// [{ result, at }] every result this game has had, oldest first.
+  resultHistory    Json                @default("[]") @map("result_history")
+  /// [{ userId, name, source, area, crewLabel, attended, leftAt }]; a member no
+  /// longer on the live crew keeps their entry with leftAt set.
+  crew             Json                @default("[]")
+  crewCount        Int                 @default(0) @map("crew_count")
+  eventDeletedAt   DateTime?           @map("event_deleted_at")
+  capturedAt       DateTime            @default(now()) @map("captured_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  @@index([seasonKey, startsAt])
+  @@map("game_snapshots")
+}
+
+/// One person's Creative Wrapped, frozen the first time they open it after
+/// unlock so later corrections don't rewrite a story they already saw.
+model WrappedRecap {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  seasonKey   String   @map("season_key")
+  version     Int
+  payload     Json
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  @@unique([userId, seasonKey])
+  @@map("wrapped_recaps")
+}
+
 model EventWorker {
   id        String        @id @default(cuid())
   eventId   String        @map("event_id")

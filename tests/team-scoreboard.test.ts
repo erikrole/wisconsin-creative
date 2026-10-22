@@ -218,8 +218,8 @@ describe("getTeamScoreboard", () => {
       endsAt: { lt: now },
       status: { not: "CANCELLED" },
       isHidden: false,
-      archivedAt: null,
     });
+    expect(officialWhere).not.toHaveProperty("archivedAt");
 
     // The facet read covers the union of both windows and never loads a crew.
     const facetQuery = mockedFindMany.mock.calls[2]?.[0];

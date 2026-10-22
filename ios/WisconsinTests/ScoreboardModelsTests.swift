@@ -257,6 +257,53 @@ final class ScoreboardModelsTests: XCTestCase {
         XCTAssertEqual(scoreboard.leaderboard.first?.bySport.first?.recordLabel, "2–1")
     }
 
+    func testTeamScoreboardFunFactsFindStoriesAndLeadWithYourSpot() throws {
+        func person(_ id: String, _ name: String, _ events: Int, _ wins: Int, _ losses: Int) -> String {
+            let games = wins + losses
+            let rate = games > 0 ? (Double(wins) / Double(games) * 1000).rounded() / 10 : 0
+            return """
+            {"userId":"\(id)","name":"\(name)","avatarUrl":null,
+             "summary":{"eventsWorked":\(events),"wins":\(wins),"losses":\(losses),"games":\(games),"winRate":\(rate)},
+             "bySport":[]}
+            """
+        }
+        func bucket(_ key: String, _ label: String, _ events: Int, _ wins: Int, _ losses: Int) -> String {
+            let games = wins + losses
+            let rate = games > 0 ? (Double(wins) / Double(games) * 1000).rounded() / 10 : 0
+            return """
+            {"key":"\(key)","label":"\(label)","contributors":3,"eventsCovered":\(events),"eventCredits":\(events * 3),
+             "wins":\(wins),"losses":\(losses),"games":\(games),"winRate":\(rate),"gameCredits":\(games * 3)}
+            """
+        }
+        let json = """
+        {
+          "scope": {"key":"2026-27","label":"2026–27 season","startsAt":"2026-07-01T00:00:00.000Z","endsAt":"2027-07-01T00:00:00.000Z","timeZone":"America/Chicago"},
+          "methodology": {"eventsCovered":"","eventCredits":"","record":"","gameCredits":"","minimumGamesForWinRate":3},
+          "filters": {"sportCode":null,"venue":null,"opponent":null,"site":null},
+          "facets": {"sports":[],"venues":[],"opponents":[],"sites":[]},
+          "summary": {"contributors":3,"eventsCovered":10,"eventCredits":25,"wins":6,"losses":4,"games":10,"winRate":60,"gameCredits":25},
+          "bySport": [\(bucket("FB", "Football", 6, 5, 1)), \(bucket("VB", "Volleyball", 4, 1, 3))],
+          "byVenue": [\(bucket("Camp Randall", "Camp Randall", 6, 5, 1))],
+          "byOpponent": [\(bucket("Iowa", "Iowa", 3, 2, 1))],
+          "bySite": [\(bucket("HOME", "Home", 7, 6, 1)), \(bucket("AWAY", "Away", 3, 0, 3))],
+          "leaderboard": [\(person("a", "Ava Stone", 9, 7, 1)), \(person("b", "Ben Ruiz", 8, 4, 3)), \(person("c", "Cal Ng", 3, 1, 1))]
+        }
+        """.data(using: .utf8)!
+
+        let scoreboard = try JSONDecoder().decode(TeamScoreboard.self, from: json)
+        let facts = TeamScoreboardFunFacts.facts(for: scoreboard, currentUserId: "c")
+        let byId = Dictionary(uniqueKeysWithValues: facts.map { ($0.id, $0) })
+
+        XCTAssertEqual(facts.first?.id, "your-spot")
+        XCTAssertEqual(facts.first?.sentence, "5 events behind Ben.")
+        XCTAssertEqual(byId["iron-crew"]?.value, "9 events")
+        XCTAssertEqual(byId["lucky-charm"]?.value, "7–1")
+        XCTAssertEqual(byId["home-away"]?.action, .filter(.site, "HOME"))
+        XCTAssertEqual(byId["familiar-face"]?.action, .filter(.opponent, "Iowa"))
+        XCTAssertEqual(byId["hot-sport"]?.action, .filter(.sport, "FB"))
+        XCTAssertEqual(TeamScoreboardFunFacts.window(facts, page: 1, size: 4).count, 4)
+    }
+
     func testTeamScoreboardToleratesRollingOptionalCollections() throws {
         let json = """
         {
@@ -439,4 +486,35 @@ final class ScoreboardModelsTests: XCTestCase {
       "nextCursor":"25"
     }
     """
+
+    func testWrappedPromoOpensDecemberFirstAndSkipsCollaborators() {
+        let before = ISO8601DateFormatter().date(from: "2026-11-20T12:00:00Z")!
+        let after = ISO8601DateFormatter().date(from: "2026-12-01T06:00:00Z")!
+        let late = ISO8601DateFormatter().date(from: "2027-01-20T12:00:00Z")!
+        XCTAssertEqual(WrappedPromo.state(now: before, role: "STUDENT"), .hidden)
+        XCTAssertEqual(WrappedPromo.state(now: before, role: "ADMIN"), .preview)
+        XCTAssertEqual(WrappedPromo.state(now: after, role: "STUDENT"), .open)
+        XCTAssertEqual(WrappedPromo.state(now: after, role: "COLLABORATOR"), .hidden)
+        XCTAssertEqual(WrappedPromo.state(now: late, role: "ADMIN"), .hidden)
+    }
+
+    func testWrappedResponseDecodesLockedAndReady() throws {
+        let locked = try JSONDecoder().decode(WrappedResponse.self, from: Data(#"{"status":"locked","unlockAt":"2026-12-01T06:00:00.000Z"}"#.utf8))
+        XCTAssertEqual(locked.status, "locked")
+        XCTAssertNil(locked.recap)
+
+        let ready = try JSONDecoder().decode(WrappedResponse.self, from: Data(#"""
+        {"status":"ready","preview":false,"frozen":true,"recap":{
+          "version":1,"seasonKey":"2026-fall","windowLabel":"July to November 2026","generatedAt":"2026-12-01T07:00:00.000Z",
+          "person":{"userId":"u1","name":"Bucky Badger","avatarUrl":null},
+          "cards":[{"id":"events","layout":"stat","tone":"blue","eyebrow":"Events worked","value":"21","countTo":21,"sentence":"It started with Game 1 on Aug 29."},
+                   {"id":"crew","layout":"people","tone":"violet","eyebrow":"Your crew","value":"Jordan","sentence":"You and Jordan worked 3 events together.",
+                    "items":[{"label":"Jordan Lee","value":"3 together","userId":"jo","avatarUrl":null}]}],
+          "team":[]}}
+        """#.utf8))
+        XCTAssertEqual(ready.recap?.cards.map(\.id), ["events", "crew"])
+        XCTAssertEqual(ready.recap?.cards.first?.countTo, 21)
+        XCTAssertEqual(ready.recap?.cards.last?.items?.first?.userId, "jo")
+    }
+
 }

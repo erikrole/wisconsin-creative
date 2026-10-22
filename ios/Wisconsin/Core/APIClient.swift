@@ -1813,6 +1813,16 @@ final class APIClient {
         return response.data
     }
 
+    /// Creative Wrapped for the signed-in person. Locked until Dec 1; admins
+    /// pass `preview` to see live numbers before then.
+    func wrapped(preview: Bool = false) async throws -> WrappedResponse {
+        let items: [URLQueryItem] = preview ? [.init(name: "preview", value: "1")] : []
+        let response: DataWrapper<WrappedResponse> = try await perform(
+            request(path: "/api/wrapped", queryItems: items)
+        )
+        return response.data
+    }
+
     /// Read-only profile record. The route owns season scope, event counting,
     /// result classification, and visibility; the app only supplies display
     /// filters and pagination.
