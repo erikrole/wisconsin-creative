@@ -47,7 +47,10 @@ import {
   SearchIcon,
   ChevronRightIcon,
   PinIcon,
+  LayoutGridIcon,
 } from "lucide-react";
+import { SidebarToolsFlyout } from "@/components/SidebarToolsFlyout";
+import { toolsForRole } from "@/lib/web-tools";
 import { SidebarCustomizeDialog } from "@/components/SidebarCustomizeDialog";
 import {
   DropdownMenu,
@@ -325,6 +328,7 @@ export default function AppSidebar({
       .filter((group) => group.items.length > 0),
   ];
   const displayGroups = groupsWithPins;
+  const webTools = user ? toolsForRole(user.role) : [];
   const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const reportProblem = useReportProblem();
@@ -490,6 +494,23 @@ export default function AppSidebar({
           {displayGroups.map((group, groupIdx) => renderGroup(group, groupIdx))}
         </nav>
       </SidebarContent>
+
+      {webTools.length > 0 && (
+        // Fixed above the account menu so it is on screen on any height; the page list above scrolls.
+        <div className="px-3 pb-2 pt-1 group-data-[collapsible=icon]:px-2">
+          <SidebarMenu className="gap-px">
+            <SidebarMenuItem>
+              <SidebarToolsFlyout
+                tools={webTools}
+                icon={LayoutGridIcon}
+                buttonClassName={navButtonClass(false)}
+                iconClassName="size-4 stroke-[1.75] text-[color:var(--sidebar-muted)] transition-colors duration-100 group-hover/menu-item:text-[color:var(--sidebar-text-active)]"
+                tooltipClassName={railTooltipClass}
+              />
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
+      )}
 
       {user && (
         <SidebarFooter className="border-t border-[var(--sidebar-border)] p-2 group-data-[collapsible=icon]:items-center">
