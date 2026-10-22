@@ -179,6 +179,11 @@ struct ReturnTimeCalendar: View {
     var latest: Date? = nil
     var tint: Color = Color.statusText(.blue)
 
+    /// Where the time buttons are centered. Set when the picker appears or
+    /// the day changes, never on a button tap, so buttons don't shift under
+    /// the finger.
+    @State private var anchor: Date?
+
     private var calendar: Calendar { .current }
 
     private var dayRange: ClosedRange<Date> {
@@ -202,6 +207,7 @@ struct ReturnTimeCalendar: View {
                     of: calendar.startOfDay(for: newDay)
                 ) else { return }
                 selection = clamped(moved)
+                anchor = selection
             }
         )
     }
@@ -248,6 +254,7 @@ struct ReturnTimeCalendar: View {
             }
         }
         .tint(tint)
+        .onAppear { if anchor == nil { anchor = selection } }
     }
 
     private static let quickHours: [(hour: Int, minute: Int)] = [
@@ -261,6 +268,7 @@ struct ReturnTimeCalendar: View {
     /// always one of them.
     private var quickTimes: [Date] {
         let day = calendar.startOfDay(for: selection)
+        let center = anchor.flatMap { calendar.isDate($0, inSameDayAs: selection) ? $0 : nil } ?? selection
         let earliest = QuarterHour.roundedUp(minimum)
         let isTight = calendar.isDate(earliest, inSameDayAs: day)
             || latest.map { calendar.isDate($0, inSameDayAs: day) } == true
@@ -269,7 +277,7 @@ struct ReturnTimeCalendar: View {
             // Centered a little before the current pick, so the times shown
             // are the ones near what's set rather than the start of the window.
             let step = TimeInterval(30 * 60)
-            let start = max(earliest, day, selection.addingTimeInterval(-3 * step))
+            let start = max(earliest, day, center.addingTimeInterval(-3 * step))
             let firstHalfHour = Date(timeIntervalSinceReferenceDate: ceil(start.timeIntervalSinceReferenceDate / step) * step)
             times = (0..<12).map { firstHalfHour.addingTimeInterval(Double($0) * step) }
         } else {
@@ -293,23 +301,26 @@ struct ReturnTimeCalendar: View {
     @ViewBuilder
     private func quickTimeButton(_ time: Date) -> some View {
         let isSelected = selection == time
-        let title = time.formatted(.dateTime.hour().minute())
+        // Full-width labels so every capsule in the grid is the same size.
+        let label = Text(time.formatted(.dateTime.hour().minute()))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
         if isSelected {
-            Button(title) { selection = time }
+            Button { selection = time } label: { label }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
                 .controlSize(.regular)
-                .frame(maxWidth: .infinity)
                 .accessibilityAddTraits(.isSelected)
         } else {
-            Button(title) {
+            Button {
                 selection = time
                 Haptics.selection()
-            }
+            } label: { label }
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
             .controlSize(.regular)
-            .frame(maxWidth: .infinity)
         }
     }
 }
