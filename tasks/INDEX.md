@@ -39,7 +39,6 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
-- `qr-print-audit-plan-2026-10-22.md` — Approved Gotham/Medium Small layout, USB helper, larger previews, durable operator history and safe remaining-only recovery; SDK chain default physically accepted for six mixed layouts/four scans and Stop/reload/C-only recovery, one initial blank/no between-label blanks, exact packet proof and failure simulation; authenticated preview, application migration and release remain pending.
 - `onboarding-continuity-2026-10-22.md` — web/iOS save and resume, optional-photo Finish and avatar recovery; local verification is separate from authenticated bidirectional handoff and Monday rollout.
 
 - `performance-web-ios-neon-2026-10-20.md` — browser cache/request lifecycle, native decode/persistence/network work, and production Neon diagnostics; tracks rollout and physical-device energy proof separately.
@@ -212,3 +211,5 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - [Recent iOS review fixes and Welcome refinement](archive/completed-2026-10-22/ios-review-fixes.md): all 11 findings fixed, seven simulator UI scenarios verified, local visual reviews retained. Authenticated/physical rollout and existing style drift are explicitly separate.
 
 - [iOS style-drift cleanup](archive/completed-2026-10-22/ios-style-drift.md): zero detector hits, simulator verification wrapper and interaction checks pass; matched light/dark review retained.
+
+- [QR Print direct USB and safe history](archive/completed-2026-10-22/qr-print-audit-plan-2026-10-22.md): shipped in #617; physical mixed-layout/scan/Stop/recovery, authenticated admin/student/browser checks, production migration and Ready deployment verified.

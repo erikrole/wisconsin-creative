@@ -49,5 +49,19 @@
     "state": "READY",
     "sourceSha": "080356807a6aafc459060bcccbf852b486ef29aa"
   },
-  "authenticatedChecks": "passed real admin and student APIs, browser login/history/draft restore; no USB output"
+  "authenticatedChecks": "passed real admin and student APIs, browser login/history/draft restore; no USB output",
+  "production": {
+    "sourceSha": "dfdb50d236b3afab4b1bd15310a148eabdcad9c6",
+    "deploymentId": "dpl_DwtqGVjGte6df6Umg1r6EQtrXts1",
+    "state": "READY",
+    "domain": "https://wisconsincreative.com/labels",
+    "migrationHealth": "207/207; no pending/failed/db-only/checksum mismatch/unverified/unexpected duplicate rows; historical baseline preserved",
+    "indexes": 5,
+    "checks": 2,
+    "foreignKeys": 1,
+    "authenticatedReadback": "passed; real account, enabled USB, gear and history load",
+    "httpChecks": "reviewed font hash matches; USB self only on labels; anonymous history 401; dev fixture 404",
+    "printOrGearStateMutation": "none",
+    "mainCI": "39864268093 passed"
+  }
 }
