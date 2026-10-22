@@ -425,7 +425,7 @@ Indexes and constraints:
 
 ## Model `Asset`
 
-Fields: 43
+Fields: 44
 
 - `id                      String                  @id @default(cuid())`
 - `assetTag                String                  @unique @map("asset_tag")`
@@ -449,6 +449,7 @@ Fields: 43
 - `availableForReservation Boolean                 @default(true) @map("available_for_reservation")`
 - `availableForCheckout    Boolean                 @default(true) @map("available_for_checkout")`
 - `availableForCustody     Boolean                 @default(true) @map("available_for_custody")`
+- `collaboratorVisible     Boolean                 @default(true) @map("collaborator_visible")`
 - `linkUrl                 String?                 @map("link_url")`
 - `imageUrl                String?                 @map("image_url")`
 - `imageRehostAttempts     Int                     @default(0) @map("image_rehost_attempts")`
