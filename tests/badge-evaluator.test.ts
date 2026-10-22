@@ -17,7 +17,9 @@ const { mockTx } = vi.hoisted(() => ({
       findUnique: vi.fn(),
     },
     notification: {
-      createMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
     },
     badgeEventReceipt: {
       createMany: vi.fn(),
@@ -61,7 +63,9 @@ beforeEach(() => {
   // the earned-badge notification. Default to "nothing new was written".
   mockTx.studentBadge.createManyAndReturn.mockResolvedValue([]);
   mockTx.user.findUnique.mockResolvedValue({ notificationPrefs: null });
-  mockTx.notification.createMany.mockResolvedValue({ count: 0 });
+  mockTx.notification.findUnique.mockResolvedValue(null);
+  mockTx.notification.create.mockResolvedValue({});
+  mockTx.notification.update.mockResolvedValue({});
   mockTx.badgeEventReceipt.createMany.mockResolvedValue({ count: 1 });
   mockTx.badgeEventReceipt.findMany.mockResolvedValue([{ sourceKey: "booking-1" }]);
   mockTx.badgeStreak.upsert.mockResolvedValue({});
@@ -116,8 +120,8 @@ describe("badge evaluator added-worker silence", () => {
   });
 
   function notifiedBadgeNames() {
-    return mockTx.notification.createMany.mock.calls.flatMap(
-      (call: unknown[]) => (call[0] as { data: Array<{ body: string }> }).data.map((row) => row.body),
+    return [...mockTx.notification.create.mock.calls, ...mockTx.notification.update.mock.calls].map(
+      (call: unknown[]) => (call[0] as { data: { body: string } }).data.body,
     );
   }
 
@@ -169,7 +173,7 @@ describe("badge evaluator added-worker silence", () => {
     const awarded = mockTx.studentBadge.createManyAndReturn.mock.calls
       .flatMap((call: unknown[]) => (call[0] as { data: Array<{ definitionId: string }> }).data.map((row) => row.definitionId));
     expect(awarded.sort()).toEqual(["area-1", "shift-10", "shift-3"]);
-    expect(mockTx.notification.createMany).not.toHaveBeenCalled();
+    expect(mockTx.notification.create).not.toHaveBeenCalled();
     expect(mockTx.user.findUnique).not.toHaveBeenCalled();
   });
 
@@ -1038,23 +1042,85 @@ describe("badge earned notifications", () => {
 
     await onCheckoutOpened({ userId: "user-1", bookingId: "booking-2", source: "kiosk_checkout", sourceKey: "booking-2" });
 
-    expect(mockTx.notification.createMany).toHaveBeenCalledWith({
-      data: [
-        expect.objectContaining({
-          userId: "user-1",
-          type: "badge_awarded",
-          title: "Badge earned",
-          body: "You earned Getting the Hang of It.",
-          channel: "IN_APP",
-          dedupeKey: "badge_awarded_award-77",
-          payload: expect.objectContaining({
-            studentBadgeId: "award-77",
-            badgeDefinitionId: "checkout-2",
-            href: "/staff/user-1?tab=badges",
-          }),
+    expect(mockTx.notification.findUnique).toHaveBeenCalledWith({
+      where: { dedupeKey: expect.stringMatching(/^badge_day_user-1_\d{4}-\d{2}-\d{2}$/) },
+      select: { payload: true },
+    });
+    expect(mockTx.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: "user-1",
+        type: "badge_awarded",
+        title: "Badge earned",
+        body: "You earned Getting the Hang of It.",
+        channel: "IN_APP",
+        readAt: null,
+        payload: expect.objectContaining({
+          studentBadgeId: "award-77",
+          badgeDefinitionId: "checkout-2",
+          badges: [{ studentBadgeId: "award-77", badgeDefinitionId: "checkout-2", name: "Getting the Hang of It" }],
+          href: "/staff/user-1?tab=badges",
         }),
-      ],
-      skipDuplicates: true,
+      }),
+    });
+  });
+
+  /**
+   * Badges were the largest notification type in production, and one event can
+   * cross several thresholds. A day's badges share one inbox row.
+   */
+  it("folds a later badge the same day into that day's row and marks it unread", async () => {
+    mockTx.badgeEventReceipt.findMany.mockResolvedValue([{ sourceKey: "booking-1" }]);
+    mockTx.booking.findMany.mockResolvedValue([]);
+    mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }) => (
+      where.trigger === "checkout:opened" && where.threshold
+        ? [{ id: "checkout-1", name: "First Checkout" }]
+        : []
+    ));
+    mockTx.studentBadge.createManyAndReturn.mockResolvedValue([{ id: "award-2", definitionId: "checkout-1" }]);
+    mockTx.notification.findUnique.mockResolvedValue({
+      payload: {
+        badges: [
+          { studentBadgeId: "award-1", badgeDefinitionId: "early-bird", name: "Early Bird" },
+          // A replay must not list the same award twice.
+          { studentBadgeId: "award-2", badgeDefinitionId: "checkout-1", name: "First Checkout" },
+        ],
+      },
+    });
+
+    await onCheckoutOpened({ userId: "user-1", bookingId: "booking-1", source: "kiosk_checkout", sourceKey: "booking-1" });
+
+    expect(mockTx.notification.create).not.toHaveBeenCalled();
+    const { where, data } = mockTx.notification.update.mock.calls[0]![0] as {
+      where: { dedupeKey: string };
+      data: { title: string; body: string; readAt: Date | null; createdAt: Date; payload: { studentBadgeId: string; badges: unknown[] } };
+    };
+    expect(where.dedupeKey).toMatch(/^badge_day_user-1_/);
+    expect(data.title).toBe("2 badges earned");
+    expect(data.body).toBe("You earned Early Bird and First Checkout.");
+    expect(data.readAt).toBeNull();
+    expect(data.createdAt).toBeInstanceOf(Date);
+    expect(data.payload.badges).toHaveLength(2);
+    expect(data.payload.studentBadgeId).toBe("award-2");
+  });
+
+  it("lists several badges earned at once in one row", async () => {
+    mockTx.badgeEventReceipt.findMany.mockResolvedValue([{ sourceKey: "booking-1" }]);
+    mockTx.booking.findMany.mockResolvedValue([]);
+    mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }) => (
+      where.trigger === "checkout:opened" && where.threshold
+        ? ["A", "B", "C", "D", "E"].map((name) => ({ id: `def-${name}`, name }))
+        : []
+    ));
+    mockTx.studentBadge.createManyAndReturn.mockImplementation(async ({ data }: { data: Array<{ definitionId: string }> }) => (
+      data.map((row) => ({ id: `award-${row.definitionId}`, definitionId: row.definitionId }))
+    ));
+
+    await onCheckoutOpened({ userId: "user-1", bookingId: "booking-1", source: "kiosk_checkout", sourceKey: "booking-1" });
+
+    expect(mockTx.notification.create).toHaveBeenCalledTimes(1);
+    expect(mockTx.notification.create.mock.calls[0]![0].data).toMatchObject({
+      title: "5 badges earned",
+      body: "You earned A, B and 3 more.",
     });
   });
 
@@ -1068,7 +1134,7 @@ describe("badge earned notifications", () => {
 
     await onCheckoutOpened({ userId: "user-1", bookingId: "booking-1", source: "kiosk_checkout", sourceKey: "booking-1" });
 
-    expect(mockTx.notification.createMany).not.toHaveBeenCalled();
+    expect(mockTx.notification.create).not.toHaveBeenCalled();
     expect(mockTx.user.findUnique).not.toHaveBeenCalled();
   });
 
@@ -1085,6 +1151,6 @@ describe("badge earned notifications", () => {
 
     // The award still lands; only the telling is suppressed.
     expect(mockTx.studentBadge.createManyAndReturn).toHaveBeenCalled();
-    expect(mockTx.notification.createMany).not.toHaveBeenCalled();
+    expect(mockTx.notification.create).not.toHaveBeenCalled();
   });
 });

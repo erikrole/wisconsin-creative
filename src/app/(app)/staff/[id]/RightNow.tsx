@@ -95,9 +95,9 @@ function Tile({
   detail: string;
 }) {
   const palette = {
-    green: { bg: "bg-[#e6f6eb]", fg: "text-[#1b6e47]" },
-    blue: { bg: "bg-[#e8eeff]", fg: "text-[#2f4bb0]" },
-    amber: { bg: "bg-[#fff1d6]", fg: "text-[#8a5200]" },
+    green: { bg: "bg-[#e6f6eb] dark:bg-[#1b6e47]/25", fg: "text-[#1b6e47] dark:text-[#6bd49a]" },
+    blue: { bg: "bg-[#e8eeff] dark:bg-[#8da4ef]/15", fg: "text-[#2f4bb0] dark:text-[#aebdf5]" },
+    amber: { bg: "bg-[#fff1d6] dark:bg-[#e5a200]/15", fg: "text-[#8a5200] dark:text-[#f0c46a]" },
   }[tone];
   return (
     <div className="flex min-w-0 flex-1 basis-64 items-start gap-3.5 rounded-xl border bg-card p-4 shadow-xs">
@@ -219,7 +219,7 @@ export default function RightNow({
               <h3 className="text-base font-black tracking-tight">This week</h3>
               <Link
                 href="/schedule"
-                className="text-[13px] font-bold text-[#2f4bb0] no-underline"
+                className="text-[13px] font-bold text-[#2f4bb0] no-underline dark:text-[#aebdf5]"
               >
                 Open schedule
               </Link>
@@ -296,7 +296,7 @@ export default function RightNow({
                   <Link
                     href="?tab=badges"
                     scroll={false}
-                    className="text-[13px] font-bold text-[#2f4bb0] no-underline"
+                    className="text-[13px] font-bold text-[#2f4bb0] no-underline dark:text-[#aebdf5]"
                   >
                     See all
                   </Link>

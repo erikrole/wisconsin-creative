@@ -1,0 +1,270 @@
+diff --git a/src/app/(app)/_home/HomeView.tsx b/src/app/(app)/_home/HomeView.tsx
+index 816df55bf..ad442d771 100644
+--- a/src/app/(app)/_home/HomeView.tsx
++++ b/src/app/(app)/_home/HomeView.tsx
+@@ -119,11 +119,16 @@ const ROW =
+   "group flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left no-underline transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50";
+ 
+ const ATTENTION_PREVIEW = 5;
++const HOME_CARD = "flex h-full min-w-0 flex-col overflow-hidden rounded-xl border bg-card shadow-xs";
+ 
+ export function HomeView(props: HomeViewProps) {
+   const { role, now, pageError, onRetry } = props;
++  const teamLayout = Boolean(props.coverage || props.activity);
++  const personalOnly = !props.attention && !props.trades && !props.crew && !teamLayout && !props.teamGear;
++  const primarySpan = personalOnly && (!props.upNext || !props.myGear) ? "lg:col-span-6" : "lg:col-span-3";
++  const secondarySpan = teamLayout ? "lg:col-span-3 xl:col-span-2" : primarySpan;
+   return (
+-    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 pb-8" data-home>
++    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 pb-8" data-home>
+       <HomeHeader {...props} />
+       {props.banners}
+       {pageError ? (
+@@ -141,9 +146,9 @@ export function HomeView(props: HomeViewProps) {
+         <>
+           {props.notice}
+           {props.summary && <SummaryStrip slot={props.summary} />}
+-          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+-            <div className="flex min-w-0 flex-col gap-5">
+-              {props.attention && (
++          <div className="grid items-stretch gap-4 lg:grid-cols-6">
++            {props.attention && (
++              <div className={cn("min-w-0", primarySpan)}>
+                 <AttentionSection
+                   slot={props.attention}
+                   onTarget={props.onTarget}
+@@ -153,13 +158,15 @@ export function HomeView(props: HomeViewProps) {
+                   remindingId={props.remindingId}
+                   remindedIds={props.remindedIds}
+                 />
+-              )}
+-              {props.upNext && (
++              </div>
++            )}
++            {props.upNext && (
++              <div className={cn("min-w-0", primarySpan)}>
+                 <UpNextSection slot={props.upNext} now={now} empty={props.upNextEmpty} onTarget={props.onTarget} />
+-              )}
+-            </div>
+-            <div className="flex min-w-0 flex-col gap-5">
+-              {props.myGear && (
++              </div>
++            )}
++            {props.myGear && (
++              <div className={cn("min-w-0", personalOnly ? primarySpan : secondarySpan)}>
+                 <GearSection
+                   title={role === "STUDENT" || role === "COLLABORATOR" ? "My gear" : "Checked out to you"}
+                   href={props.myGearHref ?? "/checkouts?mine=true"}
+@@ -173,17 +180,27 @@ export function HomeView(props: HomeViewProps) {
+                   ) : null}
+                   onSelectBooking={props.onSelectBooking}
+                 />
+-              )}
+-              {props.trades && (
++              </div>
++            )}
++            {props.trades && (
++              <div className={cn("min-w-0", primarySpan)}>
+                 <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
+-              )}
+-              {props.crew && <CrewSection slot={props.crew} />}
+-              {props.activity && <ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} />}
+-              {props.coverage && <CoverageSection slot={props.coverage} />}
+-              {props.teamGear && (
++              </div>
++            )}
++            {props.crew && (
++              <div className={cn("min-w-0", secondarySpan)}><CrewSection slot={props.crew} /></div>
++            )}
++            {props.coverage && (
++              <div className={cn("min-w-0", secondarySpan)}><CoverageSection slot={props.coverage} /></div>
++            )}
++            {props.teamGear && (
++              <div className={cn("min-w-0", primarySpan)}>
+                 <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />
+-              )}
+-            </div>
++              </div>
++            )}
++            {props.activity && (
++              <div className="min-w-0 lg:col-span-6 xl:col-span-3"><ActivitySection slot={props.activity} onSelectBooking={props.onSelectBooking} /></div>
++            )}
+           </div>
+         </>
+       )}
+@@ -249,7 +266,7 @@ function HomeHeader({ name, now, canReserve, dayLine, sync, updatedLabel, refres
+ 
+ function HomeCard({ children, className, ...rest }: React.ComponentProps<"section">) {
+   return (
+-    <section className={cn("overflow-hidden rounded-xl border bg-card shadow-xs", className)} {...rest}>
++    <section className={cn(HOME_CARD, className)} {...rest}>
+       {children}
+     </section>
+   );
+@@ -283,26 +300,31 @@ function SectionHeader({ id, title, count, href, linkLabel = "View all" }: {
+   );
+ }
+ 
+-function StateBlock({ icon: Icon, title, description, action, tone = "neutral" }: {
++function StateBlock({ icon: Icon, title, description, action, tone = "neutral", compact = false }: {
+   icon: React.ComponentType<{ className?: string }>;
+   title: string;
+   description?: string;
+   action?: ReactNode;
+   tone?: HomeTone | "positive";
++  compact?: boolean;
+ }) {
+   return (
+-    <div className="flex flex-col items-center gap-1 px-6 py-8 text-center">
++    <div className={cn("flex", compact ? "items-start gap-3 px-4 pt-3 pb-4" : "flex-col items-center gap-1 px-6 py-8 text-center")}>
+       <span
++        aria-hidden="true"
+         className={cn(
+-          "mb-2 flex size-10 items-center justify-center rounded-full",
++          "flex shrink-0 items-center justify-center rounded-full",
++          compact ? "size-8" : "mb-2 size-10",
+           tone === "positive" ? "bg-[var(--green-bg)] text-[var(--green-text)]" : TONE_TILE[tone],
+         )}
+       >
+-        <Icon className="size-5" />
++        <Icon className={compact ? "size-4" : "size-5"} />
+       </span>
+-      <p className="text-sm font-bold text-foreground">{title}</p>
+-      {description && <p className="max-w-[320px] text-[13px] text-muted-foreground">{description}</p>}
+-      {action && <div className="mt-3">{action}</div>}
++      <div className={cn("flex min-w-0 flex-col gap-1", compact ? "flex-1" : "items-center")}>
++        <p className="text-sm font-bold text-foreground">{title}</p>
++        {description && <p className="max-w-[320px] text-[13px] text-muted-foreground">{description}</p>}
++        {action && <div className="mt-3">{action}</div>}
++      </div>
+     </div>
+   );
+ }
+@@ -344,13 +366,12 @@ function SummaryStrip({ slot }: { slot: Slot<SummaryMetric[]> }) {
+   }
+   const metrics = slot.state === "ready" ? slot.rows : null;
+   return (
+-    <HomeCard aria-label="Summary" aria-busy={metrics === null}>
+-      <div className="grid grid-cols-4 divide-x max-md:grid-cols-2 max-md:divide-x-0 max-md:[&>*:nth-child(odd)]:border-r max-md:[&>*:nth-child(-n+2)]:border-b">
++    <section aria-label="Summary" aria-busy={metrics === null} className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+         {(metrics ?? Array.from({ length: 4 }, () => null)).map((m, i) => m ? (
+           <Link
+             key={m.id}
+             href={m.href}
+-            className="group flex min-w-0 flex-col gap-1 px-4 py-3.5 text-foreground no-underline transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
++            className={cn(HOME_CARD, "group gap-1 px-4 py-3.5 text-foreground no-underline transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50")}
+           >
+             <span className="truncate text-[13px] font-bold text-muted-foreground">{m.label}</span>
+             <span className={cn("text-[28px] leading-none font-black tabular-nums", m.tone === "neutral" ? "text-foreground" : TONE_TEXT[m.tone])}>
+@@ -359,14 +380,13 @@ function SummaryStrip({ slot }: { slot: Slot<SummaryMetric[]> }) {
+             <span className="truncate text-xs text-muted-foreground">{m.detail}</span>
+           </Link>
+         ) : (
+-          <div key={i} className="flex flex-col gap-2 px-4 py-3.5" aria-hidden="true">
++          <div key={i} className={cn(HOME_CARD, "gap-2 px-4 py-3.5")} aria-hidden="true">
+             <Skeleton className="h-3 w-16 bg-muted" />
+             <Skeleton className="h-7 w-10 bg-muted" />
+             <Skeleton className="h-3 w-24 bg-muted" />
+           </div>
+         ))}
+-      </div>
+-    </HomeCard>
++    </section>
+   );
+ }
+ 
+@@ -430,6 +450,7 @@ function AttentionSection({ slot, onTarget, onQuick, busyTradeId, onRemind, remi
+         <SectionError what="what needs attention" onRetry={slot.onRetry} />
+       ) : rows.length === 0 ? (
+         <StateBlock
++          compact
+           icon={CheckIcon}
+           tone="positive"
+           title="You’re all caught up"
+@@ -452,7 +473,7 @@ function AttentionSection({ slot, onTarget, onQuick, busyTradeId, onRemind, remi
+             ))}
+           </ul>
+           {(hidden > 0 || expanded) && rows.length > ATTENTION_PREVIEW && (
+-            <div className="border-t px-2 py-1">
++            <div className="mt-auto border-t px-2 py-1">
+               <Button
+                 variant="ghost"
+                 className="h-10 w-full text-[13px] font-bold text-muted-foreground"
+@@ -524,6 +545,7 @@ function UpNextSection({ slot, now, empty, onTarget }: {
+         <SectionError what="your schedule" onRetry={slot.onRetry} />
+       ) : groups.length === 0 && !featured ? (
+         <StateBlock
++          compact
+           icon={CalendarDaysIcon}
+           title={empty?.title ?? "Nothing on your calendar"}
+           description={empty?.description ?? "Shifts and gear pickups you’re part of show up here."}
+@@ -630,7 +652,7 @@ function GearSection({ title, href, slot, emptyTitle, emptyDescription, emptyAct
+       ) : slot.state === "error" ? (
+         <SectionError what="your gear" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={PackageCheckIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
++        <StateBlock compact icon={PackageCheckIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
+       ) : (
+         <GearList rows={slot.rows} onSelectBooking={onSelectBooking} />
+       )}
+@@ -680,7 +702,7 @@ function TradesSection({ slot, href, onQuick, busyTradeId }: {
+       ) : slot.state === "error" ? (
+         <SectionError what="trades" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={ArrowLeftRightIcon} title="No open trades" description="Shifts a teammate posts that you can pick up appear here." />
++        <StateBlock compact icon={ArrowLeftRightIcon} title="No open trades" description="Shifts a teammate posts that you can pick up appear here." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => (
+@@ -712,7 +734,7 @@ function CrewSection({ slot }: { slot: Slot<CrewRow[]> }) {
+       ) : slot.state === "error" ? (
+         <SectionError what="today’s crew" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={CalendarDaysIcon} title="No one is on today" description="Published shifts for today show here with who’s working." />
++        <StateBlock compact icon={CalendarDaysIcon} title="No one is on today" description="Published shifts for today show here with who’s working." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => (
+@@ -744,7 +766,7 @@ function ActivitySection({ slot, onSelectBooking }: { slot: Slot<ActivityRow[]>;
+       ) : slot.state === "error" ? (
+         <SectionError what="recent activity" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={ClockIcon} title="Quiet so far" description="Kiosk pickups and returns from the last day show here." />
++        <StateBlock compact icon={ClockIcon} title="Quiet so far" description="Kiosk pickups and returns from the last day show here." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => (
+@@ -790,7 +812,7 @@ function CoverageSection({ slot }: { slot: Slot<CoverageRow[]> }) {
+       ) : slot.state === "error" ? (
+         <SectionError what="events" onRetry={slot.onRetry} />
+       ) : slot.rows.length === 0 ? (
+-        <StateBlock icon={CalendarDaysIcon} title="No events this week" description="Synced games and events land here with crew coverage." />
++        <StateBlock compact icon={CalendarDaysIcon} title="No events this week" description="Synced games and events land here with crew coverage." />
+       ) : (
+         <ul className="flex flex-col pb-1.5">
+           {slot.rows.map((row) => {
+@@ -845,7 +867,7 @@ function TeamGearSection({ slot, onSelectBooking }: {
+       ) : slot.state === "error" ? (
+         <SectionError what="team gear" onRetry={slot.onRetry} />
+       ) : slot.rows.rows.length === 0 ? (
+-        <StateBlock icon={PackageCheckIcon} title="Everything is on the shelf" description="No one has gear checked out." />
++        <StateBlock compact icon={PackageCheckIcon} title="Everything is on the shelf" description="No one has gear checked out." />
+       ) : (
+         <GearList rows={slot.rows.rows} onSelectBooking={onSelectBooking} />
+       )}
+@@ -857,13 +879,13 @@ function TeamGearSection({ slot, onSelectBooking }: {
+ 
+ export function HomeSkeleton() {
+   return (
+-    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 pb-8" aria-busy="true" aria-label="Loading home">
++    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 pb-8" aria-busy="true" aria-label="Loading home">
+       <div className="flex flex-col gap-2 pt-1">
+         <Skeleton className="h-3.5 w-40 bg-muted" />
+         <Skeleton className="h-7 w-64 bg-muted" />
+       </div>
+       <SummaryStrip slot={{ state: "loading" }} />
+-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
++      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+         <HomeCard><RowsSkeleton rows={4} /></HomeCard>
+         <HomeCard><RowsSkeleton rows={3} /></HomeCard>
+       </div>

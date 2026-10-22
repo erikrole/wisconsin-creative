@@ -657,6 +657,8 @@ export default function EventDetailPage() {
           currentUserId={meData?.id}
           currentUserRole={currentUserRole}
           eventAllDay={event.allDay}
+          eventTitle={event.summary}
+          eventStartsAt={event.startsAt}
           eventEndsAt={event.endsAt}
           studentCallTimeAllowed={studentCallTimeVisible}
           studentCallOpen={studentCallOpen}

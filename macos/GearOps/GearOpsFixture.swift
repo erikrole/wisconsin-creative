@@ -176,4 +176,26 @@ private actor FixtureNotifier: BookingNotificationDelivering {
     func removeNotifications(identifiers: [String]) async {}
     func clearPrivateNotifications() async {}
 }
+
+/// `xcodebuild test` hosts the unit tests inside this app. The real model would
+/// restore the installed app's Keychain credential and refresh it, and each
+/// refresh rotates the companion token, which could sign the installed app out
+/// ("You were signed out"). Under XCTest the host gets the same isolated
+/// stores as the capture fixture, with no data and no automatic refresh.
+enum GearOpsTestHost {
+    static var isActive: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    @MainActor
+    static func makeModel() -> GearOpsModel {
+        GearOpsModel(
+            client: FixtureClient(),
+            defaults: UserDefaults(suiteName: "GearOpsTestHost.\(UUID().uuidString)")!,
+            bookingNotifications: FixtureNotifier(),
+            credentialStore: FixtureCredentialStore(),
+            autoStart: false
+        )
+    }
+}
 #endif

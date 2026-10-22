@@ -325,7 +325,7 @@ export function ShiftSlotCard({
                       aria-label={`Assign ${shiftWorkerSlotLabel(workerType).toLowerCase()}`}
                     />
                   </PopoverTrigger>
-                  <PopoverContent className="w-64 p-2" align="start">
+                  <PopoverContent className="w-[25rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-0" align="start">
                     <UserAvatarPicker
                       users={pickerUsers}
                       loading={pickerLoading}

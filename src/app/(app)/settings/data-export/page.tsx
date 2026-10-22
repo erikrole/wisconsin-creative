@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { handleAuthRedirect, isAbortError } from "@/lib/errors";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
 import {
   getExportCompletionToast,
@@ -30,7 +30,7 @@ const EXPORTS: ExportConfig[] = [
   {
     key: "users",
     label: "Users",
-    description: "All user profiles — roles, areas, contact info, and sizes.",
+    description: "Everyone's profile: role, area, contact info, and sizes.",
     url: "/api/users/export",
   },
   {
@@ -47,8 +47,8 @@ const EXPORTS: ExportConfig[] = [
   },
   {
     key: "audit",
-    label: "Audit Log",
-    description: "Full change history with actor, entity, action, and before/after snapshots (up to 5,000 rows).",
+    label: "Audit log",
+    description: "Every change with who, what, and before and after values.",
     url: "/api/audit/export",
   },
 ];
@@ -112,22 +112,18 @@ export default function DataExportPage() {
   return (
     <SettingsPageShell
       href="/settings/data-export"
-      description="Download a CSV snapshot of any data set. Exports are capped at 5,000 rows and include all records visible to your role."
+      description="Download a spreadsheet (CSV) of any data set. Each export holds up to 5,000 rows of what your role can see."
     >
-      <div className="flex flex-col gap-3">
+      <SettingsGroup>
         {EXPORTS.map((cfg) => {
           const isLoading = downloading === cfg.key;
           const actionLabel = `${isLoading ? "Downloading" : "Download"} ${cfg.label} CSV`;
           return (
-            <Card key={cfg.key}>
-              <CardContent className="flex items-center gap-4 py-4">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium">{cfg.label}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">{cfg.description}</p>
-                </div>
+            <SettingsRow key={cfg.key} label={cfg.label} description={cfg.description}>
+              <div className="flex sm:justify-end">
                 <Button
                   variant="outline"
-                  className="h-10 shrink-0"
+                  className="h-10"
                   disabled={!!downloading}
                   onClick={() => handleDownload(cfg)}
                   aria-label={actionLabel}
@@ -137,13 +133,13 @@ export default function DataExportPage() {
                     ? <Loader2 className="size-4 animate-spin" />
                     : <Download className="size-4" />
                   }
-                  {actionLabel}
+                  {isLoading ? "Downloading" : "Download"}
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </SettingsRow>
           );
         })}
-      </div>
+      </SettingsGroup>
     </SettingsPageShell>
   );
 }

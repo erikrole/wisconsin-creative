@@ -115,12 +115,20 @@ struct KioskRow: View {
 
     private var kioskDetail: String {
         if state == .online {
-            return "\(device.location.name) · \(device.pendingPickupCount) pickup\(device.pendingPickupCount == 1 ? "" : "s") · \(device.openCheckoutCount) open"
+            return locationPrefix + "\(device.pendingPickupCount) pickup\(device.pendingPickupCount == 1 ? "" : "s") · \(device.openCheckoutCount) open"
         }
         guard let lastSeenAt = device.lastSeenAt else {
-            return "\(device.location.name) · Never checked in"
+            return locationPrefix + "Never checked in"
         }
-        return "\(device.location.name) · Last seen \(lastSeenAt.formatted(.relative(presentation: .named)))"
+        return locationPrefix + "Last seen \(lastSeenAt.formatted(.relative(presentation: .named)))"
+    }
+
+    /// "Kohl Center Kiosk" already says where it is; repeating "Kohl Center"
+    /// under it only pushes the status off the line.
+    private var locationPrefix: String {
+        let location = device.location.name
+        if location.isEmpty || device.name.localizedCaseInsensitiveContains(location) { return "" }
+        return "\(location) · "
     }
 
     private var buildHelp: String {

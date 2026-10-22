@@ -36,6 +36,20 @@ final class ScheduleScrollTracker {
     /// scrolled.
     @ObservationIgnored private var isAtBottom = false
 
+    /// A short list can be at both edges at once. Keep its first visible day
+    /// selected, including while rubber-banding, and only prefer the last day
+    /// once scrollable content has moved away from the top.
+    nonisolated static func isScrolledToBottom(_ geometry: ScrollGeometry) -> Bool {
+        let tolerance: CGFloat = 8
+        let scrollableHeight = geometry.contentSize.height
+            + geometry.contentInsets.top + geometry.contentInsets.bottom
+            - geometry.containerSize.height
+        let distanceFromTop = geometry.contentOffset.y + geometry.contentInsets.top
+        guard scrollableHeight > tolerance, distanceFromTop > tolerance else { return false }
+        return geometry.contentOffset.y + geometry.containerSize.height
+            >= geometry.contentSize.height - tolerance
+    }
+
     func setAtBottom(_ atBottom: Bool) {
         guard atBottom != isAtBottom else { return }
         isAtBottom = atBottom

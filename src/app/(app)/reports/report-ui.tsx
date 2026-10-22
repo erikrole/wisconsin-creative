@@ -53,6 +53,9 @@ export const REPORT_CHART_COLORS = [
   "var(--report-chart-8)",
 ] as const;
 
+/** Ranked bars use one accent; color is kept for categories (donuts) and status. */
+export const REPORT_BAR_COLOR = "var(--accent)";
+
 export const REPORT_SEMANTIC_CHART_COLORS = {
   active: "var(--chart-1)",
   available: "var(--chart-2)",

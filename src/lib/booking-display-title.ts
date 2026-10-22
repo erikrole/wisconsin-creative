@@ -1,6 +1,6 @@
 import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
-import { SPORT_CODE_SET, sportLabel } from "@/lib/sports";
+import { SPORT_CODE_SET, generateEventTitle, sportLabel } from "@/lib/sports";
 
 /** A legacy "(Neutral)" tag; the neutral site belongs in the event detail, not the title. */
 const NEUTRAL_SUFFIX = /\s*\(neutral\)\s*$/i;
@@ -37,4 +37,21 @@ export function displayBookingTitle(title: string): string {
     }
   }
   return normalizeTeamAbbreviations(expandLeadingSportCode(cleaned.replace(NEUTRAL_SUFFIX, "")));
+}
+
+/**
+ * The title a new booking tied to an event is saved with. Games use the
+ * scheme ("Men's Soccer vs Evansville"); anything else keeps the event's own
+ * summary, cleaned for display.
+ */
+export function eventBookingTitle(event: {
+  summary: string;
+  sportCode: string | null;
+  opponent: string | null;
+  isHome: boolean | null;
+}, fallbackSportCode?: string | null): string {
+  const sportCode = event.sportCode || fallbackSportCode;
+  return displayBookingTitle(
+    event.opponent && sportCode ? generateEventTitle(sportCode, event.opponent, event.isHome) : event.summary,
+  );
 }
