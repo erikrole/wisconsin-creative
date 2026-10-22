@@ -406,7 +406,7 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
           </div>
           <div class="copy">
             <h3>Photo Frame</h3>
-            <p>Drop in a photo and get a clean frame with its camera settings and credit, exported as a full-size PNG.</p>
+            <p>Drop in photos and get clean frames with their camera settings and credit, ready to post or share.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>
