@@ -1,0 +1,15 @@
+# QR Print release checks
+
+PR: https://github.com/erikrole/wisconsin-creative/pull/617
+
+Current local verification uses Node 22.23.3 and current main dependencies. TypeScript, full ESLint, migration-free production app build, security gate, migration prefixes/pairing and codemaps pass. The full test run passed 6,639 tests and found five undersized development test controls; those controls were corrected and their four-case baseline recheck passed. The initial sandbox could not reach the loopback database; the permitted real disposable PostgreSQL run then passed all 12 print-history cases, including byte-bounded large histories with full recovery and no skipped pages.
+
+The additive print-history migration is now `0202_label_print_jobs`; the earlier 0198 name in retained historical captures was never applied to an application database. The SQL content is unchanged.
+
+Authenticated managed preview, exact deployment and production migration health are pending. The prior SDK integration review retains the accepted physical label/scan/Stop/recovery evidence. No additional printer output is needed for these server checks.
+
+Both protected CI checks and automated review passed for the exact source above. Managed previews failed its capacity guard: nine preview children already exist, the configured maximum. Production preflight finds only 0202 pending and no new history defects. Authenticated checks and shipping remain blocked on one preview slot. A read-only review identified merged PR #534, unused since October 20 with four empty test stores; its two-day cleanup grace ends October 23 at 10:26 a.m. Central. Explicit early-retirement approval has been requested; no preview was deleted and no cap was raised.
+
+The user explicitly approved retiring only #534 early. A private, one-target copy of the repository cleanup script changed only that target filter and grace interval to zero, retaining ownership, signed manifest, live PR/deployment/activity and atomic claim checks. Dry run passed; apply removed the target and its associated resources, with eight preview children verified afterward. The raw script result says removed-after-grace-period; this was an explicit early-retirement exception, not an expired grace. No cleanup setting or branch cap was changed. Managed previews was retried.
+
+Managed previews attempt 2 passed and deployment `dpl_8vMib1PbnEMQmwgQ6njM67Rmjhtz` reached Ready for source 080356807a6aafc459060bcccbf852b486ef29aa. `preview:setup`, `dev:preview`, `auth:local` and `preview:doctor` verified the exact sanitized child with zero pending migrations. Real admin/student HTTP checks, actual browser login, history content and draft persistence passed. The fixture gear QR `preview:asset:0` correctly blocked as oversized without changing identity; a valid AUTH CHECK text draft passed preflight and survived reload. All synthetic receipts say zero printed; no USB connection, print, feed or applied-unit mutation was requested. Images are after-only authenticated evidence; matched visual evidence remains in the SDK integration review. Production merge/deployment/readback remain the final gate.

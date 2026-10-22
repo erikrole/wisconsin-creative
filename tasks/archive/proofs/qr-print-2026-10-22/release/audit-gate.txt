@@ -1,0 +1,4 @@
+excepted: braces GHSA-vfj7-8cjw-p6xm (until 2026-11-15)
+excepted: tinypool GHSA-5gmw-xhrv-c9v3 (until 2026-11-06)
+excepted: tinypool GHSA-85c8-ppgw-ccpr (until 2026-11-06)
+audit gate: no unexcepted high or critical advisories
