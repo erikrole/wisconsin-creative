@@ -189,7 +189,10 @@ struct ReturnTimeCalendar: View {
 
     private var dayRange: ClosedRange<Date> {
         let lower = calendar.startOfDay(for: minimum)
-        return lower...max(latest ?? .distantFuture, lower)
+        // The last day stays fully enabled; the time clamp enforces the limit.
+        // Ending the range mid-day drew that day as disabled-but-picked (black).
+        let upper = latest.map { calendar.date(byAdding: DateComponents(day: 1, second: -1), to: calendar.startOfDay(for: $0)) ?? $0 }
+        return lower...max(upper ?? .distantFuture, lower)
     }
 
     private var isSingleDay: Bool {
@@ -237,7 +240,7 @@ struct ReturnTimeCalendar: View {
                 Divider()
             }
             HStack {
-                Text("Time")
+                Text("Exact time")
                 Spacer()
                 // Fallback for any quarter hour the shortcuts below don't cover.
                 QuarterHourTimePicker(
