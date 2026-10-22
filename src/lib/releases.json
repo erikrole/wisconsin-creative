@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-22",
+    "title": "A calmer Items and Kits",
+    "type": "improvement",
+    "summary": "Items, Kits, Print labels and Import now use the fresh look, with one main action per page.",
+    "details": [
+      "Items keeps Add item up front and tucks Export, Import, Fill gaps, Cleanup wizard and row density into one More menu.",
+      "Available gear shows a small green dot instead of a filled pill, so checked-out gear and the people holding it stand out.",
+      "Kits shows Ready the same quiet way."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-21",
     "title": "Hide gear from partners",
     "type": "feature",

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission } from "@/lib/rbac";
 import { HttpError } from "@/lib/http";
+import FreshLayout from "@/components/FreshLayout";
 
 export default async function KitsLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAuth();
@@ -11,5 +12,5 @@ export default async function KitsLayout({ children }: { children: React.ReactNo
     if (error instanceof HttpError && error.status === 403) redirect("/");
     throw error;
   }
-  return children;
+  return <FreshLayout>{children}</FreshLayout>;
 }

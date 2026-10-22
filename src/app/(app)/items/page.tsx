@@ -19,6 +19,7 @@ import {
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -53,6 +54,7 @@ import {
   AlertTriangle,
   Archive,
   Download,
+  MoreHorizontal,
   Package,
   PackageCheck,
   PackageOpen,
@@ -642,63 +644,54 @@ export default function ItemsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <PageHeader title="Items">
+      <PageHeader title="Items" description="Everything the crew can check out, and where it is right now.">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className="hidden size-10 sm:flex"
-            onClick={() => setDensity((d) => (d === "compact" ? "comfortable" : "compact"))}
-            aria-label={density === "compact" ? "Switch to comfortable density" : "Switch to compact density"}
-            title={density === "compact" ? "Comfortable density" : "Compact density"}
-          >
-            {density === "compact" ? <Rows3 className="size-4" aria-hidden="true" /> : <Rows4 className="size-4" aria-hidden="true" />}
-          </Button>
           {options.canEdit && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                disabled={exporting}
-                className="hidden h-10 min-w-[86px] sm:flex"
-                aria-label={exporting ? "Exporting items" : "Export items to CSV"}
-              >
-                <Download className="size-3.5" aria-hidden="true" />
-                {exporting ? "Exporting…" : "Export"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden h-10 min-w-[86px] sm:flex"
-                onClick={() => setShowGapWizard(true)}
-                disabled={!canFillGaps}
-                title={!canFillGaps ? "Category and department lists must load first" : undefined}
-              >
-                Fill gaps
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden h-10 min-w-[110px] sm:flex"
-                onClick={() => {
-                  setCleanupWizardKind(null);
-                  setShowCleanupWizard(true);
-                }}
-              >
-                Cleanup wizard
-              </Button>
-              <Button variant="outline" size="sm" className="h-10 min-w-[76px]" asChild><Link href="/import">Import</Link></Button>
-              <Button
-                size="sm"
-                className="h-10 min-w-[92px]"
-                onClick={openBlankCreate}
-                disabled={!canCreateItem}
-                title={!canCreateItem ? "Location and category lists must load first" : undefined}
-              >
-                Add item
-              </Button>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-10 gap-1.5" aria-label="More item actions">
+                  <MoreHorizontal className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">More</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onSelect={handleExport} disabled={exporting}>
+                  <Download className="size-4" aria-hidden="true" />
+                  {exporting ? "Exporting…" : "Export to CSV"}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/import">Import items</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setShowGapWizard(true)} disabled={!canFillGaps}>
+                  Fill gaps
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setCleanupWizardKind(null);
+                    setShowCleanupWizard(true);
+                  }}
+                >
+                  Cleanup wizard
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setDensity((d) => (d === "compact" ? "comfortable" : "compact"))}>
+                  {density === "compact" ? <Rows3 className="size-4" aria-hidden="true" /> : <Rows4 className="size-4" aria-hidden="true" />}
+                  {density === "compact" ? "Comfortable rows" : "Compact rows"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {options.canEdit && (
+            <Button
+              size="sm"
+              className="h-10 min-w-[92px]"
+              onClick={openBlankCreate}
+              disabled={!canCreateItem}
+              title={!canCreateItem ? "Location and category lists must load first" : undefined}
+            >
+              Add item
+            </Button>
           )}
         </div>
       </PageHeader>
