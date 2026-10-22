@@ -7,7 +7,7 @@ Web (wc-fresh theme, Lato):
 - `/welcome` setup redesigned: single column, segmented step bar, one question at a time, mobile footer stacks (src/app/(app)/welcome/page.tsx, src/components/profile-completion/ProfileCompletionWizard.tsx, page presentation only).
 - New finish screen `WelcomeDone.tsx`: "You're all set" with Schedule, Gear (/bookings), Guides (/resources), iPhone app. Collaborators see only the app row. Stopping early (Remind me tomorrow, or skipping the photo) shows "Setup paused".
 - Anticipated graduation is no longer required (completion math in src/lib/profile-completion.ts, PATCH /api/me/profile-completion accepts year alone). Label unchanged, not marked optional. Students now have 7 required details.
-- Home "Getting started" card for STUDENT accounts for 14 days (`GettingStartedCard.tsx`, `accountCreatedAt` added to GET /api/me; checklist state is per browser in localStorage).
+- Home "Getting started" card for 14 days (`GettingStartedCard.tsx`, `accountCreatedAt` added to GET /api/me). Students: profile, can't work, schedule, guides, app. Staff/admin: profile, build a crew, see who's set up, guides, app. Progress is shared with iOS through `GET/PATCH /api/me/getting-started` (users.getting_started, PATCH only adds); the old per-browser copy is uploaded once.
 - Invite email lists what happens next; login invite notice reworded.
 - No welcome email after setup (Erik dropped it to avoid email fatigue). Students get one email: the invite. The finish screen and Home card cover next steps.
 - Optional "When can't you work?" page, `/welcome/availability` (Erik: not just classes; other jobs and time out of town too). Two sections: "Every week" (classes, a job, practice: name, day circles, from/to, repeats until, defaulting to an end-of-term guess) and "Days away" (what for, from/through dates, All day switch on by default, times when off). Weekly items save one weekly CANNOT_WORK block per day; days away save one AD_HOC CANNOT_WORK block with `dateEndsOn`, all through the existing `/api/users/[id]/availability`, so scheduling, conflicts and the staff Availability tab read them unchanged. Never required; "Skip for now" marks the Home row handled. Helpers in src/lib/unavailable-times.ts.
@@ -24,7 +24,7 @@ iOS (SwiftUI):
 - Home Getting started card (`GettingStartedCard.swift`), students only, first 14 days (`accountCreatedAt` decoded from /api/me): Finish your profile, Add when you can't work (opens the existing Availability screen in a sheet; done once any CANNOT_WORK block exists, same rule as web), Check the schedule, Read the guides, Turn on shift reminders (opens Profile > Notifications, never prompts). Progress per device in UserDefaults; X hides it. DEBUG scenario `GT_PERFORMANCE_SCENARIO=home-getting-started`.
 
 ## Migration
-None. (0199 was dropped with the welcome email.)
+`0199_user_getting_started`: one nullable JSONB column `users.getting_started`. Additive; the production build applies it (`npm run build` runs migrate deploy). Recheck the prefix against main before merging (`npm run db:migrate:check`).
 
 ## How to run it
 - No database needed: `npm run review 584` (worktree beside the checkout; DB-free because the branch has no preview database, and none will be created). DB-free pages:
@@ -42,7 +42,7 @@ None. (0199 was dropped with the welcome email.)
 - [ ] Finishing shows "You're all set" with working links; Go to Home goes to `/`.
 - [ ] Remind me tomorrow or skipping the photo shows "Setup paused"; Home still shows the profile banner.
 - [ ] Reload mid-setup resumes at the first incomplete step.
-- [ ] Home, new student under 14 days: Getting started card; Finish profile opens the wizard; other rows check off after a click; X hides it; never shown to staff or accounts older than 14 days.
+- [ ] Home, new account under 14 days: student and staff versions of Getting started; Finish profile opens the wizard; other rows check off after a click; X hides it; a row checked on the web shows checked on iPhone and back; never shown to collaborators, read-only previews or accounts older than 14 days.
 - [ ] When can't you work (`/welcome/availability`, student): add a weekly item on several days, it shows as one row (e.g. "M W F · 9:30 AM – 10:45 AM"); remove deletes every day; To before From shows an inline error and disables Save; add days away (all day, then a part-day with times), it shows "Wed, Nov 25 – Sun, Nov 29"; Through before From is blocked; only one form open at a time; Skip for now and Done go Home; Home row checks off after any entry; the staff Availability tab on the student's profile shows the same blocks; a shift during a weekly item or days away shows the usual advisory conflict.
 - [ ] Home "Can't work" card (student worker): lists upcoming days away soonest first (max 3 plus "+N more"), past entries drop off, weekly names line, Add opens the dialog and the new entry appears after save; Schedule header "Can't work" button opens the same dialog; neither shows for staff/admin or a non-ST student.
 - [ ] Block a day you're scheduled: the "You're on the schedule then" step lists only clashing shifts (all-day events by date, part-day blocks by hours); Post to Trade Board creates an OPEN trade and shows Posted; an already-posted shift shows the API error inline; no clash closes the dialog.

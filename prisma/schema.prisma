@@ -298,6 +298,8 @@ model User {
   badgeStreaks                  BadgeStreak[]
   badgeEventReceipts            BadgeEventReceipt[]
   notificationPrefs             Json?                            @map("notification_prefs")
+  /// Getting started checklist: rows handled and whether it was hidden. Shared by web and iOS.
+  gettingStarted                Json?                            @map("getting_started")
   icsToken                      String?                          @unique @map("ics_token")
   scheduleEventFollows          ScheduleEventFollow[]
   collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)

@@ -1,34 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, XIcon } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
 import { useFetch } from "@/hooks/use-fetch";
+import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
+import { parseJsonSafely } from "@/lib/errors";
+import {
+  mergeGettingStarted,
+  normalizeGettingStarted,
+  sameGettingStarted,
+  withinGettingStartedWindow,
+  type GettingStartedRow,
+  type GettingStartedState,
+} from "@/lib/getting-started";
 import { openProfileCompletion } from "@/lib/profile-completion-events";
 import { UNAVAILABLE_CHANGED_EVENT, isUnavailableBlock, type AvailabilityBlockLite } from "@/lib/unavailable-times";
 import { APP_STORE_URL } from "../welcome/WelcomeDone";
 
 const STORAGE_KEY = "wc-getting-started";
-const WINDOW_DAYS = 14;
 
-type Saved = { done: string[]; dismissed: boolean };
-
-function load(): Saved {
+/** The pre-sync per-browser copy. Still read so nothing ticked before sync is lost. */
+function loadLocal(): GettingStartedState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<Saved>;
-      return { done: Array.isArray(parsed.done) ? parsed.done : [], dismissed: parsed.dismissed === true };
-    }
+    if (raw) return normalizeGettingStarted(JSON.parse(raw));
   } catch {
-    /* storage can be blocked; the card just forgets */
+    /* storage can be blocked; the server copy still works */
   }
   return { done: [], dismissed: false };
 }
 
-function save(next: Saved) {
+function saveLocal(next: GettingStartedState) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
@@ -36,25 +42,81 @@ function save(next: Saved) {
   }
 }
 
-/** Records a row as handled from elsewhere, e.g. skipping "when can’t you work". */
-export function markGettingStartedDone(id: string) {
-  const current = load();
-  if (!current.done.includes(id)) save({ ...current, done: [...current.done, id] });
+function sendPatch(patch: Partial<GettingStartedState>) {
+  // Best effort: a failed save only means the row may show again on another device.
+  void fetch("/api/me/getting-started", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  }).catch(() => {});
 }
 
-/** Fourteen quiet days of "where do I start" for a new student, then it goes away on its own. */
+/** Records a row as handled from elsewhere, e.g. skipping "when can’t you work". */
+export function markGettingStartedDone(id: GettingStartedRow) {
+  saveLocal(mergeGettingStarted(loadLocal(), { done: [id] }));
+  sendPatch({ done: [id] });
+}
+
+/** Progress shared with the iPhone app, merged with anything this browser saved before sync. */
+function useGettingStartedState(enabled: boolean) {
+  const userId = useAuthenticatedQueryUserId();
+  const queryClient = useQueryClient();
+  const queryKey = ["getting-started", userId ?? "unresolved"];
+  const [local, setLocal] = useState<GettingStartedState | null>(null);
+  useEffect(() => setLocal(loadLocal()), []);
+  const server = useQuery<GettingStartedState>({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/me/getting-started", { signal });
+      if (!res.ok) throw new Error("server");
+      const json = await parseJsonSafely<{ data?: unknown }>(res);
+      return normalizeGettingStarted(json?.data);
+    },
+    enabled: enabled && Boolean(userId),
+    staleTime: 60_000,
+  });
+
+  const state = server.data && local ? mergeGettingStarted(server.data, local) : null;
+  // Push rows this browser ticked before sync existed, once.
+  const needsUpload = Boolean(server.data && state && !sameGettingStarted(server.data, state));
+  const uploaded = useRef(false);
+  useEffect(() => {
+    if (uploaded.current || !needsUpload || !state) return;
+    uploaded.current = true;
+    sendPatch(state);
+  });
+
+  const update = (patch: Partial<GettingStartedState>) => {
+    if (!state) return;
+    const next = mergeGettingStarted(state, patch);
+    setLocal(next);
+    saveLocal(next);
+    queryClient.setQueryData(queryKey, next);
+    sendPatch(patch);
+  };
+  return { state, update };
+}
+
+type Item = { id: GettingStartedRow; label: string; done: boolean; href?: string; external?: boolean; markOnClick?: boolean; onClick?: () => void };
+
+/**
+ * Fourteen quiet days of "where do I start" for a new student or staff member,
+ * then it goes away on its own. Progress is shared with the iPhone app.
+ */
 export function GettingStartedCard() {
   const { data: user } = useCurrentUser();
   const { data: completion } = useProfileCompletion();
-  const [saved, setSaved] = useState<Saved | null>(null);
-
-  useEffect(() => setSaved(load()), []);
-  const isStudent = user?.role === "STUDENT";
+  const role = user?.role;
+  const eligible = (role === "STUDENT" || role === "STAFF" || role === "ADMIN")
+    && withinGettingStartedWindow(user?.accountCreatedAt)
+    && !user?.preview?.readOnly;
+  const { state: saved, update } = useGettingStartedState(eligible);
+  const isStudent = role === "STUDENT";
   // "When can't you work" counts as done once anything is saved, on any device.
   const { data: blocks, reload: reloadBlocks } = useFetch<AvailabilityBlockLite[]>({
     url: `/api/users/${user?.id ?? ""}/availability`,
     transform: (json) => ((json as { data?: AvailabilityBlockLite[] }).data ?? []),
-    enabled: Boolean(isStudent && user?.id && saved && !saved.dismissed),
+    enabled: Boolean(eligible && isStudent && user?.id && saved && !saved.dismissed),
     refetchOnFocus: false,
   });
   // A day off added from Home's Can't work card checks this row off right away.
@@ -63,30 +125,32 @@ export function GettingStartedCard() {
     return () => window.removeEventListener(UNAVAILABLE_CHANGED_EVENT, reloadBlocks);
   }, [reloadBlocks]);
 
-  if (!saved || saved.dismissed || user?.role !== "STUDENT" || !user.accountCreatedAt) return null;
-  const ageDays = (Date.now() - new Date(user.accountCreatedAt).getTime()) / 86_400_000;
-  if (!(ageDays >= 0 && ageDays <= WINDOW_DAYS)) return null;
+  if (!eligible || !saved || saved.dismissed) return null;
 
   const profileDone = completion?.completion.profileComplete === true;
-  const mark = (id: string) => {
-    const next = { ...saved, done: saved.done.includes(id) ? saved.done : [...saved.done, id] };
-    setSaved(next);
-    save(next);
-  };
-  const dismiss = () => {
-    const next = { ...saved, dismissed: true };
-    setSaved(next);
-    save(next);
-  };
+  const mark = (id: GettingStartedRow) => update({ done: [id] });
+  const dismiss = () => update({ dismissed: true });
+  const has = (id: GettingStartedRow) => saved.done.includes(id);
 
   const hasUnavailable = (blocks ?? []).some(isUnavailableBlock);
-  const items: Array<{ id: string; label: string; done: boolean; href?: string; external?: boolean; markOnClick?: boolean; onClick?: () => void }> = [
-    { id: "profile", label: "Finish your profile", done: profileDone, onClick: openProfileCompletion },
-    { id: "availability", label: "Add when you can’t work", done: hasUnavailable || saved.done.includes("availability"), href: "/welcome/availability", markOnClick: false },
-    { id: "schedule", label: "Check the schedule", done: saved.done.includes("schedule"), href: "/schedule" },
-    { id: "guides", label: "Read the guides", done: saved.done.includes("guides"), href: "/resources" },
-    { id: "app", label: "Get the iPhone app", done: saved.done.includes("app"), href: APP_STORE_URL, external: true },
-  ];
+  const profile: Item = { id: "profile", label: "Finish your profile", done: profileDone, onClick: openProfileCompletion };
+  const guides: Item = { id: "guides", label: "Read the guides", done: has("guides"), href: "/resources" };
+  const app: Item = { id: "app", label: "Get the iPhone app", done: has("app"), href: APP_STORE_URL, external: true };
+  const items: Item[] = isStudent
+    ? [
+        profile,
+        { id: "availability", label: "Add when you can’t work", done: hasUnavailable || has("availability"), href: "/welcome/availability", markOnClick: false },
+        { id: "schedule", label: "Check the schedule", done: has("schedule"), href: "/schedule" },
+        guides,
+        app,
+      ]
+    : [
+        profile,
+        { id: "crew", label: "Build a crew on the schedule", done: has("crew"), href: "/schedule" },
+        { id: "onboarding-status", label: "See who’s set up", done: has("onboarding-status"), href: "/staff/onboarding-status" },
+        guides,
+        app,
+      ];
   if (items.every((item) => item.done)) return null;
   const remaining = items.filter((item) => !item.done).length;
 

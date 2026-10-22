@@ -197,6 +197,7 @@
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
 | `src/lib/format.ts` | 320 |
+| `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
 | `src/lib/guide-keyboard.ts` | 139 |
@@ -710,6 +711,7 @@
 - `/api/me/blasts/[id]/read`
 - `/api/me/blasts`
 - `/api/me/change-password`
+- `/api/me/getting-started`
 - `/api/me/notification-preferences`
 - `/api/me/passkeys/[id]`
 - `/api/me/passkeys`

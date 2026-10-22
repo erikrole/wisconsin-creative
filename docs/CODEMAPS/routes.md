@@ -380,6 +380,7 @@
 - `/api/me/blasts/[id]/read` -> `src/app/api/me/blasts/[id]/read/route.ts`
 - `/api/me/blasts` -> `src/app/api/me/blasts/route.ts`
 - `/api/me/change-password` -> `src/app/api/me/change-password/route.ts`
+- `/api/me/getting-started` -> `src/app/api/me/getting-started/route.ts`
 - `/api/me/notification-preferences` -> `src/app/api/me/notification-preferences/route.ts`
 - `/api/me/passkeys/[id]` -> `src/app/api/me/passkeys/[id]/route.ts`
 - `/api/me/passkeys` -> `src/app/api/me/passkeys/route.ts`

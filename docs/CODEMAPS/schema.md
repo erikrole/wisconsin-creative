@@ -131,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 139
+Fields: 140
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -227,6 +227,7 @@ Fields: 139
 - `badgeStreaks                  BadgeStreak[]`
 - `badgeEventReceipts            BadgeEventReceipt[]`
 - `notificationPrefs             Json?                            @map("notification_prefs")`
+- `gettingStarted                Json?                            @map("getting_started")`
 - `icsToken                      String?                          @unique @map("ics_token")`
 - `scheduleEventFollows          ScheduleEventFollow[]`
 - `collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
