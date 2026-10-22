@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BookingStatus, Role } from "@prisma/client";
+import { BookingKind, BookingStatus, Role } from "@prisma/client";
 import { expectSerializableIsolation } from "./_helpers/assert-transaction";
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -7,6 +7,8 @@ type TransferOwnerTx = {
   booking: Record<"findUnique" | "findUniqueOrThrow" | "update", MockFn>;
   user: Record<"findUnique", MockFn>;
   auditLog: Record<"create", MockFn>;
+  scanSession: Record<"findFirst", MockFn>;
+  bookingAccountabilityExclusion: Record<"findUnique", MockFn>;
 };
 
 const transactionCalls: Array<{ options: unknown }> = [];
@@ -16,6 +18,8 @@ vi.mock("@/lib/db", () => {
     booking: { findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn() },
     user: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
+    scanSession: { findFirst: vi.fn() },
+    bookingAccountabilityExclusion: { findUnique: vi.fn() },
   };
 
   return {
@@ -67,6 +71,8 @@ beforeEach(() => {
   mockTx.booking.findUniqueOrThrow.mockResolvedValue({ id: "cm000000000000000000000001" });
   mockTx.booking.update.mockResolvedValue({});
   mockTx.auditLog.create.mockResolvedValue({});
+  mockTx.scanSession.findFirst.mockResolvedValue(null);
+  mockTx.bookingAccountabilityExclusion.findUnique.mockResolvedValue(null);
   mockTx.user.findUnique.mockImplementation(({ where }: { where: { id: string } }) => {
     if (where.id === "staff-1") return Promise.resolve({ role: Role.STAFF });
     if (where.id === currentRequester.id) return Promise.resolve({ role: Role.STUDENT });
@@ -76,6 +82,17 @@ beforeEach(() => {
 });
 
 describe("transferBookingOwner", () => {
+  it("holds an open checkout while a return is in progress or an accountability exclusion is unresolved", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(activeBooking({ kind: BookingKind.CHECKOUT, status: BookingStatus.OPEN }));
+    mockTx.scanSession.findFirst.mockResolvedValueOnce({ id: "scan" });
+    await expect(transferBookingOwner(activeBooking().id, "staff-1", { targetUserId: targetUser.id }))
+      .rejects.toMatchObject({ status: 409 });
+    mockTx.bookingAccountabilityExclusion.findUnique.mockResolvedValueOnce({ restoredAt: null });
+    await expect(transferBookingOwner(activeBooking().id, "staff-1", { targetUserId: targetUser.id }))
+      .rejects.toMatchObject({ status: 409 });
+    expect(mockTx.booking.update).not.toHaveBeenCalled();
+  });
+
   it("BUG: rejects an owner transfer when the snapshot changed before the transaction", async () => {
     await expect(transferBookingOwner(
       activeBooking().id,
