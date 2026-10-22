@@ -270,7 +270,7 @@ final class HomeScreenshotUITests: XCTestCase {
         app.launch()
 
         // Wait on fixture content, not chrome.
-        XCTAssertTrue(app.staticTexts["Overdue"].waitForExistence(timeout: 20),
+        XCTAssertTrue(app.staticTexts["Needs attention"].waitForExistence(timeout: 20),
                       "Home never loaded the dashboard fixture")
         attach(app, name: "home-top")
 
@@ -281,13 +281,25 @@ final class HomeScreenshotUITests: XCTestCase {
         attach(app, name: "home-bottom")
     }
 
-    func testHomeAllClearWithStaffDraft() throws {
+    func testHomeStudent() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "homeStudent"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Up next"].waitForExistence(timeout: 20),
+                      "Student Home never loaded the dashboard fixture")
+        attach(app, name: "home-student-top")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "home-student-queue")
+    }
+
+    func testHomeAllClear() throws {
         let app = XCUIApplication()
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "homeAllClear"
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["Hockey B-roll kit"].waitForExistence(timeout: 20),
-                      "Staff draft never rendered")
+        XCTAssertTrue(app.staticTexts["You\u{2019}re all caught up"].waitForExistence(timeout: 20),
+                      "All-clear state never rendered")
         attach(app, name: "home-all-clear")
     }
 
@@ -300,7 +312,7 @@ final class HomeScreenshotUITests: XCTestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["Overdue"].waitForExistence(timeout: 20),
+        XCTAssertTrue(app.staticTexts["Needs attention"].waitForExistence(timeout: 20),
                       "Home never loaded at accessibility size")
         attach(app, name: "home-accessibility-top")
         app.swipeUp(velocity: .slow)

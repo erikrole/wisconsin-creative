@@ -53,12 +53,13 @@ describe("iOS SwiftUI performance contracts", () => {
   });
 
   it("builds the Home action queue once for row and divider rendering", () => {
-    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const sections = source("ios/Wisconsin/Views/Home/HomeSections.swift");
 
-    expect(home).toContain("private func makeDisplayedEntries()");
-    expect(home).toContain("let entries = makeDisplayedEntries()");
-    expect(home).toContain("ForEach(Array(entries.enumerated())");
-    expect(home).not.toContain("displayedEntries.last?.id");
+    // Every list is built once per render and the sections read the results.
+    expect(sections).toContain("let attention = HomeModel.attention(");
+    expect(sections).toContain("let upNext = HomeModel.upNext(");
+    expect(sections).toContain("ForEach(visible)");
+    expect(sections).not.toContain("HomeModel.attention(dash: dash, claimedTrades: feeds.claimedTrades.value ?? [], now: now).count");
   });
 
   it("keeps performance instrumentation on stable pre-iOS-27 APIs", () => {

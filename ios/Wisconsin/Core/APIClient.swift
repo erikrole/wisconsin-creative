@@ -2470,6 +2470,21 @@ final class APIClient {
         return try await perform(request(path: "/api/shift-trades", queryItems: items))
     }
 
+    // MARK: - Home feeds
+
+    /// Who is working which event today: the feed behind Staff > Today.
+    func homeTodayCrew() async throws -> [HomeCrewEvent] {
+        struct Payload: Codable, Sendable { let events: [HomeCrewEvent] }
+        let resp: DataWrapper<Payload> = try await perform(request(path: "/api/users/today"))
+        return resp.data.events
+    }
+
+    /// The latest kiosk pickups and returns. Staff and admins only.
+    func homeRecentActivity() async throws -> [HomeActivity] {
+        let resp: DataWrapper<[HomeActivity]> = try await perform(request(path: "/api/dashboard/activity"))
+        return resp.data
+    }
+
     func scheduleOpenWork(area: String? = nil) async throws -> OpenWorkResponse {
         var items: [URLQueryItem] = []
         if let area { items.append(.init(name: "area", value: area)) }

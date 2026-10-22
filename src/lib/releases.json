@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-22",
+    "title": "iPhone Home matches the web",
+    "type": "improvement",
+    "summary": "Home on iPhone now reads like the new web Home: a one-line summary of your day, then what needs you, what is next, and your gear.",
+    "details": [
+      "Your name and photo sit over one sentence about today, like the shift you are on and what gear is due back.",
+      "Needs attention is one list with the web's wording. Only overdue is red, and the one green button is the action to take.",
+      "Up next shows your next shift or pickup as a large card, with a few quiet rows after it.",
+      "My gear shows what you hold and when it is due. Students claim open trades, and admins approve trade claims, right in the row.",
+      "Staff and admins get Working today, Recent activity, Coming up, and Team gear out, closed until you open them.",
+      "When nothing needs you, Home says what is next instead of only what is not."
+    ],
+    "platforms": [
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-22",
     "title": "Calmer iPhone screens",
     "type": "improvement",
     "summary": "Home, UA Gear, Availability, Notifications, Reports, event crews, item details, and profiles on iPhone are quieter and easier to scan.",
