@@ -171,7 +171,9 @@ const nextConfig: NextConfig = {
 };
 const config = withWorkflow(withBundleAnalyzer(nextConfig));
 export default withSentryConfig(config, {
-  // Upload source maps only when SENTRY_AUTH_TOKEN is set (CI/Vercel)
+  // Preview and local builds have no upload token. Avoid generating unused
+  // server/client maps there; keep them for configured release uploads.
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
   silent: !process.env.SENTRY_AUTH_TOKEN,
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,

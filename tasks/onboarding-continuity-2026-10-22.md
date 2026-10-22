@@ -93,3 +93,12 @@ At `84586e71f`, required CI 39834816434 and Managed previews 39835882763 passed.
 - One real UX bug remained: Continue during the final autosave could return before a queued newer edit finished. The shared flush promise now includes follow-up save passes. The expanded existing browser test fails on the old hook and all seven browser cases pass after the fix. Final hosted confirmation is pending the next candidate.
 
 Main advanced to `c00acc4d6` with a backend service extraction while acceptance ran. Reconcile it without changing native source; retain both source-helper migrations. Native 1.4/build 36 at `84586e71f` is signed/exported and passes deep strict signature verification and App Store publish dry run. Xcode’s export validation created an `AWAITING_UPLOAD` record (exact ID verified in its ContentDelivery log); no IPA bytes were uploaded and no version was submitted or distributed.
+
+
+## Final deployment memory repair
+
+Candidate `61112d3db` passes required CI 39840163903 and authenticated local real-backend verification of the held-response Continue regression, preserved handoff answers, photo-free Finish and physical avatar read-back. Its Managed run 39841403544 failed at `dpl_7g6biuBTBCD1gfXcpHimarSAFmWX`: Vercel explicitly reported an out-of-memory event and killed the webpack build worker with SIGKILL during optimized compilation. No migration or runtime error was reported.
+
+Current Sentry source confirms that its default webpack integration generates server/client source maps even without an upload token; `silent` suppresses logs and does not disable generation. Managed previews deliberately clear `SENTRY_AUTH_TOKEN`. Configure `sourcemaps.disable` only when that token is absent, preserving configured release uploads and runtime instrumentation. Verify the compile and actual hosted redeployment before declaring the memory failure resolved.
+
+The tokenless app build completed with the same 5 GiB Node heap limit as Managed previews, and emitted no unused static JavaScript source maps. The two deployment-memory checks, config lint, sequential TypeScript check and diff check pass. This is local compile evidence; the hosted retry remains the acceptance gate.
