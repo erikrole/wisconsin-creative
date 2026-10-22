@@ -76,10 +76,9 @@
 
     /* ---- top bar ---- */
     .topbar { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: env(safe-area-inset-top) clamp(16px, 3vw, 24px) 0; border-bottom: 1px solid var(--border); background: var(--bg); }
-    .divider { width: 1px; height: 18px; background: var(--border); }
-    .title { display: inline-flex; align-items: center; gap: 9px; margin: 0 auto 0 0; font-size: 15px; font-weight: 900; letter-spacing: -0.01em; }
+    .title { display: inline-flex; align-items: center; gap: 9px; margin: 0; font-size: 15px; font-weight: 900; letter-spacing: -0.01em; }
     .title i { width: 8px; height: 8px; border-radius: 50%; background: #c40a0a; }
-    .private { display: inline-flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; }
+    .private { display: inline-flex; margin-left: auto; margin-right: 4px; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; }
     .private svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     @media (max-width: 520px) { .private span { display: none; } }
 
@@ -192,31 +191,37 @@
       .scroll { padding-bottom: env(safe-area-inset-bottom); }
     }
     /* ---- Wisconsin Creative badge: shared byte-for-byte by every public tool.
-       The Motion W and wordmark sit first in the top bar, top left, in the
-       page's own text colour. Phones keep just the W. ---- */
-    .wc-badge {
-      display: inline-flex; align-items: center; gap: 8px; flex: none; border-radius: 8px;
-      color: inherit; text-decoration: none; font-size: 14px; font-weight: 900; letter-spacing: -0.005em; line-height: 1;
-      transition: opacity 150ms ease;
-    }
-    .wc-badge:hover { opacity: 0.8; }
+       An Apps button and the Motion W, last in the top bar (top right, W in
+       the corner), in the page's own text colour. The tool's name is top left. ---- */
+    .wc-brand { display: inline-flex; align-items: center; gap: 12px; flex: none; margin-left: auto; color: inherit; }
+    .wc-badge { display: block; width: 30px; height: 30px; flex: none; }
     .wc-badge-w {
-      width: 28px; height: 28px; flex: none; background: currentColor;
+      display: block; width: 100%; height: 100%; background: currentColor;
       -webkit-mask: url("/brand/wc-badge.svg") center / contain no-repeat; mask: url("/brand/wc-badge.svg") center / contain no-repeat;
     }
-    @media (max-width: 479px) { .wc-badge-name { display: none; } }
+    .wc-apps {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border-radius: 8px;
+      color: inherit; text-decoration: none; font-size: 13px; font-weight: 700; line-height: 1;
+      background: color-mix(in srgb, currentColor 8%, transparent); border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+      transition: background 150ms ease;
+    }
+    .wc-apps:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
+    .wc-apps svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.8; }
+    .private + .wc-brand { margin-left: 0; }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>
-    <span class="divider" aria-hidden="true"></span>
     <p class="title"><i aria-hidden="true"></i>Photo Frame</p>
     <span class="private" title="Photos are framed in this browser tab and never uploaded.">
       <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
       <span>Stays on this device</span>
     </span>
+    <div class="wc-brand">
+      <a class="wc-apps" href="/apps"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>Apps</a>
+      <span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"></span></span>
+    </div>
   </header>
 
   <main class="empty" id="main">

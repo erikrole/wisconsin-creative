@@ -151,11 +151,9 @@ describe("Photo Frame core", () => {
 describe("Photo Frame page", () => {
   const html = readFileSync("public/frame/index.html", "utf8");
 
-  it("leads its top bar with the shared Wisconsin Creative badge, and its CSP allows the badge mask", () => {
-    const badge = '<a class="wc-badge" href="/apps" aria-label="Wisconsin Creative apps"><span class="wc-badge-w" aria-hidden="true"></span><span class="wc-badge-name">Wisconsin Creative</span></a>';
-    expect(html).toContain(badge);
-    // First thing in the top bar, top left.
-    expect(html).toMatch(/<header class="topbar">\s*<a class="wc-badge"/);
+  it("ends its top bar with the shared Apps button and Wisconsin Creative badge, and its CSP allows the badge mask", () => {
+    // Top right: Apps then the W, the last thing in the top bar, same markup as every tool.
+    expect(html).toMatch(/<div class="wc-brand">\s*<a class="wc-apps" href="\/apps">[\s\S]*?<span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"><\/span><\/span>\s*<\/div>\s*<\/header>/);
     expect(html).toContain("img-src 'self' data:;");
     expect(html).toContain("connect-src 'none'");
   });
