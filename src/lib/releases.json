@@ -5,19 +5,19 @@
     "type": "improvement",
     "summary": "QR Studio has a calmer Badger red look, codes that scan more reliably, calendar event codes, and an optional caption under any code.",
     "details": [
+      "Every style now scans reliably: rounded corner eyes are redrawn, and there is a new Eye shape choice.",
+      "The scan check is stricter and flags a code that only reads at some sizes.",
       "New Event type: scan the code to add a game or shoot to your phone's calendar.",
-      "Add an optional caption like \"Scan for tickets\" under the code, in both PNG and SVG downloads, without affecting scanning.",
-      "Deleting a saved code, or clearing the whole library, can now be undone.",
-      "Rounded corner eyes are redrawn so every style scans reliably, with a new Eye shape choice.",
-      "The scan check is stricter: a code that only reads at some sizes is flagged.",
-      "Cleaner logo backings and no more hairline seams between joined modules.",
-      "A Wisconsin Creative badge at the top left links back to all the apps."
+      "Add an optional caption like \"Scan for tickets\" under the code, in PNG and SVG, without affecting scanning.",
+      "Deleting a saved code, or clearing the library, can now be undone.",
+      "Cleaner logo backings, no hairline seams, and a Wisconsin Creative badge that links back to all the apps."
     ],
     "platforms": [
       "Web"
     ],
     "pr": 594
   },
+
   {
     "date": "2026-10-21",
     "title": "A calmer Bookings screen on iPhone",
