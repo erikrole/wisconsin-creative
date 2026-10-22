@@ -5,7 +5,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/accountability.ts` | 656 |
+| `src/lib/services/accountability.ts` | 654 |
 | `src/lib/services/app-activity-report.ts` | 508 |
 | `src/lib/services/app-diagnostics.ts` | 47 |
 | `src/lib/services/auto-assign.ts` | 92 |
@@ -224,6 +224,7 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/notification-meta.ts` | 121 |
 | `src/lib/observability.ts` | 19 |
+| `src/lib/on-time-rate.ts` | 36 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
 | `src/lib/passkey-client.ts` | 126 |
