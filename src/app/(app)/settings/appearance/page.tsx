@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Monitor, Moon, Sun, Type } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsGroup } from "../_components/SettingsGroup";
 import {
   applyThemeChoice,
   readStoredThemeChoice,
@@ -89,130 +88,128 @@ export default function AppearancePage() {
   return (
     <SettingsPageShell
       href="/settings/appearance"
-      description="Choose how the app looks. Saved on this device only, so set it again on your phone or other browsers."
-      mainClassName="flex flex-col gap-4"
+      description="Saved on this device only, so set it again on your phone or other browsers."
+      mainClassName="flex flex-col gap-7"
     >
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Theme</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div role="group" aria-label="Theme" className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
-              <ChoiceCard
-                icon={<Sun className="size-5" />}
-                label="Light"
-                description="Always light, regardless of system."
-                active={mounted && theme === "light"}
-                onClick={() => pickTheme("light")}
-              />
-              <ChoiceCard
-                icon={<Moon className="size-5" />}
-                label="Dark"
-                description="Always dark, regardless of system."
-                active={mounted && theme === "dark"}
-                onClick={() => pickTheme("dark")}
-              />
-              <ChoiceCard
-                icon={<Monitor className="size-5" />}
-                label="System"
-                description="Match your OS preference."
-                active={mounted && theme === "system"}
-                onClick={() => pickTheme("system")}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Type className="size-4" />
-              Text size
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div role="group" aria-label="Text size" className="grid grid-cols-4 gap-2 max-sm:grid-cols-2">
-              {SCALE_CHOICES.map((c) => {
-                const isActive = mounted && Math.abs(scale - c.value) < 0.001;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => pickScale(c.value)}
-                    aria-pressed={isActive}
-                    aria-label={`Text size: ${c.label}`}
-                    className={`relative flex min-h-16 flex-col items-center gap-1 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                      isActive ? "border-primary bg-muted/40" : "border-border"
-                    }`}
-                  >
-                    {isActive && <Check aria-hidden="true" className="absolute right-2 top-2 size-3" />}
-                    <span aria-hidden="true" style={{ fontSize: `${14 * c.value}px` }} className="font-semibold">
-                      Aa
-                    </span>
-                    <span className="text-xs text-muted-foreground">{c.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Live preview */}
-            <div className="rounded-lg border bg-muted/30 p-4 flex flex-col gap-2">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                Preview
-              </div>
-              <p className="text-base m-0">
-                Changes apply immediately on this device. This line shows the current body size.
-              </p>
-              <p className="text-sm text-muted-foreground m-0">
-                Smaller secondary text, like the help copy under form fields.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button className="h-10"
-            variant="ghost"
-            onClick={resetAll}
-            disabled={!mounted || (theme === "system" && Math.abs(scale - 1) < 0.001)}
-          >
-            Reset to defaults
-          </Button>
+      <SettingsGroup title="Theme">
+        <div role="group" aria-label="Theme" className="grid grid-cols-3 gap-3 p-4 max-sm:grid-cols-1">
+          {THEME_CHOICES.map((c) => (
+            <ThemeChoiceCard
+              key={c.id}
+              choice={c}
+              active={mounted && theme === c.id}
+              onClick={() => pickTheme(c.id)}
+            />
+          ))}
         </div>
+      </SettingsGroup>
+
+      <SettingsGroup title="Text size" description="Applies everywhere in the app on this device.">
+        <div className="p-4">
+          <div
+            role="group"
+            aria-label="Text size"
+            className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1 max-sm:grid-cols-2"
+          >
+            {SCALE_CHOICES.map((c) => {
+              const isActive = mounted && Math.abs(scale - c.value) < 0.001;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => pickScale(c.value)}
+                  aria-pressed={isActive}
+                  aria-label={`Text size: ${c.label}`}
+                  className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-md px-3 py-2 text-sm transition-[background-color,box-shadow,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    isActive
+                      ? "bg-card font-bold text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span aria-hidden="true" style={{ fontSize: `${15 * c.value}px` }} className="font-bold leading-none">
+                    Aa
+                  </span>
+                  <span className="text-xs">{c.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="px-4 py-3.5">
+          <p className="m-0 text-sm font-bold">Preview</p>
+          <p className="m-0 mt-1 text-base">Changes apply right away. This line shows the current body size.</p>
+          <p className="m-0 mt-0.5 text-sm text-muted-foreground">
+            Smaller secondary text, like the help copy under form fields.
+          </p>
+        </div>
+      </SettingsGroup>
+
+      <div>
+        <Button
+          className="h-10"
+          variant="ghost"
+          onClick={resetAll}
+          disabled={!mounted || (theme === "system" && Math.abs(scale - 1) < 0.001)}
+        >
+          Reset to defaults
+        </Button>
+      </div>
     </SettingsPageShell>
   );
 }
 
-function ChoiceCard({
-  icon,
-  label,
-  description,
+const THEME_CHOICES: Array<{ id: ThemeChoice; label: string; description: string }> = [
+  { id: "light", label: "Light", description: "Always light." },
+  { id: "dark", label: "Dark", description: "Always dark." },
+  { id: "system", label: "System", description: "Match this device." },
+];
+
+/** A tiny window sketch in each theme, so the choice is something you can see. */
+function ThemeChoiceCard({
+  choice,
   active,
   onClick,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  description: string;
+  choice: { id: ThemeChoice; label: string; description: string };
   active: boolean;
   onClick: () => void;
 }) {
+  const half = (dark: boolean) => (
+    <div
+      className="flex h-full flex-1 flex-col gap-1.5 p-2.5"
+      style={{ background: dark ? "#111214" : "#fbfbfc" }}
+    >
+      <span className="h-1.5 w-8 rounded-full" style={{ background: dark ? "#ececef" : "#1c2024" }} />
+      <span className="h-1.5 w-12 rounded-full" style={{ background: dark ? "#3a3c42" : "#dcdce1" }} />
+      <span className="mt-auto h-3 w-8 rounded-md" style={{ background: dark ? "#8da4ef" : "#3e63dd" }} />
+    </div>
+  );
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`relative flex min-h-[5.5rem] flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-        active ? "border-primary bg-muted/40" : "border-border"
-      }`}
+      aria-label={`Theme: ${choice.label}`}
+      className="group flex flex-col gap-2 text-left focus-visible:outline-none"
     >
-      <div className="flex items-center gap-2 w-full">
-        <span className="text-foreground">{icon}</span>
-        <span className="font-semibold">{label}</span>
-        {active && (
-          <span className="ml-auto text-xs font-medium text-primary">Active</span>
+      <span
+        className={`flex h-24 overflow-hidden rounded-lg border transition-[box-shadow,border-color] group-focus-visible:ring-2 group-focus-visible:ring-ring ${
+          active ? "border-primary ring-2 ring-primary" : "border-border group-hover:border-foreground/30"
+        }`}
+      >
+        {choice.id === "system" ? (
+          <>
+            {half(false)}
+            {half(true)}
+          </>
+        ) : (
+          half(choice.id === "dark")
         )}
-      </div>
-      <p className="text-xs text-muted-foreground m-0">{description}</p>
+      </span>
+      <span className="flex items-baseline gap-2 px-0.5">
+        <span className="text-sm font-bold">{choice.label}</span>
+        <span className="text-xs text-muted-foreground">{choice.description}</span>
+      </span>
     </button>
   );
 }

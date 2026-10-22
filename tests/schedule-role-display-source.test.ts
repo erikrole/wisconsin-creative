@@ -16,8 +16,8 @@ describe("schedule staff/student display source contracts", () => {
     expect(eventCrew).toContain("shiftWorkerLabelForProfile(activeAssignment.user)");
     expect(eventCrew).toContain("const rowClassLabel = activeAssignment");
     expect(eventCrew).toContain("<TableHead>Person</TableHead>");
-    expect(picker).toContain("shiftWorkerTypeForProfile(u)");
-    expect(picker).toContain("shiftWorkerLabelForProfile(u)");
+    expect(picker).toContain("shiftWorkerTypeForProfile(user)");
+    expect(picker).toContain("shiftWorkerLabelForProfile(user)");
     expect(picker).toContain("Will use ${shiftWorkerSlotLabel(candidateWorkerType).toLowerCase()}");
     expect(picker).toContain("leave ${shiftWorkerSlotLabel(slotWorkerType).toLowerCase()} open");
   });

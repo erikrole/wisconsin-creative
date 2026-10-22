@@ -30,9 +30,13 @@ describe("iOS notification category preferences", () => {
       // The catalog owns ids and labels; the route accepts every catalog id.
       expect(catalog).toContain(`id: "${key}",\n    label: "${label}",`);
       expect(models).toContain(`var ${key}: Bool`);
-      expect(webSettings).toContain(`label="${label}"`);
-      expect(webSettings).toContain(`setCategory("${key}", v)`);
     }
+
+    // The web page renders the role-filtered catalog the API returns, so its
+    // labels and levels come from the same source as the server's.
+    expect(webSettings).toContain("json.catalog as NotificationCategoryEntry[]");
+    expect(webSettings).toContain("label={entry.label}");
+    expect(webSettings).toContain("setLevel(entry.id, value)");
 
     // Omitted fields keep their stored value; a schema default would reset them.
     expect(route).not.toContain(".default(");

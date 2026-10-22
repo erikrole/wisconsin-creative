@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/chart";
 import { statusLabelEquipment } from "@/lib/status-colors";
 import {
+  REPORT_BAR_COLOR,
   REPORT_CHART_COLORS,
   REPORT_SEMANTIC_CHART_COLORS,
   ReportChartCard,
@@ -90,11 +91,11 @@ export function TopUsedChart({ assets, days }: { assets: TopUsedAsset[]; days: n
   const data = assets.map((asset, index) => ({
     label: asset.assetTag,
     days: Number(asset.custodyDays.toFixed(2)),
-    fill: REPORT_CHART_COLORS[index % REPORT_CHART_COLORS.length],
+    fill: REPORT_BAR_COLOR,
   }));
 
   const config: ChartConfig = {
-    days: { label: "Days in custody", color: REPORT_CHART_COLORS[0] },
+    days: { label: "Days in custody", color: REPORT_BAR_COLOR },
   };
 
   return (

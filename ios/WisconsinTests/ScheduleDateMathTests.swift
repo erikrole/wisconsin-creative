@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import SwiftUI
 @testable import Wisconsin
 
 /// Locks in the all-day / multi-day day math for `ScheduleEvent`.
@@ -578,5 +579,74 @@ struct CombinedScheduleEventProjectionTests {
         #expect(collapsed[0].startsAt == start)
         #expect(collapsed[0].endsAt == laterEnd)
         #expect(collapsed[0].combinedMemberCount == 2)
+    }
+}
+
+/// Focus follows the first visible day until a list has actually scrolled to
+/// its bottom. A sparse Schedule may fit on screen with several weeks visible.
+@MainActor
+struct ScheduleScrollTrackerTests {
+    private let today = Date(timeIntervalSince1970: 1_792_454_400)
+    private var laterWeek: Date { today.addingTimeInterval(7 * 24 * 60 * 60) }
+
+    private func geometry(offset: CGFloat, contentHeight: CGFloat, topInset: CGFloat = 0) -> ScrollGeometry {
+        ScrollGeometry(
+            contentOffset: CGPoint(x: 0, y: offset),
+            contentSize: CGSize(width: 440, height: contentHeight),
+            contentInsets: EdgeInsets(top: topInset, leading: 0, bottom: 24, trailing: 0),
+            containerSize: CGSize(width: 440, height: 600)
+        )
+    }
+
+    private func tracker() -> ScheduleScrollTracker {
+        let tracker = ScheduleScrollTracker()
+        tracker.rowAppeared(on: today, anchor: "today")
+        tracker.rowAppeared(on: laterWeek, anchor: "later")
+        return tracker
+    }
+
+    @Test(arguments: [CGFloat(0), CGFloat(96)])
+    func fittingScheduleKeepsFirstVisibleDay(topInset: CGFloat) {
+        let tracker = tracker()
+        tracker.setAtBottom(ScheduleScrollTracker.isScrolledToBottom(
+            geometry(offset: -topInset, contentHeight: 240, topInset: topInset)
+        ))
+        #expect(tracker.topDay == today)
+    }
+
+    @Test func rubberBandingShortScheduleKeepsFirstDay() {
+        let tracker = tracker()
+        tracker.setAtBottom(ScheduleScrollTracker.isScrolledToBottom(
+            geometry(offset: 80, contentHeight: 240)
+        ))
+        #expect(tracker.topDay == today)
+    }
+
+    @Test func longerScheduleFollowsLastDayAtBottom() {
+        let tracker = tracker()
+        tracker.setAtBottom(ScheduleScrollTracker.isScrolledToBottom(
+            geometry(offset: 424, contentHeight: 1_000)
+        ))
+        #expect(tracker.topDay == laterWeek)
+    }
+
+    @Test func longerScheduleKeepsFirstDayBeforeBottom() {
+        let tracker = tracker()
+        tracker.setAtBottom(ScheduleScrollTracker.isScrolledToBottom(
+            geometry(offset: 200, contentHeight: 1_000)
+        ))
+        #expect(tracker.topDay == today)
+    }
+
+    @Test func returningToTopRestoresFirstDayAfterContentShrinks() {
+        let tracker = tracker()
+        tracker.setAtBottom(ScheduleScrollTracker.isScrolledToBottom(
+            geometry(offset: 424, contentHeight: 1_000)
+        ))
+        #expect(tracker.topDay == laterWeek)
+        tracker.setAtBottom(ScheduleScrollTracker.isScrolledToBottom(
+            geometry(offset: -96, contentHeight: 240, topInset: 96)
+        ))
+        #expect(tracker.topDay == today)
     }
 }

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "f1501f9c6f60ad54933f841926b41d9d78b66f53",
+  "sourcePatchSha256": "33f3bb07385aa862ba49953d4ef68b0d9067f37388b83c32dbc8b50fb6c964e5",
+  "settings": {
+    "device": "Chromium browser, deviceScaleFactor 1",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "fixture": "home-fixtures.ts at f1501f9c6, ADMIN empty",
+    "role": "ADMIN",
+    "route": "/dev-home?role=ADMIN&state=empty&theme=dark&chrome=off&at=2026-10-21T11:55:00-05:00",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-21T11:55:00-05:00",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "f36efac670c54bd0bfcac1194f505ba99f69cb1d3890a2cdabebd54c3a2b08ff",
+  "dimensions": [
+    1440,
+    1100
+  ]
+}

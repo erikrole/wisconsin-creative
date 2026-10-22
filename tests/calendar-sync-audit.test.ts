@@ -32,6 +32,7 @@ const { dbMock, txMock } = vi.hoisted(() => {
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/security/ssrf", () => ({
   assertPublicHost: vi.fn().mockResolvedValue(undefined),
+  fetchPublicUrl: (url: string, init?: RequestInit) => fetch(url, init),
 }));
 
 import { syncCalendarSource } from "@/lib/services/calendar-sync";

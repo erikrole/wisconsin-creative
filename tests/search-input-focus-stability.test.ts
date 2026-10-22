@@ -75,7 +75,7 @@ describe("kits page search stability", () => {
 
 describe("labels page search stability", () => {
   it("keeps previous rows and uses the debounced search input", () => {
-    const source = readFileSync("src/app/(app)/labels/page.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/labels/LabelsHelper.tsx", "utf8");
     expect(source).toContain("keepPreviousData: true");
     expect(source).toContain("<DebouncedSearchInput");
     expect(source).not.toContain("useDebounce");

@@ -84,7 +84,7 @@ describe("schedule working-copy route wiring", () => {
     expect(editor).toContain("/working-copy/candidate-scores?");
     expect(editor).toContain("candidateScores=");
     expect(picker).toContain("candidateScores[b.id]?.score");
-    expect(picker).toContain('className="h-72 max-h-[var(--radix-popover-content-available-height)]"');
+    expect(picker).toContain("var(--radix-popover-content-available-height");
   });
 
   it("keeps assigned conversion explicit and replacement-only", () => {

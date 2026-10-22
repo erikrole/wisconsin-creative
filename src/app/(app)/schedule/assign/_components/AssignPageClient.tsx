@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
@@ -16,11 +15,13 @@ import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
 import { useAssignmentGrid } from "@/hooks/use-assignment-grid";
 import { AssignmentGrid } from "./AssignmentGrid";
+import { WorkloadPanel } from "./WorkloadPanel";
 import { AutoAssignDialog, type AutoAssignCustomWindow } from "@/components/schedule/AutoAssignDialog";
 import { SPORT_CODES } from "@/lib/sports";
 import { AREAS, AREA_LABELS, type Area } from "@/types/areas";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, FilterIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, FilterIcon, SparklesIcon } from "lucide-react";
+import { FRESH_SCOPE_CLASS } from "@/lib/fonts/fresh";
 import {
   filterEventsByAssignmentReview,
   summarizeAssignmentReview,
@@ -32,6 +33,9 @@ export function AssignPageClient() {
   const grid = useAssignmentGrid();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const [focusUserId, setFocusUserId] = useState<string | null>(null);
+  // A focused person may not work the next month; start each month unfocused.
+  useEffect(() => setFocusUserId(null), [grid.month]);
 
   const reviewSummary = useMemo(() => summarizeAssignmentReview(grid.events), [grid.events]);
   const reviewEvents = useMemo(
@@ -79,27 +83,34 @@ export function AssignPageClient() {
     grid.setMonth(new Date(d.getFullYear(), d.getMonth(), 1));
   }
 
+  const reviewOptions: Array<{ value: ReviewFilter; label: string; count: number | null; tone?: "warning" }> = [
+    { value: "all", label: "All", count: null },
+    { value: "open", label: "Open", count: reviewSummary.open },
+    { value: "conflicts", label: "Conflicts", count: reviewSummary.conflicts, tone: "warning" },
+    { value: "clean", label: "Clean", count: reviewSummary.cleanAssignments },
+  ];
+
   return (
-    <FadeUp>
-      <PageHeader title="Assign shifts">
-        <Button className="h-10" onClick={() => setAutoAssignOpen(true)} disabled={grid.loading}>
-          Auto assign
-        </Button>
+    <FadeUp className={FRESH_SCOPE_CLASS}>
+      <PageHeader
+        title="Assign shifts"
+        description="Review coverage and conflicts here. Open an event to manage its crew in the private working schedule; changes release together after review."
+      >
         <Button variant="outline" className="h-10" onClick={() => router.push("/schedule")}>
           <ChevronLeft className="size-4" />
           Schedule
         </Button>
+        <Button className="h-10" onClick={() => setAutoAssignOpen(true)} disabled={grid.loading}>
+          <SparklesIcon className="size-4" />
+          Auto assign
+        </Button>
       </PageHeader>
 
-      <div className="mb-4 rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
-        Review coverage and conflicts here. Open an event to manage its crew in the private working schedule; changes release together after review.
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card/80 p-2 shadow-sm">
-        <div className="flex min-h-10 items-center overflow-hidden rounded-md border border-border bg-muted/30">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex h-10 items-center rounded-lg border border-[var(--border)] bg-[var(--background)]">
           <Button
-            variant="outline"
-            className="size-10"
+            variant="ghost"
+            className="size-10 rounded-r-none"
             onClick={prevMonth}
             disabled={previousMonthDisabled}
             aria-label="Previous month"
@@ -108,24 +119,22 @@ export function AssignPageClient() {
           </Button>
           <Button
             variant="ghost"
-            className="h-10 min-w-[9rem] rounded-none border-x border-border bg-background/70 font-medium hover:bg-background"
+            className="h-10 min-w-[9rem] rounded-none px-3 text-sm font-bold"
             onClick={thisMonth}
           >
             {monthLabel}
           </Button>
-          <Button variant="outline" className="size-10" onClick={nextMonth} aria-label="Next month">
+          <Button variant="ghost" className="size-10 rounded-l-none" onClick={nextMonth} aria-label="Next month">
             <ChevronRight className="size-4" />
           </Button>
         </div>
-
-        <div className="mx-0.5 h-6 w-px bg-border/80 max-sm:hidden" />
 
         <Select value={grid.sportFilter || "_all"} onValueChange={(v) => grid.setSportFilter(v === "_all" ? "" : v)}>
           <SelectTrigger
             id="assignment-sport-filter"
             name="assignmentSportFilter"
             size="sm"
-            className="h-10 w-44 bg-muted/30"
+            className="h-10 w-44"
             aria-label="Assignment sport filter"
           >
             <SelectValue placeholder="All sports" />
@@ -145,7 +154,7 @@ export function AssignPageClient() {
             id="assignment-area-filter"
             name="assignmentAreaFilter"
             size="sm"
-            className="h-10 w-36 bg-muted/30"
+            className="h-10 w-36"
             aria-label="Assignment area filter"
           >
             <SelectValue placeholder="All areas" />
@@ -164,7 +173,7 @@ export function AssignPageClient() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-10 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="h-10 gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text)]"
             onClick={() => {
               grid.setSportFilter("");
               grid.setAreaFilter("");
@@ -175,70 +184,56 @@ export function AssignPageClient() {
           </Button>
         ) : null}
 
-        {grid.loading ? (
-          <Badge variant="outline" className="ml-auto text-muted-foreground">Loading...</Badge>
-        ) : (
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-auto text-muted-foreground",
-              grid.events.length > 0 && "tabular-nums",
-            )}
-          >
-            {grid.events.length} event{grid.events.length !== 1 ? "s" : ""}
-          </Badge>
-        )}
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/80 p-2 shadow-sm">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="px-1 text-xs font-medium text-muted-foreground">Review</span>
-          <ToggleGroup
-            type="single"
-            value={reviewFilter}
-            onValueChange={(value) => {
-              if (value) setReviewFilter(value as ReviewFilter);
-            }}
-            className="gap-1"
-            aria-label="Filter assignment review state"
-          >
-            <ToggleGroupItem value="all" className="h-10 px-2.5 text-xs">
-              All
+        <ToggleGroup
+          type="single"
+          value={reviewFilter}
+          onValueChange={(value) => {
+            if (value) setReviewFilter(value as ReviewFilter);
+          }}
+          className="ml-auto h-10 rounded-lg bg-[var(--bg-surface)] p-1"
+          aria-label="Filter assignment review state"
+        >
+          {reviewOptions.map((option) => (
+            <ToggleGroupItem
+              key={option.value}
+              value={option.value}
+              className="h-8 gap-1.5 rounded-md px-3 text-xs font-bold data-[state=on]:bg-[var(--background)] data-[state=on]:shadow-sm"
+            >
+              {option.label}
+              {option.count !== null ? (
+                <span
+                  className={cn(
+                    "tabular-nums",
+                    option.tone === "warning" && option.count > 0 ? "text-[var(--orange-text)]" : "text-[var(--text-muted)]",
+                  )}
+                >
+                  {grid.loading ? "–" : option.count}
+                </span>
+              ) : null}
             </ToggleGroupItem>
-            <ToggleGroupItem value="conflicts" className="h-10 px-2.5 text-xs">
-              Conflicts
-            </ToggleGroupItem>
-            <ToggleGroupItem value="open" className="h-10 px-2.5 text-xs">
-              Open
-            </ToggleGroupItem>
-            <ToggleGroupItem value="clean" className="h-10 px-2.5 text-xs">
-              Clean
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-          <Badge variant={reviewSummary.conflicts > 0 ? "orange" : "outline"} size="sm">
-            {reviewSummary.conflicts} conflict{reviewSummary.conflicts === 1 ? "" : "s"}
-          </Badge>
-          <Badge variant="outline" size="sm">
-            {reviewSummary.open} open
-          </Badge>
-          <Badge variant="outline" size="sm">
-            {reviewSummary.cleanAssignments} clean
-          </Badge>
-        </div>
+          ))}
+        </ToggleGroup>
       </div>
 
       {grid.error && (
-        <div className="text-sm text-destructive mb-4">
+        <div className="mb-4 text-sm text-destructive">
           {grid.error === "network"
             ? "You're offline - schedule data unavailable."
             : "Failed to load schedule. Try refreshing."}
         </div>
       )}
 
+      <WorkloadPanel
+        events={grid.events}
+        loading={grid.loading}
+        monthLabel={grid.month.toLocaleDateString("en-US", { month: "long" })}
+        focusUserId={focusUserId}
+        onFocusUser={setFocusUserId}
+      />
+
       <AssignmentGrid
         events={reviewEvents}
+        focusUserId={focusUserId}
         columns={grid.columns}
         hasFilters={Boolean(grid.sportFilter || grid.areaFilter || reviewFilter !== "all")}
         onClearFilters={() => {

@@ -113,6 +113,13 @@ const baseConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400" },
         ],
       },
+      // Brand fonts are static files with unhashed names. Next serves public/
+      // files with max-age=0, so every cold load revalidated all six. A month
+      // with background revalidation keeps updates possible without the round trips.
+      {
+        source: "/:font(Gotham-[A-Za-z]+\\.woff2|Wisconsin-Regular\\.ttf)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=604800" }],
+      },
       // Auth pages: never cache — prevents BFCache from replaying the form
       // after sign-out and avoids any shared-cache leakage.
       {
