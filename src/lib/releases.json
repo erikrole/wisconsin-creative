@@ -2,6 +2,7 @@
   {
     "date": "2026-10-22",
     "title": "iPhone Home matches the web",
+    "pr": 604,
     "type": "improvement",
     "summary": "Home on iPhone now reads like the new web Home: a one-line summary of your day, then what needs you, what is next, and your gear.",
     "details": [
