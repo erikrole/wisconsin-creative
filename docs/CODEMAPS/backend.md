@@ -109,6 +109,7 @@
 | `src/lib/services/shift-generation.ts` | 629 |
 | `src/lib/services/shift-trade-emails.ts` | 70 |
 | `src/lib/services/shift-trades.ts` | 1567 |
+| `src/lib/services/sidebar-prefs.ts` | 36 |
 | `src/lib/services/signatures.ts` | 2366 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
@@ -736,6 +737,7 @@
 - `/api/me`
 - `/api/me/sessions/[id]`
 - `/api/me/sessions`
+- `/api/me/sidebar-prefs`
 
 ### `/api/my-shifts`
 

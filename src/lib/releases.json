@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-22",
+    "title": "A cleaner Board Sizes",
+    "type": "improvement",
+    "summary": "Board Sizes makes it easier to find what a piece needs, has a calmer look with the Badger red kept, lets you preview your art on any board, and builds After Effects comps for a whole board.",
+    "details": [
+      "The venue page starts with What are you making?, which leads to every board and size a piece needs, and Board terms explains venue words like FG/BG, GIP, fascia and scrim.",
+      "Search understands venue words like ribbon and ticker, and suggests matching content such as Touchdown.",
+      "Preview your exports: drop an export folder (or files) and each render lands on its board and zone by size and by name, the way exports are named (Short Wing Left, SEZ Upper, Main 1920x1080). Videos play together with sound from the main, files for other boards say where they go, and Mockup PNG saves the result. A What are you making? page shows which canvases are covered and which are missing. Files stay in your browser until you remove them.",
+      "More on a board downloads an After Effects script with a comp for the whole board and each zone size.",
+      "A calmer look in Lato with Badger red kept and the shared tool header with Apps at the top right. Ids and canvas keys hide until you turn on Technical details.",
+      "Phones get a tidier layout, copying works in browsers that block the clipboard, More menus work from the keyboard, and a broken link no longer leaves the page blank."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 592
+  },
+  {
+    "date": "2026-10-22",
     "title": "Report a Problem in the iPhone app",
     "type": "feature",
     "summary": "Settings in the iPhone app now has Report a Problem, and crashes in the iPhone app, kiosks and the Mac menu bar app reach the team with what led up to them.",

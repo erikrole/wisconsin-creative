@@ -135,7 +135,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 140
+Fields: 141
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -232,6 +232,7 @@ Fields: 140
 - `badgeStreaks                  BadgeStreak[]`
 - `badgeEventReceipts            BadgeEventReceipt[]`
 - `notificationPrefs             Json?                            @map("notification_prefs")`
+- `sidebarPrefs                  Json?                            @map("sidebar_prefs")`
 - `icsToken                      String?                          @unique @map("ics_token")`
 - `scheduleEventFollows          ScheduleEventFollow[]`
 - `collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
@@ -2024,12 +2025,13 @@ Indexes and constraints:
 
 ## Model `StudentBadge`
 
-Fields: 10
+Fields: 11
 
 - `id           String          @id @default(cuid())`
 - `userId       String          @map("user_id")`
 - `definitionId String          @map("definition_id")`
 - `awardedAt    DateTime        @default(now()) @map("awarded_at")`
+- `celebratedAt DateTime?       @map("celebrated_at")`
 - `source       BadgeSource     @default(AUTO)`
 - `awardedById  String?         @map("awarded_by_id")`
 - `note         String?`

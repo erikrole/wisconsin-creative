@@ -420,6 +420,7 @@
 - `/api/me` -> `src/app/api/me/route.ts`
 - `/api/me/sessions/[id]` -> `src/app/api/me/sessions/[id]/route.ts`
 - `/api/me/sessions` -> `src/app/api/me/sessions/route.ts`
+- `/api/me/sidebar-prefs` -> `src/app/api/me/sidebar-prefs/route.ts`
 - `/api/my-shifts` -> `src/app/api/my-shifts/route.ts`
 - `/api/notifications/count` -> `src/app/api/notifications/count/route.ts`
 - `/api/notifications/nudge` -> `src/app/api/notifications/nudge/route.ts`
