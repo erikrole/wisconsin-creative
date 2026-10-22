@@ -29,6 +29,12 @@ const PAGES = {
   departments: dynamic(() => import("@/app/(app)/settings/departments/page")),
   escalation: dynamic(() => import("@/app/(app)/settings/escalation/page")),
   locations: dynamic(() => import("@/app/(app)/settings/locations/page")),
+  categories: dynamic(() => import("@/app/(app)/settings/categories/page")),
+  "calendar-sources": dynamic(() => import("@/app/(app)/settings/calendar-sources/page")),
+  sports: dynamic(() => import("@/app/(app)/settings/sports/page")),
+  "allowed-emails": dynamic(() => import("@/app/(app)/settings/allowed-emails/page")),
+  "data-export": dynamic(() => import("@/app/(app)/settings/data-export/page")),
+  database: dynamic(() => import("@/app/(app)/settings/database/page")),
   "reports-audit": dynamic(() => import("@/app/(app)/reports/audit/page")),
 } as const;
 

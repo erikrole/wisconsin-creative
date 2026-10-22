@@ -10,7 +10,7 @@
       "Profile has a Shift calendar section to subscribe to your shifts in Apple or Google Calendar.",
       "Extend presets moved into Checkout policies, and calendar venue matching moved into Locations with plainer wording.",
       "The audit log lives only in Reports, now with Record and Action filters.",
-      "Kiosks, Collaborator access and Announcements were rebuilt to be easier to scan."
+      "Every admin page was rebuilt to be easier to scan, including Sports, which now opens one sport's crew at a time."
     ],
     "platforms": [
       "Web"

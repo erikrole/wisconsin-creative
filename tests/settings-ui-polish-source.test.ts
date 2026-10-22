@@ -44,7 +44,8 @@ describe("Settings UI polish contracts", () => {
 
     expect(profile).toContain("Slack handle");
     expect(profile).toContain('name="slackHandle"');
-    expect(sports).toContain("<SettingsJumpNav");
+    expect(sports).toContain('id="sport-setup"');
+    expect(sports).toContain('id="non-game"');
     expect(security).toContain('<Card id="passkeys"');
     expect(security).toContain('<Card id="account"');
   });

@@ -52,7 +52,6 @@ describe("operational status rail source contract", () => {
       "src/app/(app)/kits/page.tsx",
       "src/app/(app)/licenses/page.tsx",
       "src/app/(app)/staff/onboarding-status/page.tsx",
-      "src/app/(app)/settings/allowed-emails/page.tsx",
     ];
 
     for (const page of migratedPages) {
@@ -71,6 +70,7 @@ describe("operational status rail source contract", () => {
 
     expect(notifications).toContain('value={unreadOnly ? "unread" : "all"}');
     expect(onboarding).toContain('ariaPressed={statusFilter === "stale"}');
-    expect(allowedEmails).toContain('ariaPressed={statusFilter === "unclaimed"}');
+    // Registration access filters with a segmented control instead of a rail.
+    expect(allowedEmails).toContain("aria-checked={selected}");
   });
 });
