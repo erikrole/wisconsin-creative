@@ -280,11 +280,8 @@ describe("Timelapse core", () => {
     expect(tl.fromQuery("?utm_source=x")).toBeNull();
   });
 
-  it("carries the shared Wisconsin Creative badge", () => {
-    const html = readFileSync("public/timelapse/index.html", "utf8");
-    expect(html).toMatch(/<div class="wc-brand">\s*<a class="wc-apps" href="\/apps">[\s\S]*?<span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"><\/span><\/span>\s*<\/div>\s*<\/header>/);
-    expect(html).toContain("img-src 'self' data:");
-    expect(readFileSync("public/brand/wc-badge.svg", "utf8")).toContain('fill="currentColor"');
+  it("uses the shared tool header: name top left, Apps top right", () => {
+    expect(readFileSync("public/timelapse/index.html", "utf8")).toMatch(/<header class="topbar">\s*<span class="brand">[\s\S]*?<\/span>\s*<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/header>/);
   });
 
   it("drops or clamps tampered link and storage values", () => {
