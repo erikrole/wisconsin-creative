@@ -36,18 +36,28 @@ enum AppRuntimeMode {
         /// The Trade Board as a student sees it: what they can claim, and what
         /// they have already claimed and are waiting on.
         case tradeBoardStudent
-        /// The Home dashboard, served a canned payload so the action queue,
-        /// its truncation, and the staff follow-up section can be rendered
-        /// without a signed-in session.
+        /// The Home dashboard as an admin sees it, served canned payloads so
+        /// every lane (needs attention, up next, gear, the collapsed team
+        /// sections) can be rendered without a signed-in session.
         case home
-        /// Home with nothing personal outstanding but a staff draft waiting --
-        /// the shape where "You're all set" used to render directly above a
-        /// populated Drafts card.
+        /// Home with nothing overdue, due, or waiting: the all-clear state,
+        /// which has to say what is next.
         case homeAllClear
+        /// Home as a student sees it: their own gear, a shift today with a
+        /// call time, a pickup, and an open trade they can claim.
+        case homeStudent
         /// The native profile Scoreboard against a canned season payload, so
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
         case scoreboard
+        /// The shared team Scoreboard against a canned season: fact cards,
+        /// leaderboard, head to head and the explorer, with the signed-in
+        /// fixture user on the board so the "You" row shows.
+        case teamScoreboard = "team-scoreboard"
+        /// Creative Wrapped against a canned recap. `GT_WRAPPED_CARD` picks the
+        /// card to open on, and auto-advance is off, so every card can be
+        /// captured without tapping the simulator.
+        case wrapped
         /// The current user's Profile against canned identity, badge, and shift
         /// payloads. The Scoreboard entry lives between Next Up and the badge
         /// shelf, and a row's treatment can only be judged beside its neighbours.
@@ -59,6 +69,8 @@ enum AppRuntimeMode {
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
         case login
+        case onboarding
+        case registration
         /// The branded launch still itself, so the system frame, SwiftUI
         /// handoff, and inactive snapshot can be captured without a session.
         case launchView = "launch-view"
@@ -70,6 +82,10 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Staff blast surfaces against canned `/api/blasts` responses. The
+        /// screen is chosen by `GT_BLAST_VIEW`: blasts, sent, detail,
+        /// compose-crew, compose-groups, safari.
+        case blastStaff = "blast-staff"
         /// Starts a real checkout-return Live Activity in the simulator, in the
         /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
         /// overdue, returned), so the lock screen and Dynamic Island can be
@@ -122,6 +138,14 @@ enum AppRuntimeMode {
         /// announcements: a banner image with another waiting behind it,
         /// a swipeable set of images, and a text-only notice.
         case announcement
+        /// Full-screen detail captures for the whole-app UI review: the
+        /// real view pushed in a stack against canned payloads.
+        case eventDetail = "event-detail"
+        case itemDetail = "item-detail"
+        case userDetail = "user-detail"
+        case availability
+        case gearPicks = "gear-picks"
+        case sharedLogins = "shared-logins"
         case announcementImages = "announcement-images"
         case announcementPlain = "announcement-plain"
         /// Worst-case content: a long title, four images, many bullets, a block
@@ -204,11 +228,12 @@ enum AppRuntimeMode {
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile, .staffProfile,
+             .home, .homeAllClear, .homeStudent, .scoreboard, .teamScoreboard, .wrapped, .profile, .staffProfile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
-             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
+             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .blastStaff, .login, .onboarding, .registration,
+             .eventDetail, .itemDetail, .userDetail, .availability, .gearPicks, .sharedLogins,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:

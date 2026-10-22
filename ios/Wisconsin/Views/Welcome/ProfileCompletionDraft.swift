@@ -116,8 +116,8 @@ final class ProfileCompletionDraft {
         case .phones:
             let hasSimplePhoneStep = Self.hasSimplePhoneStep(for: profile.role)
             return .phones(
-                personalPhone: personalPhone,
-                workPhone: hasSimplePhoneStep || noWorkPhone ? nil : workPhone,
+                personalPhone: Self.formatPhone(personalPhone),
+                workPhone: hasSimplePhoneStep || noWorkPhone ? nil : Self.formatPhone(workPhone),
                 workPhoneNotApplicable: hasSimplePhoneStep ? nil : noWorkPhone
             )
         case .wiscard:
@@ -159,7 +159,7 @@ final class ProfileCompletionDraft {
     }
 
     static func formatPhone(_ value: String) -> String {
-        let digits = String(value.filter(\.isNumber).prefix(10))
+        let digits = String(Self.digits(value).prefix(10))
         if digits.count <= 3 { return digits }
         if digits.count <= 6 {
             return "(\(digits.prefix(3))) \(digits.dropFirst(3))"
@@ -168,7 +168,8 @@ final class ProfileCompletionDraft {
     }
 
     static func digits(_ value: String) -> String {
-        String(value.filter(\.isNumber))
+        let digits = String(value.filter(\.isNumber))
+        return digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
     }
 
     private func legacyPhone(for profile: ProfileCompletionProfile) -> String {

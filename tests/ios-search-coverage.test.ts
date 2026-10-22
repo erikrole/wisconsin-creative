@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS search: Kits, Events and Guides", () => {
   const service = source("ios/Wisconsin/Core/SearchService.swift");
   const sheet = source("ios/Wisconsin/Views/Search/GlobalSearchSheet.swift");
-  const client = source("ios/Wisconsin/Core/APIClient.swift");
+  const client = apiClientSource();
   const route = source("src/app/api/calendar-events/route.ts");
   const where = source("src/lib/schedule-event-where.ts");
 

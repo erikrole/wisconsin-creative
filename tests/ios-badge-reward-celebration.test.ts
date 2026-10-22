@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS badge reward celebration", () => {
   it("uses a per-user recent-award cursor without replaying history", () => {
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
     expect(app).toContain('WisconsinBadgeRewardCursor.\\(userId)');
     expect(app).toContain("earnedBadgeQueue.appendUnique");
     // No timer: an open phone must not keep the database awake. The foreground request

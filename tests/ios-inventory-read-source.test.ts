@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native kits and bulk inventory reads", () => {
-  const api = source("ios/Wisconsin/Core/APIClient.swift");
+  const api = apiClientSource();
   const browse = source("ios/Wisconsin/Views/BrowseView.swift");
   const kits = source("ios/Wisconsin/Views/KitsView.swift");
   const kitDetail = source("ios/Wisconsin/Views/KitDetailView.swift");

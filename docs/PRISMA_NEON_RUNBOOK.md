@@ -1,15 +1,17 @@
 # Prisma + Neon Runbook
 
-Last updated: 2026-09-22
+Last updated: 2026-10-22
 
 ## Connection Rules
 
 - `DATABASE_URL` is the pooled Neon runtime URL used by the app and `@prisma/adapter-neon`.
 - `DIRECT_URL` is the repository's explicit direct Neon URL for Prisma CLI work,
   migration deploys, and migration health inspection.
-- `DATABASE_URL_UNPOOLED` is the equivalent direct connection supplied by the
-  Neon Vercel integration. Repository migration scripts resolve
-  `DIRECT_URL` first, then `DATABASE_URL_UNPOOLED`.
+- `DATABASE_URL_UNPOOLED` is the equivalent direct connection. It was originally
+  supplied by the Neon Vercel integration; Production now retains a static Vercel
+  variable after the legacy connection was disconnected on 2026-10-22.
+  Repository migration scripts resolve `DIRECT_URL` first, then
+  `DATABASE_URL_UNPOOLED`.
 - Do not run DDL through the pooled runtime URL. Migration writers refuse to
   run without `DIRECT_URL` or `DATABASE_URL_UNPOOLED`.
 - `DATABASE_URL` remains the pooled runtime URL and is never a migration
@@ -62,6 +64,30 @@ the supported paths:
 
 Do not copy a production database credential into a committed env file, and do
 not downgrade it from Sensitive merely to make CLI download work.
+
+### Credential maintenance after the legacy integration disconnect
+
+The [preview runbook](PREVIEW_ENVIRONMENTS.md#changelog-and-acceptance) records the
+2026-10-22 disconnect. Password rotations no longer synchronize Vercel variables
+automatically. For an explicitly authorized rotation:
+
+1. Identify the exact environment, protected branch and database role before
+   changing credentials. Production, review and sanitized previews are separate
+   targets.
+2. For Production, update its existing Sensitive `DATABASE_URL` with the pooled
+   URL and both `DIRECT_URL` and `DATABASE_URL_UNPOOLED` with the direct URL for
+   that same protected branch and role. Preserve variable targeting and secrecy.
+3. Refresh a sanitized preview only through its branch-owned hosted workflow.
+   It supplies that child's own credentials and overrides inherited provider
+   variables, including legacy Preview entries. Never copy Production URLs into
+   Preview targets or use the old Neon integration's `preview/<branch>` children.
+4. Verify the authorized deployment reaches Ready and passes its target's
+   migration-health and authenticated smoke checks. Existing running deployments
+   do not receive changed variable values until a new deployment.
+
+Existing legacy `preview/<branch>` children remain untouched. Retiring them needs
+a separate ownership review and explicit cleanup authorization; the sanitized
+project's cleanup workflow does not own them.
 
 ## Supported Commands
 

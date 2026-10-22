@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const store = readFileSync("ios/Wisconsin/Core/ReservationDraftStore.swift", "utf8");
 const sheet = readFileSync("ios/Wisconsin/Views/CreateBookingSheet.swift", "utf8");
 const composer = readFileSync("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift", "utf8");
 const shell = readFileSync("ios/Wisconsin/Views/AppTabView.swift", "utf8");
 const card = readFileSync("ios/Wisconsin/Views/Components/ReservationDraftCard.swift", "utf8");
-const api = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+const api = apiClientSource();
 const app = readFileSync("ios/Wisconsin/App/WisconsinApp.swift", "utf8");
 const reservationRoute = readFileSync("src/app/api/reservations/route.ts", "utf8");
 const draftModels = readFileSync("ios/Wisconsin/Models/DraftModels.swift", "utf8");

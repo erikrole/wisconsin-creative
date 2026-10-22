@@ -96,6 +96,8 @@ struct ProfileCompletionProfile: Decodable, Equatable {
 
 struct ProfileCompletionStatus: Decodable, Equatable {
     let operationalReady: Bool
+    let requiredComplete: Bool
+    let requiresSetup: Bool
     let profileComplete: Bool
     let isComplete: Bool
     let isSnoozed: Bool
@@ -108,7 +110,7 @@ struct ProfileCompletionStatus: Decodable, Equatable {
     let completeByField: [String: Bool]
 
     enum CodingKeys: String, CodingKey {
-        case operationalReady, profileComplete, isComplete, isSnoozed, shouldPrompt
+        case operationalReady, requiredComplete, requiresSetup, profileComplete, isComplete, isSnoozed, shouldPrompt
         case snoozedUntil, completedCount, totalCount, missingFields
         case firstIncompleteStep, completeByField
     }
@@ -116,6 +118,8 @@ struct ProfileCompletionStatus: Decodable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         operationalReady = try container.decodeIfPresent(Bool.self, forKey: .operationalReady) ?? false
+        requiredComplete = try container.decodeIfPresent(Bool.self, forKey: .requiredComplete) ?? false
+        requiresSetup = try container.decodeIfPresent(Bool.self, forKey: .requiresSetup) ?? false
         profileComplete = try container.decodeIfPresent(Bool.self, forKey: .profileComplete) ?? false
         isComplete = try container.decodeIfPresent(Bool.self, forKey: .isComplete) ?? profileComplete
         isSnoozed = try container.decodeIfPresent(Bool.self, forKey: .isSnoozed) ?? false

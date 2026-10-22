@@ -39,7 +39,7 @@ describe("scoreboardEventWhere", () => {
     expect(where.startsAt).toEqual({ gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt });
     expect(where.status).toEqual({ not: "CANCELLED" });
     expect(where.isHidden).toBe(false);
-    expect(where.archivedAt).toBeNull();
+    expect(where.archivedAt).toBeUndefined();
     expect(where.NOT).toEqual([
       { rawSummary: { contains: "exhibition", mode: "insensitive" } },
       { rawSummary: { contains: "scrimmage", mode: "insensitive" } },

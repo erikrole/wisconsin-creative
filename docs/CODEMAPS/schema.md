@@ -1339,6 +1339,53 @@ Indexes and constraints:
 
 Values: `MANUAL`, `BOOKING`
 
+## Model `GameSnapshot`
+
+Fields: 21
+
+- `id               String              @id @default(cuid())`
+- `eventId          String              @unique @map("event_id")`
+- `seasonKey        String              @map("season_key")`
+- `startsAt         DateTime            @map("starts_at")`
+- `endsAt           DateTime            @map("ends_at")`
+- `sportCode        String?             @map("sport_code")`
+- `opponent         String?`
+- `site             CalendarEventSite?`
+- `venue            String?`
+- `title            String`
+- `rawSummary       String?             @map("raw_summary")`
+- `status           CalendarEventStatus`
+- `official         Boolean`
+- `result           CalendarEventResult?`
+- `resultRecordedAt DateTime?           @map("result_recorded_at")`
+- `resultHistory    Json                @default("[]") @map("result_history")`
+- `crew             Json                @default("[]")`
+- `crewCount        Int                 @default(0) @map("crew_count")`
+- `eventDeletedAt   DateTime?           @map("event_deleted_at")`
+- `capturedAt       DateTime            @default(now()) @map("captured_at")`
+- `updatedAt        DateTime            @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([seasonKey, startsAt])`
+- `@@map("game_snapshots")`
+
+## Model `WrappedRecap`
+
+Fields: 6
+
+- `id          String   @id @default(cuid())`
+- `userId      String   @map("user_id")`
+- `seasonKey   String   @map("season_key")`
+- `version     Int`
+- `payload     Json`
+- `generatedAt DateTime @default(now()) @map("generated_at")`
+
+Indexes and constraints:
+
+- `@@unique([userId, seasonKey])`
+- `@@map("wrapped_recaps")`
+
 ## Model `EventWorker`
 
 Fields: 10

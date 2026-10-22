@@ -47,7 +47,8 @@
 | `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
-| `src/lib/services/game-record.ts` | 169 |
+| `src/lib/services/game-record.ts` | 171 |
+| `src/lib/services/game-snapshots.ts` | 253 |
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/invite-email.ts` | 78 |
@@ -99,7 +100,7 @@
 | `src/lib/services/schedule-publication.ts` | 1133 |
 | `src/lib/services/schedule-template-review.ts` | 549 |
 | `src/lib/services/schedule-working-copy.ts` | 1208 |
-| `src/lib/services/scoreboard.ts` | 282 |
+| `src/lib/services/scoreboard.ts` | 284 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
@@ -112,11 +113,12 @@
 | `src/lib/services/sport-roster-preview.ts` | 108 |
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
-| `src/lib/services/team-scoreboard.ts` | 598 |
+| `src/lib/services/team-scoreboard.ts` | 600 |
 | `src/lib/services/trade-post-notifications.ts` | 115 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/wishlist.ts` | 193 |
+| `src/lib/services/wrapped.ts` | 268 |
 
 ## Key Library Files
 
@@ -229,7 +231,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 388 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 274 |
+| `src/lib/permissions.ts` | 281 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
@@ -282,6 +284,7 @@
 | `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/scoreboard-display.ts` | 27 |
 | `src/lib/scoreboard-explorer.ts` | 152 |
+| `src/lib/scoreboard-fun-facts.ts` | 194 |
 | `src/lib/search-pages.ts` | 78 |
 | `src/lib/search-result-title.ts` | 13 |
 | `src/lib/secret-box.ts` | 54 |
@@ -944,6 +947,10 @@
 - `/api/workforce/import`
 - `/api/workforce/people/[id]/placements`
 - `/api/workforce/people/[id]`
+
+### `/api/wrapped`
+
+- `/api/wrapped`
 
 ### `/api/youtube`
 

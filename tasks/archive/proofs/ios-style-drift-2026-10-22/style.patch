@@ -1,0 +1,133 @@
+--- a/ios/Wisconsin/Views/BookingsView.swift
++++ b/ios/Wisconsin/Views/BookingsView.swift
+@@ -453 +453 @@
+-                            .tint(.green)
++                            .tint(Color.statusText(.green))
+@@ -856 +856 @@
+-            .tint(.green)
++            .tint(Color.statusText(.green))
+@@ -956 +956 @@
+-                .tint(.green)
++                .tint(Color.statusText(.green))
+--- a/ios/Wisconsin/Views/BookingDetailView.swift
++++ b/ios/Wisconsin/Views/BookingDetailView.swift
+@@ -1479 +1479 @@
+-        .tint(.green)
++        .tint(Color.statusText(.green))
+--- a/ios/Wisconsin/Views/ExtendBookingSheet.swift
++++ b/ios/Wisconsin/Views/ExtendBookingSheet.swift
+@@ -147 +147 @@
+-                .tint(.green)
++                .tint(Color.statusText(.green))
+--- a/ios/Wisconsin/Views/Home/HomeSections.swift
++++ b/ios/Wisconsin/Views/Home/HomeSections.swift
+@@ -361 +361,11 @@
+-    var body: some View {
++    @ViewBuilder
++    var body: some View {
++        if hasTarget && item.quickLabel == nil {
++            Button(action: open) { rowContent }
++                .buttonStyle(.plain)
++        } else {
++            rowContent
++        }
++    }
++
++    private var rowContent: some View {
+@@ -399 +408,0 @@
+-        .onTapGesture { if hasTarget && item.quickLabel == nil { open() } }
+@@ -401 +409,0 @@
+-        .accessibilityAddTraits(hasTarget && item.quickLabel == nil ? .isButton : [])
+--- a/ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift
++++ b/ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift
+@@ -374 +374 @@
+-    let area: String
++    let areaLabel: String
+@@ -683 +683 @@
+-                        TradeBoardRow(row: row, busyIds: [])
++                        TradeBoardRow(row: row, busyIds: [], onOpenDetails: {})
+@@ -778 +778 @@
+-        TradeBoardRow(row: row, busyIds: pendingActionIds)
++        TradeBoardRow(row: row, busyIds: pendingActionIds) { detailRowId = row.id }
+@@ -780,4 +779,0 @@
+-            .contentShape(Rectangle())
+-            .onTapGesture { detailRowId = row.id }
+-            .accessibilityAddTraits(.isButton)
+-            .accessibilityHint("Shows details")
+@@ -787 +783 @@
+-                        .tint(.green)
++                        .tint(Color.statusText(.green))
+@@ -852 +848 @@
+-            area: "Video",
++            areaLabel: "Video",
+@@ -973 +969 @@
+-            area: shift.area.shiftAreaLabel,
++            areaLabel: shift.area.shiftAreaLabel,
+@@ -1254,0 +1251 @@
++    let onOpenDetails: () -> Void
+@@ -1264,2 +1261 @@
+-                    timeStack
+-                    details
++                    detailsButton
+@@ -1269,0 +1266,20 @@
++                    detailsButton
++                    trailing
++                }
++            }
++        }
++        .opacity(row.muted ? 0.6 : 1)
++    }
++
++    /// The row's main content and its review/claim actions are sibling buttons.
++    /// A native button supplies keyboard and VoiceOver activation without
++    /// intercepting the independent action at the trailing edge.
++    private var detailsButton: some View {
++        Button(action: onOpenDetails) {
++            Group {
++                if isAX {
++                    VStack(alignment: .leading, spacing: 8) {
++                        timeStack
++                        details
++                    }
++                } else {
+@@ -1271,2 +1287 @@
+-                        timeStack
+-                            .frame(width: timeColumn, alignment: .leading)
++                        timeStack.frame(width: timeColumn, alignment: .leading)
+@@ -1275,5 +1290,9 @@
+-                    trailing
+-                }
+-            }
+-        }
+-        .opacity(row.muted ? 0.6 : 1)
++                }
++            }
++            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
++            .contentShape(Rectangle())
++        }
++        .buttonStyle(.plain)
++        .accessibilityLabel("\(row.title), \(row.fullWhen), \(row.areaLabel), \(row.summary)")
++        .accessibilityValue(row.rowNotice?.text ?? "")
++        .accessibilityHint("Shows details")
+@@ -1304 +1323 @@
+-            Text("\(row.area) \u{00B7} \(row.summary)")
++            Text("\(row.areaLabel) \u{00B7} \(row.summary)")
+@@ -1342 +1361 @@
+-                .tint(.green)
++                .tint(Color.statusText(.green))
+@@ -1400 +1419 @@
+-                Circle().fill(isApprove ? Color.green : Color(.tertiarySystemFill))
++                Circle().fill(isApprove ? Color.statusText(.green) : Color(.tertiarySystemFill))
+@@ -1454 +1473 @@
+-                            Text("\(row.area) \u{00B7} \(row.venueLabel)")
++                            Text("\(row.areaLabel) \u{00B7} \(row.venueLabel)")
+@@ -1555,2 +1574,2 @@
+-            ? Color.green
+-            : (action.style == .destructive && row.trailing != .review ? .red : Color(.systemGray))
++            ? Color.statusText(.green)
++            : (action.style == .destructive && row.trailing != .review ? Color.statusText(.red) : Color(.systemGray))
+--- a/tests/ios-bookings-empty-state.test.ts
++++ b/tests/ios-bookings-empty-state.test.ts
+@@ -24 +24 @@
+-    expect(source).toContain(".tint(.green)");
++    expect(source).toContain(".tint(Color.statusText(.green))");

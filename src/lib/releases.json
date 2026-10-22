@@ -1,6 +1,25 @@
 [
   {
     "date": "2026-10-22",
+    "title": "A smoother iPhone experience",
+    "type": "improvement",
+    "summary": "Profile setup has a clearer look, and everyday gear and schedule actions are easier to use. Home, Blasts and Scoreboard bring more of the team workflow to your iPhone.",
+    "details": [
+      "Setup adds Wisconsin branding, clearer step progress and larger fields and buttons, with layouts for dark mode and larger text.",
+      "Home focuses on your next shift, pickups and gear, with attention messages that match your account.",
+      "Trade Board rows open details while Claim, Approve and Decline remain separate actions.",
+      "Gear search and Siri include bulk items, and scanning a gear family opens the matching search.",
+      "Staff can compose and track blasts from iPhone, and Browse includes the team tools.",
+      "Scoreboard adds filters, head-to-head comparisons and clearer results on web and iPhone."
+    ],
+    "platforms": [
+      "iOS",
+      "Web"
+    ],
+    "pr": 605
+  },
+  {
+    "date": "2026-10-22",
     "title": "Safer calendar and image links",
     "type": "improvement",
     "summary": "Links that staff paste for calendar feeds and item photos are now checked more carefully.",

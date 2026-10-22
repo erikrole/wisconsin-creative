@@ -84,6 +84,26 @@ final class ProfileCompletionModelsTests: XCTestCase {
         XCTAssertTrue(draft.canContinue(.email, profile: profile))
     }
 
+    func testPhoneAutofillPreservesTheNumberWithUSCountryCode() throws {
+        let profile = try profile(role: "STUDENT")
+        let draft = ProfileCompletionDraft(profile: profile)
+        for input in ["+1 (608) 555-0123", "16085550123", "6085550123"] {
+            draft.personalPhone = input
+            XCTAssertTrue(draft.canContinue(.phones, profile: profile))
+            let update = try XCTUnwrap(draft.update(for: .phones, profile: profile))
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(update)) as? [String: Any])
+            XCTAssertEqual(object["personalPhone"] as? String, "(608) 555-0123")
+        }
+    }
+
+    func testRequiredSetupCannotBeBypassedBeforeItsStatusLoads() {
+        let user = CurrentUser(id: "new-student-requires-setup", name: "New Student", email: "new@wisc.edu", role: "STUDENT", avatarUrl: nil, onboardingRequired: true)
+        let store = ProfileCompletionStore()
+        XCTAssertEqual(store.route(for: user, optimisticSession: true), .welcome)
+        store.continueForSession(for: user.id)
+        XCTAssertEqual(store.route(for: user, optimisticSession: true), .welcome)
+    }
+
     private func profile(role: String) throws -> ProfileCompletionProfile {
         let json = """
         {"id":"user-1","name":"Bucky Badger","role":"\(role)","email":"bucky@wisc.edu"}

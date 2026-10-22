@@ -75,7 +75,7 @@ final class SessionStore {
         // the strict path so they can't slip past that gate.
         if !AppRuntimeMode.isPerformanceTesting,
            let snapshot = SessionSnapshot.load(),
-           !snapshot.forcePasswordChange {
+           !snapshot.forcePasswordChange, !snapshot.onboardingRequired {
             currentUser = snapshot
             isRestoring = false
             didSeedFromSnapshot = true

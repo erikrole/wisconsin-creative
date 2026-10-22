@@ -1,0 +1,79 @@
+{
+  "title": "Recent iOS fixes",
+  "eyebrow": "Wisconsin Creative \u00b7 local verification",
+  "lede": "All 11 review findings are fixed in the combined feature checkout. Native recovery paths were exercised on iPhone 18 Pro Max.",
+  "sections": [
+    {
+      "heading": "An active license remains usable",
+      "note": "Same device, empty pool, active claim, appearance, type size and scroll.",
+      "pairs": [
+        {
+          "title": "Pool empty; holder still active",
+          "before": "license-before.png",
+          "after": "license-after.png",
+          "beforeEvidence": "license-before.capture.json",
+          "afterEvidence": "license-after.capture.json",
+          "beforeCap": "The empty pool hid the existing holder\u2019s code and recovery actions.",
+          "afterCap": "Copy, History, Return and broken-code actions remain available."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Target membership",
+      "was": "Extracted API files were absent; deleted cache source remained registered.",
+      "now": "Regenerated project includes all API extensions, response shapes, and the legacy cache replacement."
+    },
+    {
+      "h": "Wrapped privacy",
+      "was": "Historical or frozen cards could name currently hidden/inactive people.",
+      "now": "New and frozen identity cards honor current visibility while aggregate totals remain historical."
+    },
+    {
+      "h": "Secret lifecycle",
+      "was": "A pending response could reveal a password after background clearing.",
+      "now": "Clearing invalidates pending requests as well as revealed secrets."
+    },
+    {
+      "h": "Announcement recovery",
+      "was": "Dismissal decoded the wrong envelope.",
+      "now": "Successful top-level dismissal clears its retry state."
+    },
+    {
+      "h": "Search Gear",
+      "was": "Search lacked local authentication and omitted bulk families.",
+      "now": "Local authentication is required; both serialized and bulk rows are projected."
+    },
+    {
+      "h": "Scan routing",
+      "was": "A People scope concealed a scanned bulk family.",
+      "now": "A successful family scan selects Gear before publishing results."
+    },
+    {
+      "h": "Personal Home",
+      "was": "Personal API counts were described as team totals and team lanes could never populate.",
+      "now": "The summary, overdue/pickup queue and fixture data follow scope=ios-home; unreachable lanes are removed."
+    },
+    {
+      "h": "Blasts and comparison",
+      "was": "All six areas were rejected; a real 0% could appear as missing.",
+      "now": "Enum-sized bounds accept every area. Web/native labels preserve 0% versus nil, including VoiceOver."
+    }
+  ],
+  "verification": [
+    "Wisconsin build on iPhone 18 Pro Max / iOS 27.0: passed.",
+    "Native tests: 251 passed; source/API contracts: 821 passed; broader backend cases: 135 passed.",
+    "Simulator UI: 7 passed (full required student walkthrough, accessibility-size selections, and all five review regression paths).",
+    "TypeScript, touched-file ESLint (111 files), build:app, generated project membership, docs/codemaps, and audit inventory (82/82): passed.",
+    "Independent backend and native reviews: no actionable regressions.",
+    "The ios:xcode:verify wrapper stops at 11 pre-existing drift hits (7 literal status tints, 2 gestures, 2 already-formatted area labels). Direct build and simulator tests above passed; wrapper is not green."
+  ],
+  "notes": [
+    "All work is unstaged on codex/ios-review-fixes. Root product files and pending branches were preserved. No commit, push, deployment, migration execution, email, or distribution occurred.",
+    "Before/after sources combine the exact pending PR revisions in baseline-sources.json. Xcode membership was regenerated as a prerequisite to render the pre-fix app. Identical DEBUG fixture additions supply the rare empty-pool state to both binaries. Runtime image captures verify the installed binary hash in runtime-captures.json.",
+    "Fixture proof is separate from authenticated server/DB behavior, real Siri lock-screen policy, physical camera scans, APNs, and installed-device/distribution acceptance.",
+    "Existing Wrapped UIScreen.main deprecation warning remains.",
+    "After-only interaction captures: home.png, shared-password.png, bulk-scan.png and comparison.png. These demonstrate final states; only the license pair is a matched before/after."
+  ]
+}

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function between(text: string, start: string, end: string): string {
   const startIndex = text.indexOf(start);
@@ -12,7 +13,7 @@ function between(text: string, start: string, end: string): string {
 
 describe("native app and web trust contracts", () => {
   it("returns and installs authoritative booking edit and cancel snapshots", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const detail = source("ios/Wisconsin/Views/BookingDetailView.swift");
     const list = source("ios/Wisconsin/Views/BookingsView.swift");
 
@@ -54,7 +55,7 @@ describe("native app and web trust contracts", () => {
   });
 
   it("encodes explicit item clears and installs the returned fields", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const models = source("ios/Wisconsin/Models/AssetModels.swift");
     const item = source("ios/Wisconsin/Views/ItemDetailView.swift");
 

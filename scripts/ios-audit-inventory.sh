@@ -53,6 +53,8 @@ done
 read -r -d '' REGISTRY <<'EOF' || true
 # View / sheet                         | audit slug                  | status
 HomeView.swift                         | dashboard                   | audit
+Home/HomeModel.swift                   |                             | exempt-shared
+Home/HomeSections.swift                | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
 Booking/BookingActivityView.swift      |                             | exempt-shared
@@ -62,6 +64,7 @@ CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
 BlastsView.swift                       | blasts                      | audit
+BlastComposeViews.swift                | blasts                      | audit
 Announcements/WhatsNewView.swift          | whats-new                   | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
@@ -105,6 +108,7 @@ ProfileView.swift                      | profile                     | audit
 ProfileNextUp.swift                    | profile                     | audit
 ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
+WrappedView.swift                      | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 SharedLoginsView.swift                 | shared-logins               | audit
@@ -159,6 +163,7 @@ Kiosk/KioskIdleRoster.swift            |                             | exempt-sh
 Kiosk/KioskDateFormatting.swift        |                             | exempt-infra
 Components/BannerView.swift            |                             | exempt-shared
 Components/BlastBanner.swift           |                             | exempt-shared
+Components/InAppSafariView.swift       |                             | exempt-shared
 Components/CrewRow.swift               |                             | exempt-shared
 Components/ReservationDraftCard.swift  |                             | exempt-shared
 Components/Skeleton.swift              |                             | exempt-shared

@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-10-20
+Last updated: 2026-10-22
 
 ## Start Here
 
@@ -203,3 +203,9 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `web-interface-audit-plan-2026-06-05.md` - completed web interface audit execution plan.
 - `web-bug-sweep-plan-2026-05-24.md` - completed web bug sweep ledger.
 - `sprint-april-plan-2026-04-17.md` - completed April sprint plan.
+
+## Completed 2026-10-22
+
+- [Recent iOS review fixes and Welcome refinement](archive/completed-2026-10-22/ios-review-fixes.md): all 11 findings fixed, seven simulator UI scenarios verified, local visual reviews retained. Authenticated/physical rollout and existing style drift are explicitly separate.
+
+- [iOS style-drift cleanup](archive/completed-2026-10-22/ios-style-drift.md): zero detector hits, simulator verification wrapper and interaction checks pass; matched light/dark review retained.

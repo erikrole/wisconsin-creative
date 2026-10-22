@@ -96,7 +96,7 @@ describe("schedule staff/student display source contracts", () => {
     const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
     const dashboardColumn = source("src/app/(app)/_home/home-model.ts");
     const notifications = source("src/lib/services/notifications.ts");
-    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const home = source("ios/Wisconsin/Views/Home/HomeModel.swift");
     const profile = source("ios/Wisconsin/Views/ProfileNextUp.swift");
 
     expect((dashboardRoute.match(/a\.shift\.workerType === "ST"/g) ?? []).length).toBeGreaterThanOrEqual(2);
@@ -107,8 +107,9 @@ describe("schedule staff/student display source contracts", () => {
     expect(notifications).toContain("dueAt: callStartsAt?.toISOString()");
     // Only the Student call time is ever named; Staff copy has none.
     expect(notifications).toContain("` Call time: ${formatShiftNotifyTime(assignment.studentCallStartsAt)}.`");
-    expect(home).toContain('queueCallTime(workerType: shift.workerType');
-    expect(home).toContain('guard workerType == "ST", let callStartsAt else { return nil }');
+    expect(home).toContain('let studentCall = s.workerType == "ST" && !allDay && s.callStartsAt != nil');
+    expect(home).toContain('let display = (studentCall ? s.callStartsAt : nil) ?? s.event.startsAt');
+    expect(home).toContain('studentCall ? "Call time" : nil');
     expect(profile).toContain('if shift.workerType == "ST"');
   });
 

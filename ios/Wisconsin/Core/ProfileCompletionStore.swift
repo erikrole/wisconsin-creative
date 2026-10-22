@@ -40,12 +40,15 @@ final class ProfileCompletionStore {
     private(set) var isLoading = false
     private(set) var isSaving = false
     private(set) var error: String?
+    private(set) var photoRefreshNeeded = false
 
     private var activeUserId: String?
     private var manuallyPresentedUserId: String?
     private var bypassedForSessionUserId: String?
 
     func route(for user: CurrentUser, optimisticSession: Bool) -> ProfileCompletionRoute {
+        if let response, response.profile.id == user.id, response.completion.requiresSetup { return .welcome }
+        if user.onboardingRequired && response?.completion.requiredComplete != true { return .welcome }
         if bypassedForSessionUserId == user.id { return .app }
         if manuallyPresentedUserId == user.id { return .welcome }
 
@@ -74,6 +77,7 @@ final class ProfileCompletionStore {
             activeUserId = user.id
             response = nil
             error = nil
+            photoRefreshNeeded = false
             manuallyPresentedUserId = nil
             bypassedForSessionUserId = nil
         }
@@ -87,6 +91,7 @@ final class ProfileCompletionStore {
             let next = try await APIClient.shared.profileCompletion()
             guard activeUserId == user.id, !Task.isCancelled else { return }
             response = next
+            photoRefreshNeeded = false
             ProfileCompletionHint.save(next)
             if next.completion.profileComplete {
                 manuallyPresentedUserId = nil
@@ -109,6 +114,7 @@ final class ProfileCompletionStore {
             let next = try await APIClient.shared.updateProfileCompletion(update)
             guard activeUserId == user.id else { return nil }
             response = next
+            photoRefreshNeeded = false
             ProfileCompletionHint.save(next)
             if next.completion.profileComplete {
                 manuallyPresentedUserId = nil
@@ -129,12 +135,17 @@ final class ProfileCompletionStore {
         defer { isSaving = false }
         do {
             _ = try await APIClient.shared.uploadProfileAvatar(userId: user.id, jpegData: jpegData)
-            let next = try await APIClient.shared.profileCompletion()
-            guard activeUserId == user.id else { return false }
-            response = next
-            ProfileCompletionHint.save(next)
-            if next.completion.profileComplete {
-                manuallyPresentedUserId = nil
+            do {
+                let next = try await APIClient.shared.profileCompletion()
+                guard activeUserId == user.id else { return false }
+                response = next
+                photoRefreshNeeded = false
+                ProfileCompletionHint.save(next)
+                if next.completion.profileComplete { manuallyPresentedUserId = nil }
+            } catch {
+                guard activeUserId == user.id else { return false }
+                photoRefreshNeeded = true
+                self.error = "Your photo was saved, but setup couldn’t refresh. Try refreshing setup."
             }
             return true
         } catch APIError.unauthorized {
@@ -158,6 +169,7 @@ final class ProfileCompletionStore {
     }
 
     func continueForSession(for userId: String) {
+        guard response?.completion.requiresSetup != true else { return }
         bypassedForSessionUserId = userId
         manuallyPresentedUserId = nil
         error = nil
@@ -171,6 +183,7 @@ final class ProfileCompletionStore {
         activeUserId = nil
         response = nil
         error = nil
+        photoRefreshNeeded = false
         manuallyPresentedUserId = nil
         bypassedForSessionUserId = nil
         isLoading = false

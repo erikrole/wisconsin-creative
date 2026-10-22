@@ -117,68 +117,70 @@ struct UserDetailView: View {
     }
 
     private func profileHeader(_ detail: AppUserDetail) -> some View {
-        // Hero card mirrors ItemDetail's ItemHeroCard: identity leads in Gotham,
-        // contact lines are monospaced + actionable, and role/joined read as
-        // quiet metadata. Inactive accounts drop the role tone to gray.
+        // Identity leads in Gotham; role/joined read as quiet metadata.
+        // Inactive accounts drop the role tone to gray.
         let tone: StatusTone = detail.active ? StatusTone.forRole(detail.role) : .gray
-        return FormCard {
-            HStack(alignment: .top, spacing: Brand.Space.md) {
-                UserAvatarView(
-                    name: detail.name,
-                    avatarUrl: detail.avatarUrl,
-                    size: 64,
-                    fallbackBackground: Color.statusBackground(tone),
-                    fallbackForeground: Color.statusText(tone),
-                    showsBorder: false
-                )
-                .opacity(detail.active ? 1 : 0.6)
+        // Centered identity on the grouped background, no card around it: the
+        // avatar and name are the screen's subject, not one more row of content.
+        return VStack(spacing: Brand.Space.xs) {
+            UserAvatarView(
+                name: detail.name,
+                avatarUrl: detail.avatarUrl,
+                size: 88,
+                fallbackBackground: Color.statusBackground(tone),
+                fallbackForeground: Color.statusText(tone),
+                showsBorder: false
+            )
+            .opacity(detail.active ? 1 : 0.6)
+            .padding(.bottom, Brand.Space.xs)
 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(detail.name)
-                        .font(.gothamBlack(size: 22))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                    // The standing the Users list leads with. A profile that
-                    // skipped it said less about the person than the row you
-                    // tapped to reach it. Area is not joined onto this line --
-                    // a long job title wraps, and " · Video" starting a line of
-                    // its own reads as a rendering fault.
-                    if let standing = UserIdentity.standing(
-                        role: detail.role,
-                        title: detail.title,
-                        gradYear: detail.gradYear,
-                        studentYearOverride: detail.studentYearOverride
-                    ) {
-                        Text(standing)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-                    HStack(spacing: 6) {
-                        StatusPill.role(detail.role)
-                        if !detail.active {
-                            StatusPill(label: "Inactive", tone: .gray)
-                        }
-                    }
-                    if let meta = metaLine(detail) {
-                        Text(meta)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                Spacer(minLength: 0)
+            Text(detail.name)
+                .font(.gothamBlack(size: 24))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            // The standing the Users list leads with. Area is not joined onto
+            // this line -- a long job title wraps, and " · Video" starting a
+            // line of its own reads as a rendering fault.
+            if let standing = UserIdentity.standing(
+                role: detail.role,
+                title: detail.title,
+                gradYear: detail.gradYear,
+                studentYearOverride: detail.studentYearOverride
+            ) {
+                Text(standing)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(profileAccessibilityLabel(detail))
+            HStack(spacing: 6) {
+                StatusPill.role(detail.role)
+                if !detail.active {
+                    StatusPill(label: "Inactive", tone: .gray)
+                }
+            }
+            .padding(.top, 2)
+            if let meta = metaLine(detail) {
+                Text(meta)
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
 
             // Contact as things you do, not addresses to read -- and only for
-            // other people. Offering to email or call yourself is a dead end,
-            // and it was the one thing your own profile had that a teammate's
-            // needed.
+            // other people. Offering to email or call yourself is a dead end.
             if detail.id != session.currentUser?.id && (!detail.email.isEmpty || detail.phone?.isEmpty == false) {
                 ContactActions(detail: detail)
+                    .padding(.horizontal, Brand.Space.lg)
+                    .padding(.top, Brand.Space.sm)
             }
         }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Brand.Space.sm)
+        .padding(.bottom, Brand.Space.xs)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(profileAccessibilityLabel(detail))
     }
 
     /// The two quiet facts, together on one line: which area they work in and

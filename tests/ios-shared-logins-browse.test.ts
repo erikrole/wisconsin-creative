@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const browse = () => source("ios/Wisconsin/Views/BrowseView.swift");
 const view = () => source("ios/Wisconsin/Views/SharedLoginsView.swift");
 const models = () => source("ios/Wisconsin/Models/SoftwareLoginModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 
 describe("iOS shared logins", () => {
   it("adds a Shared logins row for internal roles and only the vault capability for collaborators", () => {
@@ -42,6 +43,8 @@ describe("iOS shared logins", () => {
     expect(screen).toContain("addingTimeInterval(120)");
     expect(screen).toContain("Task.sleep(for: .seconds(30))");
     expect(screen).toContain("clearSecrets()");
+    const clearing = screen.slice(screen.indexOf("func clearSecrets()"), screen.indexOf("private func hide("));
+    expect(clearing).toContain(".union(pendingSecretIds)");
     expect(screen).toContain("Couldn't refresh. This is the last list that loaded.");
     expect(screen).toContain("Adding, editing, and archiving stay on the website.");
     expect(screen).not.toMatch(/method:\s*"(PATCH|DELETE|PUT)"/);
