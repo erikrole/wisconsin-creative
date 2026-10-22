@@ -59,10 +59,7 @@ struct AccountabilityReport: Decodable, Sendable {
     let academicYear: AccountabilityAcademicYear?
     let methodology: AccountabilityMethodology
     let metrics: AccountabilityMetrics
-    let spotlightJeers: [String]?
     let leaderboard: [AccountabilityPerson]
-
-    var notes: [String] { spotlightJeers ?? [] }
 
     func rank(of userId: String) -> Int? {
         guard let index = leaderboard.firstIndex(where: { $0.userId == userId }) else { return nil }

@@ -41,7 +41,6 @@ final class AccountabilityModelTests: XCTestCase {
             "excludedRecords": 4
           },
           "capabilities": { "canExport": true, "canManageExclusions": true },
-          "spotlightJeers": ["The gear shelf appreciates a little less suspense."],
           "locations": [{ "id": "loc_1", "name": "Studio" }],
           "excluded": [{
             "bookingId": "book_hidden",
@@ -124,7 +123,6 @@ final class AccountabilityModelTests: XCTestCase {
         XCTAssertEqual(report.person("user_ada")?.areaLabel, "Live Production")
         XCTAssertEqual(report.person("user_grace")?.onTimeLabel, "Not enough checkouts")
         XCTAssertEqual(report.matching("lovelace").map(\.userId), ["user_ada"])
-        XCTAssertEqual(report.notes.count, 1)
 
         let active = try XCTUnwrap(report.person("user_ada")?.incidents.first)
         XCTAssertEqual(active.style.label, "Currently overdue")
@@ -138,7 +136,7 @@ final class AccountabilityModelTests: XCTestCase {
         XCTAssertEqual(extended.detailLine.contains("moved to"), true)
     }
 
-    func testAllTimeReportToleratesAMissingYearAndMissingJeers() throws {
+    func testAllTimeReportToleratesAMissingYear() throws {
         let json = """
         {
           "generatedAt": "2026-10-16T15:00:00.000Z",
@@ -163,7 +161,6 @@ final class AccountabilityModelTests: XCTestCase {
 
         XCTAssertEqual(report.scopeTitle, "All time")
         XCTAssertEqual(report.truncated, true)
-        XCTAssertTrue(report.notes.isEmpty)
         XCTAssertEqual(report.methodology.graceSentence, "A return is late after 1 hour past due.")
         XCTAssertNil(report.rank(of: "missing"))
     }

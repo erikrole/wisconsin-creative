@@ -261,6 +261,24 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Simpler Accountability page",
+    "type": "improvement",
+    "summary": "Accountability now leads with what matters: gear still out, your own record, and people who are repeatedly late.",
+    "details": [
+      "Overdue now sits at the top with who has what and how long it is overdue.",
+      "A Your record line shows your late returns and on-time rate.",
+      "The list shows people late 2 or more times; one-time late returns are a click away.",
+      "Location, status and sort options moved into More filters.",
+      "The podium and joke captions are gone."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 563
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",
