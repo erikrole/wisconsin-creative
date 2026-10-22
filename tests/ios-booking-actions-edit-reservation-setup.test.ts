@@ -51,7 +51,7 @@ describe("iOS focused booking edit and transfer", () => {
       detail.indexOf("struct TransferBookingOwnerSheet"),
     );
     expect(editor).toContain('TextField("Booking name"');
-    expect(editor).toContain('LabeledContent("Due back")');
+    expect(editor).toContain('LabeledContent("Change return")');
     // Tapping Due back opens an inline calendar, like Calendar's Ends row.
     expect(editor).toContain("ReturnTimeCalendar(");
     expect(editor).toContain("showsReturnCalendar.toggle()");

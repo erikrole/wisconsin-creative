@@ -19,7 +19,7 @@ describe("iOS reservation edit", () => {
   it("keeps the checkout editor narrow and routes reservations to their own flow", () => {
     const checkoutEditor = sliceBetween(detail, "struct EditBookingSheet", "struct TransferBookingOwnerSheet");
     expect(checkoutEditor).toContain('TextField("Booking name"');
-    expect(checkoutEditor).toContain('LabeledContent("Due back")');
+    expect(checkoutEditor).toContain('LabeledContent("Change return")');
     expect(checkoutEditor).toContain("ReturnTimeCalendar(");
     expect(checkoutEditor).not.toContain("ReservationEditFlow");
     expect(checkoutEditor).not.toContain("serializedAssetIds");

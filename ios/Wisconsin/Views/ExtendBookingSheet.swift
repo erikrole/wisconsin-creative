@@ -69,10 +69,18 @@ struct ExtendBookingSheet: View {
         NavigationStack {
             List {
                 Section {
-                    comparison
+                    Text(booking.title)
+                        .font(.gothamBold(size: 28))
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityAddTraits(.isHeader)
                 }
                 .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 8, trailing: 4))
+                .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 0, trailing: 4))
+
+                Section {
+                    comparison
+                }
 
                 if isCheckingNextNeed {
                     Section {
@@ -103,7 +111,8 @@ struct ExtendBookingSheet: View {
                             ReturnTimeCalendar(
                                 selection: $newEndsAt,
                                 minimum: earliestCustom,
-                                latest: latestEndsAt
+                                latest: latestEndsAt,
+                                tint: .brandPrimary
                             )
                         }
                     } header: {
@@ -181,63 +190,19 @@ struct ExtendBookingSheet: View {
 
     // MARK: Comparison
 
-    /// Current return on the left, the new one on the right, like a
-    /// before-and-after. Red only marks a return that's already late.
+    /// The same trip card as booking detail, read as a before-and-after:
+    /// the current return on the left, the new one on the right. Red only
+    /// marks a return that's already late.
     private var comparison: some View {
-        VStack(alignment: .leading, spacing: Brand.Space.sm) {
-            Text(booking.title)
-                .font(.gothamBold(size: 22))
-                .lineLimit(2)
-                .accessibilityAddTraits(.isHeader)
-            HStack(alignment: .top) {
-                endpoint(
-                    label: currentEndsAt < Date() ? "Was due" : "Due back",
-                    date: currentEndsAt,
-                    color: currentEndsAt < Date() ? Color.statusText(.red) : .secondary,
-                    alignment: .leading
-                )
-                Spacer(minLength: Brand.Space.sm)
-                Image(systemName: "arrow.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 22)
-                    .accessibilityHidden(true)
-                Spacer(minLength: Brand.Space.sm)
-                if hasNewReturn {
-                    endpoint(label: moreTime, date: newEndsAt, color: .primary, alignment: .trailing)
-                        .transition(.opacity)
-                } else {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("New return").font(.footnote).foregroundStyle(.secondary)
-                        Text("Pick below").font(.subheadline).foregroundStyle(.tertiary)
-                        Text("—").font(.title3.weight(.semibold)).foregroundStyle(.tertiary)
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-            }
-            .padding(Brand.Space.md)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        BookingTripCard(
+            start: .init(
+                label: currentEndsAt < Date() ? "Was due" : "Due back",
+                date: currentEndsAt,
+                color: currentEndsAt < Date() ? Color.statusText(.red) : .secondary
+            ),
+            end: .init(label: hasNewReturn ? moreTime : "New return", date: hasNewReturn ? newEndsAt : nil)
+        )
         .animation(.easeInOut(duration: 0.2), value: newEndsAt)
-    }
-
-    private func endpoint(label: String, date: Date, color: Color, alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 2) {
-            Text(label)
-                .font(.footnote)
-                .foregroundStyle(color == .primary ? Color.secondary : color)
-            Text(date.operationalDayLabel(now: today))
-                .font(.subheadline)
-                .foregroundStyle(color)
-            Text(date.gearTime)
-                .font(.title3.weight(.semibold).monospacedDigit())
-                .foregroundStyle(color)
-                .contentTransition(.numericText())
-        }
-        .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(self.label(date))")
     }
 
     // MARK: Choices
@@ -323,7 +288,7 @@ struct ExtendBookingSheet: View {
                 if isSelected {
                     Image(systemName: "checkmark")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.statusText(.blue))
+                        .foregroundStyle(.tint)
                         .accessibilityHidden(true)
                 }
             }

@@ -322,7 +322,7 @@ describe("student field mobile contracts", () => {
     expect(editor).toContain(".navigationTitle(\"Edit Booking\")");
     expect(editor).toContain("private var saveBlocker: String?");
     expect(editor).toContain('TextField("Booking name"');
-    expect(editor).toContain('LabeledContent("Due back")');
+    expect(editor).toContain('LabeledContent("Change return")');
     expect(editor).toContain("ReturnTimeCalendar(");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).not.toContain("OptionPickerView(");

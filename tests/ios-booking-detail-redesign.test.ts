@@ -53,13 +53,16 @@ describe("iOS Booking Detail Item Detail alignment", () => {
   });
 
   it("shows pickup and return as one trip card with progress while gear is out", () => {
-    const timeline = sliceBetween(detail, "private struct BookingTimelineSection", "private struct BookingAboutSection");
+    const timeline = sliceBetween(detail, "private struct BookingTimelineSection", "struct BookingTripCard");
 
     expect(timeline).toContain('booking.status == .open || booking.status == .completed ? "Picked up" : "Pickup"');
     expect(timeline).toContain('"Due back"');
-    expect(timeline).toContain("if booking.status == .open");
-    expect(timeline).toContain("progressBar(now: now)");
-    expect(timeline).toContain("date.operationalDayLabel(now: today)");
+    expect(timeline).toContain("progress: booking.status == .open ? progress(now: now) : nil");
+    // Detail, Extend and Edit share one trip card so they read as one place.
+    const card = sliceBetween(detail, "struct BookingTripCard", "private struct BookingAboutSection");
+    expect(card).toContain("date.operationalDayLabel(now: today)");
+    expect(source("ios/Wisconsin/Views/ExtendBookingSheet.swift")).toContain("BookingTripCard(");
+    expect(sliceBetween(detail, "struct EditBookingSheet", "struct TransferBookingOwnerSheet")).toContain("BookingTripCard(");
     expect(timeline).not.toContain(".year(");
     expect(timeline).not.toContain("gearLong");
     expect(dates).toContain("let dayDistance = Calendar.current.dayOffset(of: self, from: now)");

@@ -684,7 +684,7 @@ struct EditBookingSheet: View {
             List {
                 Section {
                     TextField("Booking name", text: $title)
-                        .font(.gothamBold(size: 18))
+                        .font(.gothamBold(size: 22))
                         .textInputAutocapitalization(.words)
                         .submitLabel(.done)
                         .accessibilityLabel("Booking name")
@@ -693,16 +693,17 @@ struct EditBookingSheet: View {
                 }
 
                 Section {
-                    LabeledContent("Pickup") {
-                        Text(booking.startsAt.operationalDateTimeLabel(now: today))
-                            .multilineTextAlignment(.trailing)
-                    }
+                    BookingTripCard(
+                        start: .init(label: "Pickup", date: booking.startsAt),
+                        end: .init(label: "Due back", date: endsAt)
+                    )
+                    .animation(.easeInOut(duration: 0.2), value: endsAt)
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { showsReturnCalendar.toggle() }
                     } label: {
-                        LabeledContent("Due back") {
-                            Text(endsAt.operationalDateTimeLabel(now: today))
-                                .foregroundStyle(showsReturnCalendar ? Color.statusText(.blue) : Color.primary)
+                        LabeledContent("Change return") {
+                            Text(showsReturnCalendar ? "Done" : "Edit")
+                                .foregroundStyle(showsReturnCalendar ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                                 .multilineTextAlignment(.trailing)
                         }
                         .frame(minHeight: 44)
@@ -713,7 +714,8 @@ struct EditBookingSheet: View {
                     if showsReturnCalendar {
                         ReturnTimeCalendar(
                             selection: $endsAt,
-                            minimum: QuarterHour.roundedUp(booking.startsAt.addingTimeInterval(15 * 60))
+                            minimum: QuarterHour.roundedUp(booking.startsAt.addingTimeInterval(15 * 60)),
+                            tint: .brandPrimary
                         )
                     }
                 } header: {
@@ -972,10 +974,10 @@ struct TransferBookingOwnerSheet: View {
 
     private func ownerRow(label: String, name: String, avatarURL: String?) -> some View {
         HStack(spacing: Brand.Space.sm) {
-            UserAvatarView(name: name, avatarUrl: avatarURL, size: 36)
+            UserAvatarView(name: name, avatarUrl: avatarURL, size: 40)
             VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.caption).foregroundStyle(.secondary)
-                Text(name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                Text(label).font(.footnote).foregroundStyle(.secondary)
+                Text(name).font(.body.weight(.semibold)).foregroundStyle(.primary)
             }
             Spacer()
         }
@@ -1085,23 +1087,11 @@ private struct BookingTimelineSection: View {
         Section {
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 let now = context.date
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top) {
-                        endpoint(label: startLabel, date: booking.startsAt, alignment: .leading)
-                        Spacer(minLength: Brand.Space.md)
-                        Image(systemName: "arrow.right")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                            .padding(.top, 22)
-                            .accessibilityHidden(true)
-                        Spacer(minLength: Brand.Space.md)
-                        endpoint(label: endLabel, date: booking.endsAt, alignment: .trailing)
-                    }
-                    if booking.status == .open {
-                        progressBar(now: now)
-                    }
-                }
-                .padding(.vertical, 6)
+                BookingTripCard(
+                    start: .init(label: startLabel, date: booking.startsAt),
+                    end: .init(label: endLabel, date: booking.endsAt),
+                    progress: booking.status == .open ? progress(now: now) : nil
+                )
             }
 
             if returnInsight.hasUpcomingNeed {
@@ -1125,37 +1115,11 @@ private struct BookingTimelineSection: View {
         booking.status == .completed ? "Returned by" : "Due back"
     }
 
-    private func endpoint(label: String, date: Date, alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 2) {
-            Text(label)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            Text(date.operationalDayLabel(now: today))
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-            Text(date.gearTime)
-                .font(.title3.weight(.semibold).monospacedDigit())
-                .foregroundStyle(.primary)
-        }
-        .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label) \(date.operationalDateTimeLabel(now: today))")
-    }
-
-    private func progressBar(now: Date) -> some View {
+    private func progress(now: Date) -> BookingTripCard.Progress {
         let span = booking.endsAt.timeIntervalSince(booking.startsAt)
         let elapsed = now.timeIntervalSince(booking.startsAt)
         let fraction = span > 0 ? min(max(elapsed / span, 0), 1) : 1
-        return GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color(.tertiarySystemFill))
-                Capsule()
-                    .fill(Color.statusText(booking.detailTone(now: now)))
-                    .frame(width: max(proxy.size.width * fraction, 4))
-            }
-        }
-        .frame(height: 4)
-        .accessibilityHidden(true)
+        return .init(fraction: fraction, color: Color.statusText(booking.detailTone(now: now)))
     }
 
     /// Names the booking waiting on this gear when the server says which one,
@@ -1169,6 +1133,83 @@ private struct BookingTimelineSection: View {
             return "\(title) needs this gear \(when). Extend only to a return time by then."
         }
         return "Needed again \(when). Extend only to a return time by then."
+    }
+}
+
+/// Pickup on the left, return on the right, like a trip. Detail, Extend and
+/// Edit all show the same card, so the three screens read as one place.
+struct BookingTripCard: View {
+    struct End {
+        let label: String
+        let date: Date?
+        /// Only for meaning: red for a late return, secondary for the old one.
+        var color: Color = .primary
+    }
+
+    struct Progress {
+        let fraction: Double
+        let color: Color
+    }
+
+    @Environment(\.today) private var today
+    let start: End
+    let end: End
+    var progress: Progress? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                endpoint(start, alignment: .leading)
+                Spacer(minLength: Brand.Space.sm)
+                Image(systemName: "arrow.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 22)
+                    .accessibilityHidden(true)
+                Spacer(minLength: Brand.Space.sm)
+                endpoint(end, alignment: .trailing)
+            }
+            if let progress {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color(.tertiarySystemFill))
+                        Capsule()
+                            .fill(progress.color)
+                            .frame(width: max(proxy.size.width * progress.fraction, 4))
+                    }
+                }
+                .frame(height: 4)
+                .accessibilityHidden(true)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func endpoint(_ end: End, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 2) {
+            Text(end.label)
+                .font(.footnote)
+                .foregroundStyle(end.color == .primary ? Color.secondary : end.color)
+            if let date = end.date {
+                Text(date.operationalDayLabel(now: today))
+                    .font(.subheadline)
+                    .foregroundStyle(end.color)
+                Text(date.gearTime)
+                    .font(.gothamBold(size: 22).monospacedDigit())
+                    .foregroundStyle(end.color)
+                    .contentTransition(.numericText())
+            } else {
+                Text("Pick below")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                Text("—")
+                    .font(.gothamBold(size: 22))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(end.date.map { "\(end.label), \($0.operationalDateTimeLabel(now: today))" } ?? "\(end.label), not chosen")
     }
 }
 

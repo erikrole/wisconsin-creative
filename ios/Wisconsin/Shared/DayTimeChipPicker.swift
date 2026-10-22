@@ -177,7 +177,8 @@ struct ReturnTimeCalendar: View {
     @Binding var selection: Date
     let minimum: Date
     var latest: Date? = nil
-    var tint: Color = Color.statusText(.blue)
+    /// Callers pass the app's tint; the kiosk target has no `brandPrimary`.
+    var tint: Color? = nil
 
     /// Where the time buttons are centered. Set when the picker appears or
     /// the day changes, never on a button tap, so buttons don't shift under
@@ -230,7 +231,7 @@ struct ReturnTimeCalendar: View {
                 DatePicker("Return day", selection: dayBinding, in: dayRange, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .labelsHidden()
-                    // Set on the picker itself; the inherited tint drew the
+                    // Set on the picker itself; relying on inheritance drew the
                     // picked day black in Extend.
                     .tint(tint)
                 Divider()
@@ -324,6 +325,9 @@ struct ReturnTimeCalendar: View {
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
             .controlSize(.regular)
+            // Unpicked times stay neutral so only the choice carries color.
+            .tint(.secondary)
+            .foregroundStyle(.primary)
         }
     }
 }
