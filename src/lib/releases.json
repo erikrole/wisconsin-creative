@@ -3,13 +3,13 @@
     "date": "2026-10-22",
     "title": "A cleaner Board Sizes",
     "type": "improvement",
-    "summary": "Board Sizes is easier for newcomers, has a calmer look with the Badger red kept, lets you preview your art on any board, and builds After Effects comps for a whole board.",
+    "summary": "Board Sizes makes it easier to find what a piece needs, has a calmer look with the Badger red kept, lets you preview your art on any board, and builds After Effects comps for a whole board.",
     "details": [
-      "New to the boards? The venue page starts with What are you making?, which leads to every board and size a piece needs, and Board terms explains words like FG/BG, GIP, fascia and scrim.",
-      "Search understands everyday words like jumbotron, ribbon and scoreboard, and suggests matching content such as Touchdown.",
+      "The venue page starts with What are you making?, which leads to every board and size a piece needs, and Board terms explains venue words like FG/BG, GIP, fascia and scrim.",
+      "Search understands venue words like ribbon and ticker, and suggests matching content such as Touchdown.",
       "Preview art: drop, paste or pick an image on a board to see it at true scale, with crops and the speaker scrim dimmed. It never leaves your device.",
       "More on a board downloads an After Effects script with a comp for the whole board and each zone size.",
-      "A calmer look in Lato with Badger red kept and the Wisconsin Creative Motion W in the top bar. Ids and canvas keys hide until you turn on Technical details.",
+      "A calmer look in Lato with Badger red kept and the shared tool header with Apps at the top right. Ids and canvas keys hide until you turn on Technical details.",
       "Phones get a tidier layout, copying works in browsers that block the clipboard, More menus work from the keyboard, and a broken link no longer leaves the page blank."
     ],
     "platforms": [

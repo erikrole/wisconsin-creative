@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
@@ -100,7 +100,7 @@ describe("Board Sizes art preview and board comps", () => {
     expect(preview).toContain("URL.createObjectURL(file)");
     expect(preview).toContain("URL.revokeObjectURL");
     expect(preview).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon/);
-    expect(html).toMatch(/img-src 'self' data: blob:/);
+    expect(html).toMatch(/img-src data: blob:/);
     expect(html).toMatch(/connect-src 'none'/);
   });
 
@@ -118,25 +118,24 @@ describe("Board Sizes art preview and board comps", () => {
   });
 });
 
-describe("Board Sizes Wisconsin Creative badge", () => {
-  it("ends the top bar with the shared Apps button and Motion W, with the mask allowed by CSP", () => {
-    expect(html).toMatch(/<div class="wc-brand">\s*<a class="wc-apps" href="\/apps">[\s\S]*?<span class="wc-badge" role="img" aria-label="Wisconsin Creative"><span class="wc-badge-w"><\/span><\/span>\s*<\/div>\s*<\/div>\s*<nav class="venue-tabs"/);
-    expect(html).toContain('mask: url("/brand/wc-badge.svg")');
-    expect(html).toMatch(/img-src 'self'/);
-    expect(readFileSync("public/brand/wc-badge.svg", "utf8")).toContain('fill="currentColor"');
+describe("Board Sizes shared tool header", () => {
+  it("uses the shared tool header: name top left, Apps top right", () => {
+    expect(html).toMatch(/<header class="topbar">\s*<div class="topbar-in">\s*<span class="brand">[\s\S]*?<span class="brand-name">Board Sizes<\/span>\s*<\/span>[\s\S]*?<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/div>\s*<nav class="venue-tabs"/);
+    expect(html).not.toContain("wc-badge");
+    expect(existsSync("public/brand/wc-badge.svg")).toBe(false);
   });
 });
 
 describe("Board Sizes for people new to the boards", () => {
   it("explains the board terms on their own page", () => {
     expect(app).toContain("var PAGES = { agents: 1, issues: 1, terms: 1 };");
-    for (const term of ["'FG / BG'", "'GIP'", "'Speaker scrim'", "'Stills only'", "'Pad'"]) expect(app).toContain(term);
+    for (const term of ["'FG / BG'", "'GIP'", "'Speaker scrim'", "'Pad'"]) expect(app).toContain(term);
+    for (const term of ["'Zone'", "'Aspect ratio'", "'Cropped'"]) expect(app).not.toContain(`[${term},`);
     expect(app).toContain("['terms', 'Board terms', null]");
   });
 
-  it("understands everyday search words without matching every board", () => {
-    expect(app).toContain("jumbotron: ['~main-board~']");
-    expect(app).toContain("var MAIN_BOARDS = { 'North Board': 1, 'Centerhung Main': 1, 'Main': 1 };");
+  it("maps venue words to the boards' own names, without consumer words like jumbotron", () => {
+    expect(app).not.toContain("jumbotron");
     expect(app).toContain("ribbon: ['fascia', 'ring']");
   });
 

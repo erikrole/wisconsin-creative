@@ -61,21 +61,12 @@
   // Plain-English meanings for the words the boards use, for people new to
   // them. Shown on the Board terms page and as hover hints where they appear.
   var TERMS = [
-    ['Zone', 'zone', 'A rectangle on a board that takes its own piece of content. Build each zone at its exact size.'],
     ['FG / BG', 'fgbg', 'Foreground and background: two layers of the same window in the board’s control system. One asset usually fills both.'],
     ['GIP', 'gip', 'Game in progress: the strip where the live score, clock and game info sit.'],
     ['Fascia (ribbon)', 'fascia', 'The long, short LED boards that run around the seating bowl. Very wide, very short, and they often scroll.'],
-    ['Centerhung', 'centerhung', 'The board that hangs over the middle of the court or rink.'],
-    ['Wing, frame, stat box', 'wing', 'Smaller zones beside the main video, used for ads, stats and framing art.'],
     ['Speaker scrim', 'scrim', 'Speakers hang in front of part of the board. Content behind the scrim is hard to see, so keep it plain.'],
-    ['Cropped', 'crop', 'Part of the canvas the board doesn’t show. Keep text and logos out of it.'],
-    ['Seam', 'seam', 'Where two TVs meet in a video wall, or where a ribbon turns a corner. Keep faces and text off it.'],
     ['Pad', 'pad', 'Keep anything important this many pixels inside every edge.'],
-    ['Safe area', 'safe', 'The part of the canvas that’s safe from crops and edges. Copy spec includes it when one is on file.'],
-    ['Stills only', 'stills', 'The zone takes a still image (PNG), not video.'],
-    ['Aspect ratio', 'ratio', 'Width compared with height, like 16:9. Art made at another shape will stretch or crop.'],
     ['IPTV / StadiumVision', 'iptv', 'The concourse and suite TVs at Camp Randall, not the LED boards.'],
-    ['Copy spec', 'spec', 'Copies the exact size, aspect ratio, position and any safe area, ready to paste into a project or message.'],
     ['Id and canvas key', 'ids', 'Stable names for scripts and production tools like the After Effects Board Builder. Turn on Technical details to see them.']
   ];
   var TERM = {};
@@ -85,15 +76,12 @@
     var n = name.toLowerCase();
     if (/\bgip\b/.test(n)) return TERM.gip;
     if (/fascia|ribbon|\bring\b/.test(n)) return TERM.fascia;
-    if (/centerhung/.test(n)) return TERM.centerhung;
-    if (/wing|frame|stat box/.test(n)) return TERM.wing;
     if (/iptv/.test(n)) return TERM.iptv;
     return null;
   }
 
   // Everyday words people search with, mapped to the words the boards use.
   var SYNONYMS = {
-    jumbotron: ['~main-board~'], videoboard: ['~main-board~'], scoreboard: ['~main-board~'], megatron: ['~main-board~'],
     ribbon: ['fascia', 'ring'], ribbons: ['fascia', 'ring'], ticker: ['fascia', 'ring'], halo: ['ring'],
     tv: ['iptv'], tvs: ['iptv'], television: ['iptv'], concourse: ['iptv'], suite: ['iptv'], stadiumvision: ['iptv'],
     score: ['gip'], clock: ['gip'], bug: ['gip'],
@@ -101,9 +89,6 @@
     football: ['camp randall'], basketball: ['kohl center'], hockey: ['kohl center', 'labahn'], volleyball: ['field house'], softball: ['goodman'],
     stadium: ['camp randall'], arena: ['kohl center', 'labahn']
   };
-  // Each venue's main video board, for "jumbotron" and friends.
-  var MAIN_BOARDS = { 'North Board': 1, 'Centerhung Main': 1, 'Main': 1 };
-  function mainTag(d) { return MAIN_BOARDS[d.name] ? ' ~main-board~' : ''; }
   var TECH_KEY = 'boards.tech.v1';
   var showTech = storageGet(TECH_KEY) === '1';
 
@@ -130,7 +115,7 @@
   readParams();
   if (state.share) {
     document.body.classList.add('is-share');
-    // Shared links keep the Motion W as branding but drop the way back to the site.
+    // Shared links keep the tool's name but drop the way back to the site.
     var apps = document.querySelector('.wc-apps');
     if (apps) apps.hidden = true;
   }
@@ -424,8 +409,8 @@
       });
     }
     return {
-      zone: function (z, d, v) { return has([z.name, z.id, (KEYS[z.id] || []).join(' '), d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(z.w, z.h)].join(' ') + mainTag(d)); },
-      display: function (d, v) { return has([d.name, d.id, (KEYS[d.id] || []).join(' '), d.sheetName || '', d.group || '', d.processor || '', v.name, size(d.w, d.h)].join(' ') + mainTag(d)); }
+      zone: function (z, d, v) { return has([z.name, z.id, (KEYS[z.id] || []).join(' '), d.name, d.sheetName || '', d.group || '', d.processor || '', v.name, size(z.w, z.h)].join(' ')); },
+      display: function (d, v) { return has([d.name, d.id, (KEYS[d.id] || []).join(' '), d.sheetName || '', d.group || '', d.processor || '', v.name, size(d.w, d.h)].join(' ')); }
     };
   }
 
@@ -692,7 +677,7 @@
       var li = node('li');
       li.appendChild(node('i', 'key key-' + k));
       li.appendChild(document.createTextNode(LEGEND[k]));
-      var hint = { scrim: TERM.scrim, crop: TERM.crop, seam: TERM.seam, stated: TERM.zone }[k];
+      var hint = { scrim: TERM.scrim }[k];
       if (hint) { li.title = hint; li.classList.add('has-term'); }
       list.appendChild(li);
     });
@@ -1482,7 +1467,7 @@
   }
 
   function renderTerms() {
-    pageHead('Reference', 'Board terms', 'The words you’ll see on these boards, in plain English.');
+    pageHead('Reference', 'Board terms', 'Venue words used across these boards.');
     setActions([moreMenu(withShare([]), 'board terms')]);
     var box = section('Terms');
     var list = node('dl', 'terms');
@@ -1491,15 +1476,6 @@
       list.appendChild(node('dd', '', t[2]));
     });
     box.appendChild(list);
-    var how = section('Finding a size');
-    var ol = node('ol', 'doc-list');
-    [
-      'Pick the venue in the tabs across the top, or search for a board, a zone, a size like 1920x1080, or an everyday word like jumbotron or ribbon.',
-      'Open a board to see it drawn to scale. Each zone is a separate canvas, so build each one at the size shown.',
-      'Copy spec copies the exact size and any safe area. Preview art lets you drop your image on the board to check it before you render.',
-      'Red notes are open questions. Ask before you build if one touches your zone.'
-    ].forEach(function (t) { ol.appendChild(node('li', '', t)); });
-    how.appendChild(ol);
   }
 
   // "What are you making?": the mapped content types, as a start for people
@@ -1510,7 +1486,7 @@
     var head = node('div', 'start-head');
     head.appendChild(node('h2', '', 'What are you making?'));
     var sub = node('p', '', 'Pick one to see every board and size it needs. ');
-    var tl = node('a', '', 'New to the boards?');
+    var tl = node('a', '', 'Board terms');
     tl.href = '?p=terms' + (state.share ? '&share=1' : '');
     tl.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openPage('terms'); });
     sub.appendChild(tl);
@@ -1825,7 +1801,7 @@
         shownDisplays++; shownZones += out.zones;
       });
     });
-    el.empty.textContent = match ? 'Nothing matches that. Try a board name like “Fascia”, a size like 1920x1080, or a word like jumbotron or ribbon.' : 'No displays with open issues at this venue.';
+    el.empty.textContent = match ? 'Nothing matches that. Try a board name like “Fascia” or a size like 1920x1080.' : 'No displays with open issues at this venue.';
     el.empty.hidden = shownDisplays > 0;
     el.summary.textContent = match ? shownDisplays + ' display' + (shownDisplays === 1 ? '' : 's') + ', ' + shownZones + ' zone' + (shownZones === 1 ? '' : 's') : '';
   }
