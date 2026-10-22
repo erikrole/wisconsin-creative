@@ -252,4 +252,38 @@ describe("Timelapse core", () => {
     const stills = run({ body: "a7v", method: "iv", ivInterval: 4, rollSeconds: 400, photoFormat: "craw" }).result;
     expect(stills.cardMb).toBe(100 * 35);
   });
+
+  it("rounds clip lengths across the minute without printing 60s", () => {
+    expect(tl.fmtClip(59.6)).toBe("1m");
+    expect(tl.fmtClip(9.96)).toBe("10s");
+    expect(tl.fmtClip(42)).toBe("42s");
+  });
+
+  it("says why a cadence is out of reach for the current method and format", () => {
+    const k4 = run({ body: "a7v", method: "tl", movieFormat: "s4k-100" }).core;
+    expect(k4.limitReason(8)).toMatch(/HD format/);
+    expect(k4.limitReason(4)).toBe("");
+    expect(run({ body: "fx3", method: "sq" }).core.limitReason(4)).toMatch(/use Interval$/);
+    expect(run({ body: "a7v", method: "iv" }).core.limitReason(300)).toMatch(/intervalometer/);
+  });
+
+  it("explains an S&Q clip that needs a faster rate than the camera offers", () => {
+    const { result } = run({ mode: "clip", clipSeconds: 20, rollSeconds: 10 });
+    expect(errors(result)[0]?.text).toMatch(/tops out at 15 fps/);
+  });
+
+  it("round-trips a plan through a share link", () => {
+    const plan = { ...baseState(), body: "a9iii", method: "tl", mode: "clip", tlInterval: 20, fps: 24, rollSeconds: 5400, clipSeconds: 12.5, movieFormat: "shd" };
+    const back = tl.fromQuery("?" + tl.toQuery(plan));
+    expect(back).toMatchObject({ body: "a9iii", method: "tl", mode: "clip", tlInterval: 20, fps: 24, rollSeconds: 5400, clipSeconds: 12.5, movieFormat: "shd" });
+    expect(tl.fromQuery("")).toBeNull();
+    expect(tl.fromQuery("?utm_source=x")).toBeNull();
+  });
+
+  it("drops or clamps tampered link and storage values", () => {
+    const bad = tl.fromQuery("?cam=__proto__&m=evil&solve=x&sq=3&tl=7.5&fps=50&roll=1e99&clip=-4&fmt=%3Cscript%3E&file=s4k-100");
+    expect(bad).toEqual({ ...tl.DEFAULTS, rollSeconds: tl.MAX_ROLL });
+    expect(tl.sanitize({ ivInterval: 0.2, clipSeconds: 1e9 })).toMatchObject({ ivInterval: 1, clipSeconds: tl.MAX_CLIP });
+    expect(tl.sanitize("nope")).toEqual(tl.DEFAULTS);
+  });
 });
