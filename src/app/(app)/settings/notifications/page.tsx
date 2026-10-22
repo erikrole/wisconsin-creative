@@ -2,9 +2,8 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { BellOff, CalendarClock, Mail, PackageCheck, Repeat2, ShoppingBag, Smartphone, Tag } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useFetch } from "@/hooks/use-fetch";
@@ -14,45 +13,69 @@ import {
   isAbortError,
   parseErrorMessage,
 } from "@/lib/errors";
+import {
+  NOTIFICATION_GROUP_LABELS,
+  type NotificationCategory,
+  type NotificationCategoryEntry,
+  type NotificationCategoryGroup,
+  type PushLevel,
+} from "@/lib/notification-catalog";
+import { cn } from "@/lib/utils";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import { SettingsPrefRow } from "../_components/SettingsPrefRow";
 import EmptyState from "@/components/EmptyState";
 import { WebPushSettings } from "@/components/notifications/WebPushSettings";
 
+type QuietHours = {
+  enabled: boolean;
+  start: string;
+  end: string;
+  days: number[];
+  allowUrgent: boolean;
+};
+
 type Prefs = {
   pausedUntil: string | null;
   channels: { email: boolean; push: boolean };
-  categories: {
-    checkoutDue: boolean;
-    checkoutOverdue: boolean;
-    reservation: boolean;
-    licenseExpiry: boolean;
-    schedule: boolean;
-    trade: boolean;
-    gearPrep: boolean;
-  };
+  badges: boolean;
+  push: Partial<Record<NotificationCategory, PushLevel>>;
+  quietHours: QuietHours;
 };
 
 type PrefsPatch = {
   pausedUntil?: string | null;
   channels?: Partial<Prefs["channels"]>;
-  categories?: Partial<Prefs["categories"]>;
+  badges?: boolean;
+  push?: Partial<Record<NotificationCategory, PushLevel>>;
+  quietHours?: Partial<QuietHours>;
 };
 
-const DEFAULT_CATEGORIES: Prefs["categories"] = {
-  checkoutDue: true,
-  checkoutOverdue: true,
-  reservation: true,
-  licenseExpiry: true,
-  schedule: true,
-  trade: true,
-  gearPrep: true,
-};
+type Loaded = { prefs: Prefs; catalog: NotificationCategoryEntry[] };
 
 const PAUSE_OPTIONS = [
   { id: "1h",  label: "1 hour",   ms: 60 * 60 * 1000 },
   { id: "1d",  label: "1 day",    ms: 24 * 60 * 60 * 1000 },
   { id: "1w",  label: "1 week",   ms: 7 * 24 * 60 * 60 * 1000 },
+];
+
+const LEVELS: Array<{ id: PushLevel; label: string }> = [
+  { id: "off", label: "Off" },
+  { id: "silent", label: "Silent" },
+  { id: "standard", label: "Alert" },
+];
+
+const GROUP_ORDER: NotificationCategoryGroup[] = ["gear", "schedule", "account", "admin"];
+
+// Monday first, matching the iOS quiet-hours picker. Values are JS days (0 = Sunday).
+const DAYS = [
+  { index: 1, short: "M", name: "Monday" },
+  { index: 2, short: "T", name: "Tuesday" },
+  { index: 3, short: "W", name: "Wednesday" },
+  { index: 4, short: "T", name: "Thursday" },
+  { index: 5, short: "F", name: "Friday" },
+  { index: 6, short: "S", name: "Saturday" },
+  { index: 0, short: "S", name: "Sunday" },
 ];
 
 function formatPausedUntil(iso: string | null): string | null {
@@ -69,10 +92,13 @@ function formatPausedUntil(iso: string | null): string | null {
 }
 
 export default function NotificationsSettingsPage() {
-  const { data: fetched, loading, error, reload } = useFetch<Prefs>({
+  const { data: fetched, loading, error, reload } = useFetch<Loaded>({
     url: "/api/me/notification-preferences",
     returnTo: "/settings/notifications",
-    transform: (json) => json.data as Prefs,
+    transform: (json) => ({
+      prefs: json.data as Prefs,
+      catalog: (json.catalog as NotificationCategoryEntry[] | undefined) ?? [],
+    }),
   });
 
   const [local, setLocal] = useState<Prefs | null>(null);
@@ -81,7 +107,8 @@ export default function NotificationsSettingsPage() {
     setPrevFetched(fetched);
     setLocal(null);
   }
-  const prefs = local ?? fetched;
+  const prefs = local ?? fetched?.prefs ?? null;
+  const catalog = fetched?.catalog ?? [];
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
 
@@ -125,10 +152,19 @@ export default function NotificationsSettingsPage() {
     save({ ...prefs, channels }, { channels: { [channel]: value } });
   }
 
-  function setCategory(key: keyof Prefs["categories"], value: boolean) {
+  function setBadges(value: boolean) {
     if (!prefs) return;
-    const categories = { ...(prefs.categories ?? DEFAULT_CATEGORIES), [key]: value };
-    save({ ...prefs, categories }, { categories: { [key]: value } });
+    save({ ...prefs, badges: value }, { badges: value });
+  }
+
+  function setLevel(id: NotificationCategory, value: PushLevel) {
+    if (!prefs) return;
+    save({ ...prefs, push: { ...prefs.push, [id]: value } }, { push: { [id]: value } }, { silent: true });
+  }
+
+  function setQuiet(patch: Partial<QuietHours>) {
+    if (!prefs) return;
+    save({ ...prefs, quietHours: { ...prefs.quietHours, ...patch } }, { quietHours: patch }, { silent: true });
   }
 
   async function pauseFor(ms: number) {
@@ -136,7 +172,7 @@ export default function NotificationsSettingsPage() {
     const until = new Date(Date.now() + ms).toISOString();
     const saved = await save({ ...prefs, pausedUntil: until }, { pausedUntil: until }, { silent: true });
     if (saved) {
-      toast.success(`Paused — quiet until ${new Date(until).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" })}`);
+      toast.success(`Paused until ${new Date(until).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" })}`);
     }
   }
 
@@ -146,13 +182,14 @@ export default function NotificationsSettingsPage() {
     if (saved) toast.success("Notifications resumed");
   }
 
-  const description = "Control how and when you receive updates about gear, shifts, and reservations. The in-app inbox always stays available regardless of these settings.";
+  const description = "Choose how gear, shift, and reservation updates reach you. Everything always lands in your in-app inbox.";
 
   if (loading) {
     return (
-      <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-3">
-            <Skeleton className="h-32 w-full rounded-md" />
-            <Skeleton className="h-44 w-full rounded-md" />
+      <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-7">
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-44 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
       </SettingsPageShell>
     );
   }
@@ -160,175 +197,231 @@ export default function NotificationsSettingsPage() {
   if (error || !prefs) {
     return (
       <SettingsPageShell href="/settings/notifications" description={description}>
-            <EmptyState
-              inline
-              icon={error === "network" ? "wifi-off" : "bell"}
-              title={error === "network" ? "You are offline" : "Could not load notifications"}
-              description={error === "network" ? "Could not connect to the server." : "Failed to load your preferences."}
-              actionLabel="Retry"
-              onAction={reload}
-            />
+        <EmptyState
+          inline
+          icon={error === "network" ? "wifi-off" : "bell"}
+          title={error === "network" ? "You are offline" : "Could not load notifications"}
+          description={error === "network" ? "Could not connect to the server." : "Failed to load your preferences."}
+          actionLabel="Retry"
+          onAction={reload}
+        />
       </SettingsPageShell>
     );
   }
 
   const pausedLabel = formatPausedUntil(prefs.pausedUntil);
   const isPaused = !!pausedLabel;
+  const quiet = prefs.quietHours;
+  const groups = GROUP_ORDER
+    .map((group) => ({ group, entries: catalog.filter((entry) => entry.group === group) }))
+    .filter(({ entries }) => entries.length > 0);
 
   return (
-    <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-4">
-        {/* Pause */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BellOff className="size-4" />
-              Quiet hours
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {isPaused ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-muted/40 p-3">
-                <div className="text-sm">
-                  <span className="font-medium">Paused</span>
-                  <span className="text-muted-foreground"> until {pausedLabel}</span>
-                </div>
-                <Button className="h-10" variant="outline" onClick={resumeNow} disabled={saving}>
-                  {saving ? <Spinner /> : "Resume now"}
-                </Button>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground m-0">
-                  Pause email and push delivery for a stretch — useful during
-                  breaks or weekends. The in-app inbox keeps recording everything.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PAUSE_OPTIONS.map((opt) => (
-                    <Button className="h-10"
-                      key={opt.id}
-                      variant="outline"
-                      onClick={() => pauseFor(opt.ms)}
-                      disabled={saving}
-                    >
-                      Pause {opt.label}
-                    </Button>
-                  ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Channels */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Delivery channels</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            <SettingsPrefRow
-              icon={<Mail className="size-4" />}
-              label="Email"
-              description="Off unless you turn it on. Sign-in invites and password resets are always emailed."
-              checked={prefs.channels.email}
-              onChange={(v) => setChannel("email", v)}
-              disabled={saving || isPaused}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Smartphone className="size-4" />}
-              label="Push"
-              description="Send push notifications to the iOS app or an enrolled browser."
-              checked={prefs.channels.push}
-              onChange={(v) => setChannel("push", v)}
-              disabled={saving || isPaused}
-            />
-            <WebPushSettings pushEnabled={prefs.channels.push} disabled={saving || isPaused} />
-            {isPaused && (
-              <p className="text-xs text-muted-foreground pt-2 m-0">
-                Channels are temporarily overridden by your active pause.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Notification types */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notification types</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            <SettingsPrefRow
-              icon={<ShoppingBag className="size-4" />}
-              label="Checkout due reminders"
-              description="Notified before a checkout is due back."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).checkoutDue}
-              onChange={(v) => setCategory("checkoutDue", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<ShoppingBag className="size-4" />}
-              label="Checkout overdue alerts"
-              description="Notified when a checkout is past its due date."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).checkoutOverdue}
-              onChange={(v) => setCategory("checkoutOverdue", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Tag className="size-4" />}
-              label="Reservation updates"
-              description="Confirmation, pickup-ready, and cancellation notices for your reservations."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).reservation}
-              onChange={(v) => setCategory("reservation", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Tag className="size-4" />}
-              label="License expiry reminders"
-              description="Notified when a license you hold is approaching expiry."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).licenseExpiry}
-              onChange={(v) => setCategory("licenseExpiry", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<CalendarClock className="size-4" />}
-              label="Schedule updates"
-              description="Published shift assignments, approvals, removals, and call-time changes."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).schedule}
-              onChange={(v) => setCategory("schedule", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<Repeat2 className="size-4" />}
-              label="Trade updates"
-              description="Claimed, approved, declined, completed, and expired shift trades."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).trade}
-              onChange={(v) => setCategory("trade", v)}
-              disabled={saving}
-            />
-            <div className="border-t border-border my-1" />
-            <SettingsPrefRow
-              icon={<PackageCheck className="size-4" />}
-              label="Gear prep nudges"
-              description="Staff-triggered reminders to reserve or prepare gear for an assigned shift."
-              checked={(prefs.categories ?? DEFAULT_CATEGORIES).gearPrep}
-              onChange={(v) => setCategory("gearPrep", v)}
-              disabled={saving}
-            />
-            <p className="text-xs text-muted-foreground pt-2 m-0">
-              In-app notifications always appear regardless of these toggles.
+    <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-7">
+      <SettingsGroup
+        title="Pause"
+        description="Hold email and push for a while, like over a break."
+      >
+        {isPaused ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+            <p className="m-0 text-sm">
+              <span className="font-bold">Paused</span>
+              <span className="text-muted-foreground"> until {pausedLabel}</span>
             </p>
-          </CardContent>
-        </Card>
+            <Button className="h-10" variant="outline" onClick={resumeNow} disabled={saving}>
+              {saving ? <Spinner /> : "Resume now"}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 px-4 py-3.5">
+            {PAUSE_OPTIONS.map((opt) => (
+              <Button
+                className="h-10"
+                key={opt.id}
+                variant="outline"
+                onClick={() => pauseFor(opt.ms)}
+                disabled={saving}
+              >
+                Pause for {opt.label}
+              </Button>
+            ))}
+          </div>
+        )}
+      </SettingsGroup>
 
-        <p className="text-xs text-muted-foreground m-0">
-          Note: in-app notifications always fire and appear in your{" "}
-          <a href="/notifications" className="underline">notifications inbox</a>.
-        </p>
+      <SettingsGroup
+        title="Where to reach you"
+        footer={isPaused ? "Your pause is overriding these channels for now." : undefined}
+      >
+        <SettingsPrefRow
+          label="Email"
+          description="Off unless you turn it on. Sign-in invites and password resets are always emailed."
+          checked={prefs.channels.email}
+          onChange={(v) => setChannel("email", v)}
+          disabled={saving || isPaused}
+        />
+        <SettingsPrefRow
+          label="Push"
+          description="The iOS app or an enrolled browser."
+          checked={prefs.channels.push}
+          onChange={(v) => setChannel("push", v)}
+          disabled={saving || isPaused}
+        />
+        <WebPushSettings pushEnabled={prefs.channels.push} disabled={saving || isPaused} />
+      </SettingsGroup>
+
+      <SettingsGroup
+        title="Quiet hours"
+        description="On a regular schedule, push arrives silently and email waits."
+      >
+        <SettingsPrefRow
+          label="Quiet hours"
+          description={quiet.enabled ? `${formatClock(quiet.start)} to ${formatClock(quiet.end)}` : "Off"}
+          checked={quiet.enabled}
+          onChange={(v) => setQuiet({ enabled: v })}
+          disabled={saving}
+        />
+        {quiet.enabled ? (
+          <>
+            <SettingsRow label="From" htmlFor="quiet-start">
+              <Input
+                id="quiet-start"
+                name="quietStart"
+                type="time"
+                value={quiet.start}
+                onChange={(e) => e.target.value && setQuiet({ start: e.target.value })}
+                disabled={saving}
+                className="h-10"
+              />
+            </SettingsRow>
+            <SettingsRow label="To" htmlFor="quiet-end">
+              <Input
+                id="quiet-end"
+                name="quietEnd"
+                type="time"
+                value={quiet.end}
+                onChange={(e) => e.target.value && setQuiet({ end: e.target.value })}
+                disabled={saving}
+                className="h-10"
+              />
+            </SettingsRow>
+            <SettingsRow label="Days" description="An overnight window belongs to the day it starts.">
+              <div role="group" aria-label="Quiet hours days" className="flex justify-between gap-1">
+                {DAYS.map((day) => {
+                  const selected = quiet.days.includes(day.index);
+                  return (
+                    <button
+                      key={day.index}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={day.name}
+                      disabled={saving}
+                      onClick={() =>
+                        setQuiet({
+                          days: selected
+                            ? quiet.days.filter((d) => d !== day.index)
+                            : [...quiet.days, day.index].sort(),
+                        })
+                      }
+                      className={cn(
+                        "size-8 rounded-full text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        selected ? "bg-[var(--accent-soft)] text-[var(--blue-text)]" : "bg-muted text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {day.short}
+                    </button>
+                  );
+                })}
+              </div>
+            </SettingsRow>
+            <SettingsPrefRow
+              label="Let urgent alerts through"
+              description="Overdue gear still alerts normally."
+              checked={quiet.allowUrgent}
+              onChange={(v) => setQuiet({ allowUrgent: v })}
+              disabled={saving}
+            />
+          </>
+        ) : null}
+      </SettingsGroup>
+
+      {groups.map(({ group, entries }, index) => (
+        <SettingsGroup
+          key={group}
+          title={NOTIFICATION_GROUP_LABELS[group]}
+          footer={
+            index === groups.length - 1 ? (
+              <>
+                Silent arrives without sound. Off also stops email for that type. Everything still lands in your{" "}
+                <a href="/notifications" className="underline">notifications inbox</a>.
+              </>
+            ) : undefined
+          }
+        >
+          {entries.map((entry) => (
+            <SettingsRow key={entry.id} label={entry.label} description={entry.description}>
+              <LevelPicker
+                label={entry.label}
+                value={prefs.push[entry.id] ?? entry.defaultLevel}
+                onChange={(value) => setLevel(entry.id, value)}
+                disabled={saving}
+              />
+            </SettingsRow>
+          ))}
+          {group === "gear" ? (
+            <SettingsPrefRow
+              label="Badge awards"
+              description="When you earn a badge."
+              checked={prefs.badges}
+              onChange={setBadges}
+              disabled={saving}
+            />
+          ) : null}
+        </SettingsGroup>
+      ))}
     </SettingsPageShell>
+  );
+}
+
+function formatClock(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const date = new Date(2000, 0, 1, h, m);
+  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+/** Off / Silent / Alert, as one segmented control. */
+function LevelPicker({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: PushLevel;
+  onChange: (value: PushLevel) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="grid grid-cols-3 gap-0.5 rounded-lg bg-muted p-0.5">
+      {LEVELS.map((level) => {
+        const active = value === level.id;
+        return (
+          <button
+            key={level.id}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled}
+            onClick={() => !active && onChange(level.id)}
+            className={cn(
+              "min-h-8 rounded-md px-2 text-xs transition-[background-color,box-shadow,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              active ? "bg-card font-bold text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {level.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

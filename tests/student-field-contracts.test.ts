@@ -70,15 +70,14 @@ describe("student field mobile contracts", () => {
   it("keeps the regular web Student dashboard team-visible while iOS Home stays personal", () => {
     const route = source("src/app/api/dashboard/route.ts");
     const statsRoute = source("src/app/api/dashboard/stats/route.ts");
-    const page = source("src/app/(app)/page.tsx");
+    const page = source("src/app/(app)/_home/HomePage.tsx");
 
     expect(route).toContain("const isPersonalOnly = isIosHomeScope || isCollaborator;");
     expect(statsRoute).toContain('const isPersonalOnly = new URL(req.url).searchParams.get("scope") === "ios-home"');
     expect(statsRoute).toContain("|| isCollaborator;");
     expect(statsRoute).not.toContain('user.role === "STUDENT"');
-    expect(page).toContain('className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 md:gap-6"');
-    expect(page).toContain("<TeamActivityColumn");
-    expect(page).not.toContain("{!isStudent && (");
+    expect(page).toContain("crew: slotOf({ data: crew.data ? crewRows(crew.data) : undefined");
+    expect(page).toContain("teamGear: pending(() => ({ rows: gearRows(data!.teamCheckouts.items");
   });
 
   it("keeps iOS booking edits on the optimistic-lock contract", () => {
@@ -275,15 +274,12 @@ describe("student field mobile contracts", () => {
     expect(tradeBoard).toContain(".accessibilityLabel(\"Post trade\")");
     expect(tradeBoard).toContain(".navigationTitle(\"Trade Board\")");
     expect(tradeBoard).toContain("APIClient.shared.scheduleOpenWork(area: areaFilter)");
-    // One "Available to Pick Up" list holds both kinds, soonest first.
-    expect(tradeBoard).toContain('title: "Available to Pick Up"');
+    // One Available list holds both kinds, soonest first.
     expect(tradeBoard).toContain("case trade(ShiftTrade)");
     expect(tradeBoard).toContain("case open(OpenWorkShift)");
-    expect(tradeBoard).toContain("My Posts");
-    expect(tradeBoard).toContain("Waiting or Blocked");
-    expect(tradeBoard).toContain("Text(\"Claim shift\")");
-    expect(tradeBoard).toContain("Text(\"Claim this shift\")");
-    expect(tradeBoard).toContain("Text(\"Cancel post\")");
+    expect(tradeBoard).toContain('case .mine: "Mine"');
+    expect(tradeBoard).toContain('"Claim", "Claiming…"');
+    expect(tradeBoard).toContain('"Cancel post", "Cancelling…"');
     expect(tradeBoard).toContain("Canceling removes the post; the shift stays assigned to you.");
     expect(tradeBoard).toContain("An admin reviews this before you're on the schedule.");
     expect(postTrade).toContain("Text(\"Choose a Shift\")");
@@ -320,20 +316,20 @@ describe("student field mobile contracts", () => {
       detail.indexOf("struct TransferBookingOwnerSheet"),
     );
 
-    expect(detail).toContain("BookingDetailsSection(");
+    expect(detail).toContain("BookingHeroSection(");
     expect(detail).toContain("Label(\"Edit Details\", systemImage: \"pencil\")");
     expect(detail).toContain(".accessibilityLabel(\"Edit booking details\")");
     expect(editor).toContain(".navigationTitle(\"Edit Booking\")");
-    expect(editor).toContain("Gear and pickup details stay read-only on your phone.");
-    expect(editor).toContain('BrandSectionHeader("Booking Name")');
-    expect(editor).toContain('Text("Due back")');
-    expect(editor).toContain("DayTimeChipPicker(");
+    expect(editor).toContain("private var saveBlocker: String?");
+    expect(editor).toContain('TextField("Booking name"');
+    expect(editor).toContain('LabeledContent("Change return")');
+    expect(editor).toContain("ReturnTimeCalendar(");
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).not.toContain("OptionPickerView(");
     expect(editor).not.toContain("TextEditor(");
     expect(apiClient).toContain("let locationId: String?");
     expect(apiClient).toContain("locationId: locationId");
-    expect(detail).toContain('BrandSectionHeader(title: "Gear")');
+    expect(detail).toContain('Text("Gear · ');
     expect(detail).toContain("if canExtendBooking");
     expect(detail).toContain("if canCancelBooking");
     expect(detail).toContain("BookingExtendBar");

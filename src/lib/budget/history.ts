@@ -22,6 +22,7 @@ const FIELDS: { key: string; label: string; format: (value: unknown) => string }
   { key: "orderNumber", label: "Order number", format: text },
   { key: "unplanned", label: "Unplanned", format: (v) => (v ? "yes" : "no") },
   { key: "recurring", label: "Repeats yearly", format: (v) => (v ? "yes" : "no") },
+  { key: "gearPickCycleId", label: "Counts toward UA", format: (v) => (v ? `UA ${String(v)}` : "no") },
   { key: "linkUrl", label: "Link", format: text },
   { key: "justification", label: "Why", format: text },
 ];

@@ -3,11 +3,19 @@ import SwiftUI
 
 struct GearOpsLoginView: View {
     let model: GearOpsModel
+    /// The menu bar extra closes as soon as another app takes focus, which is
+    /// what a password manager's item picker does. Only there does the form
+    /// offer to move into the Status window, which stays open.
+    var isMenuBarExtra = true
 
     @Environment(\.openWindow) private var openWindow
     @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
+    /// The last email that signed in. macOS AutoFill asks for Touch ID per
+    /// field, so starting in the password field makes a return sign-in one
+    /// pick and one approval instead of two. Not a secret; never the password.
+    @AppStorage("GearOps.lastSignInEmail") private var rememberedEmail = ""
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
@@ -44,6 +52,10 @@ struct GearOpsLoginView: View {
                         }
 
                         primaryButton
+
+                        if isMenuBarExtra {
+                            windowFallback
+                        }
                     }
                 }
 
@@ -54,7 +66,10 @@ struct GearOpsLoginView: View {
             .padding(.vertical, 22)
         }
         .frame(width: GearOpsLayout.popoverWidth)
-        .onAppear { focusedField = .email }
+        .onAppear {
+            if email.isEmpty { email = rememberedEmail }
+            focusedField = email.isEmpty ? .email : .password
+        }
         .onDisappear {
             // Menu-bar content can be torn down whenever the popover closes.
             // Never retain a password or a revealed-password state across that
@@ -112,6 +127,17 @@ struct GearOpsLoginView: View {
                 .disabled(authBusy)
             }
         }
+        // macOS AutoFill fills only the field its suggestion was picked in.
+        // A value that arrives whole (a pick or a paste, never typing) moves
+        // on: the email to the password field so its suggestion opens, and a
+        // password with an email present to sign-in.
+        .onChange(of: email) { old, new in
+            if old.isEmpty, new.count > 1, password.isEmpty { focusedField = .password }
+        }
+        .onChange(of: password) { old, new in
+            guard old.isEmpty, new.count > 1, trimmedEmail.contains("@") else { return }
+            DispatchQueue.main.async { submit() }
+        }
     }
 
     private func fieldLabel(_ text: String) -> some View {
@@ -161,6 +187,21 @@ struct GearOpsLoginView: View {
         .contentShape(.rect)
     }
 
+    private var windowFallback: some View {
+        Button {
+            NSApplication.shared.activate()
+            openWindow(id: GearOpsWindow.status)
+        } label: {
+            Text("Using a password manager? Sign in in a window")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help("Opens sign-in in a window that stays open while your password manager fills it")
+    }
+
     private var primaryEnabled: Bool {
         canSubmit
     }
@@ -196,6 +237,7 @@ struct GearOpsLoginView: View {
         showPassword = false
         Task {
             await model.signIn(email: submittedEmail, password: submittedPassword)
+            if model.user != nil { rememberedEmail = submittedEmail }
             if model.user == nil {
                 focusedField = .password
             }

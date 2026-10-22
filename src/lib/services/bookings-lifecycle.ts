@@ -63,6 +63,7 @@ import {
 import { assertBookingSnapshot } from "@/lib/booking-concurrency";
 import { isBookingAllocationConstraintError } from "@/lib/prisma-errors";
 import { unique } from "@/lib/utils";
+import { assertBookingDuration } from "@/lib/time";
 
 type CreateBookingInput = {
   /** Internal kiosk completion receipt, committed atomically with custody. */
@@ -157,6 +158,7 @@ function assertValidBookingWindow(startsAt: Date, endsAt: Date) {
   if (endsAt <= startsAt) {
     throw new HttpError(400, "endsAt must be later than startsAt");
   }
+  assertBookingDuration(startsAt, endsAt);
 }
 
 function assertValidCreateEventLinks(input: CreateBookingInput) {
@@ -645,6 +647,7 @@ export async function createBooking(input: CreateBookingInput) {
               bulkItems: combinedBulkItems,
               excludeBookingId: consolidationTarget.id,
               bookingKind: input.kind,
+              forCollaborator: requester.role === Role.COLLABORATOR,
             });
             if (
               availability.conflicts.length > 0
@@ -771,6 +774,7 @@ export async function createBooking(input: CreateBookingInput) {
             bulkItems: resolvedBulkItems,
             excludeBookingId: input.sourceReservationId,
             bookingKind: input.kind,
+            forCollaborator: requester.role === Role.COLLABORATOR,
           });
 
           if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
@@ -1368,7 +1372,7 @@ export async function createBooking(input: CreateBookingInput) {
       && result.kind === BookingKind.RESERVATION
       && result.shiftAssignment?.source === "RESERVATION"
     ) {
-      await dispatchScheduleAssignmentNotifications(result.shiftAssignment.id, "assigned");
+      await dispatchScheduleAssignmentNotifications(result.shiftAssignment.id, "assigned", { actorUserId: input.createdBy });
     }
 
     return Object.defineProperty(result, "creationDisposition", {
@@ -2074,6 +2078,7 @@ export async function updateReservation(
           bulkItems: remainingBulkItems,
           excludeBookingId: bookingId,
           bookingKind: "RESERVATION",
+          forCollaborator: nextRequester?.role === Role.COLLABORATOR,
         });
 
         if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
@@ -2296,7 +2301,7 @@ export async function updateReservation(
   }
 
   for (const assignmentId of scheduleNotificationAssignmentIds) {
-    await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+    await dispatchScheduleAssignmentNotifications(assignmentId, "assigned", { actorUserId });
   }
   return updated;
 }
@@ -2329,7 +2334,7 @@ export async function updateBookingEvents(
     );
 
     for (const assignmentId of scheduleNotificationAssignmentIds) {
-      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned", { actorUserId });
     }
     return updated;
   } catch (error) {
@@ -3108,7 +3113,7 @@ export async function transferBookingOwner(
     );
 
     for (const assignmentId of scheduleNotificationAssignmentIds) {
-      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned");
+      await dispatchScheduleAssignmentNotifications(assignmentId, "assigned", { actorUserId });
     }
     return updated;
   } catch (error) {
@@ -3148,6 +3153,7 @@ export async function extendBooking(
       if (newEndsAt.getTime() < Date.now()) {
         throw new HttpError(400, "New end date must be in the future");
       }
+      assertBookingDuration(existing.startsAt, newEndsAt);
 
       const serializedAssetIds = existing.serializedItems.map((i) => i.assetId);
       const bulkItems = existing.bulkItems.map((i) => ({

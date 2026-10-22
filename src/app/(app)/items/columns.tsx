@@ -152,10 +152,10 @@ export function statusBadge(asset: Asset) {
   switch (computedStatus) {
     case "AVAILABLE":
       return (
-        <Badge className={STATUS_STYLES.green.badge}>
+        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
           <StatusDot color="green" />
           Available
-        </Badge>
+        </span>
       );
     case "CHECKED_OUT": {
       const isOverdue = activeBooking?.isOverdue;

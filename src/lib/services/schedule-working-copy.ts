@@ -486,7 +486,7 @@ export async function mutateWorkingSchedule(
       )
       : buildWorkingSchedulePayload(group);
     const previousUndoStack = group.workingCopy ? parseHistoryStack(group.workingCopy.undoStack) : [];
-    const defaultWindow = command.type === "adjustSlots" && command.delta === 1
+    const defaultWindow = (command.type === "adjustSlots" && command.delta === 1) || command.type === "setSlotCounts"
       ? await resolveWorkingScheduleDefaultWindow(group, tx)
       : undefined;
 
@@ -761,7 +761,9 @@ export async function mutateWorkingSchedule(
       );
     } catch (error) {
       if (error instanceof Error && error.message === "UNASSIGN_BEFORE_REDUCING") {
-        throw new HttpError(409, "Unassign an open matching slot before reducing this crew count.");
+        throw new HttpError(409, command.type === "setSlotCounts"
+          ? "Some of those slots have people or history. Unassign them, or remove them one at a time, before lowering the count."
+          : "Unassign an open matching slot before reducing this crew count.");
       }
       if (error instanceof Error && error.message === "UNASSIGN_BEFORE_CONVERTING") {
         throw new HttpError(409, "Unassign this person before converting the slot.");

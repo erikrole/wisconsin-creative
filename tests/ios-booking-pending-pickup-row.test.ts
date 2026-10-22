@@ -19,35 +19,29 @@ describe("iOS booking pending-pickup row", () => {
   });
 
   it("derives Pending Pickup only for booked reservations after startsAt", () => {
-    const derivation = row.slice(
-      row.indexOf("private func isPendingPickup"),
-      row.indexOf("private var itemCount"),
+    const derivation = source.slice(
+      source.indexOf("func isWaitingOnPickup"),
+      source.indexOf("private struct BookingListSection"),
     );
 
-    expect(derivation).toContain("booking.kind == .reservation");
-    expect(derivation).toContain("booking.status == .booked");
-    expect(derivation).toContain("booking.startsAt < now");
-    expect(derivation).not.toMatch(/booking\.status\s=(?!=)/);
+    expect(derivation).toContain("kind == .reservation");
+    expect(derivation).toContain("status == .booked");
+    expect(derivation).toContain("startsAt < now");
+    expect(derivation).not.toMatch(/\bstatus\s=(?!=)/);
   });
 
   it("refreshes the whole row presentation on the existing minute cadence", () => {
-    const body = row.slice(
-      row.indexOf("var body: some View"),
-      row.indexOf("private func compactRow"),
-    );
+    const body = row.slice(row.indexOf("var body: some View"), row.indexOf("private var metadata"));
 
     expect(body).toContain("TimelineView(.periodic(from: .now, by: 60))");
-    expect(body).toContain("compactRow(now: context.date)");
-    expect(body).toContain("accessibilityRow(now: context.date)");
-    expect(body).toContain("rowAccessibilityLabel(now: context.date)");
+    expect(body).toContain("timing(now: now)");
+    expect(body).toContain("rowAccessibilityLabel(now: now)");
   });
 
-  it("uses an orange rail and missed-pickup wording without mutating lifecycle state", () => {
-    expect(row).toContain("if isPendingPickup(now: now) { return .orange }");
-    expect(row).toContain(
-      'return ("Pickup was due \\(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))", false)',
-    );
-    expect(row).toContain('parts.append("Pending pickup")');
+  it("groups missed pickups under their own heading with missed-pickup wording, without mutating lifecycle state", () => {
+    expect(source).toContain('title: "Waiting on pickup"');
+    expect(row).toContain('return ("Pickup was due \\(when(booking.startsAt, now: now))", false)');
+    expect(row).toContain('parts.append("Waiting on pickup")');
     expect(row).toContain("parts.append(timing(now: now).text)");
     expect(row).not.toContain('StatusPill(label: "Pending Pickup"');
   });

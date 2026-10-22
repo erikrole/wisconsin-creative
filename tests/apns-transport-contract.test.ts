@@ -66,7 +66,9 @@ describe("APNs transport contract", () => {
     const apns = source("src/lib/push/apns.ts");
     const notifications = source("src/lib/services/notifications.ts");
     expect(apns).toContain('...(opts.sound === false ? {} : { sound: "default" })');
-    expect(notifications).toContain("const presentation = resolvePushPresentation(prefs, opts.category, now);");
+    expect(notifications).toContain("let presentation = resolvePushPresentation(prefs, opts.category, now);");
+    // Staff follow-ups can only be made quieter overnight, never louder.
+    expect(notifications).toContain("const overnight = Boolean(opts.quietOvernight) && presentation.sound && isInQuietHours(OVERNIGHT, now);");
     expect(notifications).toContain("interruptionLevel: presentation.interruptionLevel,");
     expect(notifications).toContain("sound: presentation.sound,");
     // One Notification Center stack per category, and the icon badge tracks

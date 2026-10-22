@@ -11,7 +11,7 @@ import { AREAS, SPORT_GROUPS, defaultShiftConfigs } from "./types";
 import ShiftConfigTable from "./ShiftConfigTable";
 import NonGameScheduleCard from "./NonGameScheduleCard";
 import { SettingsPageShell } from "../SettingsPageShell";
-import { SettingsJumpNav } from "../_components/SettingsJumpNav";
+import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import EmptyState from "@/components/EmptyState";
 import { SportSetupWizard } from "@/components/schedule/SportSetupWizard";
 import type { SportSetupResponse } from "@/lib/services/sport-setup";
@@ -280,21 +280,21 @@ export default function SportsSettingsPage() {
     toast.success("Unsaved staffing changes discarded");
   }
 
-  const description = "Configure default Staff and Student coverage for games and non-game events. Call times apply only to Students.";
+  const description = "Which sports get shifts, and the crew each game needs.";
 
   /* ---------- Loading skeleton ---------- */
   if (loading) {
     return (
-      <SettingsPageShell href="/settings/sports" description={description} mainClassName="flex flex-col gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-md border p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-5 w-10 rounded-full" />
-              </div>
-              <Skeleton className="h-16 w-full" />
+      <SettingsPageShell href="/settings/sports" description={description} mainClassName="flex flex-col gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between rounded-xl border p-4">
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
             </div>
-          ))}
+            <Skeleton className="h-5 w-9 rounded-full" />
+          </div>
+        ))}
       </SettingsPageShell>
     );
   }
@@ -303,67 +303,55 @@ export default function SportsSettingsPage() {
   if (error) {
     return (
       <SettingsPageShell href="/settings/sports" description={description}>
-          <EmptyState
-            inline
-            icon={error === "network" ? "wifi-off" : "calendar"}
-            title={error === "network" ? "You are offline" : "Could not load sports"}
-            description={
-              error === "network"
-                ? "Could not reach the server. Check your connection and try again."
-                : "Something went wrong loading sports configuration."
-            }
-            actionLabel="Retry"
-            onAction={reload}
-          />
+        <EmptyState
+          inline
+          icon={error === "network" ? "wifi-off" : "calendar"}
+          title={error === "network" ? "You are offline" : "Could not load sports"}
+          description={
+            error === "network"
+              ? "Could not reach the server. Check your connection and try again."
+              : "Something went wrong loading sports configuration."
+          }
+          actionLabel="Retry"
+          onAction={reload}
+        />
       </SettingsPageShell>
     );
   }
 
   /* ---------- Normal render ---------- */
   return (
-    <SettingsPageShell href="/settings/sports" description={description}>
-      <div className="flex flex-col gap-4">
-        <SettingsJumpNav
-          items={[
-            { href: "#sport-setup", label: "Auto assign" },
-            { href: "#non-game", label: "Non-game" },
-            { href: "#sports", label: "Sports" },
-          ]}
-        />
-        <div id="sport-setup" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/80 p-3 shadow-xs">
-          <div className="min-w-0">
-            <p className="text-sm font-medium">Auto assign setup</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Step through every sport to set what Auto assign does for it, who it can pick from, and who travels.
-              What you set there is what shows on the cards below.
-            </p>
-          </div>
+    <SettingsPageShell href="/settings/sports" description={description} mainClassName="flex flex-col gap-7">
+      <SettingsGroup id="sport-setup">
+        <SettingsRow
+          label="Auto assign setup"
+          description="Walk through each sport to set what Auto assign does, who it can pick from, and who travels."
+        >
           <Button
-            className="h-10 shrink-0"
+            variant="outline"
+            className="w-full"
             onClick={() => {
               setWizardSportCode(null);
               setWizardOpen(true);
             }}
           >
-            Sport setup wizard
+            Open setup
           </Button>
-        </div>
+        </SettingsRow>
+      </SettingsGroup>
 
-        <SportSetupWizard
-          open={wizardOpen}
-          onOpenChange={setWizardOpen}
-          startAtSportCode={wizardSportCode}
-          onCompleted={() => {
-            reload();
-            reloadSportSetup();
-          }}
-        />
+      <SportSetupWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        startAtSportCode={wizardSportCode}
+        onCompleted={() => {
+          reload();
+          reloadSportSetup();
+        }}
+      />
 
-        <div id="non-game">
-          <NonGameScheduleCard />
-        </div>
-        <div id="sports">
-          <ShiftConfigTable
+      <div id="sports">
+        <ShiftConfigTable
           configs={configs}
           sportSetup={sportSetup ?? null}
           onOpenSetup={(sportCode) => {
@@ -378,7 +366,10 @@ export default function SportsSettingsPage() {
           onSave={saveConfig}
           onDiscard={discardConfig}
         />
-        </div>
+      </div>
+
+      <div id="non-game">
+        <NonGameScheduleCard />
       </div>
     </SettingsPageShell>
   );

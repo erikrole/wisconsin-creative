@@ -4,6 +4,7 @@ vi.mock("next/server", () => ({ after: vi.fn() }));
 
 vi.mock("@/lib/db", () => ({
   db: {
+    $executeRaw: vi.fn(async () => 0),
     user: { findUnique: vi.fn() },
     deviceToken: { findMany: vi.fn(), updateMany: vi.fn() },
     notification: { count: vi.fn() },

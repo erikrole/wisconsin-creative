@@ -58,12 +58,12 @@ describe("Snow Leopard website bug regressions", () => {
 
   it("keeps drafts out of active booking lists and never labels one as pickup", () => {
     const route = source("src/app/api/bookings/route.ts");
-    const home = source("src/app/(app)/dashboard/collaborator-home.tsx");
+    const home = source("src/app/(app)/_home/HomePage.tsx");
     const activeBlock = route.slice(route.indexOf("const ACTIVE_BOOKING_STATUSES"), route.indexOf("const PAST_BOOKING_STATUSES"));
 
     expect(activeBlock).not.toContain("BookingStatus.DRAFT");
-    expect(home).toContain('if (booking.status === "DRAFT")');
-    expect(home).toContain('label: "Draft"');
+    expect(home).toContain('if (b.status === "DRAFT")');
+    expect(home).toContain('due: "Draft"');
   });
 
   it("defers the browser Sentry SDK until page load, idle time, interaction, or navigation", () => {

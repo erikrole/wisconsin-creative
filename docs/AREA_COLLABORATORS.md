@@ -40,6 +40,8 @@ The editable catalog is limited to:
 - `PEOPLE_DIRECTORY_VIEW`
 - `SCHEDULE_FOLLOW`
 - `KIOSK_ROSTER_ELIGIBLE`
+- `TEAM_GEAR_VIEW`
+- `BRAND_ASSETS_VIEW`
 
 Dependencies normalize automatically: reservation creation adds catalog and My Gear; own edit/cancel/extend add My Gear; follow adds published Schedule; kiosk eligibility adds My Gear. Removing a prerequisite removes its dependents.
 
@@ -87,7 +89,7 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 ## Acceptance Criteria
 
 - [x] Database-backed affiliation policies, grants, revisions, BTN backfill, and suspended Learfield seed exist.
-- [x] The ten-key catalog normalizes dependencies and rejects unknown keys.
+- [x] The twelve-key catalog normalizes dependencies and rejects unknown keys.
 - [x] Current policy status and grants govern every authenticated request.
 - [x] Admin APIs and Collaborator Access Settings support create, edit, preview, suspend/reactivate, history, restore, and constrained archive.
 - [x] Invitations, registration, People management, auth payloads, web, iOS, and kiosk use the assigned policy.
@@ -100,6 +102,14 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 - [ ] Authenticated BTN/Learfield People-directory smoke is complete.
 
 ## Change Log
+
+- 2026-10-21: **iOS follows the new grants (source only).** Browse shows Brand assets with `BRAND_ASSETS_VIEW`; My Gear shows the Mine toggle and team-wide bookings with `TEAM_GEAR_VIEW` while edit, extend and cancel stay owner-scoped. Xcode build and on-device proof remain open; the cloud env cannot build iOS.
+
+- 2026-10-21: **Per-item collaborator visibility.** `Asset.collaboratorVisible` (migration `0197`, default true) is a staff/admin switch on the item's Workflow Eligibility card. When off, the item is dropped from collaborator catalog, detail and accessories reads, and a reservation that includes it (directly or through a kit) for a collaborator is rejected with `NOT_AVAILABLE_FOR_COLLABORATORS`. Staff and student flows are unchanged.
+
+- 2026-10-21: **Brand library for collaborators.** New `BRAND_ASSETS_VIEW` grant (no dependencies) opens only the Brand assets tab of Resources: list, view, download and favorite. Guides (including internal SOPs and server paths) and the Contacts list stay internal, and the page hides those tabs for collaborators. Migration `0196` grants it to BTN and Learfield. Announcements stay internal because their audience is not role-filtered.
+
+- 2026-10-21: **Collaborators move closer to student-level read access.** New `TEAM_GEAR_VIEW` grant (depends on catalog and My Gear) lifts the own-bookings-only read limit: Bookings, Checkouts, reservations and the Items list show everyone's activity and the current holder by full name. Reads only; edit, cancel, extend and custody stay owner-scoped, and brand now appears in the catalog. Migration `0195` grants it to BTN and Learfield, per Erik's approval. iOS still pins My Gear to own bookings; native follow-up pending.
 
 - 2026-08-25: **Collaborator read-path recovery is deployed.** Signed Admin role preview, collaborator read surfaces, universal Scoreboard source, and migration `0103` are present in production deployment `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE` from commit `c48dd43d`. Temporary BTN/Learfield account smoke and the full role-preview browser matrix remain separate acceptance gates.
 

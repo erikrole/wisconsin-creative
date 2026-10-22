@@ -6,11 +6,11 @@
 | Package | Version |
 |---|---|
 | `@fontsource/barlow` | `^5.3.0` |
-| `@mdxeditor/editor` | `^4.3.2` |
+| `@mdxeditor/editor` | `^4.3.3` |
 | `@neondatabase/serverless` | `1.2.0` |
 | `@prisma/adapter-neon` | `^6.19.3` |
 | `@prisma/client` | `^6.19.3` |
-| `@sentry/nextjs` | `^10.76.1` |
+| `@sentry/nextjs` | `^10.76.2` |
 | `@simplewebauthn/browser` | `^13.3.0` |
 | `@simplewebauthn/server` | `^13.3.3` |
 | `@tailwindcss/postcss` | `^4.3.3` |
@@ -22,7 +22,7 @@
 | `@upstash/redis` | `^1.38.0` |
 | `@vercel/analytics` | `1.6.1` |
 | `@vercel/blob` | `^2.8.1` |
-| `@vercel/functions` | `3.9.11` |
+| `@vercel/functions` | `3.10.1` |
 | `@vercel/speed-insights` | `2.0.0` |
 | `bcryptjs` | `^3.0.3` |
 | `class-variance-authority` | `^0.7.1` |
@@ -34,9 +34,9 @@
 | `lucide-react` | `^0.577.0` |
 | `motion` | `^12.43.0` |
 | `next` | `^15.5.26` |
-| `postcss` | `^8.5.28` |
+| `postcss` | `^8.5.30` |
 | `qrcode` | `^1.5.4` |
-| `radix-ui` | `^1.7.0` |
+| `radix-ui` | `^1.8.1` |
 | `react` | `^19.3.0` |
 | `react-day-picker` | `^9.14.0` |
 | `react-dom` | `^19.3.0` |
@@ -50,7 +50,7 @@
 | `tw-animate-css` | `^1.4.0` |
 | `vaul` | `^1.1.2` |
 | `web-push` | `^3.6.7` |
-| `workflow` | `4.8.12` |
+| `workflow` | `4.8.13` |
 | `zod` | `^3.24.2` |
 
 ## Dev Dependencies
@@ -125,6 +125,7 @@
 - `prisma:generate`: `prisma generate`
 - `prisma:migrate`: `prisma migrate dev`
 - `release`: `bash scripts/release.sh`
+- `review`: `node scripts/review-pr.mjs`
 - `review:refresh`: `node scripts/refresh-review.mjs`
 - `smoke:collaborator`: `node scripts/collaborator-deploy-smoke.mjs`
 - `smoke:deploy`: `node scripts/deploy-smoke.mjs`

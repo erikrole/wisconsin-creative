@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 104 |
-| App layouts | 15 |
-| API route handlers | 424 |
-| Service files | 111 |
-| Component files | 178 |
-| Test files | 834 |
+| App pages | 112 |
+| App layouts | 31 |
+| API route handlers | 426 |
+| Service files | 113 |
+| Component files | 185 |
+| Test files | 842 |
 
 ## Oversized Source Watchlist
 
@@ -22,26 +22,26 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 3386 |
+| `src/lib/services/bookings-lifecycle.ts` | 3392 |
 | `src/lib/services/signatures.ts` | 2366 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 2013 |
-| `src/lib/services/notifications.ts` | 1978 |
-| `src/lib/services/reports.ts` | 1938 |
-| `src/components/TradeBoard.tsx` | 1853 |
-| `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+| `src/lib/services/notifications.ts` | 2050 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1989 |
+| `src/lib/services/reports.ts` | 1943 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
 | `src/app/(app)/staff/[id]/UserInfoTab.tsx` | 1581 |
-| `src/app/(app)/resources/page.tsx` | 1574 |
-| `src/lib/services/shift-trades.ts` | 1560 |
+| `src/app/(app)/resources/page.tsx` | 1578 |
+| `src/lib/services/shift-trades.ts` | 1567 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
-| `src/components/ActivityTimeline.tsx` | 1387 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1371 |
-| `src/app/(app)/budget/BudgetView.tsx` | 1329 |
-| `src/app/api/assets/route.ts` | 1315 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1398 |
+| `src/components/ActivityTimeline.tsx` | 1388 |
+| `src/app/(app)/budget/BudgetView.tsx` | 1358 |
+| `src/app/api/assets/route.ts` | 1318 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
-| `src/hooks/use-schedule-data.ts` | 1269 |
-| `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
+| `src/hooks/use-schedule-data.ts` | 1270 |
+| `src/app/(app)/settings/app-activity/page.tsx` | 1234 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
+| `src/lib/services/schedule-working-copy.ts` | 1208 |
 
 ## High-Level Data Flow
 

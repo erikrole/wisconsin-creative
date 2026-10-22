@@ -116,6 +116,52 @@ private func returnAccessibilityLabel(
     return parts.joined(separator: ", ")
 }
 
+/// Large figure, quiet unit: "12" then "min left". Sized in one place so the
+/// lock screen and the expanded island set the number identically.
+private struct CountdownFigure: View {
+    let state: CheckoutReturnActivityAttributes.ContentState
+    let now: Date
+    let accent: Color
+    var figure: Font = .system(size: 40, weight: .bold, design: .rounded)
+
+    var body: some View {
+        let parts = state.countdown(at: now)
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(parts.value)
+                .font(figure.monospacedDigit())
+                .foregroundStyle(accent)
+                .contentTransition(.numericText(countsDown: true))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(parts.unit)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+    }
+}
+
+/// A hairline track that drains toward the return time. Decorative: the
+/// countdown beside it already says everything, so it is hidden from
+/// VoiceOver.
+private struct ReturnTrack: View {
+    let fraction: Double
+    let accent: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.14))
+                Capsule()
+                    .fill(accent)
+                    .frame(width: max(4, proxy.size.width * fraction))
+            }
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
+    }
+}
+
 struct CheckoutReturnLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: CheckoutReturnActivityAttributes.self) { context in
@@ -138,13 +184,6 @@ struct CheckoutReturnLiveActivityWidget: Widget {
                         }
                         .accessibilityLabel(context.attributes.bookingTitle)
                     }
-                }
-
-                DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.endsAt, style: .time)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Due at \(context.state.endsAt.formatted(date: .omitted, time: .shortened))")
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
@@ -261,13 +300,15 @@ private struct CheckoutReturnLockScreen: View {
     var body: some View {
         let presentation = presentation
 
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Label {
-                    Text(presentation.headline)
-                        .font(.caption.weight(.semibold))
+                    Text(presentation.headline.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.6)
                 } icon: {
                     Image(systemName: presentation.headerIcon)
+                        .font(.caption2.weight(.bold))
                 }
                 .foregroundStyle(presentation.accent)
 
@@ -275,43 +316,41 @@ private struct CheckoutReturnLockScreen: View {
 
                 if presentation.urgency != .returned {
                     Text("Due \(context.state.endsAt, style: .time)")
-                        .font(.caption.monospacedDigit())
+                        .font(.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
             }
 
             Text(context.attributes.bookingTitle)
                 .font(.headline.weight(.semibold))
-                .lineLimit(2)
+                .lineLimit(1)
 
             if presentation.urgency == .returned {
-                Text("Everything is checked in.")
+                Label("Everything is checked in", systemImage: "checkmark.circle.fill")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(presentation.accent)
             } else {
-                HStack(alignment: .lastTextBaseline, spacing: 10) {
-                    Text(context.state.minuteLabel(at: now))
-                        .font(.system(.title, design: .rounded, weight: .bold).monospacedDigit())
-                        .foregroundStyle(presentation.accent)
-                        .contentTransition(.numericText())
+                CountdownFigure(state: context.state, now: now, accent: presentation.accent)
 
-                    Spacer(minLength: 8)
+                ReturnTrack(
+                    fraction: presentation.isUnconfirmed ? 0 : context.state.remainingFraction(at: now),
+                    accent: presentation.accent
+                )
 
-                    if presentation.isUnconfirmed {
-                        Text("Open Wisconsin to confirm")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    } else if let nextNeedAt = context.state.nextNeedAt {
-                        Label {
-                            Text("Needed again \(nextNeedAt, style: .time)")
-                        } icon: {
-                            Image(systemName: "arrow.forward.circle.fill")
-                        }
+                if presentation.isUnconfirmed {
+                    Text("Open Wisconsin to confirm")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                } else if let nextNeedAt = context.state.nextNeedAt {
+                    Label {
+                        Text("Needed again \(nextNeedAt, style: .time)")
+                    } icon: {
+                        Image(systemName: "arrow.forward.circle.fill")
                     }
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 }
             }
         }
@@ -394,19 +433,29 @@ private struct ExpandedReturnStatus: View {
     var body: some View {
         let presentation = presentation
 
-        HStack(alignment: .center, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             if presentation.urgency == .returned {
                 Label("Everything checked in", systemImage: presentation.headerIcon)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(presentation.accent)
             } else {
-                Text(context.state.minuteLabel(at: now))
-                    .font(.title2.bold().monospacedDigit())
-                    .foregroundStyle(presentation.accent)
-                    .contentTransition(.numericText())
-
-                Spacer(minLength: 8)
-
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    CountdownFigure(
+                        state: context.state,
+                        now: now,
+                        accent: presentation.accent,
+                        figure: .system(size: 30, weight: .bold, design: .rounded)
+                    )
+                    Spacer(minLength: 8)
+                    Text("Due \(context.state.endsAt, style: .time)")
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                ReturnTrack(
+                    fraction: presentation.isUnconfirmed ? 0 : context.state.remainingFraction(at: now),
+                    accent: presentation.accent
+                )
                 if presentation.isUnconfirmed {
                     Text("Open Wisconsin to confirm")
                         .font(.caption.weight(.medium))
@@ -417,14 +466,14 @@ private struct ExpandedReturnStatus: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                } else {
-                    Text("Return by \(context.state.endsAt, style: .time)")
-                        .font(.caption.weight(.medium).monospacedDigit())
-                        .foregroundStyle(.secondary)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        // The island's lower corners are tightly curved; without inset the
+        // first and last glyphs of the bottom line clip against them.
+        .padding(.horizontal, 6)
+        .padding(.bottom, 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(returnAccessibilityLabel(context: context, presentation: presentation, now: now))
     }

@@ -1,3 +1,4 @@
+import { seesTeamGear } from "@/lib/collaborator-access";
 import { BookingCustodyScope, BookingKind, BookingStatus, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -57,8 +58,7 @@ export const GET = withAuth(async (req, { user }) => {
         ? { status: BookingStatus.BOOKED, startsAt: { gte: todayStart, lt: todayEnd } }
         : undefined;
 
-  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
-  const restrictTo = user.role === "COLLABORATOR" && !collaboratorPreview
+  const restrictTo = user.role === "COLLABORATOR" && !seesTeamGear(user)
     ? user.id
     : undefined;
   const result = await listBookings(BookingKind.RESERVATION, searchParams, extraWhere, restrictTo);

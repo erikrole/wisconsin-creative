@@ -1,10 +1,22 @@
 # Preview environments and agent handoffs
 
-Owner: infrastructure. Updated 2026-10-15. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
+Owner: infrastructure. Updated 2026-10-21. Accepted architecture: [D-063](DECISIONS.md#d-063-branch-owned-previews-and-one-automatic-production-build).
 
 ## Current rollout boundary
 
 The review site's Git connection is removed, so a main push no longer starts its duplicate build. Production and review remain online. Main requires a PR and passing `validate` and `postgres-integrity`, with no mandatory human reviewer. As of 2026-10-01 managed previews are live: `MANAGED_PREVIEWS_ENABLED=true`, the hosted workflow reached Ready for PR #410, local `preview:setup` → `dev:preview` → `auth:local` worked from the handed-off state, and native Git preview builds are skipped by the project's Ignored Build Step. Scheduled cleanup (`PREVIEW_CLEANUP_ENABLED`) stays off until a dry run is reviewed.
+
+## Review a pull request in one command
+
+```sh
+npm run review 543
+```
+
+Run it from any checkout. It never edits that checkout's files: it fetches the PR's branch and creates a worktree beside the main checkout at `../<repo>-review/pr-543` (override the parent with `WC_REVIEW_DIR`). It installs with the repository's npm version, starts a dev server on a free loopback port, and opens the browser at the first page the PR changes.
+
+If the PR already has a managed preview database, it attaches to it the same way `preview:setup` does, signs in the hidden smoke admin through `auth:local`, and prints the email and password (on macOS the password is also copied to the clipboard). It never provisions a database: operator keys are removed before setup runs. Without a preview (static tools, docs, `no-preview` PRs, or a missing handoff) it serves DB-free, with no database URL and no outside credentials. Static tools, the sign-in page, and dev-only labs such as `/dev-sidebar` work there; pages that read data error.
+
+Options go after `--`: `npm run review -- 543 --no-db --no-open --port 3200`, and `--branch NAME` when the PR head cannot be matched to one branch. A rerun fast-forwards a clean worktree and skips the install when the lockfile is unchanged. `npm run review -- --remove 543` deletes the worktree and leaves the branch and its preview alone. A branch already checked out in another worktree is reviewed there; a branch checked out in the main checkout is refused.
 
 ## Start or resume a branch
 
@@ -26,6 +38,10 @@ npm run preview:doctor
 The same branch keeps its database, fixtures, session secret, and file stores. Different branches get different resources. A database connection is accepted only after its endpoint, database, branch and signed sanitized-template ancestry agree. Invalid existing state fails closed. Never reset a branch to solve an authentication error.
 
 The server prints its actual loopback URL. Its deterministic port changes when necessary to avoid another checkout; an explicitly requested occupied port fails without killing anything. `auth:local` uses that server's port and cookie name. Changing Git branches stops the old server. `.next/dev` and `.next/build` separate local outputs, with process locks preventing two writers to the same output. Vercel uses its standard `.next` directory. Do not bypass these wrappers with raw Next commands.
+
+## Screenshot and scratch branches
+
+Vercel reads `vercel.json` from the pushed commit, not from `main`. A branch with no `vercel.json` (an orphan screenshot branch such as `claude/*-shots` or `scratch/*-shots`, whose history shares nothing with `main`) ignores `git.deploymentEnabled`, so Vercel still creates a (canceled) deployment for every push. The Neon-Vercel integration creates a `preview/<branch>` Neon branch from that deployment, so these branches kept appearing after #556. Every push to such a branch must carry a copy of `main`'s `vercel.json` at the branch root, or the screenshots must go through a branch that descends from `main`. The orphan branches that existed on 2026-10-21 (`claude/ios-picker-shots`, `claude/project-thread-3gqgw3-shots`, `scratch/trade-board-ios-shots`) need the file added once. `preview/*` branches are idle and negligible in cost, but delete them from the integration page when they appear.
 
 ## Resources and limits
 

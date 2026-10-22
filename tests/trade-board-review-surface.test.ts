@@ -33,12 +33,12 @@ describe("trade board review surface", () => {
 
     expect(web).toContain("const reviewQueue: ReviewQueueItem[] = [");
     expect(web).toContain("].sort((a, b) => a.startsAtMs - b.startsAtMs);");
-    expect(web).toContain("{reviewQueue.map((item) => (");
+    expect(web).toContain("reviewQueue.map((item) =>");
     expect(web).not.toContain("{requestsAwaitingReview.map((request) => {");
     expect(web).not.toContain("{tradesAwaitingReview.map((trade) => {");
 
     expect(sheet).toContain("enum TradeReviewItem: Identifiable");
-    expect(sheet).toContain("ForEach(vm.reviewQueue) { item in");
+    expect(sheet).toContain("return vm.reviewQueue.map { item in");
     expect(sheet).toContain(".sorted { $0.effectiveStartsAt < $1.effectiveStartsAt }");
   });
 
@@ -90,7 +90,7 @@ describe("trade board review surface", () => {
     expect(web).toContain('const requestsAwaitingReview = canReview');
     expect(slot).toContain('{canReviewClaims && (');
     expect(sheet).toContain('var canReview: Bool { currentUserRole == "ADMIN" }');
-    expect(sheet).toContain('if vm.canReview, vm.reviewCount > 0');
+    expect(sheet).toContain('(vm.canReview ? [.review] : []) + [.available, .mine, .history]');
     expect(eventDetail).toContain('private var canReviewClaims: Bool');
     expect(eventDetail).toContain('onApprove: canReviewClaims');
   });
@@ -99,10 +99,10 @@ describe("trade board review surface", () => {
     const web = source("src/components/TradeBoard.tsx");
     const sheet = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
 
-    expect(web).toContain('title="Admin Review"');
-    expect(web).toContain('title="Waiting on Admin"');
-    expect(sheet).toContain('title: "Admin Review"');
-    expect(sheet).toContain('title: "Waiting on Admin"');
+    expect(web).toContain('label: "Review"');
+    expect(web).toContain('"Pending"');
+    expect(sheet).toContain('case .review: "Review"');
+    expect(sheet).toContain('("Waiting on admin", .orange)');
     expect(web).not.toMatch(/staff (review|approval)|waiting on staff/i);
     expect(sheet).not.toMatch(/staff (review|approval)|waiting on staff/i);
   });

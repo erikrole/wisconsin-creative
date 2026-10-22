@@ -11,7 +11,7 @@ describe("Schedule interaction-detail contracts", () => {
 
     expect(page).not.toContain("Assign shifts");
     expect(page).toContain("Add event");
-    expect(page).toContain("onClick={() => setNewEventOpen(true)}");
+    expect(page).toContain("onSelect={() => setNewEventOpen(true)}");
     expect(page).toContain('className="h-10" aria-label="More schedule actions"');
     expect(calendar).toContain("<SchedulePeriodNavigator");
     expect(periodNavigator).toContain('className="size-10 text-muted-foreground"');

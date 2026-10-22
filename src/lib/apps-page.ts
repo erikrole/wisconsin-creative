@@ -22,9 +22,9 @@ export type AppEntry = {
 };
 
 // Written values are the fallback when the App Store or GitHub lookup fails.
-// Checked 2026-10-20:
-// - Wisconsin Creative: iTunes lookup id 6763456945, version 1.2,
-//   currentVersionReleaseDate 2026-09-14T12:29:37Z, minimumOsVersion 26.0.
+// Checked 2026-10-20 (Wisconsin Creative rechecked 2026-10-21):
+// - Wisconsin Creative: iTunes lookup id 6763456945, version 1.3,
+//   currentVersionReleaseDate 2026-10-21T01:59:41Z, minimumOsVersion 26.0.
 //   The blurb is the App Store description's first sentence. Counter checkout
 //   stays on the kiosk.
 // - Offload: release v1.5.3, published Oct 18 Madison; verified release DMG
@@ -44,7 +44,7 @@ export const appEntries: AppEntry[] = [
     statusKind: "live",
     blurb:
       "Connects gear reservations, event and shift schedules, and equipment lookup.",
-    version: "1.2",
+    version: "1.3",
     requires: "iOS 26.0 or later",
     href: "https://apps.apple.com/us/app/wisconsin-creative/id6763456945",
     cta: "View on the App Store",
@@ -242,8 +242,8 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
     .gh .art svg { inset: 16px 16px 0; width: calc(100% - 32px); height: calc(100% - 16px); overflow: hidden; }
     .gh .copy p { color: rgba(255, 247, 238, 0.84); }
 
-    .tl { background: #0b0c0e; color: #f2f2ef; }
-    .tl .copy p { color: #b9b9b3; }
+    .tl { background: #0d0e10; color: #f4f4f2; }
+    .tl .copy p { color: #b5b6b2; }
 
     .bs { background: #0b2a52; color: #eef5ff;
       background-image: linear-gradient(rgba(150,195,255,.11) 1px, transparent 1px), linear-gradient(90deg, rgba(150,195,255,.11) 1px, transparent 1px);
@@ -335,13 +335,15 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
         <a class="tool tl" href="/timelapse">
           <div class="art" aria-hidden="true">
             <svg viewBox="0 0 200 188" preserveAspectRatio="xMidYMid meet">
-              <g fill="none" stroke="#f2f2ef" stroke-opacity=".8" stroke-width="2"><path d="M14 42V22h20M186 42V22h-20M14 150v20h20M186 150v20h-20"/></g>
-              <circle cx="28" cy="36" r="3.5" fill="#ff3b3b"/>
-              <text x="38" y="39.5" fill="#b9b9b3" font-size="9" letter-spacing="1.2">REC · 1 FPS</text>
-              <text x="100" y="76" fill="#ffb224" font-size="9" letter-spacing="2.4" text-anchor="middle">CLIP LENGTH</text>
-              <text x="100" y="122" fill="#f2f2ef" font-size="52" font-weight="800" letter-spacing="-2" text-anchor="middle">20s</text>
-              <g fill="#f2f2ef"><rect x="28" y="146" width="9" height="12" rx="1.5" opacity="0.2"/><rect x="45" y="146" width="9" height="12" rx="1.5" opacity="0.31"/><rect x="62" y="146" width="9" height="12" rx="1.5" opacity="0.43"/><rect x="79" y="146" width="9" height="12" rx="1.5" opacity="0.54"/><rect x="96" y="146" width="9" height="12" rx="1.5" opacity="0.66"/><rect x="113" y="146" width="9" height="12" rx="1.5" opacity="0.77"/><rect x="130" y="146" width="9" height="12" rx="1.5" opacity="0.89"/><rect x="147" y="146" width="9" height="12" rx="1.5" opacity="1.0"/></g>
-              <rect x="166" y="142" width="3" height="20" rx="1.5" fill="#ffb224"/>
+              <g fill="none" stroke="#f4f4f2" stroke-opacity=".7" stroke-width="2"><path d="M14 38V22h16M186 38V22h-16"/></g>
+              <circle cx="66" cy="36" r="3" fill="#ff3b3b"/>
+              <text x="74" y="39.5" fill="#b5b6b2" font-size="9" letter-spacing=".4">FX3 · S&amp;Q · 1 fps</text>
+              <text x="100" y="64" fill="#7f807c" font-size="9" text-anchor="middle">Clip length</text>
+              <text x="100" y="108" fill="#f4f4f2" font-size="48" font-weight="800" letter-spacing="-2" text-anchor="middle">20s</text>
+              <rect x="20" y="130" width="160" height="10" rx="2.5" fill="#f4f4f2" fill-opacity=".1"/>
+              <g stroke="#f4f4f2" stroke-opacity=".45" stroke-width="1"><path d="M24.0 132v6"/><path d="M30.4 132v6"/><path d="M36.8 132v6"/><path d="M43.2 132v6"/><path d="M49.6 132v6"/><path d="M56.0 132v6"/><path d="M62.4 132v6"/><path d="M68.8 132v6"/><path d="M75.2 132v6"/><path d="M81.6 132v6"/><path d="M88.0 132v6"/><path d="M94.4 132v6"/><path d="M100.8 132v6"/><path d="M107.2 132v6"/><path d="M113.6 132v6"/><path d="M120.0 132v6"/><path d="M126.4 132v6"/><path d="M132.8 132v6"/><path d="M139.2 132v6"/><path d="M145.6 132v6"/><path d="M152.0 132v6"/><path d="M158.4 132v6"/><path d="M164.8 132v6"/><path d="M171.2 132v6"/><path d="M177.6 132v6"/></g>
+              <path d="M20 140H180L104 166H96Z" fill="#ff3b3b" fill-opacity=".18"/>
+              <rect x="94" y="166" width="12" height="9" rx="2" fill="#ff3b3b"/>
             </svg>
           </div>
           <div class="copy">
@@ -404,7 +406,7 @@ export function renderAppsPage(nonce?: string, live: LiveVersions = {}) {
           </div>
           <div class="copy">
             <h3>Photo Frame</h3>
-            <p>Drop in a photo and get a clean frame with its camera settings and credit, exported as a full-size PNG.</p>
+            <p>Drop in photos and get clean frames with their camera settings and credit, ready to post or share.</p>
             <span class="go">Open <i>→</i></span>
           </div>
         </a>

@@ -19,7 +19,7 @@
 
 ## Preview handoff
 
-Use [docs/PREVIEW_ENVIRONMENTS.md](docs/PREVIEW_ENVIRONMENTS.md) for the shared Claude/Cursor/Codex branch environment. Run `preview:setup`, `dev:preview`, then `auth:local`; use the printed URL. Do not pull production variables or create a new database for an existing branch.
+Use [docs/PREVIEW_ENVIRONMENTS.md](docs/PREVIEW_ENVIRONMENTS.md) for the shared Claude/Cursor/Codex branch environment. Run `preview:setup`, `dev:preview`, then `auth:local`; use the printed URL. Do not pull production variables or create a new database for an existing branch. For Erik's local review of a PR, give him `npm run review <PR#>` (worktree beside his checkout, existing preview or DB-free, never a new database).
 
 ## Verification routing
 

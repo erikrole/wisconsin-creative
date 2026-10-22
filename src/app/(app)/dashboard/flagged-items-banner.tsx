@@ -265,7 +265,7 @@ export function FlaggedItemsBanner({ items, onChanged }: Props) {
   );
 }
 
-function FlaggedReportDialog({ item, onClose }: { item: FlaggedItem | null; onClose: () => void }) {
+export function FlaggedReportDialog({ item, onClose }: { item: FlaggedItem | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const inMaintenance = item?.assetStatus === "MAINTENANCE";

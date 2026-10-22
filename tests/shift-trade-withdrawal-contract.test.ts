@@ -27,7 +27,8 @@ describe("shift trade and request withdrawal contract", () => {
     expect(apiClient).toContain('request(path: "/api/shift-assignments/\\(id)/withdraw", method: "PATCH")');
     expect(sheet).toContain("func withdrawClaim(id: String) async throws");
     expect(sheet).toContain("func withdrawRequest(id: String) async throws");
-    expect(sheet).toContain("withdrawAction");
+    expect(sheet).toContain('"withdraw-claim:\\(trade.id)"');
+    expect(sheet).toContain('"withdraw-request:\\(request.id)"');
     expect(web).toContain("/api/shift-trades/${trade.id}/withdraw");
     expect(web).toContain("/api/shift-assignments/${request.id}/withdraw");
   });

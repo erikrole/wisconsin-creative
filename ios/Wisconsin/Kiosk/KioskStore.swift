@@ -534,7 +534,9 @@ final class KioskStore {
             while !Task.isCancelled {
                 let interval = await MainActor.run { self?.nextHeartbeatInterval } ?? Self.heartbeatInterval
                 try? await Task.sleep(nanoseconds: interval)
-                guard let self else { return }
+                // Deactivation cancels this task mid-sleep; don't send one more
+                // heartbeat for a kiosk that was just signed out.
+                guard !Task.isCancelled, let self else { return }
                 do {
                     try await KioskAPI.shared.kioskHeartbeat()
                 } catch APIError.unauthorized {

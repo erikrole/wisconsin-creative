@@ -2,6 +2,7 @@ import { GearPickFit, Prisma, Role } from "@prisma/client";
 import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
+import { formatCentsCompact } from "@/lib/budget/contract";
 import { withSerializationRetry } from "@/lib/serialization";
 import {
   defaultAllowanceCents,
@@ -13,14 +14,17 @@ import {
   isItemAllowedForFit,
   type GearPickFitKey,
 } from "@/lib/gear-picks/catalog";
-import { buildOrderPlan } from "@/lib/gear-picks/order";
+import { buildOrderPlan, participantPieces, studentPieces } from "@/lib/gear-picks/order";
+import { pieceKey } from "@/lib/gear-picks/handout";
 import { isGearPickCycleOpen, priceGearPickLines, type GearPickLineInput } from "@/lib/gear-picks/pricing";
 import type {
   GearPickAdminParticipant,
   GearPickAggregateRow,
   GearPickAdminStudent,
   GearPickBudgetDto,
+  GearPickTopUpDto,
   GearPastCycleDto,
+  GearMyKitDto,
   GearPickCycleDto,
   GearPickHandoutDto,
   GearPickReceiptDto,
@@ -362,23 +366,52 @@ export function gearPickBudget(params: {
   picksCents: number;
   studentKitCents: number;
   studentCount: number;
+  topUps?: GearPickTopUpDto[];
 }): GearPickBudgetDto {
+  const topUps = params.topUps ?? [];
+  const topUpCents = topUps.reduce((sum, topUp) => sum + topUp.amountCents, 0);
+  const availableCents = params.budgetCents + topUpCents;
   const studentKitsCents = params.studentKitCents * params.studentCount;
   const committedCents = params.picksCents + studentKitsCents;
   return {
     budgetCents: params.budgetCents,
     confirmed: params.confirmed,
+    topUps,
+    topUpCents,
+    availableCents,
     picksCents: params.picksCents,
     studentKitsCents,
     studentKitCents: params.studentKitCents,
     committedCents,
-    remainingCents: params.budgetCents - committedCents,
+    remainingCents: availableCents - committedCents,
   };
+}
+
+/** Creative budget lines that top up the cycle; a line counts at its planned amount until it's cancelled. */
+async function loadGearPickTopUps(cycleId: string): Promise<GearPickTopUpDto[]> {
+  const lines = await db.budgetLine.findMany({
+    where: { gearPickCycleId: cycleId, status: { not: "CANCELLED" } },
+    select: {
+      id: true,
+      description: true,
+      unitCostCents: true,
+      quantity: true,
+      budget: { select: { id: true, name: true, fiscalYear: true } },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+  return lines.map((line) => ({
+    lineId: line.id,
+    budgetId: line.budget.id,
+    budgetLabel: `${line.budget.name} ${line.budget.fiscalYear}`,
+    description: line.description,
+    amountCents: line.unitCostCents * line.quantity,
+  }));
 }
 
 export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPicksAdminResponse> {
   const cycle = await loadCycleOrThrow(db);
-  const [participants, users, studentRows, studentUsers, receiptRows, handoutRows] = await Promise.all([
+  const [participants, users, studentRows, studentUsers, receiptRows, handoutRows, topUps] = await Promise.all([
     db.gearPickParticipant.findMany({
       where: { cycleId: cycle.id },
       select: {
@@ -434,6 +467,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       where: { cycleId: cycle.id },
       select: { userId: true, sku: true, size: true, source: true, quantity: true, handedOutAt: true },
     }),
+    loadGearPickTopUps(cycle.id),
   ]);
 
   const handouts = handoutRows.map((row) => ({
@@ -500,6 +534,7 @@ export async function getGearPicksAdmin(now: Date = new Date()): Promise<GearPic
       picksCents: committedCents,
       studentKitCents: cycle.studentKitCents,
       studentCount: students.length,
+      topUps,
     }),
     order: {
       placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
@@ -1042,10 +1077,16 @@ export async function archiveCurrentGearCycle(actor: Actor) {
         data: {
           id: data.cycle.id,
           title: data.cycle.title,
-          budgetCents: data.budget.budgetCents,
+          // History keeps one budget number per year: the allotment plus any Creative top-up.
+          budgetCents: data.budget.availableCents,
           budgetedSpendCents: data.budget.committedCents,
           otherSpendCents: 0,
-          note: `Saved from the live year. ${data.budget.confirmed ? "" : "The budget was still a placeholder. "}Student shoes are not included.`.trim(),
+          note: [
+            "Saved from the live year.",
+            data.budget.confirmed ? null : "The budget was still a placeholder.",
+            data.budget.topUpCents > 0 ? `Budget includes ${formatCentsCompact(data.budget.topUpCents)} from the Creative budget.` : null,
+            "Student shoes are not included.",
+          ].filter(Boolean).join(" "),
           items: {
             create: [...items.values()].map((item) => ({
               ...item,
@@ -1066,4 +1107,85 @@ export async function archiveCurrentGearCycle(actor: Actor) {
     }, SERIALIZABLE),
   );
   return { cycleId: data.cycle.id, items: items.size, people: people.length };
+}
+
+/**
+ * The signed-in person's own kit: standard issue, core kit and picks (staff) or the student kit, each
+ * with its handout state. Like the pick list it stays hidden from non-admins until the cycle is launched.
+ */
+export async function getMyGearKit(viewer: Actor): Promise<GearMyKitDto | null> {
+  const [cycle, participant, student, handouts] = await Promise.all([
+    db.gearPickCycle.findUnique({
+      where: { id: GEAR_PICK_CYCLE_ID },
+      select: { title: true, launchedAt: true, orderPlacedAt: true, poNumber: true, orderNumber: true, expectedAt: true },
+    }),
+    db.gearPickParticipant.findUnique({
+      where: { cycleId_userId: { cycleId: GEAR_PICK_CYCLE_ID, userId: viewer.id } },
+      select: {
+        id: true,
+        fit: true,
+        allowanceCents: true,
+        submission: { select: submissionSelect },
+        user: { select: { id: true, name: true, email: true, active: true, topSize: true, shoeSize: true } },
+      },
+    }),
+    db.gearPickStudent.findUnique({
+      where: { cycleId_userId: { cycleId: GEAR_PICK_CYCLE_ID, userId: viewer.id } },
+      select: { id: true, user: { select: { id: true, name: true, active: true, topSize: true, topSizeFit: true, shoeSize: true } } },
+    }),
+    db.gearPickHandout.findMany({
+      where: { cycleId: GEAR_PICK_CYCLE_ID, userId: viewer.id },
+      select: { sku: true, size: true, source: true, handedOutAt: true },
+    }),
+  ]);
+  if (!cycle || !(cycle.launchedAt || isSignedInAdmin(viewer))) return null;
+
+  const pieces = participant
+    ? participantPieces(
+        {
+          id: participant.id,
+          fit: participant.fit,
+          allowanceCents: participant.allowanceCents,
+          user: participant.user,
+          status: participant.submission?.submittedAt ? "SUBMITTED" : "DRAFT",
+          submission: submissionDto(participant.submission),
+        },
+        GEAR_CATALOG.kits,
+      )
+    : student
+      ? studentPieces({
+          id: student.id,
+          user: { id: student.user.id, name: student.user.name, active: student.user.active },
+          topSize: student.user.topSize,
+          topSizeFit: student.user.topSizeFit,
+          shoeSize: student.user.shoeSize,
+          needsSize: !student.user.topSize,
+        })
+      : null;
+  if (!pieces) return null;
+
+  const handedAt = new Map(handouts.map((handout) => [pieceKey(handout.sku, handout.size, handout.source as GearMyKitDto["pieces"][number]["source"]), handout.handedOutAt]));
+  return {
+    cycleTitle: cycle.title,
+    group: participant ? "Staff" : "Student",
+    order: {
+      placedAt: cycle.orderPlacedAt?.toISOString() ?? null,
+      poNumber: cycle.poNumber,
+      orderNumber: cycle.orderNumber,
+      expectedAt: cycle.expectedAt?.toISOString() ?? null,
+    },
+    pieces: pieces.map((piece) => {
+      const at = handedAt.get(pieceKey(piece.sku, piece.size, piece.source)) ?? null;
+      return {
+        sku: piece.sku,
+        itemName: piece.itemName,
+        colorLabel: piece.colorLabel,
+        source: piece.source,
+        size: piece.size,
+        quantity: piece.quantity,
+        handed: at !== null,
+        handedOutAt: at?.toISOString() ?? null,
+      };
+    }),
+  };
 }
