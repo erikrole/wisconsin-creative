@@ -105,6 +105,23 @@ enum AppRuntimeMode {
         case bookingCancel = "booking-cancel"
         /// Item detail with its edit sheet open, against a canned asset.
         case itemEdit = "item-edit"
+        /// Item detail for the Damage and loss states: staff with an open missing
+        /// case, an open damage case, a closed case, the Record outcome sheet
+        /// open, a student with the Report a problem sheet open, and the Items
+        /// list with a missing row. All served from canned payloads.
+        case damageMissing = "damage-missing"
+        case damageDamaged = "damage-damaged"
+        case damageClosed = "damage-closed"
+        case damageRecordOutcome = "damage-record-outcome"
+        case damageReportProblem = "damage-report-problem"
+        case damageItemsMissing = "damage-items-missing"
+        /// The staff Damage and loss queue: open list, closed list, empty, one
+        /// case's detail, and the Record outcome sheet over the queue.
+        case damageQueueOpen = "damage-queue-open"
+        case damageQueueClosed = "damage-queue-closed"
+        case damageQueueEmpty = "damage-queue-empty"
+        case damageQueueDetail = "damage-queue-detail"
+        case damageQueueRecord = "damage-queue-record"
         /// The reservation composer with its QR cover open. A simulator has no
         /// camera, so this captures the permission priming a first-time user
         /// actually meets, not a live viewfinder.
@@ -182,6 +199,11 @@ enum AppRuntimeMode {
         static var bookingEdit: Bool { matches(.bookingEdit) }
         static var bookingCancel: Bool { matches(.bookingCancel) }
         static var itemEdit: Bool { matches(.itemEdit) }
+        static var damageRecordOutcome: Bool { matches(.damageRecordOutcome) }
+        static var damageReportProblem: Bool { matches(.damageReportProblem) }
+        static var damageQueueClosed: Bool { matches(.damageQueueClosed) }
+        static var damageQueueDetail: Bool { matches(.damageQueueDetail) }
+        static var damageQueueRecord: Bool { matches(.damageQueueRecord) }
         static var createBookingScanner: Bool { matches(.createBookingScanner) }
         static var search: Bool { matches(.search) || matches(.searchPartial) }
 
@@ -215,7 +237,9 @@ enum AppRuntimeMode {
              .home, .homeAllClear, .scoreboard, .teamScoreboard, .wrapped, .profile, .staffProfile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
+             .itemEdit, .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome,
+             .damageReportProblem, .damageItemsMissing, .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty,
+             .damageQueueDetail, .damageQueueRecord, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
              .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,

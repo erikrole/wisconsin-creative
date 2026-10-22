@@ -85,6 +85,10 @@ Values: `OPEN`, `COMPLETED`, `CANCELLED`
 
 Values: `DAMAGED`, `LOST`
 
+## Enum `ReportResolution`
+
+Values: `REPAIRED`, `REPLACED`, `WRITTEN_OFF`, `FOUND`, `NO_ISSUE`
+
 ## Enum `BadgeCategory`
 
 Values: `CHECKOUT`, `ON_TIME`, `SCAN`, `SHIFT`, `TRADE`, `STREAK`, `MILESTONE`
@@ -131,7 +135,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 139
+Fields: 140
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -202,6 +206,7 @@ Fields: 139
 - `bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")`
 - `checkinReports                CheckinItemReport[]              @relation("CheckinReports")`
 - `dismissedCheckinReports       CheckinItemReport[]              @relation("CheckinReportDismissals")`
+- `resolvedCheckinReports        CheckinItemReport[]              @relation("CheckinReportResolutions")`
 - `allowedEmailsCreated          AllowedEmail[]                   @relation("AllowedEmailCreator")`
 - `allowedEmailsClaimed          AllowedEmail[]                   @relation("AllowedEmailClaimer")`
 - `licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")`
@@ -2525,10 +2530,10 @@ Indexes and constraints:
 
 ## Model `CheckinItemReport`
 
-Fields: 20
+Fields: 25
 
 - `id             String            @id @default(cuid())`
-- `bookingId      String            @map("booking_id")`
+- `bookingId      String?           @map("booking_id")`
 - `assetId        String?           @map("asset_id")`
 - `bulkSkuUnitId  String?           @map("bulk_sku_unit_id")`
 - `bulkSkuId      String?           @map("bulk_sku_id")`
@@ -2541,12 +2546,17 @@ Fields: 20
 - `lastReportedAt DateTime          @default(now()) @map("last_reported_at")`
 - `dismissedAt    DateTime?         @map("dismissed_at")`
 - `dismissedById  String?           @map("dismissed_by_id")`
-- `booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
+- `resolution     ReportResolution?`
+- `resolvedAt     DateTime?         @map("resolved_at")`
+- `resolvedById   String?           @map("resolved_by_id")`
+- `resolutionNote String?           @map("resolution_note")`
+- `booking     Booking?     @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
 - `asset       Asset?       @relation(fields: [assetId], references: [id], onDelete: Restrict)`
 - `bulkSkuUnit BulkSkuUnit? @relation(fields: [bulkSkuUnitId], references: [id], onDelete: Cascade)`
 - `bulkSku     BulkSku?     @relation(fields: [bulkSkuId], references: [id], onDelete: Cascade)`
 - `reportedBy  User         @relation("CheckinReports", fields: [reportedById], references: [id], onDelete: Restrict)`
 - `dismissedBy User?        @relation("CheckinReportDismissals", fields: [dismissedById], references: [id], onDelete: SetNull)`
+- `resolvedBy  User?        @relation("CheckinReportResolutions", fields: [resolvedById], references: [id], onDelete: SetNull)`
 
 Indexes and constraints:
 
@@ -2556,6 +2566,7 @@ Indexes and constraints:
 - `@@index([bookingId])`
 - `@@index([dismissedAt, lastReportedAt(sort: Desc)])`
 - `@@index([assetId, lastReportedAt(sort: Desc)])`
+- `@@index([resolvedAt])`
 - `@@map("checkin_item_reports")`
 
 ## Model `KioskDevice`

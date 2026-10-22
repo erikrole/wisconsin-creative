@@ -23,6 +23,7 @@ import { useItemChangeSync } from "@/hooks/use-item-change-sync";
 import { parseDetailTab, serializeDetailTab, useUrlState } from "@/hooks/use-url-state";
 import { ItemConditionReports } from "./_components/ItemConditionReports";
 import { ItemHeader } from "./_components/ItemHeader";
+import { ReportProblemDialog } from "./_components/ReportProblemDialog";
 import { ItemPurchasePanel } from "./_components/ItemPurchasePanel";
 import { BulkSkuDetailExperience } from "../../bulk-inventory/[id]/BulkSkuDetailExperience";
 import { BULK_ID_PREFIX } from "../lib/item-href";
@@ -92,6 +93,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [addAnotherOpen, setAddAnotherOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   useItemChangeSync();
   const invalidateItemCatalog = useInvalidateItemCatalog();
 
@@ -263,7 +265,9 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
         onSaveHeaderField={saveHeaderField}
         onAction={handleHeaderAction}
         onImageModalOpen={() => setImageModalOpen(true)}
+        onReportProblem={() => setReportOpen(true)}
       />
+      <ReportProblemDialog assetId={asset.id} assetTag={asset.assetTag} open={reportOpen} onOpenChange={setReportOpen} onReported={loadAsset} />
 
       {/* Tabs — sticky on scroll, horizontally scrollable on mobile */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>

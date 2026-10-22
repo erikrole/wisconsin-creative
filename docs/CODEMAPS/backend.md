@@ -32,7 +32,7 @@
 | `src/lib/services/calendar-sync.ts` | 755 |
 | `src/lib/services/candidate-scoring.ts` | 591 |
 | `src/lib/services/category-mutations.ts` | 168 |
-| `src/lib/services/checkin-item-reports.ts` | 618 |
+| `src/lib/services/checkin-item-reports.ts` | 645 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -42,6 +42,7 @@
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 251 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
+| `src/lib/services/damage-cases.ts` | 364 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
 | `src/lib/services/error-reports.ts` | 530 |
 | `src/lib/services/event-travel.ts` | 32 |
@@ -78,7 +79,7 @@
 | `src/lib/services/notification-deliveries.ts` | 59 |
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
-| `src/lib/services/notifications.ts` | 2047 |
+| `src/lib/services/notifications.ts` | 2050 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
@@ -373,6 +374,7 @@
 - `/api/assets/[id]/image`
 - `/api/assets/[id]/insights`
 - `/api/assets/[id]/maintenance`
+- `/api/assets/[id]/report`
 - `/api/assets/[id]/retire`
 - `/api/assets/[id]`
 - `/api/assets/brands`
@@ -433,6 +435,7 @@
 - `/api/bookings/[id]/extend`
 - `/api/bookings/[id]/force-complete`
 - `/api/bookings/[id]/nudge`
+- `/api/bookings/[id]/reports`
 - `/api/bookings/[id]/reuse-plan`
 - `/api/bookings/[id]`
 - `/api/bookings/[id]/serialized-items/[itemId]/holder`
@@ -548,6 +551,11 @@
 - `/api/cron/notifications`
 - `/api/cron/rehost-images`
 - `/api/cron/youtube-sweep`
+
+### `/api/damage-cases`
+
+- `/api/damage-cases/[id]/resolve`
+- `/api/damage-cases`
 
 ### `/api/dashboard`
 

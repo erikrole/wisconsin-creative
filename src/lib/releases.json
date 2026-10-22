@@ -637,6 +637,25 @@
   },
   {
     "date": "2026-10-21",
+    "title": "Damage and loss, tracked",
+    "type": "feature",
+    "summary": "Report a problem with any item, any time, and staff get one page to follow every damaged or missing item through to an outcome.",
+    "details": [
+      "Report a problem on any item page, on the web or iPhone: say it's damaged or can't be found, with a note and a photo.",
+      "A new Damage and loss page lists every open case with the photo, the note, who had the item, and the checkout, including lost batteries and supplies. Closed cases stay on file. Staff get the same queue on iPhone under Browse, Equipment.",
+      "Staff close a case as repaired, replaced, written off, found, or no issue. Repaired, found and no issue put the item back in service. Replaced and written off retire it.",
+      "An item reported missing, or reported damaged while idle, is held right away so it can't be booked again, and shows as Missing in the catalog. A checked-out or reserved item stays in service until staff review it.",
+      "The dashboard flags stay until a case is closed and link to the new page, and the sidebar shows how many cases are open.",
+      "A checkout now shows what was reported at return and where it stands, to the person it's for and to staff."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 560
+  },
+  {
+    "date": "2026-10-21",
     "title": "Name and area when adding one student",
     "type": "improvement",
     "summary": "The Add users dialog now opens on Add one person and can start a student's profile with their name and primary area.",

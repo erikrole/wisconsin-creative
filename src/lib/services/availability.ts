@@ -367,8 +367,8 @@ export async function checkSerializedTurnaroundRisks(
       message: report.type === "LOST"
         ? "Recent lost report on this item"
         : "Recent damage report on this item",
-      bookingId: report.booking.id,
-      bookingTitle: displayBookingTitle(report.booking.title),
+      bookingId: report.booking?.id,
+      bookingTitle: report.booking ? displayBookingTitle(report.booking.title) : undefined,
       reportType: report.type,
       reportCreatedAt: report.createdAt,
     });
