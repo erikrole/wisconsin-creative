@@ -1039,6 +1039,10 @@ function CompareGroup({
   badges: BadgeGalleryBadge[];
   onSelect: (id: string) => void;
 }) {
+  // Unearned surprises all read "Surprise badge", so they fold into one chip
+  // instead of a row of identical ones.
+  const named = badges.filter((badge) => !badge.mystery);
+  const surprises = badges.length - named.length;
   return (
     <section aria-label={title}>
       <h3 className="text-sm font-bold">
@@ -1048,7 +1052,7 @@ function CompareGroup({
         <p className="mt-1 text-sm text-muted-foreground">None.</p>
       ) : (
         <ul className="mt-2 flex flex-wrap gap-2">
-          {badges.map((badge) => (
+          {named.map((badge) => (
             <li key={badge.id}>
               <button
                 type="button"
@@ -1066,6 +1070,12 @@ function CompareGroup({
               </button>
             </li>
           ))}
+          {surprises > 0 ? (
+            <li className="flex min-h-10 items-center gap-2 rounded-full bg-muted/50 py-1 pl-1 pr-3 text-sm font-bold text-muted-foreground">
+              <BadgeMedallion icon={Sparkles} earned rarity="Rare" className="size-8" iconClassName="size-4" />
+              {surprises === 1 ? "1 surprise badge" : `${surprises} surprise badges`}
+            </li>
+          ) : null}
         </ul>
       )}
     </section>

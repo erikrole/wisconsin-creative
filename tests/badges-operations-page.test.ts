@@ -57,6 +57,7 @@ describe("Badges gallery surface", () => {
     // The weekly strip reads holder rows only, which are already empty for private badges.
     expect(client).toContain("<EarnedThisWeek data={data} filter={filter}");
     expect(client).toContain('badge.mystery ? "a surprise badge" : badge.name');
+    expect(client).toContain('surprises === 1 ? "1 surprise badge" : `${surprises} surprise badges`');
     // Surprises and bloopers have no holder list to link to.
     expect(profileTab).toContain("!isHiddenUntilEarnedBadge(badge.key) && !isPrivateHolderBadge(badge.key)");
     expect(profileTab).toContain("/badges?tab=team&compare=");
