@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import {
   CAPTURE_SELECT,
@@ -118,7 +119,7 @@ export async function buildWrappedRecap(userId: string, now: Date = new Date()):
   const crewIds = [...new Set(games.flatMap((game) => game.crew.map((member) => member.userId)))];
 
   const [avatars, assignments, travelTrips, checkouts, tradesPicked, badges, teamCheckouts, badgesAwarded] = await Promise.all([
-    db.user.findMany({ where: { id: { in: crewIds } }, select: { id: true, avatarUrl: true } }),
+    db.user.findMany({ where: visibleActiveUserWhere({ id: { in: crewIds } }), select: { id: true, avatarUrl: true } }),
     db.shiftAssignment.findMany({
       where: {
         userId,
@@ -194,6 +195,34 @@ export async function buildWrappedRecap(userId: string, now: Date = new Date()):
   };
 }
 
+/** Frozen numbers stay fixed, but identity visibility is checked on every read. */
+async function redactFrozenIdentities(recap: WrappedRecap): Promise<WrappedRecap> {
+  const isSummary = (card: WrappedRecap["cards"][number]) => card.layout === "summary" || card.id === "summary";
+  // Older summaries stored the teammate's name without an identity. Those
+  // rows cannot be checked, even when no other card supplies a user id.
+  const stripLegacy = (cards: WrappedRecap["cards"]) => cards.map((card) => isSummary(card)
+    ? { ...card, items: (card.items ?? []).filter((item) => item.label !== "Top crewmate" || item.userId) }
+    : card);
+  const cards = stripLegacy(recap.cards);
+  const team = stripLegacy(recap.team);
+  const ids = [...new Set([...cards, ...team].flatMap((card) =>
+    (card.items ?? []).flatMap((item) => item.userId ? [item.userId] : []),
+  ))];
+  if (!ids.length) return { ...recap, cards, team };
+  const visible = await db.user.findMany({
+    where: visibleActiveUserWhere({ id: { in: ids } }),
+    select: { id: true },
+  });
+  const allowed = new Set(visible.map((person) => person.id));
+  // A people card repeats names in its heading and sentence, so removing an
+  // item alone would still disclose its identity. Omit the whole affected card.
+  const safeCards = (source: WrappedRecap["cards"]) => source.flatMap((card) => {
+    if (isSummary(card)) return [{ ...card, items: (card.items ?? []).filter((item) => !item.userId || allowed.has(item.userId)) }];
+    return (card.items ?? []).some((item) => item.userId && !allowed.has(item.userId)) ? [] : [card];
+  });
+  return { ...recap, cards: safeCards(cards), team: safeCards(team) };
+}
+
 export type WrappedResponse =
   | { status: "locked"; unlockAt: string }
   | { status: "ready"; preview: boolean; frozen: boolean; recap: WrappedRecap };
@@ -222,7 +251,7 @@ export async function getWrappedRecap(
       select: { version: true, payload: true },
     });
     if (stored && stored.version === WRAPPED_RECAP_VERSION) {
-      return { status: "ready", preview: false, frozen: true, recap: stored.payload as unknown as WrappedRecap };
+      return { status: "ready", preview: false, frozen: true, recap: await redactFrozenIdentities(stored.payload as unknown as WrappedRecap) };
     }
   }
 

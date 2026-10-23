@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-18
+- Last Updated: 2026-10-22
 - Status: Active
 - Version: V1
 
@@ -49,6 +49,20 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. The mobile Items list defaults to the web-backed `Most popular` sort and also offers `Asset tag` through a compact native menu.
 7. The mobile Items list renders serialized assets and item families in the server-provided mixed order; unit-tracked and quantity-tracked families keep the same naming as web rows.
 8. The mobile Items list intentionally avoids desktop-only bulk actions and advanced filter density.
+
+### QR Print helper (2026-10-22, PR #617)
+
+`/labels` builds one canonical, template-ordered sheet from serialized items, item families and custom labels. Printed text remains editable without changing scan identity; numbered families retain the full `{familyQr}-{unitNumber}` code. Invalid/unknown unit picks and failed unit reads block partial output. USB printing and CSV downloads remain separate from deliberately confirming that physical labels were printed and applied (D-022).
+
+The accepted default uses exact 21 px Gotham XNarrow Bold outlines and Medium Small QR cells. Shared preview/USB bitmaps center text and QR independently. Sheet previews are 76 px high with a 152 px inspection dialog; the two-column layout starts at `xl`. Whole-sheet preflight checks glyph support, text fit and an independent decode of each distinct QR before output. Codes that exceed version 1 / M require a wider layout; their identities are never shortened to fit. The accepted 12 mm layout cannot provide the full nominal four-module QR quiet zone.
+
+Direct USB supports the Brother PT-D610BT (`04f9:20e1`) in desktop Chrome/Edge with 12 mm laminated white-on-black media checks. A Web Lock covers connection, printing, recovery and cleanup. New immutable batches, capped at 500 copies, use SDK-verified chain framing. Intermediate receives remain provisional; the final page or separately journaled zero-ink Stop feed settles sent copies atomically. Stop sends no further label content and releases the held tail. Errors never feed or retry automatically; held/in-flight copies require individual physical review. Untagged earlier receipts keep their original transport semantics. One initial leader per normal batch and an additional Stop-release blank remain expected tape costs.
+
+A strict local write-ahead journal and authenticated server checkpoint save before output. Session-derived operator identity, exact per-copy content, UTC attempt/completion times, acknowledgement versus physical review, recovery lineage and matching audit events persist in `LabelPrintJob` (`0202_label_print_jobs`). Idempotent retries and revision fences protect progress; a nullable unique reservation permits one unresolved batch per browser across account changes. Students can print and see their own history; staff/admin can review another operator's interrupted copies without sending or acknowledging on their behalf. Actor snapshots survive account removal. Pending logs save without printing, uncertain copies block recovery, and an explicit child contains only the confirmed remainder. Raw damaged/legacy records remain losslessly archived after physical review; raw inspection is staff-only.
+
+History's first page retains the complete active recovery receipt. UTF-8 envelopes stay below 3.5 MB, and later pages retain every batch without skipping rows or overwriting newer account/recovery state. Batch-size validation reserves outcome space. Receipt downloads retain operator, content, QR, times and lineage. Account-owned browser drafts use cross-tab compare-and-save, conflict/error feedback and non-destructive Undo. CSV export remains secondary, with repaired native merge bindings and its explicit P-touch one-record limitation.
+
+Acceptance: six mixed layouts and four production QR scans passed, with no between-label blanks. Integrated Stop emitted A/B only; reload emitted nothing; explicit Continue emitted C once. Real disposable PostgreSQL, authenticated admin/student APIs, actual browser history/draft restore, source/build/security gates and independent review passed. Migration 0202 is applied and healthy in production (207/207, matching checksum, expected indexes/constraints); the main deployment is Ready and the signed-in page and HTTP checks passed. Exact post-merge health/readback is recorded on [PR #617](https://github.com/erikrole/wisconsin-creative/pull/617) and in the [release evidence](../tasks/archive/proofs/qr-print-2026-10-22/release/README.md). Mid-transfer cable pull and tape-out remain separate physical acceptance gates. The earlier forgotten unlettered test stays unverified; failed probes remain historical evidence. See the [matched/physical review](../tasks/archive/proofs/qr-print-2026-10-22/sdk-integration/review.html) and [owner ledger](../tasks/archive/completed-2026-10-22/qr-print-audit-plan-2026-10-22.md).
 
 ### Inventory Hygiene
 1. Staff/admin opens the "Keep data clean" lane on `/operations` (the old `/items/hygiene` route redirects there).
@@ -372,6 +386,10 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Item is in an in-progress checkout draft (`Checking Out`) and detail header must deep-link correctly.
 
 ## Acceptance Criteria
+- [x] QR Print local default/USB path: shared exact-Gotham bitmap, media checks, safe batch recovery, and one integrated label with user-confirmed centered output and production scan.
+- [x] QR Print local SDK chaining: six mixed layouts, four QR scans, Stop/reload/remaining-only recovery physically accepted; one initial blank per normal batch and a Stop feed blank remain.
+- [x] QR Print local resilience: operator-attributed durable journal/history, exact remaining-only recovery, all six layouts/four QR scans, physical stop and between-job disconnect/reload.
+- [x] QR Print release acceptance: production migration healthy, Ready main deployment, actual admin/student API and browser proof, protected PR/main CI, and signed-in production readback recorded with PR #617; mid-transfer disconnect and tape-out remain separate physical gates.
 - [x] AC-1: Items list supports required filters, search, and baseline columns.
 - [x] AC-2: `tagName` is primary in list and detail for serialized assets.
 - [x] AC-3: Header status line supports the defined labels, colors, and deep links for active reservation, checkout, and draft-checkout states.
@@ -446,6 +464,16 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 5. Preserve audit coverage for every mutation.
 
 ## Change Log
+
+- 2026-10-22 (PR #617): **Direct USB labels and print history.** Exact Gotham/Medium Small previews and chained USB batches, operator-attributed durable history, safe Stop and remaining-only recovery. Physical layout/scan/Stop gates, real PostgreSQL and authenticated admin/student/browser checks passed; production migration, Ready deployment and signed-in readback also pass.
+- 2026-10-22 (local follow-up): Verified SDK chained USB batches remove between-label blank offcuts while preserving provisional copy receipts, explicit Stop feeds, per-copy physical review and exact remaining-only recovery. Added receipt downloads and opt-in USB failure simulation; fixed passive refresh discarding an unsaved completion. Hardware accepted mixed layouts and A/B→Stop→reload→C without duplicates. Migration application/authenticated preview/release remain separate.
+- 2026-10-22 (local follow-up): Durable operator-attributed QR print journal/history, explicit uncertain-output and foreign-operator recovery, remaining-only child batches, unified print ordering and bitmap preflight, account-owned drafts, conflict warnings and non-destructive Undo. Source/database/browser verification is local; migration application and authenticated managed-preview proof remain pending.
+
+- 2026-10-22: **QR Print page refinement (local)** — larger centered previews with an inspection dialog, clearer gear/custom-label controls, product template names and responsive printer/sheet hierarchy. Preview sizing preserves the accepted bitmap and physical output.
+
+- 2026-10-22: **QR Print direct USB (local)** — approved larger Gotham default, shared preview/print bitmap, PT-D610BT media checks, per-label completion, safe stop, and durable recovery. Source, fixture and one integrated physical label pass; authenticated-route and release acceptance remain separate.
+
+- 2026-10-22: **QR Print local audit.** Hardened selection/export recovery, download freshness, native merge bindings, centered frames and measured text fit while preserving Medium Small QR sizing and Gotham. Source and fixture proof remain separate from physical acceptance; direct USB status communication succeeded without P-touch, while the one-record import and final scan/feed/cut gates remain open. Not deployed by this audit.
 
 - 2026-10-18: **Items keyboard and failed lookups stay explicit (local).** Row Enter and Space open the item only when the row itself has focus, so a nested favorite, checkbox, or menu keeps the key. Page arrows and Escape ignore open dialogs, menus, listboxes, and the item-type toggle. Rows per page names its purpose. Cleanup parent search, gap counts, and attachment search say the load failed and offer Try again instead of an empty or complete result. Closing Retire returns focus to the control that opened it. Source tests cover the helpers; authenticated browser proof is still open.
 - 2026-10-18: **iPhone item Activity reads the website History tab.** Staff and admin open Activity on an item. It uses `GET /api/assets/:id/activity` with the same scopes (all activity, item updates, bookings) and cursor pages. A booking row opens that booking. Students and collaborators still do not get `asset.audit`. Previous bookings on the item are unchanged. An Xcode build on a Mac is still required.

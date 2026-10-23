@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS passkey source contract", () => {
   it("uses Apple's platform credential provider for the shared WebAuthn ceremonies", () => {
@@ -31,7 +32,7 @@ describe("iOS passkey source contract", () => {
   });
 
   it("keeps native login, enrollment, and management on the existing API contract", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const session = source("ios/Wisconsin/Core/SessionStore.swift");
     const login = source("ios/Wisconsin/Views/LoginView.swift");
     const security = source("ios/Wisconsin/Views/AccountSecuritySettingsView.swift");

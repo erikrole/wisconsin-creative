@@ -1,0 +1,110 @@
+{
+  "title": "QR Print: journal and safe recovery",
+  "eyebrow": "Wisconsin Creative \u00b7 Local follow-up \u00b7 22 October 2026",
+  "lede": "Record who printed each exact copy and when. Preserve confirmed progress, require physical review for uncertain output, and continue only the remaining labels. Approved Gotham and Medium Small print pixels stay unchanged.",
+  "stats": [
+    {
+      "k": "Local checks",
+      "v": "101 passed",
+      "n": "92 focused tests and 9 real disposable PostgreSQL cases."
+    },
+    {
+      "k": "Print pixels",
+      "v": "Unchanged",
+      "n": "Body and battery preview PNG bytes match the retained baseline exactly."
+    },
+    {
+      "k": "Hardware",
+      "v": "6 of 6",
+      "n": "All six layouts accepted; all four QR samples scan. One blank leader offcut per label."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "One ordered sheet, checked before output",
+      "note": "Matched 1440\u00d71100 staff fixtures from retained before/current source snapshots. The print sheet now scrolls as one surface so larger recovery/history content remains reachable. The development device toolbar is hidden on both sides; fixture data, clock, appearance and scroll inputs match.",
+      "pairs": [
+        {
+          "title": "Approved previews with full-sheet readiness",
+          "before": "before.png",
+          "beforeCap": "Previous helper: device receipts only, no operator history or visible complete-sheet readiness.",
+          "after": "after.png",
+          "afterCap": "Current helper: canonical order, full bitmap/font/QR preflight and a printer/history area within the scrollable sheet.",
+          "beforeEvidence": "before.capture.json",
+          "afterEvidence": "after.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Recovery and history",
+      "note": "After-only failure-state evidence from deterministic local fixtures with simulated USB. These images prove presentation; real PostgreSQL service tests establish persistence/authorization behavior separately.",
+      "shots": [
+        {
+          "title": "Explicit uncertain-copy review",
+          "tag": "After \u00b7 fixture",
+          "image": "partial.png",
+          "cap": "One completed, one uncertain and one unsent. The uncertain copy requires physical review before a remaining-only child batch."
+        },
+        {
+          "title": "Exact operator and copy history",
+          "tag": "After \u00b7 fixture",
+          "image": "history.png",
+          "cap": "History retains the operator, exact text/QR, per-copy completion time and linked continuation."
+        }
+      ]
+    },
+    {
+      "heading": "Actual Brother USB receipts",
+      "note": "Actual Chrome UI and real PT-D610BT acknowledgements, with the Brother app closed. Development fixture API/history is local and identifies its test operator as Dev Staff. Physical acceptance comes from the user\u2019s observations, not these UI screenshots.",
+      "shots": [
+        {
+          "title": "Six layouts completed",
+          "tag": "Hardware acknowledgement",
+          "image": "hardware-six-completed.png",
+          "cap": "Six no-error completions. User confirmed six good labels, all four production QR scans and six blank leader offcuts."
+        },
+        {
+          "title": "Stop after the current label",
+          "tag": "Hardware stop",
+          "image": "hardware-stop.png",
+          "cap": "Stop was requested while label 2 was active. Two completed, four unsent; the user confirmed two printed labels and two blank offcuts."
+        },
+        {
+          "title": "Unplugged and reloaded",
+          "tag": "Hardware disconnect \u00b7 no output",
+          "image": "hardware-disconnect.png",
+          "cap": "After USB unplug and reload: two completed and four unsent, with Continue disabled. Nothing resumed automatically. The test job was then closed without printing its remainder."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Durable operator history",
+      "was": "A browser-local receipt could not establish who printed an exact copy.",
+      "now": "Session-derived operator identity, immutable copy text/QR/unit snapshots and attempt/completion timestamps are retained in a dedicated server journal."
+    },
+    {
+      "h": "Safe recovery",
+      "was": "Partial or uncertain jobs required manual bookkeeping.",
+      "now": "Pending log writes never resend USB. Uncertain copies require explicit physical review; confirmed completed copies are excluded from linked continuations. Revision fencing and one unresolved browser job prevent stale or competing execution."
+    },
+    {
+      "h": "Whole-sheet checks and draft safety",
+      "was": "Display/export/USB ordering and browser draft ownership could diverge.",
+      "now": "One prepared queue drives display, CSV and USB. Whole-batch font/text/QR checks run before output. Account drafts expose save conflicts and provide Undo without dropping later edits."
+    }
+  ],
+  "verification": [
+    "101 tests passed, including real PostgreSQL concurrency, idempotency, audit rollback, authorization, exact recovery lineage and migration checks.",
+    "TypeScript, touched-file ESLint, app build, Prisma validation, migration-prefix check, docs/codemaps and whitespace checks passed. Local Node 24.22; CI Node 22 remains a separate gate.",
+    "Browser recovery checks cover reload, physical review, remaining-only copies, log failure without replay, stale outbox, foreign accounts, corrupt journals, stop, changed media, Undo/conflicts and 1440/1024/768/390 widths; no page errors.",
+    "Approved body and battery PNG data URLs are byte-identical before and after. Necessary independent review found no remaining P1/P2 in the reviewed source."
+  ],
+  "notes": [
+    "Local and uncommitted. Migration 0198 was applied only to a disposable test database, now stopped; no application database or production printed/applied state was changed.",
+    "This branch has no managed preview. Authenticated feature-route proof, application migration and separately authorized release remain open.",
+    "Each label is finalized and cut separately, producing one blank leader offcut. A lower-waste chained-print mode needs separately verified final-feed, stop and completion semantics.",
+    "Physical layout/scan, stop and between-job USB disconnect/reload checks passed. The test job was finished without printing its remaining copies and the pre-test sheet restored. No mid-transfer cable-pull or tape-out proof is claimed."
+  ]
+}

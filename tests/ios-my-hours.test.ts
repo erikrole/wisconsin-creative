@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS profile hours", () => {
   const profile = source("ios/Wisconsin/Views/ProfileView.swift");
   const detail = source("ios/Wisconsin/Views/UserDetailView.swift");
-  const client = source("ios/Wisconsin/Core/APIClient.swift");
+  const client = apiClientSource();
   const route = source("src/app/api/shifts/my-hours/route.ts");
 
   const card = profile.slice(

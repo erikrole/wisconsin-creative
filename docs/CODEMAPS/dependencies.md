@@ -33,7 +33,7 @@
 | `geist` | `^1.7.2` |
 | `lucide-react` | `^0.577.0` |
 | `motion` | `^12.43.0` |
-| `next` | `^15.5.26` |
+| `next` | `^15.5.28` |
 | `postcss` | `^8.5.30` |
 | `qrcode` | `^1.5.4` |
 | `radix-ui` | `^1.8.1` |
@@ -67,7 +67,7 @@
 | `@types/web-push` | `^3.6.4` |
 | `@vitest/coverage-v8` | `^3.2.6` |
 | `eslint` | `^9.39.4` |
-| `eslint-config-next` | `^15.5.26` |
+| `eslint-config-next` | `^15.5.28` |
 | `plist` | `^5.0.0` |
 | `prisma` | `^6.19.3` |
 | `typescript` | `5.9.3` |

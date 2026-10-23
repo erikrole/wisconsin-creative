@@ -66,10 +66,17 @@ struct ItemDetailView: View {
                         if let parent = asset.parentAsset {
                             ParentLinkCard(parent: parent)
                         }
-                        ItemHeroCard(asset: asset, onCopyQR: copyQR)
+                        let nextReservation = asset.upcomingReservations.min(by: { $0.startsAt < $1.startsAt })
+                        // A plain "Available" is a fact about the item, not a
+                        // card of its own: it rides in the hero. Every other
+                        // state keeps its card because it has more to say.
+                        let availableInHero = asset.activeBooking == nil
+                            && asset.computedStatus == .available
+                            && nextReservation == nil
+                        ItemHeroCard(asset: asset, showsAvailable: availableInHero, onCopyQR: copyQR)
                         if let booking = asset.activeBooking {
                             ActiveBookingCard(booking: booking)
-                        } else {
+                        } else if !availableInHero {
                             ItemAvailabilityCard(
                                 status: asset.computedStatus,
                                 missing: asset.missing,
@@ -188,7 +195,7 @@ struct ItemDetailView: View {
         .refreshable { await loadAsset() }
         .sheet(isPresented: $showReport) {
             if let asset {
-                ReportProblemSheet(assetId: asset.id) { message in
+                ItemProblemReportSheet(assetId: asset.id) { message in
                     toast = Toast(message: message, icon: "checkmark.circle.fill", role: .success)
                     Task { await loadAsset() }
                 }
@@ -271,8 +278,7 @@ private struct ReserveButton: View {
     let action: () -> Void
 
     var body: some View {
-        // Matches the scan hero sheet's primary action: solid black
-        // prominent button, so "reserve" reads the same everywhere.
+        // The screen's one primary action, so it takes the one green.
         Button(action: action) {
             Label(title, systemImage: "calendar.badge.plus")
                 .font(.subheadline.weight(.semibold))
@@ -281,7 +287,7 @@ private struct ReserveButton: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .tint(Color.statusText(.purple))
+        .tint(Color.statusText(.green))
         .accessibilityLabel(title)
     }
 }
@@ -434,6 +440,7 @@ struct EditAssetSheet: View {
 
 private struct ItemHeroCard: View {
     let asset: AssetDetail
+    var showsAvailable = false
     let onCopyQR: (String) -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -541,7 +548,19 @@ private struct ItemHeroCard: View {
 
     private var infoBlock: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(heroTitle)
+            Group {
+                if let qr = asset.qrCodeValue, !qr.isEmpty, qr == heroTitle {
+                    Button { onCopyQR(qr) } label: {
+                        Text(heroTitle)
+                            .frame(minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("QR code \(qr), tap to copy")
+                    .accessibilityIdentifier("item-hero-qr-copy")
+                } else {
+                    Text(heroTitle)
+                }
+            }
                 .font(.gothamBlack(size: 26, relativeTo: .title2))
                 .tracking(-0.2)
                 .lineLimit(2)
@@ -549,8 +568,8 @@ private struct ItemHeroCard: View {
 
             if let sub = subtitle {
                 Text(sub)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
 
@@ -559,8 +578,21 @@ private struct ItemHeroCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
+            if showsAvailable {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.statusText(.green))
+                        .frame(width: 8, height: 8)
+                    Text("Available")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .padding(.top, 2)
+                .accessibilityElement(children: .combine)
+            }
+
             // QR sticker code — tap copies the value for the kiosk / relink form.
-            if let qr = asset.qrCodeValue, !qr.isEmpty {
+            // When the code is the title, that title owns the same copy action.
+            if let qr = asset.qrCodeValue, !qr.isEmpty, qr != heroTitle {
                 Button {
                     onCopyQR(qr)
                 } label: {
@@ -1180,7 +1212,7 @@ struct RecordOutcomeSheet: View {
 }
 
 /// Anyone but a collaborator can report a problem from the item page.
-private struct ReportProblemSheet: View {
+private struct ItemProblemReportSheet: View {
     let assetId: String
     let onSent: (String) -> Void
     @Environment(\.dismiss) private var dismiss

@@ -1,0 +1,24 @@
+const { createRequire } = require('node:module');
+const fs = require('node:fs');
+const req = createRequire('/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/package.json');
+const { chromium, expect } = req('@playwright/test');
+const mode = process.argv[2];
+(async () => {
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, locale: 'en-US', timezoneId: 'America/Chicago', colorScheme: 'light', reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  await page.clock.setFixedTime(new Date('2026-10-22T15:00:00Z'));
+  await page.goto('http://127.0.0.1:3145/dev-labels');
+  await page.getByRole('button', { name: 'Add serialized item FB A7 IV 1 to the print sheet', exact: true }).click();
+  await page.getByRole('button', { name: 'Add numbered family Sony NP-FZ100 Battery at Cage to the print sheet', exact: true }).click();
+  await page.getByRole('radio', { name: 'Unit labels', exact: true }).click();
+  await page.getByRole('radio', { name: 'Pick numbers', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Unit numbers of Sony NP-FZ100 Battery to print', exact: true }).fill('37, 999');
+  await expect(page.getByText('No active unit 999', { exact: false }).first()).toBeVisible();
+  await page.evaluate(async () => { await document.fonts.ready; });
+  await page.screenshot({ path: `/private/tmp/qr-print-audit-evidence/${mode}-invalid.png` });
+  const buttons = await page.locator('#print-sheet footer button').evaluateAll(nodes => nodes.map(n => ({ text: n.textContent, disabled: n.disabled })));
+  fs.writeFileSync(`/private/tmp/qr-print-audit-evidence/${mode}-state.json`, JSON.stringify({ buttons, text: await page.locator('#print-sheet').innerText() }, null, 2));
+  await context.close();
+  await browser.close();
+})().catch(err => { console.error(err); process.exitCode = 1; });

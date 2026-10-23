@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS native login recovery flows", () => {
   const source = readFileSync("ios/Wisconsin/Views/LoginView.swift", "utf8");
   const authViews = readFileSync("ios/Wisconsin/Views/NativeAuthViews.swift", "utf8");
-  const apiClient = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+  const apiClient = apiClientSource();
 
   it("presents native registration and recovery screens from login", () => {
     expect(source).not.toContain("SafariServices");

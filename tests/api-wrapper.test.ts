@@ -62,6 +62,21 @@ function makeMalformedJsonRequest() {
 }
 
 describe("withAuth", () => {
+  it.each([
+    ["GET", "/api/dashboard", false], ["POST", "/api/reservations", false],
+    ["GET", "/api/me", true], ["GET", "/api/me/profile-completion", true],
+    ["PATCH", "/api/me/profile-completion", true], ["POST", "/api/auth/logout", true],
+    ["POST", "/api/users/user-1/avatar", true], ["POST", "/api/users/other/avatar", false],
+    ["POST", "/api/auth/passkey/registration/options", true], ["PATCH", "/api/profile", false],
+  ])("requires upfront setup for %s %s (setup exception: %s)", async (method, path, allowed) => {
+    vi.mocked(requireAuth).mockResolvedValue({ ...mockUser, onboardingRequired: true });
+    const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
+    const response = await withAuth(handler)(makeRequestAt(path, method, { origin: "https://app.example.com" }), { params: Promise.resolve({}) });
+    expect(response.status).toBe(allowed ? 200 : 403);
+    expect(handler).toHaveBeenCalledTimes(allowed ? 1 : 0);
+    if (!allowed) expect(await response.json()).toMatchObject({ code: "ONBOARDING_REQUIRED" });
+  });
+
   it("calls handler with authenticated user", async () => {
     const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
     const wrapped = withAuth(handler);

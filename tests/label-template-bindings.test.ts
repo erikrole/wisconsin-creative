@@ -41,4 +41,52 @@ describe("P-touch templates", () => {
       for (const field of bound) expect(provided, `${kind.template} binds ${field}`).toContain(field);
     }
   });
+
+  it("binds every printable text and QR object to the intended merge field", () => {
+    const expected = {
+      body: { text: "Label", barcode: "Codes" },
+      lens: { text: "Label", barcode: "Codes" },
+      sd: { text: "F5" },
+      text: { text: "Label" },
+      numberTag: { text: "Number", barcode: "Codes" },
+      battery: { text: "item_number", barcode: "qr_code" },
+    };
+    for (const [kind, fields] of Object.entries(expected)) {
+      const template = LABEL_KINDS[kind as keyof typeof LABEL_KINDS];
+      const xml = readZipEntry(readFileSync(`${dir}/${template.template}`), "label.xml");
+      for (const [type, field] of Object.entries(fields)) {
+        const objects = [...xml.matchAll(new RegExp(`<${type}:${type}>([\\s\\S]*?)</${type}:${type}>`, "g"))];
+        expect(objects.length, `${template.template}: ${type} objects`).toBeGreaterThan(0);
+        for (const object of objects) expect(object[1], `${template.template}: ${type} merge`).toContain(`dbMergeFieldStyleName="${field}"`);
+        expect(xml).toContain(`fieldName="${field}"`);
+      }
+      expect(xml).toContain(`databasePath="${template.file}"`);
+      expect(xml).toContain(`mergeTable="${template.file}"`);
+      expect(xml).toContain('currentRecord="0"');
+    }
+  });
+
+  it("centers every frame, separates the text and QR, and uses Medium Small QR cells", () => {
+    const attributes = (tag: string) => Object.fromEntries([...tag.matchAll(/([\w]+)="([^"]*)"/g)].map((m) => [m[1], m[2]]));
+    for (const kind of Object.values(LABEL_KINDS)) {
+      const xml = readZipEntry(readFileSync(`${dir}/${kind.template}`), "label.xml");
+      const paper = attributes(xml.match(/<style:paper\b[^>]*>/)![0]);
+      const frames = [...xml.matchAll(/<pt:objectStyle\b[^>]*>/g)].map((m) => attributes(m[0]));
+      const width = parseFloat(paper.width!);
+      for (const frame of frames) {
+        expect(parseFloat(frame.y!) + parseFloat(frame.height!) / 2, kind.template).toBeCloseTo(width / 2);
+      }
+      frames.sort((a, b) => parseFloat(a.x!) - parseFloat(b.x!));
+      for (let i = 1; i < frames.length; i += 1) {
+        expect(parseFloat(frames[i]!.x!) - parseFloat(frames[i - 1]!.x!) - parseFloat(frames[i - 1]!.width!), kind.template).toBeGreaterThanOrEqual(6);
+      }
+      const last = frames.at(-1)!;
+      const end = parseFloat(last.x!) + parseFloat(last.width!);
+      const trailing = paper.autoLength === "true" ? parseFloat(paper.marginBottom!) : parseFloat(paper.height!) - end;
+      expect(parseFloat(frames[0]!.x!), `${kind.template}: equal outer margins`).toBeCloseTo(trailing);
+      for (const qr of xml.matchAll(/<barcode:qrcodeStyle\b[^>]*>/g)) {
+        expect(attributes(qr[0]).cellSize, kind.template).toBe("1.2pt");
+      }
+    }
+  });
 });

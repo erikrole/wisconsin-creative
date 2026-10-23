@@ -1,0 +1,26 @@
+Browser tab: 1047086659, Title: "Wisconsin Creative", URL: "http://127.0.0.1:3145/dev-labels?device-proof=1".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 204-205
++				212 container
++					213 button (expanded) Review this batch, Secondary Actions: Collapse
++						214 text Review this batch
++					215 content list
++						216 container
++							217 AXListMarker 1. 
++							218 text TEST FX3 1 Printer completed · Oct 22, 2026, 1:35 PM QR:  c62a82d7
++						219 container
++							220 AXListMarker 2. 
++							221 text TEST 100-400 1 Printer completed · Oct 22, 2026, 1:35 PM QR:  c62a82d7
++						222 container
++							223 AXListMarker 3. 
++							224 text TEST FX3 1A Not sent
++						225 container
++							226 AXListMarker 4. 
++							227 text USB TEST Not sent
++						228 container
++							229 AXListMarker 5. 
++							230 text 1 Not sent QR:  c62a82d7
++						231 container
++							232 AXListMarker 6. 
++							233 text 1 Not sent QR:  c62a82d7
+The focused UI element is 213 button (expanded) Review this batch, Secondary Actions: Collapse

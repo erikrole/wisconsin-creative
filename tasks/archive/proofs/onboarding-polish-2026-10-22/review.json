@@ -1,0 +1,61 @@
+{
+  "title": "A warmer welcome",
+  "eyebrow": "Wisconsin Creative \u00b7 native onboarding",
+  "lede": "More character and a clearer next step across phone, Wiscard, student details, apparel and photo.",
+  "sections": [
+    {
+      "heading": "Same flow, refreshed presentation",
+      "note": "Matched source snapshot, fixture, 440\u00d7956pt device, appearance, text size and scroll.",
+      "pairs": [
+        {
+          "title": "First contact detail",
+          "before": "phones-before.png",
+          "after": "phones-after.png",
+          "beforeEvidence": "phones-before.capture.json",
+          "afterEvidence": "phones-after.capture.json",
+          "beforeCap": "Compact header, generic typography and small footer action.",
+          "afterCap": "Wisconsin identity, clear step rhythm, stronger title and a wider Continue action."
+        },
+        {
+          "title": "Team apparel",
+          "before": "apparel-before.png",
+          "after": "apparel-after.png",
+          "beforeEvidence": "apparel-before.capture.json",
+          "afterEvidence": "apparel-after.capture.json",
+          "beforeCap": "Compact header, generic typography and small footer action.",
+          "afterCap": "Wisconsin identity, clear step rhythm, stronger title and a wider Continue action."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A recognisable Wisconsin welcome",
+      "was": "The wizard opened with a small generic heading.",
+      "now": "The Motion W, Gotham heading and restrained red accents connect Welcome to the app."
+    },
+    {
+      "h": "A clearer rhythm",
+      "was": "Progress and action controls were visually small.",
+      "now": "Segmented progress names the current step; larger fields and Back/Continue controls create an obvious path forward."
+    },
+    {
+      "h": "Native behavior preserved",
+      "was": "The existing flow owns validation, focus, saves and required steps.",
+      "now": "Those rules stay intact, including sheet choices, numeric entry, Back, and optional photo completion."
+    }
+  ],
+  "verification": [
+    "Wisconsin build on iPhone 18 Pro Max / iOS 27.0: passed.",
+    "Native tests: 251 passed; source/API contracts: 821 passed; broader backend cases: 135 passed.",
+    "Simulator UI: 7 passed (full required student walkthrough, accessibility-size selections, and all five review regression paths).",
+    "TypeScript, touched-file ESLint (111 files), build:app, generated project membership, docs/codemaps, and audit inventory (82/82): passed.",
+    "Independent backend and native reviews: no actionable regressions.",
+    "Light and dark appearance inspected. Accessibility text retains a scrolling form and growing controls; decorative step artwork is omitted at accessibility sizes."
+  ],
+  "notes": [
+    "Dark and large-text evidence are after-only: apparel-dark.png and apparel-large.png. Other final steps: wiscard-after.png, student-after.png and photo-after.png.",
+    "The current required-onboarding native source came from a preserved dirty-root snapshot. The visual refinement changes only the two Welcome view files; DEBUG fixtures are local proof inputs.",
+    "No server account was created. Authenticated invitation/onboarding rollout and physical photo-picker acceptance remain separate gates."
+  ]
+}

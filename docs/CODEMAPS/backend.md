@@ -12,17 +12,22 @@
 | `src/lib/services/auto-fill-preview.ts` | 322 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
 | `src/lib/services/availability.ts` | 700 |
+| `src/lib/services/badge-report.ts` | 140 |
 | `src/lib/services/battery-low-stock.ts` | 89 |
 | `src/lib/services/blast-targeting.ts` | 166 |
 | `src/lib/services/blasts.ts` | 360 |
+| `src/lib/services/booking-create.ts` | 1095 |
 | `src/lib/services/booking-custody.ts` | 82 |
+| `src/lib/services/booking-event-links.ts` | 273 |
 | `src/lib/services/booking-item-holder.ts` | 194 |
+| `src/lib/services/booking-notifications.ts` | 191 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 743 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle.ts` | 3409 |
+| `src/lib/services/bookings-lifecycle-shared.ts` | 295 |
+| `src/lib/services/bookings-lifecycle.ts` | 19 |
 | `src/lib/services/bookings-queries.ts` | 322 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/budget.ts` | 950 |
@@ -35,7 +40,10 @@
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 645 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
+| `src/lib/services/checkout-escalation-notifications.ts` | 507 |
+| `src/lib/services/checkout-lifecycle.ts` | 811 |
 | `src/lib/services/checkout-policies.ts` | 40 |
+| `src/lib/services/checkout-reports.ts` | 375 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
 | `src/lib/services/collaborator-schedule.ts` | 228 |
@@ -54,6 +62,7 @@
 | `src/lib/services/gear-handover-notify.ts` | 97 |
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
+| `src/lib/services/inventory-loss-reports.ts` | 618 |
 | `src/lib/services/invite-email.ts` | 82 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
@@ -74,24 +83,29 @@
 | `src/lib/services/kit-list-availability.ts` | 35 |
 | `src/lib/services/kit-member-availability.ts` | 97 |
 | `src/lib/services/kits.ts` | 836 |
+| `src/lib/services/label-print-jobs.ts` | 102 |
 | `src/lib/services/licenses.ts` | 684 |
 | `src/lib/services/live-activities.ts` | 630 |
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
+| `src/lib/services/notification-delivery.ts` | 247 |
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
-| `src/lib/services/notifications.ts` | 2051 |
+| `src/lib/services/notifications.ts` | 28 |
 | `src/lib/services/onboarding-lifecycle.ts` | 546 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
-| `src/lib/services/reports.ts` | 1943 |
+| `src/lib/services/report-shared.ts` | 60 |
+| `src/lib/services/reports.ts` | 24 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
+| `src/lib/services/reservation-lifecycle.ts` | 1046 |
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
 | `src/lib/services/reservation-rules.ts` | 46 |
 | `src/lib/services/reservation-schedule.ts` | 461 |
+| `src/lib/services/scan-audit-reports.ts` | 350 |
 | `src/lib/services/scans.ts` | 168 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 470 |
@@ -107,10 +121,16 @@
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
+| `src/lib/services/shift-notifications.ts` | 1144 |
 | `src/lib/services/shift-trade-emails.ts` | 70 |
 | `src/lib/services/shift-trades.ts` | 1567 |
 | `src/lib/services/sidebar-prefs.ts` | 36 |
-| `src/lib/services/signatures.ts` | 2366 |
+| `src/lib/services/signature-artifacts.ts` | 212 |
+| `src/lib/services/signature-captures.ts` | 278 |
+| `src/lib/services/signature-collections.ts` | 494 |
+| `src/lib/services/signature-roster.ts` | 1090 |
+| `src/lib/services/signatures-shared.ts` | 418 |
+| `src/lib/services/signatures.ts` | 31 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
 | `src/lib/services/sport-configs.ts` | 263 |
@@ -121,8 +141,9 @@
 | `src/lib/services/trade-post-notifications.ts` | 115 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 589 |
+| `src/lib/services/utilization-report.ts` | 444 |
 | `src/lib/services/wishlist.ts` | 193 |
-| `src/lib/services/wrapped.ts` | 249 |
+| `src/lib/services/wrapped.ts` | 278 |
 
 ## Key Library Files
 
@@ -133,7 +154,7 @@
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 154 |
+| `src/lib/api.ts` | 169 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -147,9 +168,11 @@
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
-| `src/lib/auth.ts` | 455 |
+| `src/lib/auth.ts` | 460 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 345 |
+| `src/lib/avatar-image.ts` | 17 |
+| `src/lib/avatar-upload.ts` | 46 |
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 175 |
 | `src/lib/bhphoto-image.ts` | 67 |
@@ -162,7 +185,10 @@
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 229 |
-| `src/lib/brother-label-csv.ts` | 170 |
+| `src/lib/brother-chain.ts` | 71 |
+| `src/lib/brother-label-csv.ts` | 185 |
+| `src/lib/brother-label-render.ts` | 133 |
+| `src/lib/brother-usb.ts` | 180 |
 | `src/lib/bulk-batteries.ts` | 80 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 221 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
@@ -222,6 +248,10 @@
 | `src/lib/kiosk-activation.ts` | 8 |
 | `src/lib/kiosk-heartbeat-cache.ts` | 165 |
 | `src/lib/kiosk-staff-token.ts` | 79 |
+| `src/lib/label-print-client.ts` | 20 |
+| `src/lib/label-print-controller.ts` | 199 |
+| `src/lib/label-print-job.ts` | 188 |
+| `src/lib/label-print-storage.ts` | 53 |
 | `src/lib/license-dates.ts` | 56 |
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
@@ -232,16 +262,19 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/notification-meta.ts` | 121 |
 | `src/lib/observability.ts` | 19 |
+| `src/lib/onboarding-save.ts` | 48 |
+| `src/lib/onboarding-versions.ts` | 12 |
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
 | `src/lib/passkey-client.ts` | 126 |
-| `src/lib/passkey.ts` | 388 |
+| `src/lib/passkey.ts` | 390 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 281 |
+| `src/lib/permissions.ts` | 286 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
+| `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 222 |
+| `src/lib/profile-completion.ts` | 236 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
@@ -319,7 +352,7 @@
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |
-| `src/lib/user-list-cache.ts` | 73 |
+| `src/lib/user-list-cache.ts` | 91 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
 | `src/lib/validation.ts` | 883 |
@@ -694,6 +727,11 @@
 - `/api/kits/[id]/members`
 - `/api/kits/[id]`
 - `/api/kits`
+
+### `/api/labels`
+
+- `/api/labels/print-jobs/[id]`
+- `/api/labels/print-jobs`
 
 ### `/api/licenses`
 

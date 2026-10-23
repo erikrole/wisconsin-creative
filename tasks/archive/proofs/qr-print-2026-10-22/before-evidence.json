@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "3cf4a1f302b3a1e1276dbb50394daf7aed86ad20",
+  "sourcePatchSha256": "7b49ab98d0f4475cf41913be8e74dcfb60d4a46ba4b13a02eba99b70da2e5361",
+  "settings": {
+    "device": "Chrome, Playwright channel chrome, headless; reduced motion enabled",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "fixture": "dev-labels: FB A7 IV 1 + Sony NP-FZ100, pick 37 and 999, baseline 3cf4a1f302b3a1e1276dbb50394daf7aed86ad20",
+    "role": "ADMIN fixture",
+    "route": "/dev-labels",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-22T15:00:00Z fixed",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "a4755dd11cdc9f9ac7015cb931c0d458f3a664009e9f86c2e9be8f4af59131f8",
+  "dimensions": [
+    1440,
+    1100
+  ]
+}

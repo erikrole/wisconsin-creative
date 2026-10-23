@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "f705184d0ccbf53f3a9f31551e00ba6dcb7d5726",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "iPhone 18 Pro Max / iOS 27.0 / 795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "wrapped DEBUG fixture",
+    "role": "STAFF",
+    "route": "wrapped/crew-card-4",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en_US",
+    "timezone": "America/Chicago",
+    "clock": "9:41 status override",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "7a6eb40e7917b1e14406d7d4568083e66506f02c9bb79e8c56cf1e1048eda512",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

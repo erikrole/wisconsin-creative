@@ -1,6 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { installUsbSimulation, UsbSimulationControls } from "./UsbSimulation";
+import { applyPrintCommand, newPrintJob, remainingLabels, type PrintJob } from "@/lib/label-print-job";
+import { Button } from "@/components/ui/button";
+import { Suspense, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import LabelsHelper from "@/app/(app)/labels/LabelsHelper";
@@ -44,12 +47,40 @@ function installFetchMock() {
   window.fetch = async (input, init) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.origin);
     const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
-    if (url.pathname === "/api/me") {
-      return json({ user: { id: "dev", name: "Dev Staff", email: "staff@creative.local", role: "STAFF" } });
+    const demoUser = JSON.parse(localStorage.getItem("dev-labels-actor") ?? "null") ?? { id: "dev", name: "Dev Staff", email: "staff@creative.local", role: "STAFF" };
+    if (url.pathname === "/api/me") return json({ user: demoUser });
+    if (url.pathname.startsWith("/api/labels/print-jobs")) {
+      const key = "dev-labels-print-history-v1";
+      const jobs = JSON.parse(localStorage.getItem(key) ?? "[]") as PrintJob[];
+      const actor = { id: demoUser.id as string, name: demoUser.name as string };
+      const now = new Date().toISOString();
+      const save = (job: PrintJob) => { const i = jobs.findIndex((entry) => entry.id === job.id); if (i < 0) jobs.unshift(job); else jobs[i] = job; localStorage.setItem(key, JSON.stringify(jobs)); return json({ data: job }); };
+      if (init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+        const existing = jobs.find((job) => job.id === body.id); if (existing) return json({ data: existing });
+        if (body.parentId) { const parent = jobs.find((job) => job.id === body.parentId)!; if (!parent || parent.activeIndex !== null || parent.revision !== body.parentRevision || JSON.stringify(remainingLabels(parent)) !== JSON.stringify(body.labels)) return new Response("Conflict", { status: 409 }); jobs[jobs.indexOf(parent)] = applyPrintCommand(parent, { type: "review" }, actor, now); }
+        if (jobs.some((job) => job.browserId === body.browserId && job.state !== "reviewed")) return new Response("Conflict", { status: 409 });
+        return save(newPrintJob(body, actor, now));
+      }
+      if (!init?.method && /^\/api\/labels\/print-jobs\/[a-f0-9-]+$/.test(url.pathname)) { const job = jobs.find((job) => job.id === url.pathname.split("/").pop()); return job ? json({ data: job }) : new Response(JSON.stringify({ error: "Print batch not found" }), { status: 404, headers: { "Content-Type": "application/json" } }); }
+      if (init?.method === "PATCH") {
+        const job = jobs.find((entry) => entry.id === url.pathname.split("/").pop()), body = JSON.parse(String(init.body));
+        const requests = JSON.parse(localStorage.getItem("dev-labels-print-requests-v1") ?? "{}") as Record<string, string>;
+        if (requests[body.requestId] === JSON.stringify(body)) return json({ data: job });
+        if (!job || job.revision !== body.revision) return new Response("Conflict", { status: 409 });
+        requests[body.requestId] = JSON.stringify(body); localStorage.setItem("dev-labels-print-requests-v1", JSON.stringify(requests));
+        return save(applyPrintCommand(job, body.command, actor, now));
+      }
+      const active = jobs.find((job) => job.browserId === url.searchParams.get("browserId") && job.state !== "reviewed");
+      const staff = ["STAFF", "ADMIN"].includes(demoUser.role);
+      return json({ data: { jobs: jobs.filter((job) => staff || job.actor.id === actor.id), nextCursor: null, active: active && (staff || active.actor.id === actor.id) ? active : null, blockedByOtherOperator: Boolean(active && !staff && active.actor.id !== actor.id) } });
     }
     if (url.pathname === "/api/assets") {
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
-      const data = ASSETS.filter((a) => !q || `${a.assetTag} ${a.brand} ${a.model}`.toLowerCase().includes(q));
+      // Opt-in real identity for a bounded physical printer check; all APIs remain mocked.
+      const deviceProof = new URLSearchParams(window.location.search).get("device-proof") === "1"
+        ? [asset("a-c62a82d7", "FB FX3 1", "Sony", "FX3", "Camera Bodies")] : [];
+      const data = [...ASSETS, ...deviceProof].filter((a) => !q || `${a.assetTag} ${a.brand} ${a.model}`.toLowerCase().includes(q));
       const bulkItems = FAMILIES.filter((f) => !q || f.name.toLowerCase().includes(q));
       return json({ data, bulkItems, total: data.length + bulkItems.length });
     }
@@ -68,14 +99,34 @@ function installFetchMock() {
 }
 
 export default function LabelsLab() {
+  const [deviceCheck, setDeviceCheck] = useState(false), [checkMessage, setCheckMessage] = useState("");
+  useEffect(() => { setDeviceCheck(new URLSearchParams(location.search).get("device-proof") === "1"); }, []);
+  const loadDeviceCheck = (restore = false, letters = false) => {
+    if (localStorage.getItem("wc-qr-usb-journal-v2") || localStorage.getItem("wc-qr-usb-last-batch-v1")) { setCheckMessage("Review and finish the current printer batch first."); return; }
+    const actor = JSON.parse(localStorage.getItem("dev-labels-actor") ?? "null") ?? { id: "dev" };
+    const key = `labels.cart.v3:${actor.id}`, backup = "dev-labels-device-check-previous-sheet";
+    if (restore) { const previous = localStorage.getItem(backup); if (previous !== null) localStorage.setItem(key, previous); }
+    else {
+      if (localStorage.getItem(backup) === null) localStorage.setItem(backup, localStorage.getItem(key) ?? "[]");
+      const rows = (letters ? ["A", "B", "C"].map(letter => ["body", "TEST", "CHAIN", letter, "c62a82d7"]) : [
+        ["body", "TEST", "FX3", "1", "c62a82d7"], ["lens", "TEST", "100-400", "1", "c62a82d7"],
+        ["sd", "TEST", "FX3", "1A", ""], ["text", "", "USB TEST", "", ""],
+        ["numberTag", "", "", "1", "c62a82d7"], ["battery", "", "", "1", "c62a82d7"],
+      ]).map(([kind, dept, model, number, qrCodeValue], i) => ({ id: `device-check-${i}`, name: kind, title: `Device check · ${kind}`, kind, dept, model, number, qrCodeValue, copies: 1 }));
+      localStorage.setItem(key, JSON.stringify(rows));
+    }
+    location.reload();
+  };
   const [client] = useState(() => {
-    if (typeof window !== "undefined") installFetchMock();
+    if (typeof window !== "undefined") { installFetchMock(); installUsbSimulation(); }
     return new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
   return (
     <QueryClientProvider client={client}>
       <div className="min-h-screen bg-background px-4 py-6 sm:px-8">
         <div className="mx-auto max-w-6xl">
+          {deviceCheck && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 text-xs"><span className="mr-auto">Local printer check · Four QR samples open FB FX3 1 · SD and text have no QR</span><Button variant="outline" size="sm" className="h-10" onClick={() => loadDeviceCheck()}>Load six-layout device check</Button><Button variant="outline" size="sm" className="h-10" onClick={() => loadDeviceCheck(false, true)}>Load A/B/C Stop check</Button><Button variant="outline" size="sm" className="h-10" onClick={() => loadDeviceCheck(true)}>Restore previous sheet</Button>{checkMessage && <p role="alert" className="w-full text-destructive">{checkMessage}</p>}</div>}
+          <UsbSimulationControls />
           <Suspense>
             <LabelsHelper />
           </Suspense>

@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-22T22:28:25.510Z",
+  "origin": "https://wisconsincreative.com",
+  "sourceSha": "dfdb50d236b3afab4b1bd15310a148eabdcad9c6",
+  "deploymentId": "dpl_DwtqGVjGte6df6Umg1r6EQtrXts1",
+  "font": {
+    "status": 200,
+    "sha256": "c23fa33e9157c8395913f615d55d4ea3485efb8dcb65b6e38bdc59570532d108",
+    "matchesReviewedSource": true
+  },
+  "labels": {
+    "status": 307,
+    "permissionsPolicy": "camera=(self), microphone=(), geolocation=(), payment=(), usb=(self), serial=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(self), encrypted-media=(), fullscreen=(self), picture-in-picture=(), display-capture=(), midi=(), screen-wake-lock=(), web-share=(self), tools=(self)"
+  },
+  "anonymousHistoryStatus": 401,
+  "anonymousDevFixtureStatus": 404,
+  "devFixtureUsbDisabled": true,
+  "productionWrites": "None; read-only HTTP checks."
+}

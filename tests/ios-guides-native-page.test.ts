@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 function appTabViewShell() {
   return source("ios/Wisconsin/Views/AppTabView.swift").split("// MARK: - Profile")[0] ?? "";
@@ -17,7 +18,7 @@ function guideDetailClientFunction(apiClient: string) {
 
 describe("iOS native Guides page", () => {
   it("uses the existing read-only Resources API contract", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const guidesClient = guidesClientFunction(apiClient);
     const guideDetailClient = guideDetailClientFunction(apiClient);
     const models = source("ios/Wisconsin/Models/Models.swift");

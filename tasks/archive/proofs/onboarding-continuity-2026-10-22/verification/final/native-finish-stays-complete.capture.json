@@ -1,0 +1,22 @@
+{
+  "sourceRevision": "09561456e64fade677afc6c03552537c158e2f8f",
+  "nativeSourceRevision": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "deploymentId": "dpl_CgYFMPPg8zzPhQszCdqwcGxucTfW",
+  "managedRunId": 39844352154,
+  "imageSHA256": "977ad530453b608f0f54af985496626fa6a56545a94b2dcdcad21b273b24c973",
+  "testDriverSHA256": "3df43a672691d775fe0fac30c8642a276530562917db4617ddb4575d60af9e3c",
+  "settings": {
+    "browser": "156.0.8078.4",
+    "viewport": {
+      "width": 1280,
+      "height": 1000
+    },
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "route": "/welcome",
+    "capturedAt": "2026-10-22T20:07:30.449Z",
+    "fixture": "none; synthetic invited student in owned preview"
+  },
+  "baseline": "After-only authenticated evidence",
+  "evidence": "Final server preserves the physical native photo-free Finish and saved answers"
+}

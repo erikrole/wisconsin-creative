@@ -1,0 +1,78 @@
+container Description: Print sheet, ID: print-sheet
+			78 container
+				79 heading Print sheet, Value: 2
+					80 text Print sheet
+				81 text 1 label · 1 selection
+				742 button Clear
+			743 content list
+				744 container
+					745 text Generic labels 1 label
+				746 container
+					747 text AUTH CHECK Generic labels
+					748 checkbox Description: Edit printed text for AUTH CHECK, Value: 0
+					749 button Remove AUTH CHECK
+					750 pop up button (collapsed) Description: Enlarge label preview for AUTH CHECK, Secondary Actions: Expand
+					751 button (disabled) One fewer AUTH CHECK label
+					752 text field (settable) Description: Copies of AUTH CHECK label, Value: 1
+					753 button One more AUTH CHECK label
+					754 text 1 label
+			84 container
+				755 text Ready · Text, font and QR identities checked · Prints in sheet order Brother PT-D610BT 12 mm white-on-black tape
+				86 button Connect USB
+				756 text Gotham XNarrow Bold · Medium Small QR Labels share one tape feed to reduce waste. One initial blank is normal; stopping early adds a small blank to release the last label. Printing as  Creative Admin
+				88 button (disabled) Print 1 label
+				89 button (expanded) Print history · 3, Secondary Actions: Collapse
+					90 text Print history
+					757 text  · 3
+				760 text Operator, exact labels and completion times. Physical application is confirmed separately.
+				761 content list
+					795 container
+						796 button (expanded) QR Release Student A · 0/2 completed Oct 22, 2026, 5:02 PM · Reviewed, Secondary Actions: Collapse
+							797 AXListMarker ▾ 
+							798 text QR Release Student A
+							799 text  · 
+							800 text 0
+							801 text /
+							802 text 2
+							803 text  completed
+							804 text Oct 22, 2026, 5:02 PM
+							805 text  · 
+							806 text Reviewed
+						807 content list
+							808 container
+								809 AXListMarker 1. 
+								810 text TEST ROLE API 1 Confirmed not printed · Oct 22, 2026, 5:02 PM
+							811 container
+								812 AXListMarker 2. 
+								813 text TEST ROLE API 2 Not sent
+						814 button Download batch receipt
+						815 text Batch  a47ac840-d2fb-4599-922c-a87ada2ce462
+					773 button (collapsed) Creative Admin · 0/2 completed Oct 22, 2026, 5:01 PM · Reviewed, Secondary Actions: Expand
+						774 AXListMarker ▸ 
+						775 text Creative Admin
+						776 text  · 
+						777 text 0
+						778 text /
+						779 text 2
+						780 text  completed
+						781 text Oct 22, 2026, 5:01 PM
+						782 text  · 
+						783 text Reviewed
+					784 button (collapsed) Creative Admin · 0/2 completed Oct 22, 2026, 5:01 PM · Reviewed, Secondary Actions: Expand
+						785 AXListMarker ▸ 
+						786 text Creative Admin
+						787 text  · 
+						788 text 0
+						789 text /
+						790 text 2
+						791 text  completed
+						792 text Oct 22, 2026, 5:01 PM
+						793 text  · 
+						794 text Reviewed
+				91 button (collapsed) Export CSV for P-touch Editor, Secondary Actions: Expand
+					92 text Export CSV for P-touch Editor
+	93 container Notifications alt+T
+	758 pop up button (collapsed) Description: Open Next.js Dev Tools, ID: next-logo, Secondary Actions: Expand
+		759 image
+
+The focused UI element is 796 button (expanded) QR Release Student A · 0/2 completed Oct 22, 2026, 5:02 PM · Reviewed, Secondary Actions: Collapse

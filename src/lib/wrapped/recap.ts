@@ -77,6 +77,7 @@ export type WrappedPersonInput = {
   user: { id: string; name: string; avatarUrl: string | null; primaryArea: ShiftArea | null; role: Role };
   /** Every team game in the window; the person's games are the ones they crewed. */
   games: WrappedGame[];
+  /** Only currently active, visible identities; a null avatar is still visible. */
   avatars: Map<string, string | null>;
   shiftHours: number;
   travelTrips: number;
@@ -306,7 +307,7 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
   }
 
   const mates = countBy(
-    mine.flatMap((game) => game.crew.filter((member) => member.userId !== user.id)),
+    mine.flatMap((game) => game.crew.filter((member) => member.userId !== user.id && input.avatars.has(member.userId))),
     (member) => member.userId,
   ).slice(0, 3);
   const mateNames = new Map(mine.flatMap((game) => game.crew.map((member) => [member.userId, member.name] as const)));
@@ -442,7 +443,7 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
   if (topSport) summary.push({ label: "Top sport", value: topSport.label });
   if (hours >= 1) summary.push({ label: "Hours", value: String(hours) });
   if (checkouts.length > 0) summary.push({ label: "Checkouts", value: String(checkouts.length) });
-  if (summary.length < 4 && topMate && topMate.count >= 2) summary.push({ label: "Top crewmate", value: firstName(mateNames.get(topMate.key) ?? "") });
+  if (summary.length < 4 && topMate && topMate.count >= 2) summary.push({ label: "Top crewmate", value: firstName(mateNames.get(topMate.key) ?? ""), userId: topMate.key });
   if (summary.length < 4 && onTime > 0) summary.push({ label: "On-time returns", value: String(onTime) });
   cards.push({
     id: "summary",

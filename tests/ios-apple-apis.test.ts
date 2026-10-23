@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 describe("iOS Apple API adoption", () => {
   it("lets overdue alerts arrive as time-sensitive", () => {
@@ -70,7 +70,7 @@ describe("iOS Apple API adoption", () => {
 
   it("stamps pushes with the filter criteria the Focus filter matches", () => {
     const apns = source("src/lib/push/apns.ts");
-    const notifications = source("src/lib/services/notifications.ts");
+    const notifications = serviceModuleSource("notifications");
     const blasts = source("src/lib/services/blasts.ts");
     const data = source("ios/Wisconsin/App/AppIntentsData.swift");
 

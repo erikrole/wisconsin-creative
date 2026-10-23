@@ -25,6 +25,17 @@ export type LabelRow = {
   copies: number;
 };
 
+/** Version 1 / M keeps the 12 mm templates at the requested Medium Small size.
+ * Capacities: https://www.qrcode.com/en/about/versionPage/versionPage1_10.html
+ * Preserve scan identity; longer or non-ASCII values need a wider-tape layout.
+ */
+export function fitsBrotherQr(value: string): boolean {
+  if (!value || /[^\x20-\x7e]/.test(value)) return false;
+  if (/^\d+$/.test(value)) return value.length <= 34;
+  if (/^[0-9A-Z $%*+./:-]+$/.test(value)) return value.length <= 20;
+  return value.length <= 14;
+}
+
 export const LABEL_KINDS: Record<
   LabelKind,
   { label: string; file: string; template: string; headers: string[]; needsQr: boolean }
@@ -105,6 +116,7 @@ export function sdCardRows(camera: string, dept: string, count: number, slots: s
 }
 
 export function numberRangeRows(from: number, to: number, prefix: string, kind: "text" | "numberTag"): LabelRow[] {
+  if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || Math.abs(to - from) > 499) return [];
   const rows: LabelRow[] = [];
   const step = from <= to ? 1 : -1;
   for (let n = from; step > 0 ? n <= to : n >= to; n += step) {
@@ -138,6 +150,9 @@ export function buildBrotherCsv(kind: LabelKind, rows: LabelRow[]): string {
     .filter((row) => row.kind === kind)
     .filter((row) => !LABEL_KINDS[kind].needsQr || row.qrCodeValue)
     .flatMap((row) => {
+      if (LABEL_KINDS[kind].needsQr && !fitsBrotherQr(row.qrCodeValue)) {
+        throw new Error("This QR code needs a wider-tape template.");
+      }
       const line = cells(row).map(quote).join(",");
       return Array.from({ length: Math.max(1, Math.floor(row.copies)) }, () => line);
     });

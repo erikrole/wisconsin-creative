@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ShiftArea } from "@prisma/client";
 import {
   createBulkSkuSchema,
+  previewBlastSchema,
   markBulkUnitLabelsSchema,
   scanSchema,
   sportRosterBulkSchema,
@@ -35,6 +36,12 @@ const bulkSkuInput = {
 };
 
 describe("shared mutation array bounds", () => {
+  it("accepts an audience containing every supported blast area", () => {
+    expect(previewBlastSchema.safeParse({
+      target: { kind: "DYNAMIC", areas: Object.values(ShiftArea) },
+    }).success).toBe(true);
+  });
+
   it("accepts the roster maximum and rejects max plus one", () => {
     const maximum = Array.from(
       { length: MAX_SPORT_ROSTER_USERS_PER_REQUEST },

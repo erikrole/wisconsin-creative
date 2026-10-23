@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native reservation kit calling", () => {
   it("lets the composer fetch, expand, and submit a kit without renaming the event", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const composer = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
     const protocol = source("ios/Wisconsin/Models/DraftModels.swift");

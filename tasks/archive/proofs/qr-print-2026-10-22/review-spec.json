@@ -1,0 +1,142 @@
+{
+  "title": "QR Print: refined previews and direct USB",
+  "eyebrow": "Wisconsin Creative \u00b7 local review \u00b7 22 October 2026",
+  "lede": "Larger centered previews, an enlarged inspection dialog, clearer gear and custom-label controls, and a more readable USB print area. The approved print pixels and scan identity are unchanged.",
+  "stats": [
+    {
+      "k": "Preview height",
+      "v": "76 px",
+      "n": "Up from 44 px; about 73% taller."
+    },
+    {
+      "k": "Focused tests",
+      "v": "76 passed",
+      "n": "TypeScript, lint and final application build also pass."
+    },
+    {
+      "k": "Direct USB",
+      "v": "1 / 1",
+      "n": "Integrated label printed and accepted by the user; no Brother app."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "A clearer print sheet",
+      "note": "Matched 1440\u00d71100 staff-fixture captures with the same four labels, fixed clock and zero document/catalogue/sheet scroll. The baseline was rebuilt from its retained source in an isolated snapshot.",
+      "pairs": [
+        {
+          "title": "Read each label before printing",
+          "before": "ui-refinement/before.png",
+          "after": "ui-refinement/after.png",
+          "beforeCap": "Small previews beside the CSV-era controls.",
+          "afterCap": "Larger centered previews, readable template names and distinct printer controls.",
+          "beforeEvidence": "ui-refinement/before-evidence.json",
+          "afterEvidence": "ui-refinement/after-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Inspect the label closely",
+      "shots": [
+        {
+          "image": "ui-refinement/dialog.png",
+          "title": "Enlarged preview",
+          "tag": "Keyboard accessible",
+          "cap": "Click a preview to inspect the same bitmap. Escape closes it and restores focus."
+        }
+      ]
+    },
+    {
+      "heading": "Custom labels read as a deliberate workflow",
+      "shots": [
+        {
+          "image": "ui-refinement/custom-labels.png",
+          "title": "SD cards, text and numbers",
+          "tag": "After only",
+          "cap": "Clear section names, readable fields and specific Add actions."
+        }
+      ]
+    },
+    {
+      "heading": "Smaller screens retain the whole layout",
+      "note": "After-only phone evidence. The split layout begins at xl so the normal app sidebar does not squeeze picker titles or clip Add controls.",
+      "shots": [
+        {
+          "image": "ui-refinement/phone.png",
+          "title": "Phone-width sheet",
+          "tag": "390 CSS px",
+          "cap": "Large previews preserve aspect ratio; the review shortcut remains available."
+        }
+      ]
+    },
+    {
+      "heading": "Direct USB is physically verified",
+      "note": "Live integrated helper, after-only device proof. The user confirmed the larger Gotham label is centered, unclipped and scans correctly in production. The later UI refinement keeps those exact print pixels.",
+      "shots": [
+        {
+          "image": "usb-integration/hardware.png",
+          "title": "Printer completed 1 of 1",
+          "tag": "User accepted",
+          "cap": "FB FX3 1 \u00b7 correct production scan \u00b7 exact Gotham XNarrow Bold \u00b7 Medium Small QR."
+        }
+      ]
+    },
+    {
+      "heading": "Earlier audit: complete selections before export",
+      "note": "Historical matched evidence from the first audit stage, before USB integration. The selection protections remain in the final helper.",
+      "pairs": [
+        {
+          "title": "Unit 999 is not active",
+          "sub": "Camera plus battery family, selected units 37 and 999.",
+          "before": "before-invalid.png",
+          "after": "after-invalid.png",
+          "beforeCap": "The warning was visible while downloads still exported only the valid subset.",
+          "afterCap": "Invalid input is identified accessibly and all CSV downloads wait for correction.",
+          "beforeEvidence": "before-evidence.json",
+          "afterEvidence": "after-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Live dark appearance",
+      "note": "After-only capture from the user\u2019s Chrome window; the accepted 1/1 print receipt remains visible.",
+      "shots": [
+        {
+          "image": "ui-refinement/live-dark.png",
+          "title": "Refined helper",
+          "tag": "Live local page",
+          "cap": "Larger centered preview and clearer gear, printer and completion controls."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Preview quality",
+      "was": "44 px preview with little room to inspect text or QR.",
+      "now": "76 px centered preview, 152 px inspection view, preserved aspect ratio and visible loading state."
+    },
+    {
+      "h": "Clearer controls",
+      "was": "Native template filenames, generic Add actions and tightly packed picker controls.",
+      "now": "Product template names, specific custom-label actions, clearer search/filter structure and a distinct USB panel."
+    },
+    {
+      "h": "Responsive behavior",
+      "was": "A wider sheet could squeeze the picker beside the app sidebar.",
+      "now": "Two columns begin at xl; narrower layouts stack cleanly and retain the review shortcut."
+    }
+  ],
+  "verification": [
+    "76 focused tests, TypeScript, touched-file lint and npm run build:app pass.",
+    "Dialog name, Escape/focus return, all custom generators, preview centering and four viewport sizes passed browser checks without page errors.",
+    "USB and CSV regression browser checks pass after refinement.",
+    "1024 px viewport with 256 px sidebar space retains a 434.83 px picker title column and unclipped Add controls.",
+    "Normal preview PNG bytes are identical before and after refinement. The earlier integrated physical label was user-approved."
+  ],
+  "notes": [
+    "Local source only; no commit, push or deployment. Authenticated feature-route proof remains open.",
+    "The UI refinement changes display sizing and controls; it does not change the approved printer bitmap.",
+    "Matched receipts establish retained-source/image provenance, not authenticated server behavior."
+  ]
+}

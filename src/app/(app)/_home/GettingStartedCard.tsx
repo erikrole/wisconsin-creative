@@ -1,101 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, XIcon } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
 import { useFetch } from "@/hooks/use-fetch";
-import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
-import { parseJsonSafely } from "@/lib/errors";
 import {
-  mergeGettingStarted,
-  normalizeGettingStarted,
-  sameGettingStarted,
   withinGettingStartedWindow,
   type GettingStartedRow,
-  type GettingStartedState,
 } from "@/lib/getting-started";
+import { useGettingStartedState } from "@/hooks/use-getting-started";
+import { Button } from "@/components/ui/button";
 import { openProfileCompletion } from "@/lib/profile-completion-events";
 import { UNAVAILABLE_CHANGED_EVENT, isUnavailableBlock, type AvailabilityBlockLite } from "@/lib/unavailable-times";
 import { APP_STORE_URL } from "../welcome/WelcomeDone";
-
-const STORAGE_KEY = "wc-getting-started";
-
-/** The pre-sync per-browser copy. Still read so nothing ticked before sync is lost. */
-function loadLocal(): GettingStartedState {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return normalizeGettingStarted(JSON.parse(raw));
-  } catch {
-    /* storage can be blocked; the server copy still works */
-  }
-  return { done: [], dismissed: false };
-}
-
-function saveLocal(next: GettingStartedState) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    /* ignore */
-  }
-}
-
-function sendPatch(patch: Partial<GettingStartedState>) {
-  // Best effort: a failed save only means the row may show again on another device.
-  void fetch("/api/me/getting-started", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  }).catch(() => {});
-}
-
-/** Records a row as handled from elsewhere, e.g. skipping "when can’t you work". */
-export function markGettingStartedDone(id: GettingStartedRow) {
-  saveLocal(mergeGettingStarted(loadLocal(), { done: [id] }));
-  sendPatch({ done: [id] });
-}
-
-/** Progress shared with the iPhone app, merged with anything this browser saved before sync. */
-function useGettingStartedState(enabled: boolean) {
-  const userId = useAuthenticatedQueryUserId();
-  const queryClient = useQueryClient();
-  const queryKey = ["getting-started", userId ?? "unresolved"];
-  const [local, setLocal] = useState<GettingStartedState | null>(null);
-  useEffect(() => setLocal(loadLocal()), []);
-  const server = useQuery<GettingStartedState>({
-    queryKey,
-    queryFn: async ({ signal }) => {
-      const res = await fetch("/api/me/getting-started", { signal });
-      if (!res.ok) throw new Error("server");
-      const json = await parseJsonSafely<{ data?: unknown }>(res);
-      return normalizeGettingStarted(json?.data);
-    },
-    enabled: enabled && Boolean(userId),
-    staleTime: 60_000,
-  });
-
-  const state = server.data && local ? mergeGettingStarted(server.data, local) : null;
-  // Push rows this browser ticked before sync existed, once.
-  const needsUpload = Boolean(server.data && state && !sameGettingStarted(server.data, state));
-  const uploaded = useRef(false);
-  useEffect(() => {
-    if (uploaded.current || !needsUpload || !state) return;
-    uploaded.current = true;
-    sendPatch(state);
-  });
-
-  const update = (patch: Partial<GettingStartedState>) => {
-    if (!state) return;
-    const next = mergeGettingStarted(state, patch);
-    setLocal(next);
-    saveLocal(next);
-    queryClient.setQueryData(queryKey, next);
-    sendPatch(patch);
-  };
-  return { state, update };
-}
 
 type Item = { id: GettingStartedRow; label: string; done: boolean; href?: string; external?: boolean; markOnClick?: boolean; onClick?: () => void };
 
@@ -110,7 +29,7 @@ export function GettingStartedCard() {
   const eligible = (role === "STUDENT" || role === "STAFF" || role === "ADMIN")
     && withinGettingStartedWindow(user?.accountCreatedAt)
     && !user?.preview?.readOnly;
-  const { state: saved, update } = useGettingStartedState(eligible);
+  const { state: saved, update, error: syncError, saving: syncing, retry } = useGettingStartedState(eligible);
   const isStudent = role === "STUDENT";
   // "When can't you work" counts as done once anything is saved, on any device.
   const { data: blocks, reload: reloadBlocks } = useFetch<AvailabilityBlockLite[]>({
@@ -125,7 +44,11 @@ export function GettingStartedCard() {
     return () => window.removeEventListener(UNAVAILABLE_CHANGED_EVENT, reloadBlocks);
   }, [reloadBlocks]);
 
-  if (!eligible || !saved || saved.dismissed) return null;
+  if (!eligible || !saved) return null;
+  const syncFeedback = syncError ? (
+    <p role="status" className="text-sm text-muted-foreground">{syncError} <Button variant="link" onClick={retry}>Retry</Button></p>
+  ) : syncing ? <p role="status" className="text-xs text-muted-foreground">Saving checklist…</p> : null;
+  if (saved.dismissed) return syncFeedback;
 
   const profileDone = completion?.completion.profileComplete === true;
   const mark = (id: GettingStartedRow) => update({ done: [id] });
@@ -151,7 +74,7 @@ export function GettingStartedCard() {
         guides,
         app,
       ];
-  if (items.every((item) => item.done)) return null;
+  if (items.every((item) => item.done)) return syncFeedback;
   const remaining = items.filter((item) => !item.done).length;
 
   return (
@@ -172,6 +95,7 @@ export function GettingStartedCard() {
           <XIcon className="size-4" aria-hidden="true" />
         </button>
       </div>
+      {syncFeedback}
       <ul className="mt-3 divide-y divide-border">
         {items.map((item) => {
           const body = (

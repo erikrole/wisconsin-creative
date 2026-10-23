@@ -1,0 +1,29 @@
+{
+  "sourceRevision": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "resultBundle": "/private/tmp/wc-live-web-to-native-1792695874621.xcresult",
+  "test": "OnboardingLiveUITests/testWebToNativeResumesPartialWiscardAndFinishesWithoutPhoto()",
+  "attachment": {
+    "configurationName": "Test Scheme Action",
+    "deviceId": "00008160-000A7C610C100036",
+    "deviceName": "Erik\u2019s iPhone",
+    "exportedFileName": "FD430A4A-5814-49DD-A653-95F30503F8AA.png",
+    "isAssociatedWithFailure": false,
+    "suggestedHumanReadableName": "physical-web-to-native-apparel_0_BCF06BD5-AB5C-4533-997B-6FA09A3F2D47.png",
+    "timestamp": 1792695920.337
+  },
+  "imageSHA256": "879e870771ffefd10674cae83f12c51a8e971c3a52e60f9d37a74baa3226ee2c",
+  "baseline": "After-only authenticated physical iPhone 18 Pro Max; synthetic student",
+  "capture": {
+    "capture": "physical-web-to-native-apparel",
+    "capturedAt": "2026-10-22T19:05:20Z",
+    "fixtureScenario": "none",
+    "locale": "en_US",
+    "screenPoints": [
+      440,
+      956
+    ],
+    "screenScale": 3,
+    "systemVersion": "27.2",
+    "timezone": "America/Chicago"
+  }
+}

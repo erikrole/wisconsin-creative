@@ -47,7 +47,7 @@ For `PERSON` custody, the table applies as written. For `SHARED` custody, every 
 
 Responder and Admin pushes between 10 PM and 7 AM Central are delivered silently (`quietOvernight`, ledger reason `overnight`) regardless of the recipient's settings; the requester's own stages keep their normal presentation. Location responders are active visible STAFF or ADMIN users configured at `/settings/escalation`. If none are configured, delivery falls back to the active staff/admin booking creator, then active admins. Requester and operational recipient caps are independent and enforced inside fanout.
 
-Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notifications.ts`, and `src/workflows/checkout-overdue-notifications.ts`.
+Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/checkout-escalation-notifications.ts`, and `src/workflows/checkout-overdue-notifications.ts`.
 
 ## Reservation Lifecycle Triggers (Implemented 2026-04-23)
 
@@ -61,7 +61,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Channel: IN_APP only (email deferred)
 - Self-cancel: requester is not notified when they cancel their own reservation
 - Self-made: a reservation the requester created or merged themselves writes a read receipt (`readAt` set) and sends no push
-- Implementation: `createReservationLifecycleNotification` in `src/lib/services/notifications.ts`
+- Implementation: `createReservationLifecycleNotification` in `src/lib/services/booking-notifications.ts`
 
 ## Shift Trade Triggers (Implemented 2026-05-05)
 
@@ -90,7 +90,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Reviewer rows are deduplicated by assignment and reviewer, carry the event-routable payload, and use the schedule notification preference category for push gating. A retry is safe.
 - Initial open-slot request alerts plus the request workflow's escalation, blocked, and auto-approved outcome alerts are Admin-only. Staff have no claim approve/decline permission or queue visibility. Trade Board claim reviewer alerts follow the same Admin-only policy.
 - The student receives the existing `shift_request_pending` lifecycle notification; approval or decline continues through the existing assignment notification path.
-- Implementation: `handleOpenShiftPickup` in `src/app/api/shift-assignments/pickup/handler.ts` and `notifyPickupRequestReviewers` in `src/lib/services/notifications.ts`.
+- Implementation: `handleOpenShiftPickup` in `src/app/api/shift-assignments/pickup/handler.ts` and `notifyPickupRequestReviewers` in `src/lib/services/shift-notifications.ts`.
 
 ## Shift Schedule Triggers (Implemented 2026-05-21)
 
@@ -109,7 +109,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Changed-after-publish call-time edits clear assignment acknowledgement before notifying the worker.
 - Payloads are event-routable with `target: "event"`, `/events/{eventId}`, `eventId`, `shiftId`, and `assignmentId`.
 - Delivery respects additive notification categories: `schedule`, `trade`, and `gearPrep`. Old preference JSON defaults these categories to enabled.
-- Implementation: `src/lib/services/schedule-notification-policy.ts` and `src/lib/services/notifications.ts`.
+- Implementation: `src/lib/services/schedule-notification-policy.ts` and `src/lib/services/shift-notifications.ts`.
 
 ## Badge Award Triggers (Implemented 2026-05-09)
 
@@ -145,7 +145,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Deferred sends: request-path pushes go through `deferPush()` (`after()` from `next/server`, with an awaited-detach fallback outside request scope) so the serverless function can't be frozen mid-APNs-round-trip after the response is written.
 - Delivery self-test: `POST /api/devices/test` accepts the current installation's APNs token, verifies that it is an active token owned by the caller, sends a real test push only to that registration, and returns `{ delivered, devices, revoked }`. Normal push delivery can still reach every active registration signed in to the account.
 - Required env vars: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_P8_KEY` (base64-encoded full PEM including headers). Missing = push silently skipped.
-- Source: `src/lib/push/apns.ts` (dispatch/sendPush), `src/lib/services/notifications.ts` (sendPushToUser, deferPush), `src/app/api/devices/route.ts`, `src/app/api/devices/test/route.ts`
+- Source: `src/lib/push/apns.ts` (dispatch/sendPush), `src/lib/services/notification-delivery.ts` (sendPushToUser, deferPush), `src/app/api/devices/route.ts`, `src/app/api/devices/test/route.ts`
 
 ## Browser Push (Android PWA — 2026-08-28)
 - Transport: Web Push via the Node `web-push` library and VAPID keys; the root-scoped `/sw.js` service worker presents the payload and routes notification taps to the authenticated inbox.

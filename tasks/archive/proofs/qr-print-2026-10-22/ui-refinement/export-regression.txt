@@ -1,0 +1,16 @@
+{
+  "results": [
+    "Invalid picks block export; corrected picks export exact CSV; changed CSV resets download state; successive downloads retain all 3 units for marking.",
+    "Large numeric input stays responsive; raster number preview keeps the QR scannable and the complete ink group centered; sheet edits survive reload.",
+    "Malformed unit responses fail visibly, block partial downloads, and recover with Try again.",
+    "Tablet review shortcut, keyboard filter focus, and phone-width overflow smoke pass."
+  ],
+  "pageErrors": [],
+  "previewFit": {
+    "bitmapWidth": 194,
+    "bitmapHeight": 76,
+    "left": 14,
+    "right": 14,
+    "decodedQr": "6d6623d4"
+  }
+}

@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 142 | 5 |
+| `User` | 145 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -37,6 +37,7 @@
 | `ScanSession` | 9 | 2 |
 | `OverrideEvent` | 8 | 4 |
 | `AuditLog` | 9 | 4 |
+| `LabelPrintJob` | 11 | 4 |
 | `ProductEvent` | 12 | 6 |
 | `UserAppInstallation` | 15 | 4 |
 | `SignatureCollection` | 21 | 4 |

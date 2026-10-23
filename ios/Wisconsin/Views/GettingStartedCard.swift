@@ -31,8 +31,8 @@ enum StarterDestination {
     }
 }
 
-/// Which Getting started rows a student has handled, kept per user on this
-/// device. Holds row ids and a dismissed flag only, never profile values.
+/// Account-backed checklist progress. Its per-account retry copy holds only
+/// row identifiers and a dismissed flag, never private profile values.
 struct GettingStartedProgress: Codable, Equatable {
     var done: Set<String> = []
     var dismissed = false
@@ -56,9 +56,13 @@ struct GettingStartedProgress: Codable, Equatable {
 
     /// True while a student's account is inside the first-weeks window.
     static func isInWindow(role: String, accountCreatedAt: String?, now: Date = Date()) -> Bool {
-        guard role == "STUDENT", let accountCreatedAt, let created = parse(accountCreatedAt) else { return false }
+        guard ["STUDENT", "STAFF", "ADMIN"].contains(role), let accountCreatedAt, let created = parse(accountCreatedAt) else { return false }
         let age = now.timeIntervalSince(created) / 86_400
         return age >= 0 && age <= Double(windowDays)
+    }
+
+    func merging(_ other: Self) -> Self {
+        Self(done: done.union(other.done), dismissed: dismissed || other.dismissed)
     }
 
     private static func parse(_ value: String) -> Date? {
@@ -73,6 +77,11 @@ struct GettingStartedProgress: Codable, Equatable {
     }
 }
 
+struct GettingStartedEnvelope: Decodable {
+    let data: GettingStartedProgress
+    let userId: String
+}
+
 /// Loads and holds the checklist state. Owned by Home so the loading task
 /// runs even while the card itself renders nothing.
 @MainActor
@@ -80,25 +89,42 @@ struct GettingStartedProgress: Codable, Equatable {
 final class GettingStartedModel {
     private(set) var progress: GettingStartedProgress?
     private(set) var hasUnavailableTime = false
+    private(set) var syncError: String?
+    private(set) var isSyncing = false
     private var userId: String?
+    private var isStudent = false
+    private var generation = UUID()
 
     func load(for user: CurrentUser, completionStore: ProfileCompletionStore) async {
-        guard user.role == "STUDENT", !user.isReadOnlyRolePreview,
+        guard !user.isReadOnlyRolePreview,
               GettingStartedProgress.isInWindow(role: user.role, accountCreatedAt: user.accountCreatedAt)
         else {
+            generation = UUID()
+            isSyncing = false
+            userId = nil
             progress = nil
             return
         }
-        userId = user.id
-        progress = GettingStartedProgress.load(for: user.id)
-        guard progress?.dismissed == false else { return }
+        if userId != user.id {
+            generation = UUID()
+            isSyncing = false
+            userId = user.id
+            progress = GettingStartedProgress.load(for: user.id)
+            hasUnavailableTime = false
+            syncError = nil
+        }
+        isStudent = user.role == "STUDENT"
+        progress?.done.insert("app")
+        progress?.save(for: user.id)
+        await sync()
+        guard userId == user.id else { return }
         await completionStore.load(for: user)
         await reloadAvailability()
     }
 
     func reloadAvailability() async {
-        guard let userId, progress?.dismissed == false else { return }
-        if let blocks = try? await APIClient.shared.availabilityBlocks(userId: userId) {
+        guard let owner = userId, isStudent, progress?.dismissed == false else { return }
+        if let blocks = try? await APIClient.shared.availabilityBlocks(userId: owner), userId == owner {
             hasUnavailableTime = GettingStartedProgress.hasUnavailableTime(in: blocks)
         }
     }
@@ -108,6 +134,7 @@ final class GettingStartedModel {
         next.done.insert(id)
         progress = next
         next.save(for: userId)
+        Task { await sync() }
     }
 
     func dismiss() {
@@ -115,7 +142,34 @@ final class GettingStartedModel {
         next.dismissed = true
         progress = next
         next.save(for: userId)
+        Task { await sync() }
     }
+
+    func sync() async {
+        guard let owner = userId, !isSyncing else { return }
+        let token = generation
+        isSyncing = true
+        syncError = nil
+        defer { if generation == token { isSyncing = false } }
+        do {
+            var remote = try await APIClient.shared.gettingStarted()
+            guard userId == owner, generation == token, remote.userId == owner else { return }
+            while let local = progress {
+                let merged = local.merging(remote.data)
+                progress = merged
+                merged.save(for: owner)
+                if merged == remote.data { break }
+                remote = try await APIClient.shared.updateGettingStarted(merged, expectedUserId: owner)
+                guard userId == owner, generation == token, remote.userId == owner else { return }
+                // Edits made during this request stay in `progress` and join
+                // the next pass instead of being replaced by its response.
+            }
+        } catch {
+            guard userId == owner, generation == token else { return }
+            syncError = "Couldn’t save checklist progress. It will retry when you return."
+        }
+    }
+
 }
 
 /// Quiet first-weeks checklist on Home. Every row is optional; nothing here
@@ -139,15 +193,9 @@ struct GettingStartedCard: View {
 
     private var rows: [Row] {
         guard let user = session.currentUser, let progress = model.progress else { return [] }
-        return [
+        let common = [
             Row(id: "profile", title: "Finish your profile", done: profileDone) {
                 completionStore.presentManually(for: user.id)
-            },
-            Row(id: "availability", title: "Add when you can’t work", done: model.hasUnavailableTime || progress.done.contains("availability")) {
-                showAvailability = true
-            },
-            Row(id: "schedule", title: "Check the schedule", done: progress.done.contains("schedule")) {
-                handled("schedule", then: .schedule)
             },
             Row(id: "guides", title: "Read the guides", done: progress.done.contains("guides")) {
                 handled("guides", then: .guides)
@@ -156,10 +204,23 @@ struct GettingStartedCard: View {
                 handled("notifications", then: .notifications)
             },
         ]
+        let work: [Row] = user.role == "STUDENT" ? [
+            Row(id: "availability", title: "Add when you can’t work", done: model.hasUnavailableTime || progress.done.contains("availability")) { showAvailability = true },
+            Row(id: "schedule", title: "Check the schedule", done: progress.done.contains("schedule")) { handled("schedule", then: .schedule) },
+        ] : [
+            Row(id: "crew", title: "Build a crew on the schedule", done: progress.done.contains("crew")) { handled("crew", then: .schedule) },
+        ]
+        return Array(common.prefix(1)) + work + Array(common.dropFirst())
     }
 
     var body: some View {
         let rows = rows
+        if let error = model.syncError {
+            HStack {
+                Text(error).font(.footnote).foregroundStyle(.secondary)
+                Button("Retry") { Task { await model.sync() } }
+            }
+        }
         if let progress = model.progress, !progress.dismissed, !rows.allSatisfy(\.done) {
             card(rows)
                 .sheet(isPresented: $showAvailability, onDismiss: { Task { await model.reloadAvailability() } }) {

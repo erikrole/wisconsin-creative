@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 const info = readFileSync("src/app/(app)/staff/[id]/UserInfoTab.tsx", "utf8");
 const page = readFileSync("src/app/(app)/staff/[id]/page.tsx", "utf8");
-const cropDialog = readFileSync("src/app/(app)/staff/[id]/AvatarCropDialog.tsx", "utf8");
 const schema = readFileSync("prisma/schema.prisma", "utf8");
 
 describe("annotated user profile contract", () => {
@@ -42,12 +41,9 @@ describe("annotated user profile contract", () => {
     expect(info).not.toContain('aria-label="Birth year"');
   });
 
-  it("lets users crop, zoom, and reposition profile photos before upload", () => {
+  it("routes roster photo selection through the shared crop editor", () => {
     expect(page).toContain("<AvatarCropDialog");
     expect(page).toContain("setPendingAvatarFile(file)");
-    expect(cropDialog).toContain("Crop profile photo");
-    expect(cropDialog).toContain('aria-label="Photo zoom"');
-    expect(cropDialog).toContain("onPointerMove={moveCrop}");
   });
 
   it("adds Live Production as an assignment area", () => {

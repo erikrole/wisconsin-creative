@@ -55,6 +55,8 @@ read -r -d '' REGISTRY <<'EOF' || true
 HomeView.swift                         | dashboard                   | audit
 GettingStartedCard.swift               | dashboard                   | audit
 CantWorkCard.swift                     | dashboard                   | audit
+Home/HomeModel.swift                   |                             | exempt-shared
+Home/HomeSections.swift                | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
 Booking/BookingActivityView.swift      |                             | exempt-shared
@@ -64,6 +66,7 @@ CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
 BlastsView.swift                       | blasts                      | audit
+BlastComposeViews.swift                | blasts                      | audit
 Announcements/WhatsNewView.swift          | whats-new                   | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
@@ -165,12 +168,14 @@ Kiosk/KioskIdleRoster.swift            |                             | exempt-sh
 Kiosk/KioskDateFormatting.swift        |                             | exempt-infra
 Components/BannerView.swift            |                             | exempt-shared
 Components/BlastBanner.swift           |                             | exempt-shared
+Components/InAppSafariView.swift       |                             | exempt-shared
 Components/CrewRow.swift               |                             | exempt-shared
 Components/ReservationDraftCard.swift  |                             | exempt-shared
 Components/Skeleton.swift              |                             | exempt-shared
 Components/StatusPill.swift            |                             | exempt-shared
 Components/Toast.swift                 |                             | exempt-shared
 Components/UserAvatarView.swift        |                             | exempt-shared
+Components/ProfileAvatarEditor.swift   | profile                     | audit
 Search/FloatingSearchButton.swift      |                             | exempt-tiny
 Search/ScanResultHeroCard.swift        |                             | exempt-shared
 Search/SearchResultRow.swift           |                             | exempt-shared

@@ -627,9 +627,10 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Audit every create, claim, skip, retry, and follow-up onboarding action.
 - Consequences:
   - `/api/allowed-emails` remains the access authority, while `/login` is the first-time onboarding entry point. The compatibility `/register` route redirects there for older links.
-  - Successful registration enters role-aware Welcome setup on web or native iOS. Operational readiness is derived from role-specific canonical profile fields, while apparel, shoes, and a profile photo determine the separate profile-complete state.
+  - Successful registration enters role-aware Welcome setup on web or native iOS. New internal accounts must save role-specific contact, Wiscard, student-year and apparel details before FINISH releases app access; photo remains optional. Operational readiness and full profile completeness remain separately derived from canonical fields.
   - Collaborator setup remains limited to welcome and an optional photo; internal contact, Wiscard, student, sizing, area, and location requirements do not apply.
   - First-time onboarding must not generate, export, or require shared temporary passwords.
+  - 2026-10-22 amendment (local implementation): store the required lifecycle marker and an account-level completion receipt. Save validated, coupled field groups with keyed optimistic versions in Serializable transactions; FINISH is idempotent and independent of photo presence. Both clients hydrate/resume from account truth. Preserve legacy full-step/SNOOZE compatibility and do not backfill existing users into the new gate.
   - The web operator experience should make allowlist invitations feel like the single account-access workflow.
   - iOS cannot treat login success as enough if `forcePasswordChange` is true for reset/recovery.
 - Implementation Reference:

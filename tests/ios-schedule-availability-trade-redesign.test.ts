@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native Schedule availability and Trade Board redesign", () => {
   it("makes weekly availability interactive and existing blocks editable", () => {
     const view = source("ios/Wisconsin/Views/AvailabilityView.swift");
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
     const updateRoute = source("src/app/api/users/[id]/availability/[blockId]/route.ts");
 
     expect(view).toContain("AvailabilityWeekStrip(");
@@ -14,7 +15,7 @@ describe("native Schedule availability and Trade Board redesign", () => {
       "context.block == nil ? (kind == .weekly ? \"Add Class Schedule\" : \"Add Day Away\") : \"Edit Availability\""
     );
     expect(view).toContain("stride(from: 0, through: 23 * 60 + 45, by: 15)");
-    expect(view).toContain("One-off days and ranges");
+    expect(view).toContain("Days away");
     expect(client).toContain("func updateAvailabilityBlock(");
     expect(client).toContain("/availability/\\(blockId)\", method: \"PATCH\"");
     expect(updateRoute).toContain("export const PATCH");

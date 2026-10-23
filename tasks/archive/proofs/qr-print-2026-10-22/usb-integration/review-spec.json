@@ -1,0 +1,61 @@
+{
+  "title": "QR Print: direct USB printing",
+  "eyebrow": "Wisconsin Creative \u00b7 local proof \u00b7 22 October 2026",
+  "lede": "The approved 21 px exact Gotham layout is the default. The integrated helper printed one label without P-touch; the user confirmed its centered, unclipped output and correct production scan.",
+  "stats": [
+    {
+      "k": "Focused tests",
+      "v": "76 passed",
+      "n": "14 USB transport cases plus existing QR helper coverage."
+    },
+    {
+      "k": "Hardware",
+      "v": "1 / 1",
+      "n": "Printer completion and user scan acceptance."
+    },
+    {
+      "k": "Release",
+      "v": "Local",
+      "n": "Uncommitted; not deployed."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "USB becomes the primary action",
+      "note": "Matched fixture inputs, viewport, role and clock. This pair compares the audited CSV helper with the integrated USB helper.",
+      "pairs": [
+        {
+          "title": "Printer controls and shared previews",
+          "before": "before.png",
+          "after": "after.png",
+          "beforeCap": "CSV export and approximate native-template preview.",
+          "afterCap": "Direct USB action, exact bitmap preview, optional CSV export.",
+          "beforeEvidence": "before-evidence.json",
+          "afterEvidence": "after-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Integrated hardware acceptance",
+      "note": "After-only live Chrome screenshot. Development fixture uses the real approved QR identity; server APIs stay mocked. P-touch was closed.",
+      "shots": [
+        {
+          "image": "hardware.png",
+          "title": "Printer completed 1 of 1",
+          "tag": "Physical test",
+          "cap": "User: Yes, it looks right and scans."
+        }
+      ]
+    }
+  ],
+  "verification": [
+    "76 focused tests, TypeScript, lint and build:app passed.",
+    "Browser checks cover media/transport failures, completed prefix plus unknown label, chooser races, reload recovery, explicit applied marking, safe stop, CSV freshness and responsive widths.",
+    "One integrated FB FX3 1 label completed and was accepted by the user."
+  ],
+  "notes": [
+    "Exact PT-D610BT; 12 mm laminated white-on-black tape; desktop Chrome/Edge.",
+    "Authenticated feature-route proof remains open. No commit, push, deployment or production printed-state mutation.",
+    "The one physical body-label proof does not validate every template or device failure mode."
+  ]
+}

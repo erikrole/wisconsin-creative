@@ -60,7 +60,7 @@ Public registration and login responses must stay generic where membership discl
 6. Status and follow-up controls for pending, claimed, stale, and failed rows.
 7. Native iOS forced-password handling for reset/recovery users before the normal app shell.
 8. Focused tests for bulk role boundaries, duplicates, existing records, audit writes, and forced-password access.
-9. Role-aware Welcome setup on web and native iOS after registration or sign-in, with a one-day continue-later path.
+9. Role-aware Welcome setup on web and native iOS after registration or sign-in. New internal accounts complete every required step before app access; only the photo step may be skipped. Existing returning-user reminders retain a one-day snooze.
 10. Derived operational-readiness and profile-completion status for all active accounts in the staff/admin onboarding view.
 11. Email-first discovery on web and native iOS, with the old registration route retained only as a compatibility redirect.
 
@@ -74,6 +74,16 @@ Public registration and login responses must stay generic where membership discl
 7. The current forced-password API exception list must stay narrow: password setup and logout only.
 8. iOS `CurrentUser` keeps `forcePasswordChange` so the native shell can route reset/recovery users correctly after login and `/api/me`.
 9. `POST /api/auth/discover` is rate-limited by IP and normalized email, returns only `onboarding` or `password`, and never replaces the registration allowlist check.
+
+## Cross-device continuation (2026-10-22 local implementation)
+
+Validated field-group saves are account-backed, with conflict-safe versions and resume derived from saved answers. `onboardingCompletedAt` records the Finish decision independently of optional photo presence. Existing accounts are not backfilled into a required gate. Apparel choices offer Men’s/Women’s separately for clothing and shoes, preserving saved legacy/custom values. Private unfinished text remains in memory and is explicitly unsaved until acknowledged; Getting started retry copies contain only account-scoped row IDs.
+
+- [x] Disposable PostgreSQL proves partial saves, distinct-group contention, stale same-group rejection, safe replay, audit rollback, photo-free Finish and legacy SNOOZE.
+- [x] Chromium components prove dirty-input recovery, delayed-read ordering, custom-size entry, denied-storage checklist sync and crop retry.
+- [x] iPhone 18 Pro Max simulator proves the required student sequence, apparel choices, photo skip/finish and crop retry presentation.
+- [ ] Authenticate one preview student on web and iOS; verify web→iOS and iOS→web continuation, relaunch and skipped-photo completion against the shared backend.
+- [ ] Deploy migration/server changes, distribute the native build, and verify physical photo selection before production readiness.
 
 ## Acceptance Criteria
 - [x] Operator can onboard a roster-sized batch without manually switching between Users and Allowed Emails.

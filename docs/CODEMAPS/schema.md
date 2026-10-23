@@ -135,13 +135,15 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 142
+Fields: 145
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
 - `email                         String                           @unique`
 - `passwordHash                  String                           @map("password_hash")`
 - `forcePasswordChange           Boolean                          @default(false) @map("force_password_change")`
+- `onboardingRequired            Boolean                          @default(false) @map("onboarding_required")`
+- `onboardingCompletedAt         DateTime?                        @map("onboarding_completed_at")`
 - `role                          Role`
 - `affiliation                   Affiliation?`
 - `collaboratorProfile           CollaboratorProfile?             @map("collaborator_profile")`
@@ -176,6 +178,7 @@ Fields: 142
 - `overrides                     OverrideEvent[]`
 - `bulkMovements                 BulkStockMovement[]`
 - `audits                        AuditLog[]                       @relation("AuditActor")`
+- `labelPrintJobs                LabelPrintJob[]`
 - `shiftAssignments              ShiftAssignment[]                @relation("ShiftAssignee")`
 - `shiftAssignedBy               ShiftAssignment[]                @relation("ShiftAssigner")`
 - `shiftGroupsPublished          ShiftGroup[]                     @relation("ShiftGroupPublisher")`
@@ -945,6 +948,29 @@ Indexes and constraints:
 - `@@index([actorUserId, createdAt])`
 - `@@index([createdAt])`
 - `@@map("audit_logs")`
+
+## Model `LabelPrintJob`
+
+Fields: 11
+
+- `id              String   @id`
+- `actorUserId     String?  @map("actor_user_id")`
+- `browserId       String   @map("browser_id")`
+- `activeBrowserId String?  @unique @map("active_browser_id")`
+- `revision        Int      @default(0)`
+- `lastRequestId   String   @map("last_request_id")`
+- `lastRequestHash String   @map("last_request_hash")`
+- `job             Json`
+- `createdAt       DateTime @default(now()) @map("created_at")`
+- `updatedAt       DateTime @updatedAt @map("updated_at")`
+- `actor           User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([actorUserId, createdAt])`
+- `@@index([browserId, createdAt])`
+- `@@index([createdAt])`
+- `@@map("label_print_jobs")`
 
 ## Model `ProductEvent`
 

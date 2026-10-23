@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "3cf4a1f302b3a1e1276dbb50394daf7aed86ad20",
+  "sourcePatchSha256": "322aa6bc108f81b3fe04997d183257694ea0b662d4413184931496ffb5a734e2",
+  "settings": {
+    "device": "Headless Chrome via Playwright",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "fixture": "dev-labels catalog and units; body FB A7 IV 1 plus FZ100 selected units 37 and 999; device-proof absent",
+    "role": "STAFF fixture",
+    "route": "/dev-labels",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-22T15:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

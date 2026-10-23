@@ -1,0 +1,27 @@
+{
+  "evidence": "Real authenticated preview; network disabled; typed answer retained and save error shown",
+  "sourceRevision": "09561456e64fade677afc6c03552537c158e2f8f",
+  "sourcePatchSHA256": null,
+  "deploymentId": "dpl_CgYFMPPg8zzPhQszCdqwcGxucTfW",
+  "managedRunId": 39844352154,
+  "imageSHA256": "26d8145a80535da0b2719f1c2a62be977129d71d645144a4e027f8756ebc3a00",
+  "testDriverSHA256": "41d3af07c898cdcf432cfc4994d123e27684a73feae65b9bf075232ca2605db1",
+  "settings": {
+    "browser": "156.0.8078.4",
+    "viewport": {
+      "width": 1280,
+      "height": 1000
+    },
+    "fixture": "none; synthetic invited student on its own managed preview",
+    "role": "STUDENT",
+    "route": "/welcome",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "capturedAt": "2026-10-22T20:08:10.114Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "baseline": "After-only authenticated evidence"
+}

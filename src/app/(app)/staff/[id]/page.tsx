@@ -21,6 +21,7 @@ import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { UserAvatar } from "@/components/UserAvatar";
 import { DetailPageHeader } from "@/components/DetailPageHeader";
+import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,7 +72,8 @@ import { ProfileCompletionNotice } from "@/components/profile-completion/Profile
 import { AvatarCropDialog } from "./AvatarCropDialog";
 import { ProfileRelatedLinks } from "./_components/ProfileRelatedLinks";
 import { useQueryClient } from "@tanstack/react-query";
-import { syncCachedUserLists } from "@/lib/user-list-cache";
+import { uploadAvatarPhoto, removeAvatarPhoto } from "@/lib/avatar-upload";
+import { syncAvatarCaches, syncCachedUserLists } from "@/lib/user-list-cache";
 import { formatAnticipatedGraduation } from "@/lib/student-profile";
 
 /* ── Tab Definitions ───────────────────────────────────── */
@@ -93,10 +95,6 @@ type BadgeDefinitionOption = {
 type ApiEnvelope<T> = {
   data?: T;
   error?: string;
-};
-
-type AvatarResponse = {
-  avatarUrl?: string | null;
 };
 
 type PasswordResetResponse = {
@@ -231,6 +229,7 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
 
 export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const actorId = useAuthenticatedQueryUserId();
   const { setBreadcrumbLabel } = useBreadcrumbLabel();
 
   const [activeTab, setActiveTab] = useUrlState<TabKey>(
@@ -276,6 +275,12 @@ export default function UserDetailPage() {
   // We need local user state for optimistic updates (avatar, active toggle)
   const [userOverrides, setUserOverrides] = useState<Partial<UserDetail>>({});
   const effectiveUser = user ? { ...user, ...userOverrides } : null;
+  useEffect(() => {
+    setUserOverrides((previous) => {
+      if (!("avatarUrl" in previous)) return previous;
+      const next = { ...previous }; delete next.avatarUrl; return next;
+    });
+  }, [user?.avatarUrl]);
 
   const { data: meData } = useCurrentUser();
   const currentUserId = meData?.id ?? null;
@@ -330,30 +335,19 @@ export default function UserDetailPage() {
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [activeTab, hasGearTab, user]);
 
-  async function uploadAvatar(file: File): Promise<boolean> {
+  async function uploadAvatar(file: File, expectedAvatarUrl: string | null, expectedActorId: string | null): Promise<boolean> {
     if (avatarBusyRef.current) return false;
     avatarBusyRef.current = true;
     setUploadingAvatar(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(`/api/users/${id}/avatar`, { method: "POST", body: formData });
-      if (handleAuthRedirect(res)) return false;
-      if (!res.ok) {
-        const msg = await parseErrorMessage(res, "Failed to upload avatar");
-        toast.error(msg);
-        return false;
-      } else {
-        const json = await parseJsonSafely<ApiEnvelope<AvatarResponse>>(res);
-        const avatarUrl = json?.data?.avatarUrl ?? null;
-        setUserOverrides((prev) => ({ ...prev, avatarUrl }));
-        await syncCachedUserLists(queryClient, id, { avatarUrl });
-        toast.success("Profile photo updated");
-        return true;
-      }
-    } catch {
-      toast.error("Network error");
-      return false;
+      const avatarUrl = await uploadAvatarPhoto(id, file, expectedAvatarUrl, expectedActorId);
+      if (!avatarUrl) return false;
+      setUserOverrides((prev) => ({ ...prev, avatarUrl }));
+      await syncAvatarCaches(queryClient, id, avatarUrl);
+      toast.success("Profile photo updated");
+      return true;
+    } catch (reason) {
+      throw reason instanceof Error ? reason : new Error("Couldn’t save your photo. Your crop is still here.");
     } finally {
       avatarBusyRef.current = false;
       setUploadingAvatar(false);
@@ -369,22 +363,16 @@ export default function UserDetailPage() {
       variant: "danger",
     });
     if (!ok) return;
+    if (avatarBusyRef.current) return;
     // Optimistic: remove avatar immediately, rollback on failure
     const previousUrl = effectiveUser?.avatarUrl ?? null;
     setUserOverrides((prev) => ({ ...prev, avatarUrl: null }));
     avatarBusyRef.current = true;
     setUploadingAvatar(true);
     try {
-      const res = await fetch(`/api/users/${id}/avatar`, { method: "DELETE" });
-      if (handleAuthRedirect(res)) return;
-      if (!res.ok) {
-        setUserOverrides((prev) => ({ ...prev, avatarUrl: previousUrl }));
-        const msg = await parseErrorMessage(res, "Failed to remove avatar");
-        toast.error(msg);
-      } else {
-        await syncCachedUserLists(queryClient, id, { avatarUrl: null });
-        toast.success("Profile photo removed");
-      }
+      if (!await removeAvatarPhoto(id, previousUrl ?? "", actorId)) { setUserOverrides((prev) => ({ ...prev, avatarUrl: previousUrl })); return; }
+      await syncAvatarCaches(queryClient, id, null);
+      toast.success("Profile photo removed");
     } catch {
       setUserOverrides((prev) => ({ ...prev, avatarUrl: previousUrl }));
       toast.error("Network error");
@@ -846,6 +834,7 @@ export default function UserDetailPage() {
 
       <AvatarCropDialog
         file={pendingAvatarFile}
+        avatarUrl={effectiveUser?.avatarUrl ?? null}
         profileName={profile.name}
         onClose={() => setPendingAvatarFile(null)}
         onConfirm={uploadAvatar}

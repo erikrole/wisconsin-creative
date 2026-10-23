@@ -1480,7 +1480,7 @@ private struct BookingExtendBar: View {
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
         .controlSize(.large)
-        .tint(.green)
+        .tint(Color.statusText(.green))
         .disabled(isActioning)
         .accessibilityLabel("Extend Return")
         .padding(.horizontal, Brand.Space.md)
