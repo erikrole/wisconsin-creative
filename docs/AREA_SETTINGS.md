@@ -228,14 +228,14 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ### Quick links (`/settings/quick-links`) — System, ADMIN
-- Admins add, edit, reorder and remove the sites in the sidebar's Quick links menu (table `quick_links`, migration 0203, seeded with APM Music and Greenfly).
+- Admins add, edit, reorder and remove the sites in the sidebar's Quick links menu (table `quick_links`, migration 0204, seeded with APM Music and Greenfly).
 - Each link is an https URL or an app path, with an optional short description and an audience: Everyone (collaborators included), Students, staff and admins, Staff and admins, or Admins only (stored as `roles`; empty means everyone).
 - `GET /api/quick-links` returns only the links the caller's role may see; `?manage=1`, POST, PUT (order) and PATCH/DELETE `/api/quick-links/[id]` are ADMIN only and audited as `quick_link`.
 - The sidebar loads the list the first time its menu opens, so ordinary page loads never query it. DB-free review: `/dev-settings?page=quick-links`.
 
 ## Change Log
 
-- 2026-10-23: **Quick links (PR #621).** New admin page and sidebar menu for everyday sites with per-role visibility; migration 0203_quick_links.
+- 2026-10-23: **Quick links (PR #621).** New admin page and sidebar menu for everyday sites with per-role visibility; migration 0204_quick_links.
 
 - 2026-10-22: **Native vault and license recovery fixes verified locally.** Background clearing invalidates pending shared-secret requests as well as revealed secrets, preventing late responses from exposing a password again. An active Photo Mechanic holder retains Copy, History, Return, and broken-code actions when the separately fetched pool is empty. Delayed-request/background and empty-pool simulator regressions pass against local fixtures; authenticated server and physical-device proof remain separate.
 
