@@ -48,7 +48,8 @@
     "source-map-js": "1.2.2",
     "undici": "7.29.1",
     "@workflow/core": {
-      "nanoid": "5.1.16"
+      "nanoid": "5.1.16",
+      "zod": "4.6.7"
     },
     "@xmldom/xmldom": "0.9.12",
     "@xhmikosr/decompress": "11.1.4",
@@ -57,6 +58,27 @@
     "devalue": "5.9.4",
     "@prisma/config@6.19.3": {
       "deepmerge-ts": "8.0.2"
+    },
+    "@vercel/cli-config": {
+      "zod": "4.6.7"
+    },
+    "@vercel/cli-auth": {
+      "zod": "4.6.7"
+    },
+    "@vercel/functions": {
+      "zod": "4.6.7"
+    },
+    "@workflow/cli": {
+      "zod": "4.6.7"
+    },
+    "@workflow/world": {
+      "zod": "4.6.7"
+    },
+    "@workflow/world-local": {
+      "zod": "4.6.7"
+    },
+    "@workflow/world-vercel": {
+      "zod": "4.6.7"
     }
   },
   "scripts": {

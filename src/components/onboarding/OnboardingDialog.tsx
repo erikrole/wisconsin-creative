@@ -49,6 +49,8 @@ type InviteResponse = {
   skipped?: boolean | number;
   /** Single adds only: what happened to the invite email, when one was asked for. */
   emailStatus?: "sent" | "failed" | "not_configured";
+  /** Roster adds only: invite emails sent for the new rows, when asked for. */
+  emailed?: InviteEmailTally;
   created?: number;
   failed?: number;
   failedRows?: FailedInviteRow[];
@@ -60,7 +62,11 @@ type FailedInviteRow = {
   reason: string;
 };
 
+type InviteEmailTally = { sent: number; failed: number; notConfigured: number };
+
 type CompletionResult = {
+  /** Present when invite emails were requested. */
+  emailed?: InviteEmailTally;
   created: number;
   skipped: number;
   requested: number;
@@ -622,6 +628,7 @@ export default function OnboardingDialog({
               role: row.role,
               ...inviteProfileFields(row.role, selectedPolicyId),
             })),
+            ...(emailInviteNow ? { sendInvite: true } : {}),
           };
       const response = await fetch("/api/allowed-emails", {
         method: "POST",
@@ -666,7 +673,12 @@ export default function OnboardingDialog({
       } else {
         const created = result?.created ?? 0;
         const skipped = typeof result?.skipped === "number" ? result.skipped : 0;
-        if (created > 0 && skipped === 0) {
+        const unsent = result.emailed ? result.emailed.failed + result.emailed.notConfigured : 0;
+        if (unsent > 0) {
+          toast.warning(`Added ${created}, but ${unsent} invite email${unsent === 1 ? "" : "s"} didn’t send. Use Resend in Allowed Emails.`);
+        } else if (created > 0 && result.emailed) {
+          toast.success(`Added and emailed ${created} invitation${created === 1 ? "" : "s"}`);
+        } else if (created > 0 && skipped === 0) {
           toast.success(`Added ${created} invitation${created === 1 ? "" : "s"}`);
         } else if (created > 0) {
           toast.success(`Added ${created}; skipped ${skipped} already allowlisted or registered`);
@@ -681,6 +693,11 @@ export default function OnboardingDialog({
       setBulkFileName("");
       setInviteError("");
       setCompletion({
+        emailed: inviteMode === "single"
+          ? result.emailStatus
+            ? { sent: result.emailStatus === "sent" ? 1 : 0, failed: result.emailStatus === "failed" ? 1 : 0, notConfigured: result.emailStatus === "not_configured" ? 1 : 0 }
+            : undefined
+          : result.emailed,
         created: result?.created ?? (result?.skipped === true ? 0 : 1),
         skipped: typeof result?.skipped === "number" ? result.skipped : result?.skipped === true ? 1 : 0,
         requested: emails.length,
@@ -732,14 +749,19 @@ export default function OnboardingDialog({
                     ? "These rows were not confirmed by the server. Retry them below; existing rows are safe to retry because the server skips duplicates."
                     : completion.created === 0
                       ? "Every address is already invited or already has an account. To send a fresh setup link to someone who hasn't signed up, use Resend in Allowed Emails."
-                      : "New people create their account from the link in their invite email. If someone didn't get it, use Resend in Allowed Emails. No shared first-login password is created."}
+                      : !completion.emailed
+                        ? "These invitations were not emailed. Use Resend in Allowed Emails to send each person their setup link."
+                        : completion.emailed.failed + completion.emailed.notConfigured > 0
+                          ? "Some invite emails didn't send. Use Resend in Allowed Emails for anyone who didn't get one."
+                          : "Each new person was emailed their setup link. If someone didn't get it, use Resend in Allowed Emails."}
                 </AlertDescription>
               </Alert>
 
-              <div className={`grid grid-cols-2 gap-2 ${completion.failed > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+              <div className={`grid grid-cols-2 gap-2 ${(completion.failed > 0 ? 1 : 0) + (completion.emailed ? 1 : 0) > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
                 <OnboardingMetricCard label="Requested" value={completion.requested} />
                 <OnboardingMetricCard label="Added" value={completion.created} />
                 <OnboardingMetricCard label="Skipped" value={completion.skipped} />
+                {completion.emailed && <OnboardingMetricCard label="Emailed" value={completion.emailed.sent} />}
                 {completion.failed > 0 && <OnboardingMetricCard label="Failed" value={completion.failed} />}
               </div>
 
@@ -990,23 +1012,23 @@ export default function OnboardingDialog({
                       </Select>
                     </div>
                   )}
-                  {inviteRole !== "COLLABORATOR" && (
-                    <div className="flex items-start gap-2.5">
-                      <Checkbox
-                        id="onboard-single-email-now"
-                        checked={emailInviteNow}
-                        onCheckedChange={(checked) => setEmailInviteNow(checked === true)}
-                        disabled={inviting}
-                        className="mt-0.5"
-                      />
-                      <div className="grid gap-0.5">
-                        <Label htmlFor="onboard-single-email-now" className="font-normal">Email the invite now</Label>
-                        <p className="text-xs text-muted-foreground">Sends the sign-in link once. You can resend it later from Allowed Emails.</p>
-                      </div>
-                    </div>
-                  )}
                 </TabsContent>
               </Tabs>
+              {inviteRole !== "COLLABORATOR" && (
+                <div className="flex items-start gap-2.5">
+                  <Checkbox
+                    id="onboard-email-now"
+                    checked={emailInviteNow}
+                    onCheckedChange={(checked) => setEmailInviteNow(checked === true)}
+                    disabled={inviting}
+                    className="mt-0.5"
+                  />
+                  <div className="grid gap-0.5">
+                    <Label htmlFor="onboard-email-now" className="font-normal">Email the invite now</Label>
+                    <p className="text-xs text-muted-foreground">Sends each new person their setup link. You can resend it later from Allowed Emails.</p>
+                  </div>
+                </div>
+              )}
 
               {needsCollaboratorPolicy && (
                 <div className="grid gap-2 rounded-lg border p-3">
