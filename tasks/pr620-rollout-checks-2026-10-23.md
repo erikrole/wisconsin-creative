@@ -33,3 +33,26 @@ Physical iPhone 16 Pro details became readable after the user's “Go”; no ins
 The handoff and this checkpoint are local/uncommitted. Historical receipts keep their original pre-push scope; use the current handoff for latest state.
 
 Handoff validation: `npm run verify:docs` passed (codemaps current); both handoff/ledger relative-link and whitespace sweeps passed; complete PR `git diff --check` passed. No application code changed during handoff preparation.
+
+
+## Hosted QA receipts — 2026-10-23 (Claude, against the attached #620 preview)
+
+Source head `c961b1d921668e79d129fe3f9869ce836241082a`; Managed previews run 39986452627; deployment `dpl_Dbt1MfVLaa5B4PVmYAJedjwobYrq` (READY, preview target); Neon branch `br-proud-water-au27gt77`. `preview:setup` and `preview:doctor` passed (template verified). No secrets, links or tokens are recorded here.
+
+| Check | Result |
+| --- | --- |
+| Deployment attests to the owned preview (branch/key, not production) | Pass |
+| Six synthetic `@creative.local` invites created on the preview DB only (`sendInvite:false`) | Pass |
+| Missing proof rejected at register (403) | Pass |
+| Rotated (superseded) proof rejected at register (403) — API-level equivalent of "a newer link invalidates the old one" | Pass |
+| Preview mail isolation: resend reports email not configured | Pass |
+| Web: invited email without link shows "Check your email" step; resend shows "Email unavailable" | Pass |
+| Web: invited email with link completes name/password signup and lands on `/welcome` (invite 2 claimed, 1 user row) | Pass |
+| Web: the same link cannot be reused (register 403; link no longer offers signup) | Pass |
+| Web: a real resend invalidating the previous link through the UI | Not testable on the preview (mail disabled); covered by the rotated-proof 403 and the local PostgreSQL proof |
+| Native: debug build with preview origin/token overrides; app receives the invite URL, calls the live preview's discover with the proof, and shows the locked-email "Set up account" form | Pass |
+| Native: Create account → native Welcome against the live preview | **Not completed** — see below |
+
+Native blocker: in a freshly created iPhone 18 Pro Max simulator (iOS 27.0) the first Password field retains one character while Confirm password takes all input, so Create account stays disabled and registration is never sent. The existing fixture test `testColdInviteCreatesAccountAndEntersNativeWelcome` fails identically on that simulator, so this is the simulator's password-autofill environment, not the preview or the #620 change. The reserved invite (first synthetic account) is still unclaimed. Next step: disable AutoFill Passwords on that device (or paste the password) and run the live check once.
+
+Notes: the https invite link opens Safari in the simulator because production AASA lacks the invite rules; the link was delivered to the app directly (`XCUIApplication.open`). A temporary UI test was used for this and was not committed. Remaining after the production deploy: real inbox email, physical iPhone universal link, updated distributed binary.
