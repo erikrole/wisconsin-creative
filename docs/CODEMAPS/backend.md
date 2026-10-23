@@ -63,7 +63,7 @@
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/inventory-loss-reports.ts` | 618 |
-| `src/lib/services/invite-email.ts` | 123 |
+| `src/lib/services/invite-email.ts` | 133 |
 | `src/lib/services/invite-token.ts` | 34 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
@@ -94,7 +94,7 @@
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
 | `src/lib/services/notifications.ts` | 28 |
-| `src/lib/services/onboarding-lifecycle.ts` | 546 |
+| `src/lib/services/onboarding-lifecycle.ts` | 550 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
@@ -217,7 +217,7 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
-| `src/lib/email-template.ts` | 206 |
+| `src/lib/email-template.ts` | 207 |
 | `src/lib/email.ts` | 147 |
 | `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
@@ -275,7 +275,7 @@
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 236 |
+| `src/lib/profile-completion.ts` | 237 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
