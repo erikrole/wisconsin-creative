@@ -110,6 +110,8 @@ const COLLABORATOR_NAV_HREFS = [
 type NavGroup = {
   label?: string;
   staffOnly?: boolean;
+  /** Starts folded until the person opens it; their choice is remembered. */
+  defaultCollapsed?: boolean;
   items: NavItem[];
 };
 
@@ -131,14 +133,6 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Purchasing",
-    items: [
-      { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
-      { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
-      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
-    ],
-  },
-  {
     label: "Library",
     items: [
       { label: "Resources", href: "/resources", icon: BookMarkedIcon },
@@ -151,12 +145,24 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Operations", href: "/operations", icon: WrenchIcon },
       { label: "Kits", href: "/kits", icon: BackpackIcon },
+      { label: "Reports", href: "/reports", icon: ChartColumnIcon },
+      { label: "Damage and loss", href: "/damage", icon: PackageXIcon },
+      { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
+    ],
+  },
+  {
+    // Weekly-or-rarer pages stay one click away, like Linear's and Notion's "More",
+    // so the everyday list fits on screen without scrolling.
+    label: "More",
+    staffOnly: true,
+    defaultCollapsed: true,
+    items: [
+      { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
+      { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
+      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
       { label: "Badges", href: "/badges", icon: MedalIcon },
       { label: "Signatures", href: "/signatures", icon: SignatureIcon },
-      { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
       { label: "YouTube Studio Lite", href: "/youtube", icon: SquarePlayIcon, requiredRole: "ADMIN" },
-      { label: "Damage and loss", href: "/damage", icon: PackageXIcon },
-      { label: "Reports", href: "/reports", icon: ChartColumnIcon },
       { label: "Issues", href: "/issues", icon: BugIcon, requiredRole: "ADMIN" },
     ],
   },
@@ -424,7 +430,13 @@ export default function AppSidebar({
           : "Student";
 
   function renderGroup(group: NavGroup, groupIdx: number) {
-    const isCollapsed = Boolean(group.label && collapsedGroups.includes(group.label));
+    // Default-folded groups store an "open:" marker instead, so both kinds share one list.
+    const isCollapsed = Boolean(group.label && (group.defaultCollapsed
+      ? !collapsedGroups.includes(`open:${group.label}`)
+      : collapsedGroups.includes(group.label)));
+    const toggleKey = group.defaultCollapsed ? `open:${group.label}` : group.label;
+    // A folded group still hints that something inside wants a look.
+    const hiddenAttention = isCollapsed && group.items.some((item) => (attentionCounts?.[item.href]?.count ?? 0) > 0);
     return (
       <SidebarGroup
         key={group.label ?? group.items.map((item) => item.href).join("-")}
@@ -433,12 +445,18 @@ export default function AppSidebar({
         {group.label && (
             <button
               type="button"
-              onClick={() => toggleGroup(group.label!)}
+              onClick={() => toggleGroup(toggleKey!)}
               aria-expanded={!isCollapsed}
               className="group/label flex h-6 w-full shrink-0 items-center justify-start gap-1 rounded-md px-2 font-bold tracking-[0.01em] text-[color:var(--sidebar-muted)] outline-none transition-colors hover:text-[color:var(--sidebar-text-active)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] max-md:h-8 group-data-[collapsible=icon]:hidden"
             >
               {/* Global `button { font-size: inherit }` is unlayered and beats utilities on the button itself. */}
               <span className="text-[11.5px] max-md:text-[13px]">{group.label}</span>
+              {hiddenAttention && (
+                <>
+                  <span aria-hidden="true" className="ml-0.5 size-1.5 shrink-0 rounded-full bg-[var(--sidebar-muted)]" />
+                  <span className="sr-only">, something inside needs a look</span>
+                </>
+              )}
               <ChevronRightIcon
                 aria-hidden="true"
                 className={cn(

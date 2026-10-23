@@ -164,7 +164,7 @@ describe("web sidebar source contract", () => {
     const appShell = source("src/components/AppShell.tsx");
 
     expect(sidebar).toContain('label: "People"');
-    expect(sidebar).toContain('label: "Purchasing"');
+    expect(sidebar).toContain('label: "More"');
     expect(sidebar).toContain('label: "Library"');
     expect(sidebar).not.toContain('{ label: "Notifications"');
     expect(sidebar).not.toContain("unreadNotifications");

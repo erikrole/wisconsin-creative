@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-23",
+    "title": "A calmer Dashboard and sidebar",
+    "type": "improvement",
+    "summary": "The Dashboard is quieter and easier to scan, and the sidebar is shorter, so the pages you use every day fit on one screen.",
+    "details": [
+      "The Creative Wrapped banner now shows once instead of twice, and the admin preview is a small row instead of a full red block.",
+      "New reservation uses Badger red, the one brand-colored action on the page.",
+      "Section links and the Up next highlight use calm neutral styling, with colored dots for pickups and shifts.",
+      "Weekly-or-rarer staff pages (Budget, Wish list, UA Gear Picks, Badges, Signatures, YouTube Studio Lite, Issues) move into a folded More group. A dot shows when something inside needs a look, and the sidebar remembers if you leave it open."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-22",
     "title": "Print labels straight to USB",
     "type": "feature",
