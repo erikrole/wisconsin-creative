@@ -10,17 +10,6 @@ export const PLATFORM_LABELS: Record<ClientPlatform, string> = {
   kiosk: "Kiosk",
 };
 
-/**
- * Categorical platform hues, in fixed order. Validated with the dataviz palette
- * checker: light against the card surface, dark steps against #1a1b1e.
- */
-export const PLATFORM_COLORS: Record<ClientPlatform, { light: string; dark: string }> = {
-  web: { light: "#3E63DD", dark: "#5F7FE6" },
-  ios: { light: "#12A594", dark: "#139E85" },
-  macos: { light: "#8E4EC6", dark: "#9D6BD6" },
-  kiosk: { light: "#F76B15", dark: "#D66A22" },
-};
-
 export const CHANNEL_LABELS: Record<string, string> = {
   app_store: "App Store",
   testflight: "TestFlight",

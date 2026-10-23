@@ -150,9 +150,3 @@ export function liveVideosEqual(a: LiveVideo, b: LiveVideo): boolean {
 export function snapshot(fields: Partial<VideoSnapshot> & Pick<VideoSnapshot, "id" | "title" | "description">): VideoSnapshot {
   return { categoryId: "17", isPublic: true, ...fields };
 }
-
-export function visibilityLabel(video: VideoSnapshot): string {
-  const privacy = video.status?.privacyStatus;
-  if (privacy) return privacy.charAt(0).toUpperCase() + privacy.slice(1);
-  return video.isPublic ? "Public" : "Nonpublic";
-}

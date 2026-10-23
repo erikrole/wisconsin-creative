@@ -107,8 +107,3 @@ export function scoreLineItemMatch(line: MatchLine, item: MatchItem): MatchResul
     reasons,
   };
 }
-
-/** The same signals from the other side: an item looking for the line that paid for it. */
-export function scoreItemLineMatch(item: MatchItem, line: MatchLine): MatchResult | null {
-  return scoreLineItemMatch(line, item);
-}

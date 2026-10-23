@@ -301,21 +301,3 @@ export async function getBookingDetail(bookingId: string) {
     locationMode
   };
 }
-
-export async function getBookingForScan(bookingId: string) {
-  const booking = await db.booking.findUnique({
-    where: { id: bookingId },
-    include: {
-      serializedItems: { include: { asset: true } },
-      bulkItems: { include: { bulkSku: true } },
-      scanSessions: true,
-      overrides: true
-    }
-  });
-
-  if (!booking) {
-    throw new HttpError(404, "Booking not found");
-  }
-
-  return booking;
-}

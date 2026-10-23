@@ -26,19 +26,6 @@ export function statusLabel(status: string, kind?: BookingDisplayKind): string {
   return bookingStatusLabel(status, kind);
 }
 
-/** Audit log fields to never display in the history tab */
-export const HIDDEN_AUDIT_FIELDS = new Set([
-  "_actorRole", "_actorId", "_actorEmail", "_actorName",
-  "updatedAt", "createdAt", "id", "organizationId",
-]);
-
-export const EQUIPMENT_ACTIONS = new Set([
-  "booking.items_added",
-  "booking.items_removed",
-  "booking.items_qty_changed",
-  "booking.item_substituted",
-]);
-
 export const actionLabels: Record<string, string> = {
   create: "created booking",
   created: "created booking",

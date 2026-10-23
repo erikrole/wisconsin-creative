@@ -20,7 +20,7 @@ const tx = {
 const models = {
   applicant: { findUnique: vi.fn(), findMany: vi.fn() },
   applicantRetentionEvent: { findMany: vi.fn(), update: vi.fn() },
-  $transaction: vi.fn(async (fn: (t: typeof tx) => Promise<unknown>, ...[]: [options?: unknown]) => fn(tx)),
+  $transaction: vi.fn(async (fn: (t: typeof tx) => Promise<unknown>, _options?: unknown) => fn(tx)),
 };
 vi.mock("@/lib/db", () => ({ get db() { return models; } }));
 
