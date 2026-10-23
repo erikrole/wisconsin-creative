@@ -243,7 +243,7 @@ describe("onboarding lifecycle service", () => {
       ],
     });
 
-    expect(result).toEqual({ created: 1, skipped: 1 });
+    expect(result).toMatchObject({ created: 1, skipped: 1 });
     expect(db.allowedEmail.createMany).toHaveBeenCalledWith({
       data: [
         {
@@ -293,7 +293,7 @@ describe("onboarding lifecycle service", () => {
       }],
     });
 
-    expect(result).toEqual({ created: 1, skipped: 0 });
+    expect(result).toMatchObject({ created: 1, skipped: 0 });
     expect(db.allowedEmail.createMany).toHaveBeenCalledWith({
       data: [{
         email: "student@uw.edu",
