@@ -93,11 +93,11 @@
     <p class="lede">When invite email is unavailable, the recovery screen must say so without claiming a link was sent.</p>
     <hr class="rule">
   </header>
-  
-  
+
+
   <h2>Same response, corrected confirmation</h2>
   <p class="sec-note">Matched 390 × 844 Chromium captures. Both use the same mocked unconfigured-email response, account, route, clock, scroll position and appearance. This is DB-free UI evidence.</p>
-  
+
       <section class="pair">
         <div class="pair-head">
           <h3>Email is not configured</h3>
@@ -176,8 +176,8 @@
   }
 }</pre></details>
       </section>
-  
-  
+
+
   <h2>Verification</h2><div class="panel"><ul><li>Both captures have no horizontal overflow at 390px and no page errors.</li><li>Capture receipts bind image hashes to the recorded source revision, local source patch and matching settings.</li></ul></div>
   <h2>Things to know</h2><div class="panel flag"><ul><li>No database, inbox delivery or native app behavior is proved by these fixtures.</li><li>PR #620 still requires a coordinated native onboarding rollout: the released iOS client cannot forward the new invite token.</li><li>Local review fixes are uncommitted and have not been deployed.</li></ul></div>
 </div>
