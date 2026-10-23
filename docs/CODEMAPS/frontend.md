@@ -77,6 +77,7 @@
 | `/settings/notifications` | `src/app/(app)/settings/notifications/page.tsx` |
 | `/settings` | `src/app/(app)/settings/page.tsx` |
 | `/settings/profile` | `src/app/(app)/settings/profile/page.tsx` |
+| `/settings/quick-links` | `src/app/(app)/settings/quick-links/page.tsx` |
 | `/settings/reservation-rules` | `src/app/(app)/settings/reservation-rules/page.tsx` |
 | `/settings/security` | `src/app/(app)/settings/security/page.tsx` |
 | `/settings/sports` | `src/app/(app)/settings/sports/page.tsx` |
@@ -175,9 +176,9 @@
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
+| `src/components/Sidebar.tsx` | 796 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
-| `src/components/Sidebar.tsx` | 721 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |

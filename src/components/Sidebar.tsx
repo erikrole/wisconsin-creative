@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import {
   applyThemeChoice,
@@ -53,7 +54,8 @@ import {
 } from "lucide-react";
 import { SidebarToolsFlyout } from "@/components/SidebarToolsFlyout";
 import { ALL_TOOLS_HREF, toolsForRole } from "@/lib/web-tools";
-import { QUICK_LINKS, SIDEBAR_APPS, linksForRole } from "@/lib/sidebar-links";
+import { SIDEBAR_APPS, linksForRole } from "@/lib/sidebar-links";
+import type { QuickLinkDto } from "@/lib/quick-links";
 import { SidebarCustomizeDialog } from "@/components/SidebarCustomizeDialog";
 import {
   DropdownMenu,
@@ -420,7 +422,35 @@ export default function AppSidebar({
     ...(apps.length > 0 ? [{ title: "Our apps", items: apps }] : []),
     ...(webTools.length > 0 ? [{ title: "Tools", items: webTools }] : []),
   ];
-  const quickLinks = user ? linksForRole(user.role, QUICK_LINKS) : [];
+  // Quick links load the first time the menu opens, so an ordinary page load never asks the database for them.
+  const [quickLinksWanted, setQuickLinksWanted] = useState(false);
+  const wantQuickLinks = useCallback(() => setQuickLinksWanted(true), []);
+  const quickLinksQuery = useQuery<QuickLinkDto[]>({
+    queryKey: ["quick-links"],
+    queryFn: async () => {
+      const res = await fetch("/api/quick-links");
+      if (!res.ok) throw new Error(`Quick links failed (${res.status})`);
+      return ((await res.json()) as { data: QuickLinkDto[] }).data;
+    },
+    enabled: Boolean(user) && quickLinksWanted,
+    staleTime: 5 * 60_000,
+  });
+  const quickLinks = (quickLinksQuery.data ?? []).map((link) => ({
+    label: link.label,
+    href: link.url,
+    detail: link.detail ?? undefined,
+    icon: LinkIcon,
+  }));
+  const isAdmin = user?.role === "ADMIN";
+  const quickLinksStatus = quickLinksQuery.isPending ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground" aria-live="polite">Loading links…</p>
+  ) : quickLinksQuery.isError ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground" aria-live="polite">Couldn&rsquo;t load links. Try again in a moment.</p>
+  ) : quickLinks.length === 0 ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground">
+      {isAdmin ? "No links yet. Add the sites the team uses every day." : "No links yet."}
+    </p>
+  ) : undefined;
   const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const reportProblem = useReportProblem();
@@ -599,7 +629,7 @@ export default function AppSidebar({
         </nav>
       </SidebarContent>
 
-      {(appSections.length > 0 || quickLinks.length > 0) && (
+      {user && (
         // Fixed above the account menu so they are on screen on any height; the page list above scrolls.
         <div className="px-3 pb-2 pt-1 group-data-[collapsible=icon]:px-2">
           <SidebarMenu className="gap-px">
@@ -616,18 +646,19 @@ export default function AppSidebar({
                 />
               </SidebarMenuItem>
             )}
-            {quickLinks.length > 0 && (
-              <SidebarMenuItem>
-                <SidebarToolsFlyout
-                  label="Quick links"
-                  sections={[{ title: "Quick links", items: quickLinks }]}
-                  icon={LinkIcon}
-                  buttonClassName={navButtonClass(false)}
-                  iconClassName={flyoutIconClass}
-                  tooltipClassName={railTooltipClass}
-                />
-              </SidebarMenuItem>
-            )}
+            <SidebarMenuItem>
+              <SidebarToolsFlyout
+                label="Quick links"
+                sections={[{ title: "Quick links", items: quickLinks }]}
+                status={quickLinksStatus}
+                onOpen={wantQuickLinks}
+                footer={isAdmin ? { label: "Edit Quick links", href: "/settings/quick-links" } : undefined}
+                icon={LinkIcon}
+                buttonClassName={navButtonClass(false)}
+                iconClassName={flyoutIconClass}
+                tooltipClassName={railTooltipClass}
+              />
+            </SidebarMenuItem>
           </SidebarMenu>
         </div>
       )}

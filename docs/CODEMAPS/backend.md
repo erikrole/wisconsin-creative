@@ -184,7 +184,7 @@
 | `src/lib/booking-display-title.ts` | 58 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 229 |
+| `src/lib/breadcrumbs.ts` | 230 |
 | `src/lib/brother-chain.ts` | 71 |
 | `src/lib/brother-label-csv.ts` | 185 |
 | `src/lib/brother-label-render.ts` | 133 |
@@ -256,7 +256,7 @@
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
-| `src/lib/nav-sections.ts` | 299 |
+| `src/lib/nav-sections.ts` | 308 |
 | `src/lib/notification-catalog.ts` | 325 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
@@ -280,6 +280,7 @@
 | `src/lib/public-showroom.ts` | 454 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 66 |
+| `src/lib/quick-links.ts` | 66 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/releases.ts` | 104 |
@@ -335,6 +336,7 @@
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-reminder-workflow.ts` | 26 |
 | `src/lib/shift-trade-actions.ts` | 60 |
+| `src/lib/sidebar-links.ts` | 30 |
 | `src/lib/software-vault-access.ts` | 20 |
 | `src/lib/software-vault-crypto.ts` | 11 |
 | `src/lib/software-vault-validation.ts` | 39 |
@@ -804,6 +806,11 @@
 
 - `/api/push/web`
 - `/api/push/web/test`
+
+### `/api/quick-links`
+
+- `/api/quick-links/[id]`
+- `/api/quick-links`
 
 ### `/api/reports`
 
