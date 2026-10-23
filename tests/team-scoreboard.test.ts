@@ -48,6 +48,11 @@ function event(
     site: dimensions.site ?? null,
     rawLocationText: dimensions.rawLocationText ?? null,
     result,
+    startsAt: new Date("2026-09-12T19:00:00Z"),
+    allDay: false,
+    rawStartsAt: null,
+    rawAllDay: null,
+    resultObservations: [],
     shiftGroup: {
       shifts: shifts.map((people) => ({
         assignments: people.map((user) => ({ user })),

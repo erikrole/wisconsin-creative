@@ -7,6 +7,10 @@
   "buildCommand": "NODE_OPTIONS=--max-old-space-size=5120 npm run build",
   "crons": [
     {
+      "path": "/api/cron/football-results",
+      "schedule": "10 8 * * *"
+    },
+    {
       "path": "/api/cron/notifications",
       "schedule": "0 9 * * *"
     },

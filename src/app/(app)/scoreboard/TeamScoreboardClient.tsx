@@ -47,6 +47,7 @@ import {
 import { scoreboardFunFacts, type ScoreboardFunFact } from "@/lib/scoreboard-fun-facts";
 import type { TeamScoreboard, TeamScoreboardFacet } from "@/lib/services/team-scoreboard";
 import { cn } from "@/lib/utils";
+import { FootballResultsCard } from "./FootballResultsCard";
 import { ScoreboardCompare } from "./ScoreboardCompare";
 import { ScoreboardExplore } from "./ScoreboardExplore";
 import { ScoreboardFunFacts } from "./ScoreboardFunFacts";
@@ -588,6 +589,11 @@ function TeamScoreboardExplorer() {
                   people={rankedPeople.map((row) => row.person)}
                   compareIds={activeCompare}
                   onChange={setCompareIds}
+                />
+                <FootballResultsCard
+                  games={data.footballGames}
+                  canRefresh={currentUser?.role === "ADMIN" || currentUser?.role === "STAFF"}
+                  onRefresh={reload}
                 />
                 <ScoreboardExplore data={data} filters={filters} onSelect={setFilter} />
               </div>

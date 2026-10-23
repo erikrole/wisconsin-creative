@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-23",
+    "title": "Football final scores on Scoreboard",
+    "type": "feature",
+    "summary": "Finished football games now show the final score, checked against UW Athletics and ESPN, on Scoreboard and on profiles.",
+    "details": [
+      "Scoreboard has a Football finals card. Each game shows Wisconsin's score first, with links to the UW and ESPN game pages.",
+      "A score only appears once both sources agree and match the result on the Schedule; otherwise it says the score is under review.",
+      "Games also record whether the opponent was ranked, whether they went to overtime, and the TV network.",
+      "Staff can refresh scores on demand. Scores refresh once a day during football season."
+    ],
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-22",
     "title": "Print labels straight to USB",
     "type": "feature",
