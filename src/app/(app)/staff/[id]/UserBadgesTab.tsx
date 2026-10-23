@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type ComponentType } from "react";
 import {
   AlarmClockCheck,
@@ -49,7 +50,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { StaggerItem, StaggerList } from "@/components/ui/motion";
 import { useFetch } from "@/hooks/use-fetch";
-import { badgeRarityVariant, getBadgeRarity, isHiddenUntilEarnedBadge, type BadgeRarity } from "@/lib/badges/display";
+import { badgeRarityVariant, getBadgeRarity, isHiddenUntilEarnedBadge, isPrivateHolderBadge, type BadgeRarity } from "@/lib/badges/display";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { formatDateFull } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -610,6 +611,7 @@ function BadgeDetailDialog({
   badge,
   canRevoke = false,
   canAward = false,
+  showGalleryLink = false,
   onOpenChange,
   onRevoke,
   onAwardRequest,
@@ -618,6 +620,8 @@ function BadgeDetailDialog({
   badge: UserBadge | null;
   canRevoke?: boolean;
   canAward?: boolean;
+  /** Link out to the badge's sheet in the team gallery. */
+  showGalleryLink?: boolean;
   onOpenChange: (open: boolean) => void;
   onRevoke?: (badgeId: string) => void;
   onAwardRequest?: (badge: UserBadge) => void;
@@ -706,6 +710,15 @@ function BadgeDetailDialog({
                   <p className="mt-3 text-xs font-medium text-foreground/60 tabular-nums">
                     {holdersLine(badge)}
                   </p>
+                ) : null}
+                {/* Surprises and bloopers never list holders, so there is nothing to link to. */}
+                {showGalleryLink && !isHiddenUntilEarnedBadge(badge.key) && !isPrivateHolderBadge(badge.key) ? (
+                  <Link
+                    href={`/badges?badge=${encodeURIComponent(badge.key)}`}
+                    className="mt-2 inline-flex min-h-10 items-center text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    See who has it
+                  </Link>
                 ) : null}
               </div>
             </DialogHeader>
@@ -835,11 +848,14 @@ export default function UserBadgesTab({
   canRevoke = false,
   canAward = false,
   onAwardRequest,
+  gallery = null,
 }: {
   userId: string;
   canRevoke?: boolean;
   canAward?: boolean;
   onAwardRequest?: (badge: UserBadge) => void;
+  /** Links into the team gallery; null for viewers who can't open it. */
+  gallery?: { isSelf: boolean } | null;
 }) {
   const [filter, setFilter] = useState<BadgeFilter>("all");
   const [expandedShelves, setExpandedShelves] = useState<Set<AwardCollectionKey>>(new Set());
@@ -1028,6 +1044,14 @@ export default function UserBadgesTab({
               : ""}
             Recently earned awards get a soft glow for one week.
           </p>
+          {gallery ? (
+            <Link
+              href={gallery.isSelf ? "/badges" : `/badges?tab=team&compare=${encodeURIComponent(userId)}`}
+              className="-mt-3 inline-flex min-h-10 w-fit items-center text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {gallery.isSelf ? "Open the team badge gallery" : "Compare badges with yours"}
+            </Link>
+          ) : null}
         </>
       )}
 
@@ -1036,6 +1060,7 @@ export default function UserBadgesTab({
         badge={selectedBadge}
         canRevoke={canRevoke}
         canAward={canAward}
+        showGalleryLink={gallery !== null}
         onOpenChange={(open) => {
           if (!open) setSelectedBadge(null);
         }}

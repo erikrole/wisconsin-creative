@@ -40,7 +40,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/schedule-working-copy.ts` | 1208 |
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
-| `src/app/(app)/staff/[id]/page.tsx` | 1159 |
+| `src/app/(app)/staff/[id]/page.tsx` | 1160 |
 | `src/lib/services/shift-notifications.ts` | 1144 |
 
 ## High-Level Data Flow

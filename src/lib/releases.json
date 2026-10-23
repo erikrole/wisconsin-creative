@@ -5,11 +5,11 @@
     "type": "feature",
     "summary": "Badges is now a gallery everyone can open. See every badge, who has it, and how your collection compares with your teammates.",
     "details": [
-      "The Gallery shows every badge, your progress toward the ones you don't have yet, and who on the team already earned each one.",
+      "The Gallery shows every badge and who on the team already earned each one, with Up next at the top: the three badges you are closest to earning.",
       "The Team view ranks everyone by badges earned. Pick anyone to see what only they have, what you both have, and what only you have.",
       "Surprise badges stay a surprise: you can see that someone found one, but not what it is until you earn it yourself.",
       "Badges for damaged, missing or late gear never show who holds them and never count toward the ranking.",
-      "Badges moved into the People section of the sidebar for everyone. Staff still award badges from the new Award tab.",
+      "Badges moved into the People section of the sidebar for everyone, and a profile's Badges tab links straight to who else has a badge or to a side-by-side compare. Staff still award badges from the new Award tab.",
       "Rarity is now measured among the people who can earn badges, so collaborator accounts no longer make every badge look rarer, and the badge report no longer ranks people who have left."
     ],
     "platforms": [

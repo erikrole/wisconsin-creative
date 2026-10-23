@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, ChevronDown, ChevronUp, Info, Search, Sparkles, Trophy, X } from "lucide-react";
 import { BadgeMedallion } from "@/components/badges/BadgeMedallion";
 import { badgeIcon } from "@/components/badges/badge-artwork";
@@ -82,6 +82,26 @@ function byViewerProgress(a: BadgeGalleryBadge, b: BadgeGalleryBadge) {
   return a.sortOrder - b.sortOrder;
 }
 
+/** Up to three goals the viewer is closest to finishing: furthest along, then fewest to go. */
+function closestGoals(badges: BadgeGalleryBadge[], limit = 3) {
+  return badges
+    .filter((badge) => badge.active && !badge.mystery && hasProgress(badge) && badge.progressCurrent! > 0)
+    .sort((a, b) => (
+      b.progressCurrent! / b.progressTarget! - a.progressCurrent! / a.progressTarget!
+      || (a.progressTarget! - a.progressCurrent!) - (b.progressTarget! - b.progressCurrent!)
+      || a.sortOrder - b.sortOrder
+    ))
+    .slice(0, limit);
+}
+
+/** Mirrors the open sheet or compare dialog into the URL so it can be shared or linked to. */
+function replaceSearchParam(key: string, value: string | null) {
+  const url = new URL(window.location.href);
+  if (value) url.searchParams.set(key, value);
+  else url.searchParams.delete(key);
+  window.history.replaceState(null, "", url);
+}
+
 function matchesFilter(badge: BadgeGalleryBadge, filter: GalleryFilter) {
   if (filter === "earned") return badge.earnedByViewer;
   if (filter === "not_yet") return !badge.earnedByViewer;
@@ -132,15 +152,21 @@ export default function BadgesClient({
   isStaff,
   badgesAvailable,
   initialTab,
+  initialBadgeKey = null,
+  initialCompareId = null,
 }: {
   isAdmin: boolean;
   isStaff: boolean;
   badgesAvailable: boolean;
   initialTab: GalleryTab;
+  /** `?badge=<key>` opens that badge's sheet once the gallery loads. */
+  initialBadgeKey?: string | null;
+  /** `?compare=<userId>` opens the compare dialog with that person. */
+  initialCompareId?: string | null;
 }) {
   const [tab, setTab] = useState<GalleryTab>(initialTab === "award" && !isStaff ? "gallery" : initialTab);
-  const [selectedBadgeId, setSelectedBadgeId] = useState<string | null>(null);
-  const [comparePersonId, setComparePersonId] = useState<string | null>(null);
+  const [selectedBadgeId, setSelectedBadgeIdState] = useState<string | null>(null);
+  const [comparePersonId, setComparePersonIdState] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useFetch<GalleryResponse>({
     url: "/api/badges/gallery",
@@ -155,6 +181,36 @@ export default function BadgesClient({
   );
   const selectedBadge = data?.badges.find((badge) => badge.id === selectedBadgeId) ?? null;
   const comparePerson = comparePersonId ? peopleById.get(comparePersonId) ?? null : null;
+
+  function setSelectedBadgeId(id: string | null) {
+    setSelectedBadgeIdState(id);
+    const badge = id ? data?.badges.find((entry) => entry.id === id) : null;
+    // A mystery key is per-viewer noise, so it never lands in a shareable URL.
+    replaceSearchParam("badge", badge && !badge.mystery ? badge.key : null);
+  }
+
+  function setComparePersonId(id: string | null) {
+    setComparePersonIdState(id);
+    replaceSearchParam("compare", id);
+  }
+
+  // Resolve deep links once, after the gallery arrives. A key the viewer can't
+  // see (an unearned surprise, a retired badge) or someone outside their view
+  // simply opens nothing.
+  const deepLinkResolved = useRef(false);
+  useEffect(() => {
+    if (!data || deepLinkResolved.current) return;
+    deepLinkResolved.current = true;
+    if (initialBadgeKey) {
+      const badge = data.badges.find((entry) => entry.key === initialBadgeKey && !entry.mystery);
+      if (badge) setSelectedBadgeIdState(badge.id);
+      else replaceSearchParam("badge", null);
+    }
+    if (initialCompareId) {
+      if (data.canCompare && data.people.some((person) => person.id === initialCompareId)) setComparePersonIdState(initialCompareId);
+      else replaceSearchParam("compare", null);
+    }
+  }, [data, initialBadgeKey, initialCompareId]);
 
   function changeTab(next: string) {
     const value = next as GalleryTab;
@@ -345,6 +401,8 @@ function GalleryView({
     <div className="flex flex-col gap-6">
       <ViewerSummary data={data} viewer={peopleById.get(data.viewerId) ?? null} onOpenTeam={onOpenTeam} />
 
+      {!narrowing ? <UpNext badges={data.badges} onSelect={onSelectBadge} /> : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <ToggleGroup
           type="single"
@@ -505,6 +563,42 @@ function ViewerSummary({
         </button>
       ) : null}
     </div>
+  );
+}
+
+/** The three goals you're closest to, so the next one is always one glance away. */
+function UpNext({ badges, onSelect }: { badges: BadgeGalleryBadge[]; onSelect: (id: string) => void }) {
+  const goals = useMemo(() => closestGoals(badges), [badges]);
+  if (goals.length === 0) return null;
+
+  return (
+    <section aria-label="Closest to earning">
+      <h2 className="text-base font-bold leading-6">Up next</h2>
+      <p className="text-sm text-muted-foreground">The badges you&apos;re closest to earning.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        {goals.map((badge) => {
+          const remaining = badge.progressTarget! - badge.progressCurrent!;
+          return (
+            <button
+              key={badge.id}
+              type="button"
+              onClick={() => onSelect(badge.id)}
+              className="flex w-full items-center gap-3 rounded-xl bg-card px-4 py-3.5 text-left shadow-[0_0_0_1px_var(--border)] outline-none transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_color-mix(in_oklch,var(--foreground)_7%,transparent),0_0_0_1px_var(--border)] focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              aria-label={`${badge.name}, ${badge.progressCurrent} of ${badge.progressTarget}, ${remaining} to go. Open details.`}
+            >
+              <BadgeMedallion icon={badgeIcon(badge.icon)} earned={false} rarity={rarityOf(badge)} className="size-11 shrink-0" iconClassName="size-5" />
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-sm font-bold leading-5">{badge.name}</h3>
+                <Progress value={progressPercent(badge)} className="mt-2 h-1.5" aria-hidden="true" />
+                <p className="mt-1.5 text-xs text-muted-foreground tabular-nums">
+                  {badge.progressCurrent}/{badge.progressTarget} · {remaining === 1 ? "1 to go" : `${remaining} to go`}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

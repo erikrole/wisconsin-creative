@@ -41,4 +41,22 @@ describe("Badges gallery surface", () => {
     expect(panel).not.toContain("UserFilters");
     expect(panel).not.toContain("useUrlState");
   });
+
+  it("deep links badges and comparisons, and links in from the profile tab", () => {
+    const page = source("src/app/(app)/badges/page.tsx");
+    const client = source("src/app/(app)/badges/BadgesClient.tsx");
+    const profileTab = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
+    const profilePage = source("src/app/(app)/staff/[id]/page.tsx");
+
+    expect(page).toContain("initialBadgeKey=");
+    expect(page).toContain("initialCompareId=");
+    // A mystery tile's key is never written into a shareable URL.
+    expect(client).toContain('replaceSearchParam("badge", badge && !badge.mystery ? badge.key : null)');
+    expect(client).toContain("data.canCompare && data.people.some");
+    expect(client).toContain("<UpNext badges={data.badges}");
+    // Surprises and bloopers have no holder list to link to.
+    expect(profileTab).toContain("!isHiddenUntilEarnedBadge(badge.key) && !isPrivateHolderBadge(badge.key)");
+    expect(profileTab).toContain("/badges?tab=team&compare=");
+    expect(profilePage).toContain('profile.role !== "COLLABORATOR" ? { isSelf } : null');
+  });
 });

@@ -12,7 +12,7 @@ import BadgesClient from "./BadgesClient";
 export default async function BadgesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; badge?: string; compare?: string }>;
 }) {
   const user = await requireAuth();
 
@@ -20,7 +20,7 @@ export default async function BadgesPage({
     redirect("/");
   }
 
-  const { tab } = await searchParams;
+  const { tab, badge, compare } = await searchParams;
   const isStaff = user.role === Role.ADMIN || user.role === Role.STAFF;
 
   return (
@@ -29,6 +29,8 @@ export default async function BadgesPage({
       isStaff={isStaff}
       badgesAvailable={badgesEnabled()}
       initialTab={tab === "team" || tab === "award" ? tab : "gallery"}
+      initialBadgeKey={typeof badge === "string" ? badge : null}
+      initialCompareId={typeof compare === "string" ? compare : null}
     />
   );
 }

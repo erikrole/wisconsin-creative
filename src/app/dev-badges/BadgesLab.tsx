@@ -83,6 +83,8 @@ function Lab() {
                     isStaff={role === "ADMIN" || role === "STAFF"}
                     badgesAvailable
                     initialTab={tab === "team" || tab === "award" ? tab : "gallery"}
+                    initialBadgeKey={params.get("badge")}
+                    initialCompareId={params.get("compare")}
                   />
                 ) : null}
               </FreshLayout>
