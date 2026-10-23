@@ -1,12 +1,26 @@
 [
   {
     "date": "2026-10-23",
+    "title": "Clearer invite emails",
+    "type": "fixes",
+    "summary": "Invite emails are shorter, with one setup button and a link to download the iPhone app.",
+    "details": [
+      "Create your account in the browser from the invite email, then sign in to the iPhone app.",
+      "Adding people now says Nothing new to add when every address was already invited or already has an account, and points to Resend."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 625
+  },
+  {
+    "date": "2026-10-23",
     "title": "Safer sign-up and account protections",
     "type": "fixes",
     "summary": "Creating an account now needs the link from your invite email, and a few account details are shared only with the people who need them.",
     "details": [
       "New accounts are created from the link in the invite email. Typed the sign-in page by hand or lost the email? Enter your address and choose Email me my invite link.",
-      "Invite links work for 30 days; a resend sends a fresh one and retires the old link. The latest iPhone app can open the emailed app link, create your account, and continue setup.",
+      "Invite links work for 30 days; a resend sends a fresh one and retires the old link. Set up in the browser, then sign in to the iPhone app.",
       "Wiscard card details on a teammate's profile are visible only to that person, staff and admins.",
       "When an admin resets someone's password, any passkeys on the account are cleared too, so the person sets everything up fresh after signing in with the temporary password.",
       "Sign-in responds in the same time whether or not an address has an account."

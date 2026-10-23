@@ -63,7 +63,7 @@
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/inventory-loss-reports.ts` | 618 |
-| `src/lib/services/invite-email.ts` | 110 |
+| `src/lib/services/invite-email.ts` | 123 |
 | `src/lib/services/invite-token.ts` | 34 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
