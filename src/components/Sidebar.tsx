@@ -127,6 +127,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Staff", href: "/staff", icon: UsersIcon },
       { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
+      { label: "Badges", href: "/badges", icon: MedalIcon },
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
     ],
   },
@@ -151,7 +152,6 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Operations", href: "/operations", icon: WrenchIcon },
       { label: "Kits", href: "/kits", icon: BackpackIcon },
-      { label: "Badges", href: "/badges", icon: MedalIcon },
       { label: "Signatures", href: "/signatures", icon: SignatureIcon },
       { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
       { label: "YouTube Studio Lite", href: "/youtube", icon: SquarePlayIcon, requiredRole: "ADMIN" },

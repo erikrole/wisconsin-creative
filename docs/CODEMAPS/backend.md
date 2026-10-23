@@ -12,7 +12,7 @@
 | `src/lib/services/auto-fill-preview.ts` | 322 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
 | `src/lib/services/availability.ts` | 700 |
-| `src/lib/services/badge-report.ts` | 140 |
+| `src/lib/services/badge-report.ts` | 144 |
 | `src/lib/services/battery-low-stock.ts` | 89 |
 | `src/lib/services/blast-targeting.ts` | 166 |
 | `src/lib/services/blasts.ts` | 360 |
@@ -454,6 +454,7 @@
 - `/api/badges/award/bulk`
 - `/api/badges/award`
 - `/api/badges/events/app-open`
+- `/api/badges/gallery`
 - `/api/badges/recent`
 - `/api/badges`
 - `/api/badges/user/[userId]`

@@ -42,6 +42,24 @@ const HIDDEN_BADGE_KEYS = new Set([
   "leap_day",
 ]);
 
+/**
+ * Tongue-in-cheek awards for something going wrong: damaged or missing gear,
+ * late returns, a moved due date. They are fine on a person's own shelf, but
+ * the team gallery never lists who holds them and the team ranking never
+ * counts them. A public "who damaged gear" roll is the per-person damage tally
+ * Erik chose not to show on Accountability (2026-10-22).
+ */
+const PRIVATE_HOLDER_BADGE_KEYS = new Set([
+  "oops_damaged",
+  "oops_missing",
+  "running_late",
+  "due_date_dancer",
+]);
+
+export function isPrivateHolderBadge(key: string): boolean {
+  return PRIVATE_HOLDER_BADGE_KEYS.has(key);
+}
+
 const LEGENDARY_BADGE_KEYS = new Set([
   "above_and_beyond",
   "category_collector",

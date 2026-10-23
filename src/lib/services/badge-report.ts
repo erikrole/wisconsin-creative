@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { badgeEligibleUserWhere } from "@/lib/badges/queries";
 
 const BADGE_REPORT_PERIODS = [30, 90, 365] as const;
 
@@ -34,8 +35,11 @@ export async function getBadgeReport(days: number = BADGE_REPORT_DEFAULT_PERIOD)
       select: { id: true, key: true, name: true, category: true, sortOrder: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
+    // Departed people and collaborators used to rank here, so the leaderboard
+    // could lead with someone no longer on the team.
     db.studentBadge.groupBy({
       by: ["userId"],
+      where: { user: badgeEligibleUserWhere },
       _count: true,
       orderBy: { _count: { userId: "desc" } },
       take: 10,
