@@ -50,6 +50,7 @@ Public registration and login responses must stay generic where membership discl
 8. Every create, claim, skip, resend, and retry action must be audit logged.
 9. Bulk endpoints need row-count bounds and rate limits sized for shared-network student onboarding.
 10. Import output must not contain passwords.
+11. Claiming an invite requires the one-time token from its emailed link (D-037, 2026-10-23 amendment). The sign-in page offers a rate-limited resend to the invited address only.
 
 ## V1 Scope
 1. A documented onboarding lifecycle centered on `AllowedEmail` invites.

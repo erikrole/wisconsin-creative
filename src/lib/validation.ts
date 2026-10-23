@@ -356,7 +356,15 @@ export const loginSchema = z.object({
   companion: z.boolean().optional(),
 });
 
+export const inviteTokenSchema = z.string().trim().min(1).max(128);
+
 export const authDiscoverySchema = z.object({
+  email: z.string().trim().max(254).email(),
+  // Present when the sign-in page was opened from an invite email link.
+  invite: inviteTokenSchema.optional(),
+});
+
+export const inviteResendSchema = z.object({
   email: z.string().trim().max(254).email(),
 });
 
@@ -407,6 +415,9 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(128),
   // Omitted by the native app, which always keeps people signed in.
   rememberMe: z.boolean().optional(),
+  // The one-time token from the invite email's link. Optional at the schema
+  // boundary so a missing token gets the invite-link message, not a 400.
+  inviteToken: inviteTokenSchema.optional(),
 });
 
 export const forgotPasswordSchema = z.object({

@@ -3,6 +3,7 @@ import { HttpError, ok } from "@/lib/http";
 import { authDiscoverySchema } from "@/lib/validation";
 import { withHandler } from "@/lib/api";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { inviteTokenMatches } from "@/lib/services/invite-token";
 
 // Discovery is intentionally a small UX hint, not an authorization check. The
 // registration route still re-checks the allowlist and claims it atomically.
@@ -30,6 +31,8 @@ export const POST = withHandler(async (req) => {
       select: {
         claimedAt: true,
         role: true,
+        inviteTokenHash: true,
+        inviteTokenIssuedAt: true,
         collaboratorPolicy: { select: { status: true } },
       },
     }),
@@ -49,5 +52,10 @@ export const POST = withHandler(async (req) => {
   // Deliberately return no role, name, or profile seed data. The only public
   // distinction is the requested onboarding affordance for an unclaimed
   // allowlist row; all other addresses continue through password sign-in.
-  return ok({ flow: pendingInvite ? "onboarding" : "password" as const });
+  // For a pending invite, `inviteLink` says whether this visit arrived through
+  // the emailed link: "required" sends the page to the resend affordance
+  // instead of a sign-up form that the register route would refuse.
+  if (!pendingInvite) return ok({ flow: "password" as const });
+  const inviteLink = allowedEmail && (await inviteTokenMatches(allowedEmail, body.invite)) ? "valid" : "required";
+  return ok({ flow: "onboarding" as const, inviteLink });
 });

@@ -1,14 +1,19 @@
 import { renderEmail, sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
+import { issueInviteToken } from "@/lib/services/invite-token";
 
 export type InviteEmailKind = "invite" | "reminder";
 
 /** `not_configured` means no provider key is set, so nothing left the server. */
 export type InviteEmailStatus = "sent" | "failed" | "not_configured";
 
-/** The login page prefills the invited address, so the link claims the right invite. */
-export function inviteLoginUrl(email: string): string {
-  return `${env.appUrl}/login?email=${encodeURIComponent(email)}`;
+/**
+ * The login page prefills the invited address, so the link claims the right
+ * invite. An unclaimed invite's link also carries its one-time sign-up token.
+ */
+export function inviteLoginUrl(email: string, inviteToken?: string | null): string {
+  const url = `${env.appUrl}/login?email=${encodeURIComponent(email)}`;
+  return inviteToken ? `${url}&invite=${encodeURIComponent(inviteToken)}` : url;
 }
 
 function firstName(name: string | null | undefined): string {
@@ -19,16 +24,19 @@ export function buildInviteEmail({
   name,
   email,
   kind = "invite",
+  inviteToken = null,
 }: {
   name?: string | null;
   email: string;
   kind?: InviteEmailKind;
+  /** Present for an unclaimed invite; the sign-up form needs this link. */
+  inviteToken?: string | null;
 }): { subject: string; html: string; text: string } {
   const first = firstName(name);
   /** "Hi Maya, you've..." with a name, "You've..." without. */
   const lead = (sentence: string) =>
     first ? `Hi ${first}, ${sentence}` : `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}`;
-  const loginUrl = inviteLoginUrl(email);
+  const loginUrl = inviteLoginUrl(email, inviteToken);
   const reminder = kind === "reminder";
   const subject = reminder ? "Finish setting up your Wisconsin Creative account" : "You're invited to Wisconsin Creative";
 
@@ -57,7 +65,9 @@ export function buildInviteEmail({
           ],
         },
     action: { label: reminder ? "Finish setting up" : "Set up your account", url: loginUrl },
-    note: `Sign in with ${email}. Use this exact address so we can find your invite.`,
+    note: inviteToken
+      ? `Sign in with ${email}, using this link: it carries your invitation and works for 30 days. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
+      : `Sign in with ${email}. Use this exact address so we can find your invite.`,
     footer: [
       "Forget your password later? Choose Forgot password on the sign-in page and we'll email you a reset link.",
       "Questions? Reply to this email. Wasn't expecting this? You can ignore it, nothing happens until you sign in.",
@@ -68,14 +78,20 @@ export function buildInviteEmail({
   return { subject, ...rendered };
 }
 
-/** Never throws: callers decide what to tell the admin from the returned status. */
+/**
+ * Never throws: callers decide what to tell the admin from the returned status.
+ * Pass `allowedEmailId` for an unclaimed invite so the link carries a fresh
+ * sign-up token; a reminder to someone who already registered needs none.
+ */
 export async function sendInviteEmail(input: {
   email: string;
   name?: string | null;
   kind?: InviteEmailKind;
+  allowedEmailId?: string;
 }): Promise<InviteEmailStatus> {
   if (!env.resendApiKey) return "not_configured";
-  const { subject, html, text } = buildInviteEmail(input);
+  const inviteToken = input.allowedEmailId ? await issueInviteToken(input.allowedEmailId) : null;
+  const { subject, html, text } = buildInviteEmail({ ...input, inviteToken });
   const delivered = await sendEmail({ to: input.email, subject, html, text });
   return delivered ? "sent" : "failed";
 }

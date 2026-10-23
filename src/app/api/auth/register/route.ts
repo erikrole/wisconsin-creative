@@ -10,6 +10,7 @@ import { createAuditEntriesTx, createAuditEntry, createAuditEntryTx } from "@/li
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 import { unique } from "@/lib/utils";
+import { inviteTokenMatches } from "@/lib/services/invite-token";
 
 // Registration is invitation-gated (allowlist), so the IP ceiling is sized for
 // an onboarding wave from a shared network rather than for abuse defense.
@@ -20,6 +21,10 @@ const REGISTER_LIMIT = { max: 40, windowMs: 15 * 60 * 1000 }; // per IP per 15 m
 // about (D-037 membership-enumeration boundary).
 const INVITE_GATE_MESSAGE =
   "Registration is by invitation only. If you already have an account, sign in. Otherwise contact Erik Role to request access.";
+
+/** The address is invited, but this request did not arrive through its emailed link. */
+export const INVITE_LINK_MESSAGE =
+  "Open the link in your invite email to finish signing up. Need a new one? Enter your address on the sign-in page and choose Email me my invite link.";
 
 export const POST = withHandler(async (req) => {
   const ip = getClientIp(req);
@@ -52,6 +57,14 @@ export const POST = withHandler(async (req) => {
     throw new HttpError(403, INVITE_GATE_MESSAGE);
   }
 
+  // Inbox proof: the invite row is reachable by anyone who can guess a campus
+  // address, so claiming it also needs the one-time token the invite email
+  // carried. A stale or missing token points back to the email (or a resend)
+  // instead of the invite gate message, which would read as "not invited".
+  if (!(await inviteTokenMatches(allowedEntry, body.inviteToken))) {
+    throw new HttpError(403, INVITE_LINK_MESSAGE, { code: "INVITE_LINK_REQUIRED" });
+  }
+
   const passwordHash = await hashPassword(body.password);
   const preloadedPrimaryArea = allowedEntry.preloadedPrimaryArea ?? allowedEntry.preloadedAreas?.[0] ?? null;
   // Atomic: create user + claim invitation in one transaction
@@ -77,7 +90,7 @@ export const POST = withHandler(async (req) => {
 
       await tx.allowedEmail.update({
         where: { id: allowedEntry.id },
-        data: { claimedAt: new Date(), claimedById: created.id },
+        data: { claimedAt: new Date(), claimedById: created.id, inviteTokenHash: null, inviteTokenIssuedAt: null },
       });
 
       // Staged hire invite (D-065): link the applicant to the new account inside

@@ -17,7 +17,12 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
+vi.mock("@/lib/services/invite-token", () => ({
+  issueInviteToken: vi.fn(async () => "fresh-raw-token"),
+}));
+
 import { buildInviteEmail, inviteLoginUrl, sendInviteEmail } from "@/lib/services/invite-email";
+import { issueInviteToken } from "@/lib/services/invite-token";
 
 describe("invite email", () => {
   beforeEach(() => {
@@ -27,6 +32,25 @@ describe("invite email", () => {
 
   it("links to the login page with the invited address prefilled", () => {
     expect(inviteLoginUrl("a+b@wisc.edu")).toBe("https://creative.example.test/login?email=a%2Bb%40wisc.edu");
+    expect(inviteLoginUrl("a@wisc.edu", "tok/en")).toBe("https://creative.example.test/login?email=a%40wisc.edu&invite=tok%2Fen");
+  });
+
+  it("mints a fresh sign-up token for an unclaimed invite and puts it in the link", async () => {
+    sendEmail.mockResolvedValueOnce(true);
+    await expect(sendInviteEmail({ email: "x@wisc.edu", allowedEmailId: "invite-1" })).resolves.toBe("sent");
+    expect(issueInviteToken).toHaveBeenCalledWith("invite-1");
+    const sent = sendEmail.mock.calls[0]![0] as { html: string; text: string };
+    expect(sent.html).toContain("login?email=x%40wisc.edu&amp;invite=fresh-raw-token");
+    expect(sent.text).toContain("login?email=x%40wisc.edu&invite=fresh-raw-token");
+    expect(sent.html).toContain("works for 30 days");
+  });
+
+  it("sends a plain sign-in link for a reminder to someone who already registered", async () => {
+    sendEmail.mockResolvedValueOnce(true);
+    await sendInviteEmail({ email: "x@wisc.edu", kind: "reminder" });
+    expect(issueInviteToken).not.toHaveBeenCalled();
+    const sent = sendEmail.mock.calls[0]![0] as { text: string };
+    expect(sent.text).not.toContain("invite=");
   });
 
   it("greets by first name, escapes dynamic content, and tells them which address to use", () => {

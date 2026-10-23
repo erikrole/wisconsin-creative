@@ -101,7 +101,7 @@ export const POST = withAuth(async (req, { user }) => {
   // Opt-in per add: the invite is the one automatic email a new person gets.
   // Collaborators are onboarded by their organization, not this email.
   if (body?.sendInvite === true && invite.role !== "COLLABORATOR") {
-    const emailStatus = await sendInviteEmail({ email, name: "preloadedName" in invite ? invite.preloadedName : null });
+    const emailStatus = await sendInviteEmail({ email, name: "preloadedName" in invite ? invite.preloadedName : null, allowedEmailId: result.entry.id });
     await createAuditEntry({
       actorId: user.id,
       actorRole: user.role,

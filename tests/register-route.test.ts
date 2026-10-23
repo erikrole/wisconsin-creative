@@ -57,12 +57,17 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
+vi.mock("@/lib/services/invite-token", () => ({
+  inviteTokenMatches: vi.fn(async (_invite: unknown, raw: string | undefined) => raw === "valid-invite-token"),
+}));
+
 import { createSession, hashPassword } from "@/lib/auth";
 import { createAuditEntriesTx, createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { POST } from "@/app/api/auth/register/route";
 
+// Every ordinary registration arrives through the invite email's link.
 function postRegister(body: Record<string, unknown>) {
   return new Request("https://app.example.com/api/auth/register", {
     method: "POST",
@@ -70,7 +75,7 @@ function postRegister(body: Record<string, unknown>) {
       "content-type": "application/json",
       "x-forwarded-for": "127.0.0.1",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ inviteToken: "valid-invite-token", ...body }),
   });
 }
 
@@ -296,6 +301,41 @@ describe("POST /api/auth/register", () => {
         collaboratorProfile: "BTN_STANDARD",
         capabilities: policy.grants.map((grant) => grant.capabilityKey),
       }),
+    }));
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["stale", "expired-invite-token"],
+  ])("refuses an invited address whose sign-up link token is %s", async (_label, inviteToken) => {
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(allowedInvite(Role.STUDENT));
+    tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
+
+    const response = await POST(
+      postRegister({ name: "Student User", email: "student@example.com", password: "long-enough-password", inviteToken }),
+      noParams,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.code).toBe("INVITE_LINK_REQUIRED");
+    expect(body.error).toContain("Open the link in your invite email");
+    expect(tx.user.create).not.toHaveBeenCalled();
+    expect(createSession).not.toHaveBeenCalled();
+  });
+
+  it("clears the sign-up token when the invite is claimed", async () => {
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(allowedInvite(Role.STUDENT));
+    tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
+
+    const response = await POST(
+      postRegister({ name: "Student User", email: "student@example.com", password: "long-enough-password" }),
+      noParams,
+    );
+
+    expect(response.status).toBe(201);
+    expect(tx.allowedEmail.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ inviteTokenHash: null, inviteTokenIssuedAt: null }),
     }));
   });
 

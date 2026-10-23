@@ -284,7 +284,7 @@ describe("POST /api/allowed-emails (single)", () => {
     expect(res.status).toBe(201);
     expect((await res.json()).emailStatus).toBe("sent");
     expect(sendInviteEmail).toHaveBeenCalledTimes(1);
-    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "jo@wisc.edu", name: "Jo Park" });
+    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "jo@wisc.edu", name: "Jo Park", allowedEmailId: "e-2" });
     expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
       entityId: "e-2",
       action: "invite_sent",

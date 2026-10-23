@@ -1,10 +1,12 @@
 [
   {
     "date": "2026-10-23",
-    "title": "Tighter account protections",
+    "title": "Safer sign-up and account protections",
     "type": "fixes",
-    "summary": "A few account details are now shared only with the people who need them, and account recovery resets every way into an account at once.",
+    "summary": "Creating an account now needs the link from your invite email, and a few account details are shared only with the people who need them.",
     "details": [
+      "New accounts are created from the link in the invite email. Typed the sign-in page by hand or lost the email? Enter your address and choose Email me my invite link.",
+      "Invite links work for 30 days; a resend sends a fresh one and retires the old link.",
       "Wiscard card details on a teammate's profile are visible only to that person, staff and admins.",
       "When an admin resets someone's password, any passkeys on the account are cleared too, so the person sets everything up fresh after signing in with the temporary password.",
       "Sign-in responds in the same time whether or not an address has an account."
