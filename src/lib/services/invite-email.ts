@@ -20,17 +20,27 @@ function firstName(name: string | null | undefined): string {
   return name?.trim().split(/\s+/)[0] ?? "";
 }
 
+/**
+ * Released 1.4 (36) receives universal links for `/login?invite=` but cannot
+ * read the token, so the app button would strand a student in the old app.
+ * Flip to true once a build with native invite sign-up is the App Store version.
+ */
+export const NATIVE_INVITE_SETUP_RELEASED = false;
+
 export function buildInviteEmail({
   name,
   email,
   kind = "invite",
   inviteToken = null,
+  nativeSetup = NATIVE_INVITE_SETUP_RELEASED,
 }: {
   name?: string | null;
   email: string;
   kind?: InviteEmailKind;
   /** Present for an unclaimed invite; the sign-up form needs this link. */
   inviteToken?: string | null;
+  /** Offer the universal-link app button beside the browser one. */
+  nativeSetup?: boolean;
 }): { subject: string; html: string; text: string } {
   const first = firstName(name);
   /** "Hi Maya, you've..." with a name, "You've..." without. */
@@ -41,6 +51,7 @@ export function buildInviteEmail({
   // which cannot read an invite token. Only the explicit app action is claimed.
   const browserLoginUrl = inviteToken ? `${loginUrl}&web=1` : loginUrl;
   const reminder = kind === "reminder";
+  const offerApp = Boolean(inviteToken) && nativeSetup;
   const subject = reminder ? "Finish setting up your Wisconsin Creative account" : "You're invited to Wisconsin Creative";
 
   const rendered = renderEmail({
@@ -67,11 +78,13 @@ export function buildInviteEmail({
             "Install the iPhone app to scan gear and get shift reminders",
           ],
         },
-    action: { label: reminder ? "Finish setting up" : inviteToken ? "Set up in browser" : "Set up your account", url: browserLoginUrl },
-    secondaryAction: inviteToken ? { label: "Set up in the iPhone app", url: loginUrl } : undefined,
-    note: inviteToken
+    action: { label: reminder ? "Finish setting up" : offerApp ? "Set up in browser" : "Set up your account", url: browserLoginUrl },
+    secondaryAction: offerApp ? { label: "Set up in the iPhone app", url: loginUrl } : undefined,
+    note: offerApp
       ? `Sign in with ${email}, using either setup link: each carries your invitation and works for 30 days. For setup in the iPhone app, install the latest version first. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
-      : `Sign in with ${email}. Use this exact address so we can find your invite.`,
+      : inviteToken
+        ? `Sign in with ${email}. This link carries your invitation and works for 30 days. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
+        : `Sign in with ${email}. Use this exact address so we can find your invite.`,
     footer: [
       "Forget your password later? Choose Forgot password on the sign-in page and we'll email you a reset link.",
       "Questions? Reply to this email. Wasn't expecting this? You can ignore it, nothing happens until you sign in.",

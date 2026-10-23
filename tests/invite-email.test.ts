@@ -21,7 +21,7 @@ vi.mock("@/lib/services/invite-token", () => ({
   issueInviteToken: vi.fn(async () => "fresh-raw-token"),
 }));
 
-import { buildInviteEmail, inviteLoginUrl, sendInviteEmail } from "@/lib/services/invite-email";
+import { NATIVE_INVITE_SETUP_RELEASED, buildInviteEmail, inviteLoginUrl, sendInviteEmail } from "@/lib/services/invite-email";
 import { issueInviteToken } from "@/lib/services/invite-token";
 
 describe("invite email", () => {
@@ -46,11 +46,20 @@ describe("invite email", () => {
   });
 
   it("keeps browser setup out of universal linking while offering explicit native setup", () => {
-    const { html, text } = buildInviteEmail({ email: "alex@wisc.edu", inviteToken: "fixture-token" });
+    const { html, text } = buildInviteEmail({ email: "alex@wisc.edu", inviteToken: "fixture-token", nativeSetup: true });
     expect(html).toContain('href="https://creative.example.test/login?email=alex%40wisc.edu&amp;invite=fixture-token&amp;web=1"');
     expect(html).toContain('href="https://creative.example.test/login?email=alex%40wisc.edu&amp;invite=fixture-token"');
     expect(text).toContain("Set up in browser: https://creative.example.test/login?email=alex%40wisc.edu&invite=fixture-token&web=1");
     expect(text).toContain("Set up in the iPhone app: https://creative.example.test/login?email=alex%40wisc.edu&invite=fixture-token");
+  });
+
+  it("sends only the browser link until a native invite build is released", () => {
+    expect(NATIVE_INVITE_SETUP_RELEASED).toBe(false);
+    const { html, text } = buildInviteEmail({ email: "alex@wisc.edu", inviteToken: "fixture-token" });
+    expect(text).toContain("Set up your account: https://creative.example.test/login?email=alex%40wisc.edu&invite=fixture-token&web=1");
+    expect(text).not.toContain("iPhone app:");
+    expect(html).not.toContain('href="https://creative.example.test/login?email=alex%40wisc.edu&amp;invite=fixture-token"');
+    expect(text).toContain("works for 30 days");
   });
 
   it("sends a plain sign-in link for a reminder to someone who already registered", async () => {
