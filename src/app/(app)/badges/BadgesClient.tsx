@@ -23,7 +23,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useFetch } from "@/hooks/use-fetch";
 import { badgeRarityVariant, type BadgeRarity } from "@/lib/badges/display";
 import type { BadgeGallery, BadgeGalleryBadge, BadgeGalleryPerson } from "@/lib/badges/gallery";
-import { formatDateFull } from "@/lib/format";
+import { formatDateFull, formatDateShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import BadgeAwardPanel from "./BadgeAwardPanel";
 
@@ -269,7 +269,7 @@ export default function BadgesClient({
             ) : error || !data ? (
               <LoadError onRetry={reload} />
             ) : (
-              <TeamView data={data} onCompare={setComparePersonId} />
+              <TeamView data={data} onCompare={setComparePersonId} onSelectBadge={setSelectedBadgeId} />
             )}
           </TabsContent>
 
@@ -746,7 +746,15 @@ function BadgeSheet({
   );
 }
 
-function TeamView({ data, onCompare }: { data: GalleryResponse; onCompare: (id: string) => void }) {
+function TeamView({
+  data,
+  onCompare,
+  onSelectBadge,
+}: {
+  data: GalleryResponse;
+  onCompare: (id: string) => void;
+  onSelectBadge: (id: string) => void;
+}) {
   const [filter, setFilter] = useState<TeamFilter>("everyone");
 
   // Each person's three rarest public badges, drawn beside their count.
@@ -780,6 +788,7 @@ function TeamView({ data, onCompare }: { data: GalleryResponse; onCompare: (id: 
 
   return (
     <div className="flex flex-col gap-4">
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ToggleGroup
           type="single"
@@ -797,6 +806,8 @@ function TeamView({ data, onCompare }: { data: GalleryResponse; onCompare: (id: 
         </ToggleGroup>
         <p className="text-xs text-muted-foreground">Pick someone to compare badges.</p>
       </div>
+
+      <EarnedThisWeek data={data} filter={filter} onSelectBadge={onSelectBadge} />
 
       <ol className="overflow-hidden rounded-xl bg-card shadow-[0_0_0_1px_var(--border)]" aria-label="Team badge ranking">
         {people.map((person) => {
@@ -842,6 +853,95 @@ function TeamView({ data, onCompare }: { data: GalleryResponse; onCompare: (id: 
         })}
       </ol>
     </div>
+  );
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+/** Rows the strip shows before it asks, so a busy week doesn't push the ranking off screen. */
+const RECENT_PREVIEW_COUNT = 5;
+
+/**
+ * Who earned what in the last seven days, newest first. Holders are already
+ * empty for private badges and when comparisons are off, so nothing here can
+ * reveal a blooper or a surprise's name.
+ */
+function EarnedThisWeek({
+  data,
+  filter,
+  onSelectBadge,
+}: {
+  data: GalleryResponse;
+  filter: TeamFilter;
+  onSelectBadge: (id: string) => void;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const peopleById = useMemo(() => new Map(data.people.map((person) => [person.id, person])), [data.people]);
+
+  const recent = useMemo(() => {
+    const since = Date.now() - WEEK_MS;
+    const rows: { badge: BadgeGalleryBadge; person: BadgeGalleryPerson; awardedAt: string }[] = [];
+    for (const badge of data.badges) {
+      for (const holder of badge.holders) {
+        if (new Date(holder.awardedAt).getTime() < since) continue;
+        const person = peopleById.get(holder.userId);
+        if (!person || !personMatchesTeamFilter(person, filter)) continue;
+        rows.push({ badge, person, awardedAt: holder.awardedAt });
+      }
+    }
+    return rows.sort((a, b) => b.awardedAt.localeCompare(a.awardedAt));
+  }, [data.badges, peopleById, filter]);
+
+  if (recent.length === 0) return null;
+  const shown = showAll ? recent : recent.slice(0, RECENT_PREVIEW_COUNT);
+
+  return (
+    <section aria-label="Earned this week">
+      <div className="flex items-end justify-between gap-3">
+        <h2 className="text-base font-bold leading-6">Earned this week</h2>
+        <p className="text-xs text-muted-foreground tabular-nums">{recent.length === 1 ? "1 badge" : `${recent.length} badges`}</p>
+      </div>
+      <ul className="mt-3 overflow-hidden rounded-xl bg-card shadow-[0_0_0_1px_var(--border)]">
+        {shown.map(({ badge, person, awardedAt }) => {
+          const isViewer = person.id === data.viewerId;
+          return (
+            <li key={`${badge.id}:${person.id}`} className="border-b border-border/60 last:border-b-0">
+              <button
+                type="button"
+                onClick={() => onSelectBadge(badge.id)}
+                className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
+              >
+                <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  <span className="font-bold">{isViewer ? "You" : person.name}</span>
+                  <span className="text-muted-foreground">{badge.mystery ? " found " : " earned "}</span>
+                  <span className="font-bold">{badge.mystery ? "a surprise badge" : badge.name}</span>
+                </span>
+                <span className="hidden shrink-0 text-xs text-muted-foreground tabular-nums sm:inline">{formatDateShort(awardedAt)}</span>
+                <BadgeMedallion
+                  icon={badge.mystery ? Sparkles : badgeIcon(badge.icon)}
+                  earned
+                  rarity={rarityOf(badge)}
+                  className="size-8 shrink-0"
+                  iconClassName="size-4"
+                />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {recent.length > RECENT_PREVIEW_COUNT ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-1.5 h-10 w-full text-xs text-muted-foreground hover:text-foreground"
+          aria-expanded={showAll}
+          onClick={() => setShowAll((open) => !open)}
+        >
+          {showAll ? <ChevronUp className="size-3.5" aria-hidden="true" /> : <ChevronDown className="size-3.5" aria-hidden="true" />}
+          {showAll ? "Show less" : `Show ${recent.length - RECENT_PREVIEW_COUNT} more`}
+        </Button>
+      ) : null}
+    </section>
   );
 }
 
