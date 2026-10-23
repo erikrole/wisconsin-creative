@@ -14,6 +14,14 @@ export default defineConfig([
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    },
+  },
+  {
+    // Static tools under public/ are plain browser scripts that swallow errors on purpose.
+    files: ["public/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" }],
     },
   },
   globalIgnores([

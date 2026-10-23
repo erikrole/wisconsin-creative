@@ -6,7 +6,6 @@ import { findLeftoverReservationPickup } from "@/lib/services/reservation-pickup
 type Client = Prisma.TransactionClient | PrismaClient;
 
 export const CHECKOUT_LIMIT_CODE = "checkout_limit";
-export const LEFTOVER_PICKUP_CODE = "leftover_pickup";
 
 export type KioskCheckoutAllowance = {
   /** Personal OPEN + PENDING_PICKUP checkouts, the set the limit counts. */

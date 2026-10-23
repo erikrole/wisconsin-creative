@@ -24,12 +24,12 @@
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |
-| `src/lib/services/bookings-checkin.ts` | 743 |
+| `src/lib/services/bookings-checkin.ts` | 742 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
 | `src/lib/services/bookings-lifecycle-shared.ts` | 295 |
 | `src/lib/services/bookings-lifecycle.ts` | 19 |
-| `src/lib/services/bookings-queries.ts` | 322 |
-| `src/lib/services/bookings.ts` | 9 |
+| `src/lib/services/bookings-queries.ts` | 304 |
+| `src/lib/services/bookings.ts` | 7 |
 | `src/lib/services/budget.ts` | 950 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 973 |
@@ -70,7 +70,7 @@
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
-| `src/lib/services/kiosk-checkout-allowance.ts` | 86 |
+| `src/lib/services/kiosk-checkout-allowance.ts` | 85 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 267 |
 | `src/lib/services/kiosk-extend-window.ts` | 168 |
@@ -179,7 +179,7 @@
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 168 |
 | `src/lib/booking-action-policy.ts` | 216 |
-| `src/lib/booking-actions.ts` | 14 |
+| `src/lib/booking-actions.ts` | 11 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
 | `src/lib/booking-display-title.ts` | 58 |
@@ -290,7 +290,7 @@
 | `src/lib/reservation-reuse.ts` | 95 |
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 71 |
-| `src/lib/resource-assets.ts` | 848 |
+| `src/lib/resource-assets.ts` | 847 |
 | `src/lib/resource-import-images.ts` | 104 |
 | `src/lib/resource-import.ts` | 186 |
 | `src/lib/resource-search.ts` | 124 |

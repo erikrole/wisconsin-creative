@@ -293,8 +293,6 @@ export function reviewChecks(video: ReviewVideo, draft: ReviewDraft | null, live
 }
 
 export type ReviewStatus = "Needs source" | "Needs review" | "Published" | "Needs attention" | "Protected";
-export const REVIEW_STATUSES: ReviewStatus[] = ["Needs review", "Needs source", "Needs attention", "Published", "Protected"];
-
 export function holdReason(video: ReviewVideo, draft: ReviewDraft | null): string | null {
   if (video.protectedReason) return video.protectedReason;
   if (draft?.hold) return draft.hold;

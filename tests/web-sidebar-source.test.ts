@@ -131,7 +131,6 @@ describe("web sidebar source contract", () => {
   });
 
   it("avoids authenticated shell RSC prefetch failures in Safari", () => {
-    const appShell = source("src/components/AppShell.tsx");
     const sidebar = source("src/components/Sidebar.tsx");
     const sectionNav = source("src/components/SectionNav.tsx");
 
