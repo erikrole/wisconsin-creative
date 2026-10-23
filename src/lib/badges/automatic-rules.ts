@@ -32,6 +32,7 @@ export const automaticCheckoutRuleKeys = [
   "checkout_distinct_events",
   "checkout_full_context",
   "checkout_for_shift_heavy",
+  "checkout_pi_day",
 ] as const;
 
 export const automaticTradeRuleKeys = [
@@ -82,6 +83,9 @@ export const automaticShiftRuleKeys = [
   "shift_bounce_back",
   "shift_battle_tested",
   "shift_sites",
+  "shift_home_football",
+  "shift_axe_game",
+  "shift_homecoming",
 ] as const;
 
 export const automaticMeasuredRuleKeys = new Set<string>([
@@ -97,6 +101,15 @@ const LONG_HAUL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** How close to the due moment a return has to land to count as a buzzer beater. */
 const BUZZER_WINDOW_MS = 5 * 60 * 1000;
+
+/** Sport code the calendar sync assigns to football games. */
+const FOOTBALL_SPORT_CODE = "fb";
+
+/**
+ * Minnesota, with an optional ranking and school or mascot words, but never a
+ * different school such as Minnesota State or Minnesota Duluth.
+ */
+const AXE_OPPONENT = /^(?:(?:no\.\s*|#)\d+\s+)?(?:(?:the\s+)?university\s+of\s+)?minnesota(?:\s+golden\s+gophers|\s+gophers)?$/i;
 
 /** A claim inside this window before the shift starts is short-notice cover. */
 const SHORT_NOTICE_MS = 24 * 60 * 60 * 1000;
@@ -167,6 +180,8 @@ export type ShiftBadgeEvidence = {
         site?: string | null;
         locationId?: string | null;
         opponent?: string | null;
+        /** The calendar title, read only to spot the Homecoming game. */
+        summary?: string | null;
       };
     };
   };
@@ -264,7 +279,9 @@ export function checkoutAutomaticRuleCounts(bookings: CheckoutBadgeEvidence[], t
     const weekKey = localWeekKey(booking.startsAt, timeZone);
     weekKeys.add(weekKey);
     checkoutsPerWeek.set(weekKey, (checkoutsPerWeek.get(weekKey) ?? 0) + 1);
-    const monthKey = localParts(booking.startsAt, timeZone).date.slice(0, 7);
+    const localDate = localParts(booking.startsAt, timeZone).date;
+    if (localDate.slice(5) === "03-14") increment(counts, "checkout_pi_day");
+    const monthKey = localDate.slice(0, 7);
     monthCounts.set(monthKey, (monthCounts.get(monthKey) ?? 0) + 1);
 
     for (const assetId of new Set(booking.serializedItems.map((item) => item.assetId))) {
@@ -499,6 +516,12 @@ export function shiftAutomaticRuleCounts(assignments: ShiftBadgeEvidence[], time
     monthKeys.add(start.date.slice(0, 7));
     if (event.result === "WIN" || event.result === "LOSS") {
       if (normalizedSport) scoredSports.add(normalizedSport);
+    }
+    if (normalizedSport === FOOTBALL_SPORT_CODE) {
+      if (isHome) increment(counts, "shift_home_football");
+      // The rivalry is played for Paul Bunyan's Axe wherever it is hosted.
+      if (AXE_OPPONENT.test(event.opponent?.trim() ?? "")) increment(counts, "shift_axe_game");
+      if (/\bhomecoming\b/i.test(event.summary ?? "")) increment(counts, "shift_homecoming");
     }
 
     assignmentsByLocalDate.set(start.date, (assignmentsByLocalDate.get(start.date) ?? 0) + 1);

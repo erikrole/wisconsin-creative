@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-23",
+    "title": "Six new badges, three of them surprises",
+    "type": "feature",
+    "summary": "New badges to chase, plus three hidden ones tied to Badger game days.",
+    "details": [
+      "Iron Crew is for working 100 event shifts, and Centurion is for returning 100 checkouts on time.",
+      "Fifth Quarter is for working five home football games.",
+      "Three surprises stay hidden until someone earns them. Here's a hint: one is about a rivalry, one is about a homecoming, and one is about a number."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 622
+  },
+  {
+    "date": "2026-10-23",
     "title": "A badge gallery for the whole team",
     "type": "feature",
     "summary": "Badges is now a gallery everyone can open. See every badge, who has it, and how your collection compares with your teammates.",

@@ -40,6 +40,9 @@ const HIDDEN_BADGE_KEYS = new Set([
   "midnight_oil",
   "weekend_warrior",
   "leap_day",
+  "axe_crew",
+  "homecoming",
+  "pi_day",
 ]);
 
 /**
