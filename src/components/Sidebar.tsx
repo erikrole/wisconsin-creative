@@ -49,9 +49,11 @@ import {
   ChevronRightIcon,
   PinIcon,
   LayoutGridIcon,
+  LinkIcon,
 } from "lucide-react";
 import { SidebarToolsFlyout } from "@/components/SidebarToolsFlyout";
-import { toolsForRole } from "@/lib/web-tools";
+import { ALL_TOOLS_HREF, toolsForRole } from "@/lib/web-tools";
+import { QUICK_LINKS, SIDEBAR_APPS, linksForRole } from "@/lib/sidebar-links";
 import { SidebarCustomizeDialog } from "@/components/SidebarCustomizeDialog";
 import {
   DropdownMenu,
@@ -321,6 +323,8 @@ function useAccountSidebarPrefs(
 
 const menuItemClass = "min-h-9 gap-2.5 rounded-md px-2 text-[13.5px] [&_svg]:size-4 [&_svg]:stroke-[1.75] [&_svg]:text-muted-foreground";
 
+const flyoutIconClass = "size-4 stroke-[1.75] text-[color:var(--sidebar-muted)] transition-colors duration-100 group-hover/menu-item:text-[color:var(--sidebar-text-active)]";
+
 // Collapsed-rail labels: portalled, so they carry the chrome typeface themselves.
 const railTooltipClass = cn(chromeFont.className, "rounded-md px-2 py-1 text-[12.5px] font-bold");
 
@@ -411,6 +415,12 @@ export default function AppSidebar({
   ];
   const displayGroups = groupsWithPins;
   const webTools = user ? toolsForRole(user.role) : [];
+  const apps = user ? linksForRole(user.role, SIDEBAR_APPS) : [];
+  const appSections = [
+    ...(apps.length > 0 ? [{ title: "Our apps", items: apps }] : []),
+    ...(webTools.length > 0 ? [{ title: "Tools", items: webTools }] : []),
+  ];
+  const quickLinks = user ? linksForRole(user.role, QUICK_LINKS) : [];
   const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const reportProblem = useReportProblem();
@@ -589,19 +599,35 @@ export default function AppSidebar({
         </nav>
       </SidebarContent>
 
-      {webTools.length > 0 && (
-        // Fixed above the account menu so it is on screen on any height; the page list above scrolls.
+      {(appSections.length > 0 || quickLinks.length > 0) && (
+        // Fixed above the account menu so they are on screen on any height; the page list above scrolls.
         <div className="px-3 pb-2 pt-1 group-data-[collapsible=icon]:px-2">
           <SidebarMenu className="gap-px">
-            <SidebarMenuItem>
-              <SidebarToolsFlyout
-                tools={webTools}
-                icon={LayoutGridIcon}
-                buttonClassName={navButtonClass(false)}
-                iconClassName="size-4 stroke-[1.75] text-[color:var(--sidebar-muted)] transition-colors duration-100 group-hover/menu-item:text-[color:var(--sidebar-text-active)]"
-                tooltipClassName={railTooltipClass}
-              />
-            </SidebarMenuItem>
+            {appSections.length > 0 && (
+              <SidebarMenuItem>
+                <SidebarToolsFlyout
+                  label="Apps"
+                  sections={appSections}
+                  footer={{ label: "All apps and tools", href: ALL_TOOLS_HREF }}
+                  icon={LayoutGridIcon}
+                  buttonClassName={navButtonClass(false)}
+                  iconClassName={flyoutIconClass}
+                  tooltipClassName={railTooltipClass}
+                />
+              </SidebarMenuItem>
+            )}
+            {quickLinks.length > 0 && (
+              <SidebarMenuItem>
+                <SidebarToolsFlyout
+                  label="Quick links"
+                  sections={[{ title: "Quick links", items: quickLinks }]}
+                  icon={LinkIcon}
+                  buttonClassName={navButtonClass(false)}
+                  iconClassName={flyoutIconClass}
+                  tooltipClassName={railTooltipClass}
+                />
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </div>
       )}

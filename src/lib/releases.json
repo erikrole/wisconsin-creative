@@ -3,12 +3,14 @@
     "date": "2026-10-23",
     "title": "A calmer Dashboard and sidebar",
     "type": "improvement",
-    "summary": "The Dashboard is quieter and easier to scan, and the sidebar is shorter, so the pages you use every day fit on one screen.",
+    "summary": "The Dashboard is quieter and easier to scan, and the sidebar is shorter, with our apps and everyday sites one click away.",
     "details": [
       "The Creative Wrapped banner now shows once instead of twice, and the admin preview is a small row instead of a full red block.",
       "New reservation uses Badger red, the one brand-colored action on the page.",
       "Section links and the Up next highlight use calm neutral styling, with colored dots for pickups and shifts.",
-      "Weekly-or-rarer staff pages (Budget, Wish list, UA Gear Picks, Badges, Signatures, YouTube Studio Lite, Issues) move into a folded More group. A dot shows when something inside needs a look, and the sidebar remembers if you leave it open."
+      "Weekly-or-rarer staff pages (Budget, Wish list, UA Gear Picks, Badges, Signatures, YouTube Studio Lite, Issues) move into a folded More group. A dot shows when something inside needs a look, and the sidebar remembers if you leave it open.",
+      "Tools is now Apps: the iPhone app on the App Store, Offload and Fetch sit above the browser tools.",
+      "A new Quick links menu opens the sites the team uses every day in a new tab. Some links show only to staff or admins."
     ],
     "platforms": [
       "Web"
