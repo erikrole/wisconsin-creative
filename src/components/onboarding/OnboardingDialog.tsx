@@ -720,11 +720,19 @@ export default function OnboardingDialog({
             <DialogBody className="min-h-0 overflow-y-auto flex flex-col gap-4 py-5">
               <Alert className={completion.failed > 0 ? "border-[var(--orange)]/50 bg-[var(--orange-bg)]" : "border-[var(--green)]/40 bg-[var(--green-bg)]"}>
                 {completion.failed > 0 ? <AlertCircle className="size-4 text-[var(--orange-text)]" /> : <CheckCircle2 className="size-4 text-[var(--green-text)]" />}
-                <AlertTitle>{completion.failed > 0 ? "Some invitations need attention" : "Invitations saved"}</AlertTitle>
+                <AlertTitle>
+                  {completion.failed > 0
+                    ? "Some invitations need attention"
+                    : completion.created === 0
+                      ? "Nothing new to add"
+                      : "Invitations saved"}
+                </AlertTitle>
                 <AlertDescription className="col-start-2 text-muted-foreground">
                   {completion.failed > 0
                     ? "These rows were not confirmed by the server. Retry them below; existing rows are safe to retry because the server skips duplicates."
-                    : "Send users to the app login page. They enter their invited email and are routed to password setup automatically. No shared first-login password is created."}
+                    : completion.created === 0
+                      ? "Every address is already invited or already has an account. To send a fresh setup link to someone who hasn't signed up, use Resend in Allowed Emails."
+                      : "New people create their account from the link in their invite email. If someone didn't get it, use Resend in Allowed Emails. No shared first-login password is created."}
                 </AlertDescription>
               </Alert>
 

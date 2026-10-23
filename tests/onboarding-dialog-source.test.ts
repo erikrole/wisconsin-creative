@@ -53,7 +53,8 @@ describe("onboarding dialog source wiring", () => {
     expect(source).toContain("Authenticated preview checks existing users and invitations before commit.");
     expect(source).toContain("Review account status before saving invitations.");
     expect(source).toContain("serverBlockingRows.length > 0");
-    expect(source).toContain("Send users to the app login page. They enter their invited email and are routed to password setup automatically.");
+    expect(source).toContain("New people create their account from the link in their invite email.");
+    expect(source).toContain("Nothing new to add");
     expect(source).toContain("requested: emails.length");
   });
 
