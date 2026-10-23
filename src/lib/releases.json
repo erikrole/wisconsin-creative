@@ -1,14 +1,14 @@
 [
   {
     "date": "2026-10-23",
-    "title": "Football final scores on Scoreboard",
+    "title": "Football scores and six new badges",
     "type": "feature",
-    "summary": "Finished football games now show the final score, checked against UW Athletics and ESPN, on Scoreboard and on profiles.",
+    "summary": "Football games on a profile's Scoreboard now show the final score from UW Athletics, and six new badges reward football game days.",
     "details": [
-      "Scoreboard has a Football finals card. Each game shows Wisconsin's score first, with links to the UW and ESPN game pages.",
+      "Each finished football game shows Wisconsin's score first, with links to the UW and ESPN game pages.",
       "The score is the one UW Athletics publishes. Nothing shows until UW lists the game as final.",
       "Games also record whether the opponent was ranked, whether they went to overtime, and the TV network. Six new football badges use them: Photo Finish, Giant Killer, Top 25 Regular, Bonus Time, Prime Time and Clean Sheet.",
-      "Staff can refresh scores on demand. Scores refresh once a day during football season."
+      "Scores refresh once a day during football season."
     ],
     "platforms": [
       "Web"

@@ -138,7 +138,7 @@
 | `src/lib/services/sport-roster-preview.ts` | 108 |
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
-| `src/lib/services/team-scoreboard.ts` | 611 |
+| `src/lib/services/team-scoreboard.ts` | 600 |
 | `src/lib/services/trade-post-notifications.ts` | 115 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
 | `src/lib/services/user-deactivation.ts` | 589 |
