@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-23",
+    "title": "Roster invites are emailed",
+    "type": "fixes",
+    "summary": "Adding people with Paste a roster now emails each of them their setup link, and Resend sends the invite itself.",
+    "details": [
+      "Email the invite now applies to both Add one person and Paste a roster, and the result shows how many were emailed.",
+      "Resend on someone who hasn't signed up sends the normal invite instead of a reminder."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 628
+  },
+  {
+    "date": "2026-10-23",
     "title": "Skip the photo during setup",
     "type": "fixes",
     "summary": "The last setup step now says Skip for now when you haven't added a photo, and your profile reminds you to add one later.",
