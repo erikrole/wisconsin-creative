@@ -121,6 +121,28 @@ export function formatTimeShort(iso: string) {
 }
 
 /**
+ * Whole calendar days from `now` to `iso` on the Central (institution) calendar:
+ * 0 = today, 1 = tomorrow, -1 = yesterday. Uses a fixed zone rather than the
+ * runtime's, because the server renders in UTC and would otherwise file tonight's
+ * 7 PM event under tomorrow. Client-safe, so it does not read `env`.
+ */
+const INSTITUTION_TZ = "America/Chicago";
+const dayFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: INSTITUTION_TZ,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+function institutionDayNumber(date: Date): number {
+  const parts = dayFormatter.formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return Math.floor(Date.UTC(get("year"), get("month") - 1, get("day")) / 86_400_000);
+}
+export function institutionDayOffset(iso: string | Date, now: Date): number {
+  return institutionDayNumber(new Date(iso)) - institutionDayNumber(now);
+}
+
+/**
  * Calendar-relative operational time, such as "Today, 2:30 PM",
  * "Tomorrow, 2:30 PM", "Yesterday, 2:30 PM", or "July 29, 2:30 PM".
  * Dense surfaces can pass `{ month: "short" }` for "Jul 29, 2:30 PM".
@@ -131,24 +153,14 @@ export function formatOperationalDateTime(
   options?: { month?: "long" | "short" },
 ): string {
   const date = new Date(iso);
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const dayAfterTomorrow = new Date(today);
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+  const offset = institutionDayOffset(date, now);
 
   let dayLabel: string;
-  if (date >= today && date < tomorrow) {
+  if (offset === 0) {
     dayLabel = "Today";
-  } else if (date >= tomorrow && date < dayAfterTomorrow) {
+  } else if (offset === 1) {
     dayLabel = "Tomorrow";
-  } else if (date >= yesterday && date < today) {
+  } else if (offset === -1) {
     dayLabel = "Yesterday";
   } else {
     dayLabel = date.toLocaleDateString("en-US", {
