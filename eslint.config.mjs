@@ -16,6 +16,13 @@ export default defineConfig([
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
+  {
+    // Static tools under public/ are plain browser scripts that swallow errors on purpose.
+    files: ["public/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", { caughtErrors: "none" }],
+    },
+  },
   globalIgnores([
     ".next/**",
     ".vercel/**",

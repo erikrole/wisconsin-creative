@@ -138,7 +138,6 @@ describe("iOS launch experience", () => {
     const session = source("ios/Wisconsin/Core/SessionStore.swift");
     const login = source("ios/Wisconsin/Views/LoginView.swift");
     const passwordSetup = source("ios/Wisconsin/Views/PasswordSetupView.swift");
-    const launch = source("ios/Wisconsin/Views/LaunchView.swift");
 
     expect(app).toMatch(/if session\.isRestoring \{\s+LaunchView\(/);
     expect(session).toMatch(

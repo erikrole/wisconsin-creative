@@ -11,7 +11,6 @@ import {
 import { statusLabelEquipment } from "@/lib/status-colors";
 import {
   REPORT_BAR_COLOR,
-  REPORT_CHART_COLORS,
   REPORT_SEMANTIC_CHART_COLORS,
   ReportChartCard,
 } from "../report-ui";
@@ -88,7 +87,7 @@ export type TopUsedAsset = {
 export function TopUsedChart({ assets, days }: { assets: TopUsedAsset[]; days: number }) {
   if (assets.length === 0) return null;
 
-  const data = assets.map((asset, index) => ({
+  const data = assets.map((asset) => ({
     label: asset.assetTag,
     days: Number(asset.custodyDays.toFixed(2)),
     fill: REPORT_BAR_COLOR,
