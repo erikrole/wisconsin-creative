@@ -83,7 +83,7 @@ export function buildInviteEmail({
     note: offerApp
       ? `Sign in with ${email}, using either setup link: each carries your invitation and works for 30 days. For setup in the iPhone app, install the latest version first. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
       : inviteToken
-        ? `Sign in with ${email}. This link carries your invitation and works for 30 days. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
+        ? `This link is for ${email} and works for 30 days. If it expires, open the sign-in page and choose Email me my invite link.`
         : `Sign in with ${email}. Use this exact address so we can find your invite.`,
     footer: [
       "Forget your password later? Choose Forgot password on the sign-in page and we'll email you a reset link.",
