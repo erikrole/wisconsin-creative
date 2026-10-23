@@ -224,7 +224,8 @@ export function getProfileCompletion(profile: ProfileCompletionProfile, now = ne
     profileComplete: hiddenSmokeIdentity || profileComplete,
     isComplete: hiddenSmokeIdentity || profileComplete,
     isSnoozed,
-    shouldPrompt: requiresSetup || (!hiddenSmokeIdentity && !onboardingComplete && missingFields.length > 0 && !isSnoozed),
+    // A photo skipped during setup stays a gentle, snoozable prompt afterwards.
+    shouldPrompt: requiresSetup || (!hiddenSmokeIdentity && (!onboardingComplete || !completeByField.photo) && missingFields.length > 0 && !isSnoozed),
     snoozedUntil: snoozedUntil?.toISOString() ?? null,
     completedCount: hiddenSmokeIdentity ? applicableFields.length : completedCount,
     totalCount: applicableFields.length,

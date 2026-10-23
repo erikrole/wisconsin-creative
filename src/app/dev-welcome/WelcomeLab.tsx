@@ -46,10 +46,16 @@ function sample(role: Role, filled: number): ProfileCompletionResponse {
     profile.gradYear = 2029;
     profile.graduationTerm = "SPRING";
   }
+  if (filled >= 4) {
+    profile.topSizeFit = "UNISEX";
+    profile.topSize = "M";
+    profile.shoeSizeSystem = "US_MENS";
+    profile.shoeSize = "10";
+  }
   return { profile, completion: getProfileCompletion(profile) as ProfileCompletionResponse["completion"] };
 }
 
-/** `?role=STUDENT&view=setup&filled=0|1|2|3`, `?view=done|later`, or `?view=availability` (availability API mocked by the caller). */
+/** `?role=STUDENT&view=setup&filled=0|1|2|3|4`, `?view=done|later`, or `?view=availability` (availability API mocked by the caller). */
 function Lab() {
   const params = useSearchParams();
   const role = (ROLES.find((r) => r === params.get("role")) ?? "STUDENT") as Role;

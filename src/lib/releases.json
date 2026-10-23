@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-23",
+    "title": "Skip the photo during setup",
+    "type": "fixes",
+    "summary": "The last setup step now says Skip for now when you haven't added a photo, and your profile reminds you to add one later.",
+    "details": [
+      "If an earlier detail is still missing, the photo step tells you which one to go back and add.",
+      "A skipped photo shows up as a gentle profile reminder that you can snooze."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 627
+  },
+  {
+    "date": "2026-10-23",
     "title": "Clearer invite emails",
     "type": "fixes",
     "summary": "Invite emails are shorter, with one setup button and a link to download the iPhone app.",
