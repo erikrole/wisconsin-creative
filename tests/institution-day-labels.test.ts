@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dayHeading } from "@/app/(app)/_home/home-model";
-import { formatOperationalDateTime, institutionDayOffset } from "@/lib/format";
+import { formatDayLabel, formatOperationalDateTime, institutionDayOffset, isDueToday, isStartingToday } from "@/lib/format";
 
 // Fri Oct 23, 1:45 PM CDT. Volleyball at 7 PM CDT is 00:00Z Oct 24, which is
 // "tomorrow" on a UTC server clock but still tonight in Madison.
@@ -29,5 +29,18 @@ describe("institution-day labels", () => {
     const sat = new Date("2026-11-01T17:00:00Z"); // Sun Nov 1, 11 AM CST
     expect(institutionDayOffset("2026-11-02T05:30:00Z", sat)).toBe(0);
     expect(institutionDayOffset("2026-11-02T06:00:00Z", sat)).toBe(1);
+  });
+});
+
+describe("same-day checks and day labels", () => {
+  it("treats a 7 PM Central event as starting and due today", () => {
+    expect(isStartingToday(volleyball, now)).toBe(true);
+    expect(isDueToday(volleyball, now)).toBe(true);
+    expect(isStartingToday(football, now)).toBe(false);
+  });
+
+  it("labels timed events Today and Tomorrow", () => {
+    expect(formatDayLabel(volleyball, now)).toBe("Today");
+    expect(formatDayLabel(football, now)).toBe("Tomorrow");
   });
 });
