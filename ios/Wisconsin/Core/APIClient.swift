@@ -553,6 +553,54 @@ final class APIClient {
         }
     }
 
+    // MARK: - Signatures (iPad Apple Pencil capture; STAFF/ADMIN)
+
+    func signatureCollections() async throws -> [SignatureCollectionSummary] {
+        let resp: SignatureCollectionListResponse = try await perform(request(path: "/api/signatures/collections"))
+        return resp.collections
+    }
+
+    func signatureCollection(id: String) async throws -> SignatureCollectionDetail {
+        try await perform(request(path: "/api/signatures/collections/\(id)"))
+    }
+
+    func signatureCaptureBootstrap(collectionId: String, memberId: String) async throws -> SignatureCaptureBootstrap {
+        try await perform(request(path: "/api/signatures/collections/\(collectionId)/members/\(memberId)"))
+    }
+
+    /// Idempotent by `requestId`: replaying the same request after an
+    /// ambiguous failure returns the original committed result.
+    func saveSignatureCapture(
+        collectionId: String,
+        memberId: String,
+        body: SignatureCaptureRequest
+    ) async throws -> SignatureCaptureResult {
+        var req = request(path: "/api/signatures/collections/\(collectionId)/capture/\(memberId)", method: "POST")
+        req.httpBody = try JSONEncoder().encode(body)
+        return try await perform(req)
+    }
+
+    /// Inline transparent PNG of a READY revision (`signature:download`), for
+    /// the roster preview. Revisions are immutable, so callers may cache by ID.
+    func signatureArtifactPNG(revisionId: String) async throws -> Data {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response, _) = try await authenticatedData(for: request(path: "/api/signatures/artifacts/\(revisionId)/png"))
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.networkError(error)
+        }
+        guard let http = response as? HTTPURLResponse else { throw APIError.serverError("Invalid response") }
+        switch http.statusCode {
+        case 200...299: return data
+        case 401: throw APIError.unauthorized
+        case 404: throw APIError.notFound
+        default: throw APIError.httpError(statusCode: http.statusCode, message: "Signature preview unavailable")
+        }
+    }
+
     // MARK: - ICS Calendar Feed
 
     /// Whether the user has a feed, plus the raw token when the server can
