@@ -23,7 +23,7 @@ const INVITE_GATE_MESSAGE =
   "Registration is by invitation only. If you already have an account, sign in. Otherwise contact Erik Role to request access.";
 
 /** The address is invited, but this request did not arrive through its emailed link. */
-export const INVITE_LINK_MESSAGE =
+const INVITE_LINK_MESSAGE =
   "Open the link in your invite email to finish signing up. Need a new one? Enter your address on the sign-in page and choose Email me my invite link.";
 
 export const POST = withHandler(async (req) => {
