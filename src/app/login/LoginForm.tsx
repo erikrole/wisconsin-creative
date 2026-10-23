@@ -621,6 +621,11 @@ export default function LoginForm() {
                       <AlertDescription>{formError}</AlertDescription>
                     </Alert>
                   )}
+                  {formError && isPassword && !isNetworkError && (
+                    <p className="pt-2 text-sm text-[#a6a6ae]">
+                      Double-check the address above. New here? Open the link in your invite email to set up your account.
+                    </p>
+                  )}
                 </div>
               </div>
 

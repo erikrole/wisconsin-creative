@@ -51,7 +51,7 @@ export const POST = withHandler(async (req) => {
   // does not separate "no such account" from "wrong password".
   const valid = await verifyPassword(user?.passwordHash ?? UNKNOWN_ACCOUNT_HASH, body.password);
   if (!user || !valid) {
-    throw new HttpError(401, "Invalid credentials");
+    throw new HttpError(401, "Wrong email or password.");
   }
   if (!user.active) {
     throw new HttpError(403, "Your account has been deactivated. Contact Erik Role.");

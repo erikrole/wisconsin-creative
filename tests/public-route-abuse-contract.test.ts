@@ -34,7 +34,7 @@ const ROUTE_CONTROLS: Record<(typeof PUBLIC_HANDLER_ROUTES)[number], RegExp[]> =
     /\bcheckRateLimit\s*\(\s*`login:ip:\$\{ip\}`/,
     /\bcheckRateLimit\s*\(\s*`login:email:\$\{email\}`/,
     /\bgetClientIp\s*\(/,
-    /Invalid credentials/,
+    /Wrong email or password\./,
     /\bcreateSession\s*\(/,
     /\bcreateAuditEntry\s*\(/,
   ],
