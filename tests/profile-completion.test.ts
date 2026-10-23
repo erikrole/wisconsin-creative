@@ -88,6 +88,13 @@ describe("profile completion", () => {
     expect(result.missingFields).not.toContain("anticipatedGraduation");
   });
 
+  it("lets setup finish without a photo but keeps the photo as a snoozable prompt", () => {
+    const finished = profile({ role: "STUDENT", onboardingCompletedAt: "2026-10-23T19:00:00Z", personalPhone: "608-555-0100", wiscardCardNumber: "1234567890", wiscardIssueCode: "1", studentYearOverride: "FRESHMAN", topSizeFit: "UNISEX", topSize: "M", shoeSizeSystem: "US_MENS", shoeSize: "10" });
+    expect(getProfileCompletion(finished)).toMatchObject({ requiredComplete: true, onboardingComplete: true, shouldPrompt: true, missingFields: ["photo"] });
+    expect(getProfileCompletion({ ...finished, profilePromptSnoozedUntil: "2099-10-23T00:00:00Z" }).shouldPrompt).toBe(false);
+    expect(getProfileCompletion({ ...finished, avatarUrl: "https://example.com/a.webp" }).shouldPrompt).toBe(false);
+  });
+
   it("accepts complete student academic details", () => {
     const result = getProfileCompletion(profile({
       role: "STUDENT",
