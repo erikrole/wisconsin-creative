@@ -25,10 +25,15 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
   const tempPassword = crypto.randomBytes(12).toString("base64url");
   const passwordHash = await hashPassword(tempPassword);
 
-  // Atomic: update password + invalidate sessions together
-  await db.$transaction([
+  // Atomic: update password + invalidate every other credential together.
+  // An administrator reset is account recovery, so passkeys and pending reset
+  // links go too: a credential enrolled by whoever held the account before
+  // must not outlive the password it was enrolled under.
+  const [, sessions, passkeys, resetLinks] = await db.$transaction([
     db.user.update({ where: { id }, data: { passwordHash, forcePasswordChange: true } }),
     db.session.deleteMany({ where: { userId: id } }),
+    db.passkeyCredential.deleteMany({ where: { userId: id } }),
+    db.passwordResetToken.deleteMany({ where: { userId: id } }),
   ]);
 
   try {
@@ -47,7 +52,11 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
     entityType: "user",
     entityId: id,
     action: "password_reset",
-    after: { resetBy: user.name, forcePasswordChange: true },
+    after: {
+      resetBy: user.name,
+      forcePasswordChange: true,
+      revoked: { sessions: sessions.count, passkeys: passkeys.count, resetLinks: resetLinks.count },
+    },
   });
 
   return ok({ data: { temporaryPassword: tempPassword, forcePasswordChange: true } });
