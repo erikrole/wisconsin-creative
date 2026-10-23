@@ -230,7 +230,7 @@
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
-| `src/lib/football-results.ts` | 232 |
+| `src/lib/football-results.ts` | 233 |
 | `src/lib/format.ts` | 320 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |

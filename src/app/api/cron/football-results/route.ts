@@ -10,8 +10,8 @@ export const GET = withCron(async () => {
   const now = new Date();
   // Neon cost: no fetch, no query and no job-run row outside the season.
   if (!isFootballSeason(now)) return ok({ data: { skipped: "off_season" } });
-  // Scheduled right after morning-refresh in vercel.json so one Neon wake covers both.
-  const dueAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8, 10));
+  // Scheduled just before morning-refresh (08:00) in vercel.json so tonight's badge pass sees fresh scores and one Neon wake covers both.
+  const dueAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 50));
   try {
     const data = await refreshFootballResults();
     await recordJobRun({ job: "football_results", outcome: data.ok ? "succeeded" : "failed", dueAt,

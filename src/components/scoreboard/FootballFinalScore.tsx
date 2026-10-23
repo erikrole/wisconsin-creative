@@ -16,20 +16,16 @@ export function footballDetailLabels(details: FootballGameDetails | null | undef
 
 /** Shared team/profile treatment. Source links are public game pages, never crew details. */
 export function FootballFinalScore({ score }: { score: FootballScore | null | undefined }) {
-  if (!score) return null;
+  if (!score || score.status !== "verified") return null;
   const facts = footballDetailLabels(score.details);
   const overtime = score.details ? overtimeLabel(score.details.overtimes) : null;
   return (
     <div className="mt-1 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-x-3">
-        {score.status === "verified" ? (
-          <span className="font-semibold tabular-nums" aria-label={`Final${overtime ? ` in ${overtime}` : ""}: Wisconsin ${score.wisconsin}, opponent ${score.opponent}`}>
-            {score.wisconsin}–{score.opponent}{" "}
-            <span className="font-normal text-muted-foreground">Final{overtime ? `/${overtime}` : ""} · Wisconsin first</span>
-          </span>
-        ) : (
-          <span className="text-muted-foreground">{score.status === "disputed" ? "Score under review" : "Awaiting score verification"}</span>
-        )}
+        <span className="font-semibold tabular-nums" aria-label={`Final${overtime ? ` in ${overtime}` : ""}: Wisconsin ${score.wisconsin}, opponent ${score.opponent}`}>
+          {score.wisconsin}–{score.opponent}{" "}
+          <span className="font-normal text-muted-foreground">Final{overtime ? `/${overtime}` : ""} · Wisconsin first</span>
+        </span>
         <span className="flex items-center gap-3">
           {score.sources.map((source) => (
             <a key={source.provider} href={source.url} target="_blank" rel="noopener noreferrer"

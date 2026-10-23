@@ -13,16 +13,17 @@ export function FootballResultsCard({ games, canRefresh, onRefresh }: {
   canRefresh: boolean;
   onRefresh: () => void;
 }) {
-  if (games.length === 0 && !canRefresh) return null;
+  const scored = games.filter((game) => game.finalScore?.status === "verified");
+  if (scored.length === 0 && !canRefresh) return null;
   return (
-    <ReportSectionCard title="Football finals" description="Scores checked against UW Athletics and ESPN. Wisconsin is listed first."
+    <ReportSectionCard title="Football finals" description="Final scores from UW Athletics, with rank and TV from ESPN. Wisconsin is listed first."
       contentClassName="p-0">
       {canRefresh ? <FootballResultsRefresh onRefresh={onRefresh} /> : null}
-      {games.length === 0 ? (
+      {scored.length === 0 ? (
         <p className="px-4 py-4 text-sm text-muted-foreground">No finished football games with a result yet.</p>
       ) : (
         <ul className="divide-y divide-border/50">
-          {games.map((game) => (
+          {scored.map((game) => (
             <li key={game.id} className="px-4 py-3">
               <p className="text-sm font-medium">
                 {game.site === "AWAY" ? "at" : "vs"} {game.opponent ?? "Opponent"}

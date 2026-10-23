@@ -69,24 +69,31 @@ describe("football identity and agreement", () => {
     expect(footballScoreForEvent(event, observations(), now)).toMatchObject({ status: "verified", wisconsin: 24, opponent: 20, margin: 4, stale: false,
       sources: [{ provider: "UW", url: "https://uwbadgers.com/game-center/17144" }, { provider: "ESPN", url: "https://www.espn.com/college-football/game/_/gameId/401858466" }] });
   });
-  it.each(["numeric disagreement", "calendar disagreement", "changed identity", "ambiguous refresh"])("withholds the score on %s", (scenario) => {
+  it("shows the UW score when ESPN or the calendar disagree with it", () => {
+    const rows = observations(); rows[1]!.snapshot.wisconsin = 25;
+    expect(footballScoreForEvent(event, rows, now)).toMatchObject({ status: "verified", wisconsin: 24, opponent: 20 });
+    expect(footballScoreForEvent({ ...event, result: "LOSS" }, observations(), now)).toMatchObject({ status: "verified", wisconsin: 24, opponent: 20 });
+  });
+  it.each(["changed identity", "ambiguous refresh"])("hides the score on %s", (scenario) => {
     const rows = observations(); const current = { ...event };
-    if (scenario === "numeric disagreement") rows[1]!.snapshot.wisconsin = 25;
-    if (scenario === "calendar disagreement") current.result = "LOSS";
     if (scenario === "changed identity") current.opponent = "Notre Dame";
-    if (scenario === "ambiguous refresh") rows[1]!.lastError = "ambiguous_match";
-    expect(footballScoreForEvent(current, rows, now)).toMatchObject({ status: "disputed", wisconsin: null, opponent: null, margin: null });
+    if (scenario === "ambiguous refresh") rows[0]!.lastError = "ambiguous_match";
+    expect(footballScoreForEvent(current, rows, now)).toBeNull();
+  });
+  it("drops ESPN, and its facts, when ESPN's game identity no longer matches", () => {
+    const rows = observations(); rows[1]!.lastError = "ambiguous_match";
+    expect(footballScoreForEvent(event, rows, now)).toMatchObject({ status: "verified", wisconsin: 24, details: null, sources: [{ provider: "UW" }] });
   });
   it("keeps last verified data during failures but clearly marks it stale", () => {
     const rows = observations(); rows[1]!.lastError = "fetch_failed";
     expect(footballScoreForEvent(event, rows, now)).toMatchObject({ status: "verified", wisconsin: 24, stale: true });
     expect(footballScoreForEvent(event, observations(), new Date("2026-10-05T01:00Z"))).toMatchObject({ stale: true });
   });
-  it("does not invent a score from one source, an ongoing game, or an unknown calendar result", () => {
-    const rows = observations(); rows[1]!.snapshot.final = false;
-    for (const result of [footballScoreForEvent(event, observations().slice(0, 1), now), footballScoreForEvent(event, rows, now), footballScoreForEvent({ ...event, result: null }, observations(), now)]) {
-      expect(result).toMatchObject({ status: "pending", wisconsin: null });
-    }
+  it("shows UW alone when ESPN is missing, but never invents a score for an ongoing game", () => {
+    expect(footballScoreForEvent(event, observations().slice(0, 1), now)).toMatchObject({ status: "verified", wisconsin: 24, details: null });
+    const rows = observations(); rows[0]!.snapshot.final = false;
+    expect(footballScoreForEvent(event, rows, now)).toBeNull();
+    expect(footballScoreForEvent(event, observations().slice(1), now)).toBeNull();
     expect(footballScoreForEvent({ ...event, sportCode: "VB" }, [], now)).toBeNull();
   });
 });
@@ -122,7 +129,6 @@ describe("ESPN game facts", () => {
     const espnRow = rows.find((row) => row.provider === "ESPN")!;
     (espnRow.snapshot as { opponentRank: number; overtimes: number; networks: string[] }).opponentRank = 13;
     expect(footballScoreForEvent(event, rows, now)).toMatchObject({ status: "verified", details: { opponentRank: 13, overtimes: 0, networks: [] } });
-    expect(footballScoreForEvent({ ...event, result: "LOSS" }, rows, now)).toMatchObject({ status: "disputed", details: null });
   });
   it("only runs the cron during football season", () => {
     expect(isFootballSeason(new Date("2026-10-23T08:10:00Z"))).toBe(true);

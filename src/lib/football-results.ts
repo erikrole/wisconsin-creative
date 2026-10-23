@@ -205,27 +205,28 @@ export type FootballScore = {
 };
 export type FootballGameDetails = { wisconsinRank: number | null; opponentRank: number | null; overtimes: number; networks: string[] };
 
-/** Read-time agreement also invalidates scores after a Schedule correction. */
+/** Read-time identity matching also hides scores after a Schedule correction. */
 export function footballScoreForEvent(event: FootballEventIdentity, observations: StoredObservation[] = [], now = new Date()): FootballScore | null {
   if (event.sportCode !== "FB") return null;
   const parsed = observations.map((observation) => ({ observation, parsed: footballObservationSchema.safeParse(observation.snapshot) }));
   const valid = parsed.flatMap(({ observation, parsed: result }) => result.success && result.data.provider === observation.provider
     && result.data.externalId === observation.externalId ? [{ ...observation, data: result.data }] : []);
-  const sources = valid.map(({ data, observedAt }) => ({ provider: data.provider,
+  const trusted = (provider: Provider) => {
+    const row = valid.find((candidate) => candidate.provider === provider);
+    return row && matchesFootballGame(event, row.data) && row.lastError !== "identity_changed" && row.lastError !== "ambiguous_match" ? row : null;
+  };
+  // The UW Athletics score is the one shown. ESPN only adds rank, overtime and TV, and
+  // a disagreement between the two never hides or replaces the UW score.
+  const uw = trusted("UW");
+  if (!uw || !uw.data.final || uw.data.wisconsin === null || uw.data.opponentScore === null) return null;
+  const espn = trusted("ESPN");
+  const espnFinal = espn?.data.final ? espn.data : null;
+  const used = [uw, ...(espn ? [espn] : [])];
+  const sources = used.map(({ data, observedAt }) => ({ provider: data.provider,
     // Derive outbound links from validated IDs, never trust snapshot URLs.
     url: data.provider === "UW" ? `https://uwbadgers.com/game-center/${data.externalId}` : `https://www.espn.com/college-football/game/_/gameId/${data.externalId}`,
     observedAt: observedAt.toISOString() }));
-  const stale = valid.some((row) => Boolean(row.lastError) || now.getTime() - row.observedAt.getTime() > 48 * 60 * 60 * 1000);
-  const base = { wisconsin: null, opponent: null, margin: null, stale, sources, details: null };
-  if (valid.length !== observations.length || valid.some((row) => !matchesFootballGame(event, row.data)
-    || row.lastError === "identity_changed" || row.lastError === "ambiguous_match")) return { ...base, status: "disputed" };
-  const uw = valid.find((row) => row.provider === "UW")?.data;
-  const espn = valid.find((row) => row.provider === "ESPN")?.data;
-  if (!uw || !espn || !uw.final || !espn.final || !event.result) return { ...base, status: "pending" };
-  if (uw.wisconsin === null || uw.opponentScore === null || uw.wisconsin !== espn.wisconsin || uw.opponentScore !== espn.opponentScore
-    || uw.outcome !== event.result || espn.outcome !== event.result || outcome(uw.wisconsin, uw.opponentScore) !== event.result) {
-    return { ...base, status: "disputed" };
-  }
-  return { status: "verified", wisconsin: uw.wisconsin, opponent: uw.opponentScore, margin: uw.wisconsin - uw.opponentScore, stale, sources,
-    details: { wisconsinRank: espn.wisconsinRank, opponentRank: espn.opponentRank, overtimes: espn.overtimes, networks: espn.networks } };
+  const stale = used.some((row) => Boolean(row.lastError) || now.getTime() - row.observedAt.getTime() > 48 * 60 * 60 * 1000);
+  return { status: "verified", wisconsin: uw.data.wisconsin, opponent: uw.data.opponentScore, margin: uw.data.wisconsin - uw.data.opponentScore, stale, sources,
+    details: espnFinal ? { wisconsinRank: espnFinal.wisconsinRank, opponentRank: espnFinal.opponentRank, overtimes: espnFinal.overtimes, networks: espnFinal.networks } : null };
 }
