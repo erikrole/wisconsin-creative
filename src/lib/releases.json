@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-23",
+    "title": "One setup link in invite emails",
+    "type": "fixes",
+    "summary": "Invite emails now have a single Set up your account button that opens in the browser, so nobody gets stuck in an older iPhone app.",
+    "details": [
+      "Create your account in the browser from the invite email, then sign in to the iPhone app.",
+      "Adding people now says Nothing new to add when every address was already invited or already has an account, and points to Resend."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 625
+  },
+  {
+    "date": "2026-10-23",
     "title": "Safer sign-up and account protections",
     "type": "fixes",
     "summary": "Creating an account now needs the link from your invite email, and a few account details are shared only with the people who need them.",
