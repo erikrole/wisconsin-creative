@@ -201,6 +201,7 @@
 - `/api/audit` -> `src/app/api/audit/route.ts`
 - `/api/auth/discover` -> `src/app/api/auth/discover/route.ts`
 - `/api/auth/forgot-password` -> `src/app/api/auth/forgot-password/route.ts`
+- `/api/auth/invite/resend` -> `src/app/api/auth/invite/resend/route.ts`
 - `/api/auth/login` -> `src/app/api/auth/login/route.ts`
 - `/api/auth/logout` -> `src/app/api/auth/logout/route.ts`
 - `/api/auth/passkey/login/options` -> `src/app/api/auth/passkey/login/options/route.ts`

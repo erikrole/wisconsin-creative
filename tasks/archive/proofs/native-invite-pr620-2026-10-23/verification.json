@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-23T15:40:38.435429+00:00",
+  "status": "LOCAL_READY_UNRELEASED",
+  "pullRequest": {
+    "url": "https://github.com/erikrole/wisconsin-creative/pull/620",
+    "head": "7bf5f38658611eb7da72a71c482f1514b7e03bc8",
+    "base": "ab9aa36bc8899aaa500ab94fc1a134518284a386",
+    "draft": true,
+    "merged": false,
+    "localUncommittedChanges": true
+  },
+  "nativeUnitTests": {
+    "passed": 29,
+    "result": "/private/tmp/wc-pr620-native-unit-final.xcresult",
+    "log": "/private/tmp/wc-pr620-native-unit-final.log",
+    "hostEnvironment": "GT_PERFORMANCE_SCENARIO=login; fixture only"
+  },
+  "nativeUI": {
+    "passed": 4,
+    "result": "/private/tmp/wc-pr620-native-ui7.xcresult",
+    "finalRecoveryRegression": "/private/tmp/wc-pr620-native-ui8.xcresult",
+    "device": "iPhone 18 Pro Max",
+    "runtime": "iOS 27.0",
+    "isolatedSimulator": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "api": "all intercepted by fixture URL protocol"
+  },
+  "sourceContracts": {
+    "passed": 861,
+    "files": 163,
+    "log": "/private/tmp/wc-pr620-native-source-contracts-final.log"
+  },
+  "builds": {
+    "simulator": "/private/tmp/wc-pr620-native-ui-build8.log",
+    "unsignedReleaseIOS": "/private/tmp/wc-pr620-native-device-build-final.log",
+    "webApp": "database-free build:app passed; no migration-running build"
+  },
+  "otherChecks": [
+    "TypeScript",
+    "changed-file ESLint",
+    "XcodeGen consistency",
+    "verify:docs",
+    "git diff --check",
+    "offline review render: 9 images loaded, no horizontal overflow"
+  ],
+  "independentReview": "Native auth and older-client email/AASA fixes reviewed; both reported findings closed in source.",
+  "notVerified": [
+    "Real inbox delivery",
+    "Real shared-backend register persistence/rollback",
+    "Physical-device universal-link association and Apple CDN propagation",
+    "Updated native distribution"
+  ],
+  "mutationsNotPerformed": [
+    "Stage/commit/push",
+    "Merge",
+    "Production/Neon/preview data change",
+    "Invite/send email",
+    "Deploy/upload/release"
+  ]
+}

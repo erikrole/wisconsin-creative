@@ -54,7 +54,7 @@ describe("POST /api/allowed-emails/[id]/resend", () => {
     const res = await POST(req(), ctx);
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ data: { emailStatus: "sent" } });
-    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "mia@wisc.edu", name: "Mia Sato", kind: "reminder" });
+    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "mia@wisc.edu", name: "Mia Sato", kind: "reminder", allowedEmailId: "inv-1" });
     expect(enforceRateLimit).toHaveBeenCalledWith("allowed-emails:resend:inv-1", expect.objectContaining({ max: 3 }));
     const audit = vi.mocked(createAuditEntry).mock.calls[0]![0];
     expect(audit).toMatchObject({ entityId: "inv-1", action: "invite_resent", after: { emailStatus: "sent" } });

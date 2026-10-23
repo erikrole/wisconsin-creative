@@ -1718,7 +1718,7 @@ final class CreateBookingViewModel {
             return true
         case .httpError(let statusCode, _):
             return (500...599).contains(statusCode)
-        case .unauthorized, .notFound, .conflict:
+        case .unauthorized, .notFound, .conflict, .inviteLinkRequired:
             return false
         }
     }

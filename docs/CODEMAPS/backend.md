@@ -63,7 +63,8 @@
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/inventory-loss-reports.ts` | 618 |
-| `src/lib/services/invite-email.ts` | 82 |
+| `src/lib/services/invite-email.ts` | 110 |
+| `src/lib/services/invite-token.ts` | 34 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
@@ -216,7 +217,7 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
-| `src/lib/email-template.ts` | 202 |
+| `src/lib/email-template.ts` | 206 |
 | `src/lib/email.ts` | 147 |
 | `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
@@ -355,7 +356,7 @@
 | `src/lib/user-list-cache.ts` | 91 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
-| `src/lib/validation.ts` | 883 |
+| `src/lib/validation.ts` | 894 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |
@@ -434,6 +435,7 @@
 
 - `/api/auth/discover`
 - `/api/auth/forgot-password`
+- `/api/auth/invite/resend`
 - `/api/auth/login`
 - `/api/auth/logout`
 - `/api/auth/passkey/login/options`

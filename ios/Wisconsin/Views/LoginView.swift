@@ -11,6 +11,8 @@ struct LoginView: View {
     @State private var activeAuthMethod: AuthMethod?
     @State private var authDestination: AuthDestination?
     @State private var passkeyAutoFillAttempt = 0
+    @State private var discoveryRequests = LatestRequestGeneration()
+    @State private var handledInviteID: UUID?
     @FocusState private var focused: Field?
     @AccessibilityFocusState private var accessibilityFocused: Field?
 
@@ -19,6 +21,7 @@ struct LoginView: View {
     private enum LoginStep {
         case identity
         case password
+        case invite
     }
 
     /// Re-arms AutoFill when the step changes and after a deliberate passkey
@@ -82,7 +85,31 @@ struct LoginView: View {
             discoveryLoading ? "Checking…" : "Continue"
         case .password:
             passwordLoading ? "Signing in…" : "Sign in"
+        case .invite:
+            "Email me my invite link"
         }
+    }
+
+    private var inviteToken: String? {
+        guard session.pendingInvite?.email == trimmedEmail else { return nil }
+        return session.pendingInvite?.token
+    }
+
+    private func acceptPendingInvite() {
+        guard let invite = session.pendingInvite, invite.id != handledInviteID,
+              !session.isLoading, activeAuthMethod != .password, activeAuthMethod != .passkey else { return }
+        handledInviteID = invite.id
+        // A fresh link for the open registration updates its proof in place.
+        // Keep the name and password already entered in that sheet.
+        if case .register(let currentEmail) = authDestination, currentEmail == invite.email { return }
+        discoveryRequests.invalidate()
+        activeAuthMethod = nil
+        authDestination = nil
+        email = invite.email
+        password = ""
+        identityError = nil
+        setLoginStep(.identity)
+        advanceToPassword()
     }
 
     private func advanceToPassword() {
@@ -92,18 +119,26 @@ struct LoginView: View {
         identityError = nil
         activeAuthMethod = .discovery
         let submittedEmail = trimmedEmail
+        let submittedToken = inviteToken
+        let requestToken = discoveryRequests.begin()
         Task {
-            defer { activeAuthMethod = nil }
+            defer {
+                if discoveryRequests.owns(requestToken) { activeAuthMethod = nil }
+            }
             do {
-                let result = try await APIClient.shared.discoverAuth(email: submittedEmail)
-                guard !Task.isCancelled else { return }
+                let result = try await APIClient.shared.discoverAuth(email: submittedEmail, invite: submittedToken)
+                guard !Task.isCancelled, discoveryRequests.owns(requestToken) else { return }
                 if result.isOnboarding {
-                    authDestination = .register(email: submittedEmail)
+                    if result.needsInviteLink(token: submittedToken) {
+                        setLoginStep(.invite)
+                    } else {
+                        authDestination = .register(email: submittedEmail)
+                    }
                 } else {
                     setLoginStep(.password)
                 }
             } catch {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, discoveryRequests.owns(requestToken) else { return }
                 identityError = error.localizedDescription
             }
         }
@@ -112,6 +147,8 @@ struct LoginView: View {
     private func changeEmail() {
         guard !authBusy else { return }
         focused = nil
+        session.clearPendingInvite()
+        discoveryRequests.invalidate()
         password = ""
         showPassword = false
         identityError = nil
@@ -167,6 +204,16 @@ struct LoginView: View {
             guard loginStep == .identity else { return }
             await session.armPasskeyAutoFill()
         }
+        .onChange(of: session.pendingInvite?.id, initial: true) { _, _ in
+            acceptPendingInvite()
+        }
+        .onChange(of: authBusy) { _, busy in
+            if !busy { acceptPendingInvite() }
+        }
+        .onDisappear {
+            discoveryRequests.invalidate()
+            if activeAuthMethod == .discovery { activeAuthMethod = nil }
+        }
         .onAppear {
             if let notice = session.notice {
                 AccessibilityNotification.Announcement(notice).post()
@@ -178,11 +225,10 @@ struct LoginView: View {
             }
         }
         .onChange(of: loginStep) { _, step in
-            focused = step == .identity ? .email : .password
-            accessibilityFocused = step == .identity ? .email : .password
-            AccessibilityNotification.Announcement(
-                step == .identity ? "Enter your email address" : "Enter your password"
-            ).post()
+            focused = step == .identity ? .email : step == .password ? .password : nil
+            accessibilityFocused = focused
+            let announcement = step == .identity ? "Enter your email address" : step == .password ? "Enter your password" : "Open the link in your invite email"
+            AccessibilityNotification.Announcement(announcement).post()
         }
         .sheet(item: $authDestination) { destination in
             NavigationStack {
@@ -209,8 +255,11 @@ struct LoginView: View {
             if loginStep == .identity {
                 identityStep
                     .transition(.opacity)
-            } else {
+            } else if loginStep == .password {
                 passwordStep
+                    .transition(.opacity)
+            } else {
+                inviteStep
                     .transition(.opacity)
             }
 
@@ -220,6 +269,9 @@ struct LoginView: View {
                     .accessibilityLabel("Sign in failed. \(error)")
             }
 
+            if loginStep == .invite {
+                InviteLinkResendButton(email: trimmedEmail)
+            } else {
             // The page's one saturated moment remains stable across both
             // local steps so Continue becomes Sign in without layout churn.
             Button {
@@ -228,6 +280,8 @@ struct LoginView: View {
                     advanceToPassword()
                 case .password:
                     submit()
+                case .invite:
+                    break
                 }
             } label: {
                 HStack(spacing: 8) {
@@ -244,6 +298,7 @@ struct LoginView: View {
             }
             .authButton(.primary)
             .disabled(loginStep == .identity ? !canContinue : !canSubmit)
+            }
 
             if loginStep == .identity {
                 HStack(spacing: 12) {
@@ -281,6 +336,29 @@ struct LoginView: View {
                 .accessibilityHint("Choose an account with a saved passkey")
             }
         }
+    }
+
+    private var inviteStep: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(trimmedEmail)
+                    .font(.subheadline.weight(.semibold))
+                    .textSelection(.enabled)
+                Spacer(minLength: 8)
+                Button("Change") { changeEmail() }
+                    .font(.footnote.weight(.semibold))
+                    .buttonStyle(.plain)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .disabled(authBusy)
+            }
+            Text("Check your email")
+                .font(.headline)
+            Text("Choose Set up in the iPhone app in your invite email to create your account here. If the link has expired or you cannot find it, request a new one below.")
+                .font(.subheadline)
+                .foregroundStyle(AuthPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(AuthPalette.textPrimary)
     }
 
     private var identityStep: some View {

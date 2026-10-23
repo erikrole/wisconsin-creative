@@ -61,9 +61,22 @@ struct WisconsinApp: App {
                     }
                 }
                 .onOpenURL { url in
+#if DEBUG
+                    if let fixtureLink = InviteSignupFixtureAPI.incomingLink(url) {
+                        session.receiveInviteURL(fixtureLink)
+                        return
+                    }
+#endif
+                    if session.receiveInviteURL(url) { return }
                     // Custom URLs and universal links share one parser. Query
                     // parameters never open a mutation sheet — Extend stays a
                     // deliberate action on booking detail.
+                    guard let route = GearTrackerRouteParser.parse(url) else { return }
+                    appState.apply(route)
+                }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    guard let url = activity.webpageURL else { return }
+                    if session.receiveInviteURL(url) { return }
                     guard let route = GearTrackerRouteParser.parse(url) else { return }
                     appState.apply(route)
                 }
@@ -422,6 +435,15 @@ struct RootView: View {
                     }
                     .animation(reduceMotion ? nil : .easeInOut, value: session.isOffline)
             }
+        }
+        .alert("Use this invitation?", isPresented: Binding(
+            get: { session.pendingInvite != nil && session.currentUser != nil && !session.isInitialSessionValidationInFlight },
+            set: { _ in }
+        )) {
+            Button("Cancel", role: .cancel) { session.clearPendingInvite() }
+            Button("Sign out and continue") { Task { await session.logout() } }
+        } message: {
+            Text("You are signed in as \(session.currentUser?.email ?? "another account"). Sign out to set up the invited account.")
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: session.isRestoring)
         .announcementSplash(eligibilityKey: announcementEligibilityKey)

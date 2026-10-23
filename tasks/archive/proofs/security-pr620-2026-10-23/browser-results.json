@@ -1,0 +1,20 @@
+{
+  "fixtureOnly": true,
+  "database": false,
+  "emailDelivery": false,
+  "viewport": [
+    390,
+    844
+  ],
+  "passed": [
+    "pending invite without token hides credentials and remember-me",
+    "resend confirms once and disables repeated submission",
+    "Change clears the resend confirmation",
+    "stale emailed token requests a fresh link",
+    "emailed token forwarded to discovery and registration; successful response navigates to welcome fixture",
+    "unknown/wrong-password path retains generic error and static recovery hint",
+    "missing email configuration never claims the link was sent",
+    "malformed success response remains retryable without false sent confirmation"
+  ],
+  "pageErrors": []
+}
