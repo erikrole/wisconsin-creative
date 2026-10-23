@@ -80,6 +80,7 @@ export default function LoginForm() {
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteResendLoading, setInviteResendLoading] = useState(false);
   const [inviteResendMessage, setInviteResendMessage] = useState("");
+  const [inviteEmailUnavailable, setInviteEmailUnavailable] = useState(false);
   const [step, setStep] = useState<AuthStep>("identity");
   const [identityLoading, setIdentityLoading] = useState(false);
   const [identityError, setIdentityError] = useState("");
@@ -186,6 +187,7 @@ export default function LoginForm() {
     setName("");
     setIdentityError("");
     setInviteResendMessage("");
+    setInviteEmailUnavailable(false);
     setFieldErrors({});
     clearLoginErrors();
     clearRegistrationErrors();
@@ -221,6 +223,7 @@ export default function LoginForm() {
       setShowPassword(false);
       setFieldErrors({});
       setInviteResendMessage("");
+      setInviteEmailUnavailable(false);
       setStep(
         result?.flow !== "onboarding"
           ? "password"
@@ -288,6 +291,10 @@ export default function LoginForm() {
         throw new Error(await parseErrorMessage(response, "Could not send the link. Please try again."));
       }
       const result = await parseJsonSafely<InviteResendResponse>(response);
+      if (!result || typeof result.inviteEmailConfigured !== "boolean") {
+        throw new Error("Could not confirm the link was sent. Please try again.");
+      }
+      setInviteEmailUnavailable(!result.inviteEmailConfigured);
       setInviteResendMessage(
         result?.inviteEmailConfigured === false
           ? result.message ?? "Invite email is not configured yet. Contact Erik Role for your sign-up link."
@@ -424,7 +431,7 @@ export default function LoginForm() {
       ? inviteResendLoading
         ? "Sending…"
         : inviteResendMessage
-          ? "Link sent"
+          ? inviteEmailUnavailable ? "Email unavailable" : "Link sent"
           : "Email me my invite link"
     : isOnboarding
       ? registrationSubmitting

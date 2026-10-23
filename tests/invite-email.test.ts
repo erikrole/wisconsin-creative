@@ -45,6 +45,14 @@ describe("invite email", () => {
     expect(sent.html).toContain("works for 30 days");
   });
 
+  it("keeps browser setup out of universal linking while offering explicit native setup", () => {
+    const { html, text } = buildInviteEmail({ email: "alex@wisc.edu", inviteToken: "fixture-token" });
+    expect(html).toContain('href="https://creative.example.test/login?email=alex%40wisc.edu&amp;invite=fixture-token&amp;web=1"');
+    expect(html).toContain('href="https://creative.example.test/login?email=alex%40wisc.edu&amp;invite=fixture-token"');
+    expect(text).toContain("Set up in browser: https://creative.example.test/login?email=alex%40wisc.edu&invite=fixture-token&web=1");
+    expect(text).toContain("Set up in the iPhone app: https://creative.example.test/login?email=alex%40wisc.edu&invite=fixture-token");
+  });
+
   it("sends a plain sign-in link for a reminder to someone who already registered", async () => {
     sendEmail.mockResolvedValueOnce(true);
     await sendInviteEmail({ email: "x@wisc.edu", kind: "reminder" });
@@ -73,6 +81,18 @@ describe("invite email", () => {
   it("reports not_configured and sends nothing when no provider key is set", async () => {
     apiKey = "";
     await expect(sendInviteEmail({ email: "x@wisc.edu" })).resolves.toBe("not_configured");
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not email a sign-up link when the invite was claimed before token issuance", async () => {
+    vi.mocked(issueInviteToken).mockResolvedValueOnce(null);
+    await expect(sendInviteEmail({ email: "x@wisc.edu", allowedEmailId: "invite-1" })).resolves.toBe("failed");
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("reports token-issuance failure without throwing or sending a misleading link", async () => {
+    vi.mocked(issueInviteToken).mockRejectedValueOnce(new Error("Invite no longer exists"));
+    await expect(sendInviteEmail({ email: "x@wisc.edu", allowedEmailId: "invite-1" })).resolves.toBe("failed");
     expect(sendEmail).not.toHaveBeenCalled();
   });
 

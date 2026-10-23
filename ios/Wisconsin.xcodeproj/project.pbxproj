@@ -72,9 +72,11 @@
 		2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
 		2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */; };
 		2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */; };
+		2F7DA9360562159A551FEF65 /* NativeInviteSignupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61CE8AE7D19F957C5BA61C46 /* NativeInviteSignupUITests.swift */; };
 		2FD2DC461CD2264F0A56E51E /* GearPickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7B22E7033F1442ADEF6691 /* GearPickModels.swift */; };
 		3039D7804BF2ACCD2BF288CF /* BlastComposeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7F6123BBD4F8AE0634CB2C /* BlastComposeViews.swift */; };
 		30A2174F020A46E7B8538492 /* CreateBookingPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFF5F65A92CEAED518EF6E6 /* CreateBookingPickers.swift */; };
+		3131C43C1F1C249ADEC0EE2D /* InviteLinkResendButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87073493430695BF033C5785 /* InviteLinkResendButton.swift */; };
 		31591DD0437B097C2510AB84 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BBAACBEA87B1EE9FEBC287 /* UserAvatarView.swift */; };
 		31BA906AD0D633053D4804B7 /* AccountSecuritySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */; };
 		321FDB303266285CC1A98953 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC7E600F4A64D29482B039E0 /* WhatsNewView.swift */; };
@@ -90,6 +92,7 @@
 		3C75E1BEF022199B034CAACC /* BrandAssetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2795089BD5B00BFA48D63 /* BrandAssetsView.swift */; };
 		3F0879ADAE07E40D10144C86 /* ScheduleCalendarSubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796958C4A59FDC2C36ED1E38 /* ScheduleCalendarSubscriptionSheet.swift */; };
 		3F77C59C1B0F0446677A157F /* RecentIOSRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F53E9F27FBCB9721A82BF55 /* RecentIOSRegressionTests.swift */; };
+		407F26A5822F0E60EA4C4627 /* AuthInviteLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591CA93547DD4684FAD8D989 /* AuthInviteLinkTests.swift */; };
 		411CF014B25A6515F8E6869E /* CreateBookingEquipmentRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C885700380306D486A94C9 /* CreateBookingEquipmentRows.swift */; };
 		41891E6B69644BB1DB025CB9 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9DAB950F60885A23620BEC /* Brand.swift */; };
 		41B304E3F5ABE1BF6F9B94BB /* CheckoutReturnActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */; };
@@ -269,6 +272,7 @@
 		DF903B01D6C6E80FD5ABB03E /* ProfileCompletionDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AD62D4B6264BA6FE15C183 /* ProfileCompletionDraft.swift */; };
 		DF9D5CD07F84E63E30627EBA /* AccountabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E70592C49A02FCFFAB9105A /* AccountabilityView.swift */; };
 		E05F7723FFEB7EB135EC8EA8 /* ScheduleEventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7F97C3C6D850E4FB17D6F8F /* ScheduleEventRow.swift */; };
+		E0E0603A93EA900F5EE87178 /* AuthInviteLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFDF0DA1120D0A5F5F131353 /* AuthInviteLink.swift */; };
 		E6F51692EA10D1DF6DA5F049 /* KioskSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E968BAF46C8E557831F73C27 /* KioskSuccessView.swift */; };
 		E74AB0C45B70B59CEBC79AC4 /* AppTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B208F1EB8DD4DA49DADC1CAB /* AppTabView.swift */; };
 		E92107A6B7830650DE247381 /* APIClient+Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2918FE493352DE21C25D8675 /* APIClient+Profile.swift */; };
@@ -278,6 +282,7 @@
 		ECC2A2BC90EAD234C6BD598D /* LatestBrowseHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16A5B5D4E9AE06420C2C4C08 /* LatestBrowseHarness.swift */; };
 		ECC9462F50A2804BF6D7ED3D /* BlastArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */; };
 		EF7FE74D513941148FDDA452 /* ReportFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF5F57A830BEA38433C56E1 /* ReportFormatting.swift */; };
+		F115E2AED686200CDED10A68 /* InviteSignupTestHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9933579835C2FC6119CC88DC /* InviteSignupTestHarness.swift */; };
 		F177CB625773D440DFADA946 /* AccountabilityModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */; };
 		F2A0A3013F3F22792FA32C84 /* KioskComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348C1E3385689A947929A115 /* KioskComponents.swift */; };
 		F3AE80E47FC7B6AAA76035B6 /* KioskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA38BB094C95612DBF9F1C24 /* KioskStore.swift */; };
@@ -429,6 +434,7 @@
 		552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSecuritySettingsView.swift; sourceTree = "<group>"; };
 		5740ABDA01126CBBB53F25EF /* ProfileCompletionWelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionWelcomeView.swift; sourceTree = "<group>"; };
 		58ABE954706326D6137979FB /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
+		591CA93547DD4684FAD8D989 /* AuthInviteLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthInviteLinkTests.swift; sourceTree = "<group>"; };
 		592769886AB12F6A842CC8CF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		59BEC868CE07F10941FEBB5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -440,6 +446,7 @@
 		5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
 		609E4E02EB555D808A50CE2A /* UtilizationReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilizationReportView.swift; sourceTree = "<group>"; };
 		6148A160C162A021FF9DE4C0 /* FormModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormModels.swift; sourceTree = "<group>"; };
+		61CE8AE7D19F957C5BA61C46 /* NativeInviteSignupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeInviteSignupUITests.swift; sourceTree = "<group>"; };
 		649B6E0F68D9B5DB4D054656 /* KioskIdleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdleView.swift; sourceTree = "<group>"; };
 		64AD62D4B6264BA6FE15C183 /* ProfileCompletionDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionDraft.swift; sourceTree = "<group>"; };
 		64F14676788E6FA7CDD08D48 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -475,6 +482,7 @@
 		841B755DD26E463F2B624373 /* ReportModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportModelsTests.swift; sourceTree = "<group>"; };
 		843772771897AABEF8DD1F93 /* BannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BannerView.swift; sourceTree = "<group>"; };
 		84430D9886900EA2E8F3CB0B /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		87073493430695BF033C5785 /* InviteLinkResendButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteLinkResendButton.swift; sourceTree = "<group>"; };
 		88F162C9B5233CB44C35E9E5 /* WisconsinLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WisconsinLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingEventViews.swift; sourceTree = "<group>"; };
 		89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementSplashSheet.swift; sourceTree = "<group>"; };
@@ -492,6 +500,7 @@
 		966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailSheet.swift; sourceTree = "<group>"; };
 		98D7A852B8982340011FD05F /* AnnouncementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementModels.swift; sourceTree = "<group>"; };
 		98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuarterHourTimePicker.swift; sourceTree = "<group>"; };
+		9933579835C2FC6119CC88DC /* InviteSignupTestHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteSignupTestHarness.swift; sourceTree = "<group>"; };
 		9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreboardView.swift; sourceTree = "<group>"; };
 		9C450858455B38900B99D9C1 /* ReportSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSession.swift; sourceTree = "<group>"; };
 		9CDE77AE37C01B8DA663C7CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -577,6 +586,7 @@
 		DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModelsTests.swift; sourceTree = "<group>"; };
 		DE250FADCDB66EDCBD5DF234 /* AvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityView.swift; sourceTree = "<group>"; };
 		DEF52CE902DAB5F4F5AFC87D /* SoftwareLoginModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareLoginModelTests.swift; sourceTree = "<group>"; };
+		DFDF0DA1120D0A5F5F131353 /* AuthInviteLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthInviteLink.swift; sourceTree = "<group>"; };
 		E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnActivityAttributes.swift; sourceTree = "<group>"; };
 		E15CD71193CFD39E493FF9B9 /* KioskChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskChrome.swift; sourceTree = "<group>"; };
 		E376E0961E9404F4D93C4B4E /* GearWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearWidgetPublisher.swift; sourceTree = "<group>"; };
@@ -732,6 +742,7 @@
 				663DC1D3F890A7577C4D89D5 /* AppIntents.swift */,
 				B9D82991FC6AE45A56917938 /* AppIntentsData.swift */,
 				FF98C537202359B822B1D752 /* BookingEntity.swift */,
+				9933579835C2FC6119CC88DC /* InviteSignupTestHarness.swift */,
 				16A5B5D4E9AE06420C2C4C08 /* LatestBrowseHarness.swift */,
 				0CF2E588B9A1DA4F76309E88 /* NotificationActions.swift */,
 				F99A80ADF1EEA4CF4AE43367 /* OnboardingTestHarness.swift */,
@@ -961,6 +972,7 @@
 				C235118B9D7CE7FA9E79421B /* APIClientResponseShapes.swift */,
 				38065600FA5A1C1AC4C8CC2F /* AppState.swift */,
 				D7BC639F2D52A9931FBEF8F3 /* AuthDesign.swift */,
+				DFDF0DA1120D0A5F5F131353 /* AuthInviteLink.swift */,
 				1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */,
 				4A9DAB950F60885A23620BEC /* Brand.swift */,
 				39565FFA7236A61DAD12D9BB /* DateFormats.swift */,
@@ -990,6 +1002,7 @@
 		E4C0BE70BBCA61E06847F9A5 /* WisconsinUITests */ = {
 			isa = PBXGroup;
 			children = (
+				61CE8AE7D19F957C5BA61C46 /* NativeInviteSignupUITests.swift */,
 				382CC3A14FCDC4E920CCC863 /* OnboardingWalkthroughUITests.swift */,
 				B4AC4A5E9A1F61ABB128DDBD /* RecentIOSRegressionUITests.swift */,
 				B697AC8644C31499AB3D7408 /* ReportsScreenshotUITests.swift */,
@@ -1028,6 +1041,7 @@
 				A5159F2511DF2C09D8E495B8 /* GuideMarkdown.swift */,
 				14DA88A1DF6F8D23066A07BC /* GuidesView.swift */,
 				64F14676788E6FA7CDD08D48 /* HomeView.swift */,
+				87073493430695BF033C5785 /* InviteLinkResendButton.swift */,
 				DD3AE6ABC6E4E6D32F563D8E /* ItemActivityView.swift */,
 				80CA4880F08046F8E23F079B /* ItemDetailView.swift */,
 				F12684601FE641B454D0219B /* ItemsView.swift */,
@@ -1090,6 +1104,7 @@
 			children = (
 				264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */,
 				D1A401A3DB3D9E32E60965FB /* APIClientRetryTests.swift */,
+				591CA93547DD4684FAD8D989 /* AuthInviteLinkTests.swift */,
 				F1AB4E32967E7E27BF878BA9 /* BlastHistoryTests.swift */,
 				33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */,
 				E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */,
@@ -1353,6 +1368,7 @@
 			files = (
 				09B21E53A13846FA980ACCEE /* APIClientRetryTests.swift in Sources */,
 				F177CB625773D440DFADA946 /* AccountabilityModelTests.swift in Sources */,
+				407F26A5822F0E60EA4C4627 /* AuthInviteLinkTests.swift in Sources */,
 				2127E8FF340C558E288B43E7 /* BlastHistoryTests.swift in Sources */,
 				ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */,
 				2C6B96B64D01EF1B40948AFD /* BrandAssetModelTests.swift in Sources */,
@@ -1391,6 +1407,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F7DA9360562159A551FEF65 /* NativeInviteSignupUITests.swift in Sources */,
 				D43D840F1E69810C5E0FADA3 /* OnboardingWalkthroughUITests.swift in Sources */,
 				CAA22DA410C36FA0B508A17B /* RecentIOSRegressionUITests.swift in Sources */,
 				CB4CE3E584F6CF6F481E5926 /* ReportsScreenshotUITests.swift in Sources */,
@@ -1489,6 +1506,7 @@
 				C3C5D175C583096B0D645F24 /* AssetModels.swift in Sources */,
 				DC10577F4AF30D4E44E08B63 /* AssignStudentSheet.swift in Sources */,
 				B055ADFFD82943733382DB0D /* AuthDesign.swift in Sources */,
+				E0E0603A93EA900F5EE87178 /* AuthInviteLink.swift in Sources */,
 				56A81DDDEF06AB1D40D13B33 /* AvailabilityView.swift in Sources */,
 				922F655D9910FE2ECB1E7DD8 /* BadgeEarnedCelebration.swift in Sources */,
 				BF476A31687D54A1DB40F63B /* BadgeReportView.swift in Sources */,
@@ -1556,6 +1574,8 @@
 				B1DDE3C06BD40F1F8615A227 /* HomeView.swift in Sources */,
 				179A2B76C8B92DAEC9EE336A /* InAppSafariView.swift in Sources */,
 				59047C1F15964210773081BC /* InventoryReadModels.swift in Sources */,
+				3131C43C1F1C249ADEC0EE2D /* InviteLinkResendButton.swift in Sources */,
+				F115E2AED686200CDED10A68 /* InviteSignupTestHarness.swift in Sources */,
 				D403B2F000A63EC5E1F72819 /* ItemActivityModels.swift in Sources */,
 				70A3E38B8611D73E220C8B59 /* ItemActivityView.swift in Sources */,
 				FC55F8C00EAB32F578B178F0 /* ItemDetailView.swift in Sources */,

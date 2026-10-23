@@ -10,7 +10,8 @@ import { createAuditEntriesTx, createAuditEntry, createAuditEntryTx } from "@/li
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 import { unique } from "@/lib/utils";
-import { inviteTokenMatches } from "@/lib/services/invite-token";
+import { INVITE_TOKEN_TTL_MS, inviteTokenMatches } from "@/lib/services/invite-token";
+import { withSerializationRetry } from "@/lib/serialization";
 
 // Registration is invitation-gated (allowlist), so the IP ceiling is sized for
 // an onboarding wave from a shared network rather than for abuse defense.
@@ -70,7 +71,7 @@ export const POST = withHandler(async (req) => {
   // Atomic: create user + claim invitation in one transaction
   let user;
   try {
-    user = await db.$transaction(async (tx) => {
+    user = await withSerializationRetry(() => db.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
           name: allowedEntry.preloadedName?.trim() || body.name.trim(),
@@ -88,10 +89,23 @@ export const POST = withHandler(async (req) => {
         include: { collaboratorPolicy: { select: collaboratorPolicyActorSelect } },
       });
 
-      await tx.allowedEmail.update({
-        where: { id: allowedEntry.id },
+      // A resend or claim may win while bcrypt runs. Consume only the exact
+      // still-valid token checked above; failure rolls back the new account.
+      const claimed = await tx.allowedEmail.updateMany({
+        where: {
+          id: allowedEntry.id,
+          claimedAt: null,
+          inviteTokenHash: allowedEntry.inviteTokenHash,
+          inviteTokenIssuedAt: {
+            equals: allowedEntry.inviteTokenIssuedAt,
+            gt: new Date(Date.now() - INVITE_TOKEN_TTL_MS),
+          },
+        },
         data: { claimedAt: new Date(), claimedById: created.id, inviteTokenHash: null, inviteTokenIssuedAt: null },
       });
+      if (claimed.count !== 1) {
+        throw new HttpError(403, INVITE_LINK_MESSAGE, { code: "INVITE_LINK_REQUIRED" });
+      }
 
       // Staged hire invite (D-065): link the applicant to the new account inside
       // the same transaction. Never overwrites an existing link.
@@ -200,7 +214,7 @@ export const POST = withHandler(async (req) => {
       }
 
       return created;
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const target = (error.meta?.target as string[] | string | undefined) ?? "";

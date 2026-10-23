@@ -80,7 +80,7 @@ struct PerformanceTestRootView: View {
         case .staffProfile:
             StaffProfileHarnessView()
         case .login:
-            LoginView()
+            InviteSignupHarnessView()
         case .registration:
             NavigationStack { NativeRegistrationView(initialEmail: "alex.onboarding@wisc.edu") }
         case .onboarding:
@@ -850,8 +850,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
 
         // Unmapped paths answer 404, never 401: `APIError.notFound` stays local
         // to the caller, while a 401 would tear down the harness session.
-        var mapped = Self.body(for: request)
-        var statusCode = mapped == nil ? 404 : 200
+        let inviteResponse = InviteSignupFixtureAPI.response(for: request)
+        var mapped = inviteResponse?.body ?? Self.body(for: request)
+        var statusCode = inviteResponse?.status ?? (mapped == nil ? 404 : 200)
 #if DEBUG
         // Review captures of Home's own states: `GT_FIXTURE_HOME=error` fails
         // the dashboard load; `=empty` serves the all-clear payload with no drafts.

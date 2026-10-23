@@ -1,0 +1,891 @@
+diff --git a/ios/Wisconsin/App/PerformanceTestHarness.swift b/ios/Wisconsin/App/PerformanceTestHarness.swift
+index 52de7f8a9..b12592539 100644
+--- a/ios/Wisconsin/App/PerformanceTestHarness.swift
++++ b/ios/Wisconsin/App/PerformanceTestHarness.swift
+@@ -80,7 +80,7 @@ struct PerformanceTestRootView: View {
+         case .staffProfile:
+             StaffProfileHarnessView()
+         case .login:
+-            LoginView()
++            InviteSignupHarnessView()
+         case .registration:
+             NavigationStack { NativeRegistrationView(initialEmail: "alex.onboarding@wisc.edu") }
+         case .onboarding:
+@@ -850,8 +850,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
+ 
+         // Unmapped paths answer 404, never 401: `APIError.notFound` stays local
+         // to the caller, while a 401 would tear down the harness session.
+-        var mapped = Self.body(for: request)
+-        var statusCode = mapped == nil ? 404 : 200
++        let inviteResponse = InviteSignupFixtureAPI.response(for: request)
++        var mapped = inviteResponse?.body ?? Self.body(for: request)
++        var statusCode = inviteResponse?.status ?? (mapped == nil ? 404 : 200)
+ #if DEBUG
+         // Review captures of Home's own states: `GT_FIXTURE_HOME=error` fails
+         // the dashboard load; `=empty` serves the all-clear payload with no drafts.
+diff --git a/ios/Wisconsin/App/WisconsinApp.swift b/ios/Wisconsin/App/WisconsinApp.swift
+index c17f61d1e..3df2f8ea3 100644
+--- a/ios/Wisconsin/App/WisconsinApp.swift
++++ b/ios/Wisconsin/App/WisconsinApp.swift
+@@ -61,12 +61,25 @@ struct WisconsinApp: App {
+                     }
+                 }
+                 .onOpenURL { url in
++#if DEBUG
++                    if let fixtureLink = InviteSignupFixtureAPI.incomingLink(url) {
++                        session.receiveInviteURL(fixtureLink)
++                        return
++                    }
++#endif
++                    if session.receiveInviteURL(url) { return }
+                     // Custom URLs and universal links share one parser. Query
+                     // parameters never open a mutation sheet — Extend stays a
+                     // deliberate action on booking detail.
+                     guard let route = GearTrackerRouteParser.parse(url) else { return }
+                     appState.apply(route)
+                 }
++                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
++                    guard let url = activity.webpageURL else { return }
++                    if session.receiveInviteURL(url) { return }
++                    guard let route = GearTrackerRouteParser.parse(url) else { return }
++                    appState.apply(route)
++                }
+                 .onContinueUserActivity(BookingHandoff.activityType) { activity in
+                     // Handoff from another device carries the web URL, which
+                     // the universal-link parser already routes.
+@@ -423,6 +436,15 @@ struct RootView: View {
+                     .animation(reduceMotion ? nil : .easeInOut, value: session.isOffline)
+             }
+         }
++        .alert("Use this invitation?", isPresented: Binding(
++            get: { session.pendingInvite != nil && session.currentUser != nil && !session.isInitialSessionValidationInFlight },
++            set: { _ in }
++        )) {
++            Button("Cancel", role: .cancel) { session.clearPendingInvite() }
++            Button("Sign out and continue") { Task { await session.logout() } }
++        } message: {
++            Text("You are signed in as \(session.currentUser?.email ?? "another account"). Sign out to set up the invited account.")
++        }
+         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: session.isRestoring)
+         .announcementSplash(eligibilityKey: announcementEligibilityKey)
+         .task(id: session.currentUser?.shellIdentity) {
+diff --git a/ios/Wisconsin/Core/APIClient+Auth.swift b/ios/Wisconsin/Core/APIClient+Auth.swift
+index 0d4b3432d..e3ad3c7fc 100644
+--- a/ios/Wisconsin/Core/APIClient+Auth.swift
++++ b/ios/Wisconsin/Core/APIClient+Auth.swift
+@@ -5,15 +5,16 @@ import Foundation
+ extension APIClient {
+     // MARK: - Auth
+ 
+-    func discoverAuth(email: String) async throws -> AuthDiscoveryResult {
++    func discoverAuth(email: String, invite: String? = nil) async throws -> AuthDiscoveryResult {
+         struct Body: Encodable {
+             let email: String
++            let invite: String?
+         }
+ 
+         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+         prepareAuthHost(for: normalizedEmail)
+         var req = request(path: "/api/auth/discover", method: "POST")
+-        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail))
++        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail, invite: invite))
+         return try await perform(req, broadcastsSessionExpiry: false)
+     }
+ 
+@@ -30,11 +31,12 @@ extension APIClient {
+         return resp.user
+     }
+ 
+-    func register(name: String, email: String, password: String) async throws -> CurrentUser {
++    func register(name: String, email: String, password: String, inviteToken: String? = nil) async throws -> CurrentUser {
+         struct Body: Encodable {
+             let name: String
+             let email: String
+             let password: String
++            let inviteToken: String?
+         }
+ 
+         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+@@ -43,12 +45,22 @@ extension APIClient {
+         req.httpBody = try JSONEncoder().encode(Body(
+             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+             email: normalizedEmail,
+-            password: password
++            password: password,
++            inviteToken: inviteToken
+         ))
+         let response: LoginResponse = try await perform(req, broadcastsSessionExpiry: false)
+         return response.user
+     }
+ 
++    func resendInviteLink(email: String) async throws -> InviteResendResult {
++        struct Body: Encodable { let email: String }
++        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
++        prepareAuthHost(for: normalizedEmail)
++        var req = request(path: "/api/auth/invite/resend", method: "POST")
++        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail))
++        return try await perform(req, broadcastsSessionExpiry: false)
++    }
++
+     func requestPasswordReset(email: String) async throws -> PasswordResetRequestResult {
+         struct Body: Encodable {
+             let email: String
+diff --git a/ios/Wisconsin/Core/APIClient.swift b/ios/Wisconsin/Core/APIClient.swift
+index b63107199..fe9eb4244 100644
+--- a/ios/Wisconsin/Core/APIClient.swift
++++ b/ios/Wisconsin/Core/APIClient.swift
+@@ -5,6 +5,7 @@ enum APIError: LocalizedError {
+     case sessionChanged
+     case notFound
+     case conflict(String)
++    case inviteLinkRequired(String)
+     case httpError(statusCode: Int, message: String)
+     case serverError(String)
+     case decodingError(Error)
+@@ -16,6 +17,7 @@ enum APIError: LocalizedError {
+         case .sessionChanged: "This request belonged to a previous sign-in and was cancelled."
+         case .notFound: "The requested item could not be found."
+         case .conflict(let msg): msg
++        case .inviteLinkRequired(let message): message
+         case .httpError(_, let message): message
+         case .serverError(let msg): msg
+         case .decodingError: "Unexpected response from server."
+@@ -155,10 +157,35 @@ enum AuthDiscoveryFlow: String, Decodable {
+     }
+ }
+ 
++enum InviteLinkStatus: String, Decodable {
++    case valid
++    case required
++
++    init(from decoder: Decoder) throws {
++        let value = try decoder.singleValueContainer().decode(String.self)
++        self = InviteLinkStatus(rawValue: value) ?? .required
++    }
++}
++
++struct InviteResendResult: Decodable {
++    let message: String
++    let inviteEmailConfigured: Bool
++}
++
+ struct AuthDiscoveryResult: Decodable {
+     let flow: AuthDiscoveryFlow
++    let inviteLink: InviteLinkStatus?
+ 
+     var isOnboarding: Bool { flow == .onboarding }
++
++    func needsInviteLink(token: String?) -> Bool {
++        guard isOnboarding else { return false }
++        switch inviteLink {
++        case .required: return true
++        case .valid: return token?.isEmpty != false
++        case nil: return false // Older servers do not require inbox proof yet.
++        }
++    }
+ }
+ 
+ enum AssetTextMutation {
+@@ -512,8 +539,11 @@ final class APIClient {
+             if request.url?.path != "/api/me" {
+                 NotificationCenter.default.post(name: .collaboratorPolicyMayHaveChanged, object: nil)
+             }
+-            let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
+-                ?? "You do not have access to this feature."
++            let body = try? JSONDecoder().decode(ServerErrorBody.self, from: data)
++            let message = body?.error ?? "You do not have access to this feature."
++            if request.url?.path == "/api/auth/register", body?.code == "INVITE_LINK_REQUIRED" {
++                throw APIError.inviteLinkRequired(message)
++            }
+             throw APIError.httpError(statusCode: http.statusCode, message: message)
+         case 409:
+             if let body = try? decoder.decode(ServerErrorBody.self, from: data), body.code == "ONBOARDING_CONFLICT" {
+diff --git a/ios/Wisconsin/Core/AuthDesign.swift b/ios/Wisconsin/Core/AuthDesign.swift
+index 786035de9..5c5eec96d 100644
+--- a/ios/Wisconsin/Core/AuthDesign.swift
++++ b/ios/Wisconsin/Core/AuthDesign.swift
+@@ -164,6 +164,8 @@ struct AuthScreen<Content: View, Footer: View>: View {
+     let subtitle: String
+     /// Sheets opened from sign-in drop the mark; the page behind carries it.
+     var showsMark = true
++    /// Long forms let the system reduce the viewport above the keyboard.
++    var avoidsKeyboard = false
+     @ViewBuilder var content: Content
+     @ViewBuilder var footer: Footer
+ 
+@@ -213,7 +215,7 @@ struct AuthScreen<Content: View, Footer: View>: View {
+                 .scrollDismissesKeyboard(.interactively)
+             }
+         }
+-        .ignoresSafeArea(.keyboard, edges: .bottom)
++        .ignoresSafeArea(avoidsKeyboard ? [] : .keyboard, edges: .bottom)
+         .preferredColorScheme(.dark)
+     }
+ }
+diff --git a/ios/Wisconsin/Core/SessionStore.swift b/ios/Wisconsin/Core/SessionStore.swift
+index 632639436..c7078c1f4 100644
+--- a/ios/Wisconsin/Core/SessionStore.swift
++++ b/ios/Wisconsin/Core/SessionStore.swift
+@@ -39,6 +39,22 @@ final class SessionStore {
+     var isLoading = false
+     var isRestoring = true
+     var error: String?
++    var pendingInvite: AuthInviteLink?
++    private(set) var registrationNeedsInviteLink = false
++
++    @discardableResult
++    func receiveInviteURL(_ url: URL) -> Bool {
++        guard let invite = AuthInviteLink.parse(url) else { return false }
++        pendingInvite = invite
++        registrationNeedsInviteLink = false
++        error = nil
++        return true
++    }
++
++    func clearPendingInvite() {
++        pendingInvite = nil
++        registrationNeedsInviteLink = false
++    }
+     var isOffline = false
+     /// A cold launch with no cached session could not reach the server, so we
+     /// cannot yet say whether the stored cookie is valid. Held on the launch
+@@ -133,6 +149,9 @@ final class SessionStore {
+                 let user = try await APIClient.shared.login(email: email, password: password)
+                 guard self.authRequests.owns(requestToken) else { return }
+                 self.didSeedFromSnapshot = false
++                if self.pendingInvite?.email == email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
++                    self.clearPendingInvite()
++                }
+                 self.publishCurrentUserIfChanged(user)
+                 // Not during a forced change: that password is about to be replaced.
+                 if !user.forcePasswordChange {
+@@ -147,22 +166,35 @@ final class SessionStore {
+         await mutation.value
+     }
+ 
+-    func register(name: String, email: String, password: String) async {
++    func register(name: String, email: String, password: String, inviteToken: String? = nil) async {
+         let mutation = authMutations.enqueue { [weak self] in
+             guard let self else { return }
+             let requestToken = self.authRequests.begin()
+             self.isLoading = true
++            self.registrationNeedsInviteLink = false
+             self.error = nil
+             do {
+-                let user = try await APIClient.shared.register(name: name, email: email, password: password)
++                let user = try await APIClient.shared.register(name: name, email: email, password: password, inviteToken: inviteToken)
+                 guard self.authRequests.owns(requestToken) else { return }
+                 self.didSeedFromSnapshot = false
++                if self.pendingInvite?.email == email, self.pendingInvite?.token == inviteToken {
++                    self.clearPendingInvite()
++                }
+                 self.publishCurrentUserIfChanged(user)
+                 Task { await Self.upgradeToPasskeyAfterSignIn(password: password) }
+                 self.isOffline = false
+             } catch {
+                 guard self.authRequests.owns(requestToken) else { return }
+-                self.error = error.localizedDescription
++                if case APIError.inviteLinkRequired = error,
++                   let current = self.pendingInvite,
++                   current.email != email || current.token != inviteToken {
++                    // A newer inbox link arrived while this request was in flight.
++                    // Its proof is ready; do not mark it expired from an old reply.
++                    self.error = nil
++                } else {
++                    if case APIError.inviteLinkRequired = error { self.registrationNeedsInviteLink = true }
++                    self.error = error.localizedDescription
++                }
+             }
+             if self.authRequests.owns(requestToken) { self.isLoading = false }
+         }
+@@ -503,6 +535,6 @@ final class SessionStore {
+         if currentUser != user {
+             currentUser = user
+         }
+-        SessionSnapshot.save(user)
++        if !AppRuntimeMode.isPerformanceTesting { SessionSnapshot.save(user) }
+     }
+ }
+diff --git a/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift b/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift
+index ad11ce317..5f77dc033 100644
+--- a/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift
++++ b/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift
+@@ -1718,7 +1718,7 @@ final class CreateBookingViewModel {
+             return true
+         case .httpError(let statusCode, _):
+             return (500...599).contains(statusCode)
+-        case .unauthorized, .notFound, .conflict:
++        case .unauthorized, .notFound, .conflict, .inviteLinkRequired:
+             return false
+         }
+     }
+diff --git a/ios/Wisconsin/Views/LoginView.swift b/ios/Wisconsin/Views/LoginView.swift
+index f96ddc525..8c710e6f1 100644
+--- a/ios/Wisconsin/Views/LoginView.swift
++++ b/ios/Wisconsin/Views/LoginView.swift
+@@ -11,6 +11,8 @@ struct LoginView: View {
+     @State private var activeAuthMethod: AuthMethod?
+     @State private var authDestination: AuthDestination?
+     @State private var passkeyAutoFillAttempt = 0
++    @State private var discoveryRequests = LatestRequestGeneration()
++    @State private var handledInviteID: UUID?
+     @FocusState private var focused: Field?
+     @AccessibilityFocusState private var accessibilityFocused: Field?
+ 
+@@ -19,6 +21,7 @@ struct LoginView: View {
+     private enum LoginStep {
+         case identity
+         case password
++        case invite
+     }
+ 
+     /// Re-arms AutoFill when the step changes and after a deliberate passkey
+@@ -82,9 +85,33 @@ struct LoginView: View {
+             discoveryLoading ? "Checking…" : "Continue"
+         case .password:
+             passwordLoading ? "Signing in…" : "Sign in"
++        case .invite:
++            "Email me my invite link"
+         }
+     }
+ 
++    private var inviteToken: String? {
++        guard session.pendingInvite?.email == trimmedEmail else { return nil }
++        return session.pendingInvite?.token
++    }
++
++    private func acceptPendingInvite() {
++        guard let invite = session.pendingInvite, invite.id != handledInviteID,
++              !session.isLoading, activeAuthMethod != .password, activeAuthMethod != .passkey else { return }
++        handledInviteID = invite.id
++        // A fresh link for the open registration updates its proof in place.
++        // Keep the name and password already entered in that sheet.
++        if case .register(let currentEmail) = authDestination, currentEmail == invite.email { return }
++        discoveryRequests.invalidate()
++        activeAuthMethod = nil
++        authDestination = nil
++        email = invite.email
++        password = ""
++        identityError = nil
++        setLoginStep(.identity)
++        advanceToPassword()
++    }
++
+     private func advanceToPassword() {
+         guard canContinue else { return }
+         focused = nil
+@@ -92,18 +119,26 @@ struct LoginView: View {
+         identityError = nil
+         activeAuthMethod = .discovery
+         let submittedEmail = trimmedEmail
++        let submittedToken = inviteToken
++        let requestToken = discoveryRequests.begin()
+         Task {
+-            defer { activeAuthMethod = nil }
++            defer {
++                if discoveryRequests.owns(requestToken) { activeAuthMethod = nil }
++            }
+             do {
+-                let result = try await APIClient.shared.discoverAuth(email: submittedEmail)
+-                guard !Task.isCancelled else { return }
++                let result = try await APIClient.shared.discoverAuth(email: submittedEmail, invite: submittedToken)
++                guard !Task.isCancelled, discoveryRequests.owns(requestToken) else { return }
+                 if result.isOnboarding {
+-                    authDestination = .register(email: submittedEmail)
++                    if result.needsInviteLink(token: submittedToken) {
++                        setLoginStep(.invite)
++                    } else {
++                        authDestination = .register(email: submittedEmail)
++                    }
+                 } else {
+                     setLoginStep(.password)
+                 }
+             } catch {
+-                guard !Task.isCancelled else { return }
++                guard !Task.isCancelled, discoveryRequests.owns(requestToken) else { return }
+                 identityError = error.localizedDescription
+             }
+         }
+@@ -112,6 +147,8 @@ struct LoginView: View {
+     private func changeEmail() {
+         guard !authBusy else { return }
+         focused = nil
++        session.clearPendingInvite()
++        discoveryRequests.invalidate()
+         password = ""
+         showPassword = false
+         identityError = nil
+@@ -167,6 +204,16 @@ struct LoginView: View {
+             guard loginStep == .identity else { return }
+             await session.armPasskeyAutoFill()
+         }
++        .onChange(of: session.pendingInvite?.id, initial: true) { _, _ in
++            acceptPendingInvite()
++        }
++        .onChange(of: authBusy) { _, busy in
++            if !busy { acceptPendingInvite() }
++        }
++        .onDisappear {
++            discoveryRequests.invalidate()
++            if activeAuthMethod == .discovery { activeAuthMethod = nil }
++        }
+         .onAppear {
+             if let notice = session.notice {
+                 AccessibilityNotification.Announcement(notice).post()
+@@ -178,11 +225,10 @@ struct LoginView: View {
+             }
+         }
+         .onChange(of: loginStep) { _, step in
+-            focused = step == .identity ? .email : .password
+-            accessibilityFocused = step == .identity ? .email : .password
+-            AccessibilityNotification.Announcement(
+-                step == .identity ? "Enter your email address" : "Enter your password"
+-            ).post()
++            focused = step == .identity ? .email : step == .password ? .password : nil
++            accessibilityFocused = focused
++            let announcement = step == .identity ? "Enter your email address" : step == .password ? "Enter your password" : "Open the link in your invite email"
++            AccessibilityNotification.Announcement(announcement).post()
+         }
+         .sheet(item: $authDestination) { destination in
+             NavigationStack {
+@@ -209,9 +255,12 @@ struct LoginView: View {
+             if loginStep == .identity {
+                 identityStep
+                     .transition(.opacity)
+-            } else {
++            } else if loginStep == .password {
+                 passwordStep
+                     .transition(.opacity)
++            } else {
++                inviteStep
++                    .transition(.opacity)
+             }
+ 
+             // Error
+@@ -220,6 +269,9 @@ struct LoginView: View {
+                     .accessibilityLabel("Sign in failed. \(error)")
+             }
+ 
++            if loginStep == .invite {
++                InviteLinkResendButton(email: trimmedEmail)
++            } else {
+             // The page's one saturated moment remains stable across both
+             // local steps so Continue becomes Sign in without layout churn.
+             Button {
+@@ -228,6 +280,8 @@ struct LoginView: View {
+                     advanceToPassword()
+                 case .password:
+                     submit()
++                case .invite:
++                    break
+                 }
+             } label: {
+                 HStack(spacing: 8) {
+@@ -244,6 +298,7 @@ struct LoginView: View {
+             }
+             .authButton(.primary)
+             .disabled(loginStep == .identity ? !canContinue : !canSubmit)
++            }
+ 
+             if loginStep == .identity {
+                 HStack(spacing: 12) {
+@@ -283,6 +338,29 @@ struct LoginView: View {
+         }
+     }
+ 
++    private var inviteStep: some View {
++        VStack(alignment: .leading, spacing: 12) {
++            HStack {
++                Text(trimmedEmail)
++                    .font(.subheadline.weight(.semibold))
++                    .textSelection(.enabled)
++                Spacer(minLength: 8)
++                Button("Change") { changeEmail() }
++                    .font(.footnote.weight(.semibold))
++                    .buttonStyle(.plain)
++                    .frame(minWidth: 44, minHeight: 44)
++                    .disabled(authBusy)
++            }
++            Text("Check your email")
++                .font(.headline)
++            Text("Choose Set up in the iPhone app in your invite email to create your account here. If the link has expired or you cannot find it, request a new one below.")
++                .font(.subheadline)
++                .foregroundStyle(AuthPalette.textSecondary)
++                .fixedSize(horizontal: false, vertical: true)
++        }
++        .foregroundStyle(AuthPalette.textPrimary)
++    }
++
+     private var identityStep: some View {
+         VStack(alignment: .leading, spacing: 8) {
+             Text("Email address")
+diff --git a/ios/Wisconsin/Views/NativeAuthViews.swift b/ios/Wisconsin/Views/NativeAuthViews.swift
+index 680f2b61f..a13b2ac10 100644
+--- a/ios/Wisconsin/Views/NativeAuthViews.swift
++++ b/ios/Wisconsin/Views/NativeAuthViews.swift
+@@ -53,7 +53,7 @@ struct NativeRegistrationView: View {
+             Self.isValidEmail(normalizedEmail) &&
+             password.count >= 8 &&
+             password == confirmPassword &&
+-            !isSubmitting
++            !isSubmitting && !session.registrationNeedsInviteLink
+     }
+ 
+     init(initialEmail: String = "") {
+@@ -66,11 +66,13 @@ struct NativeRegistrationView: View {
+         AuthScreen(
+             title: "Set up account",
+             subtitle: "Your invited email is approved. Create a password, then add the details needed for work.",
+-            showsMark: false
++            showsMark: false,
++            avoidsKeyboard: true
+         ) {
+             VStack(alignment: .leading, spacing: 18) {
+                 AuthLabeledField(title: "Full name", isFocused: focusedField == .name) {
+                     TextField(text: $name, prompt: Text("Your name").foregroundStyle(AuthPalette.textTertiary)) { Text("Full name") }
++                        .accessibilityLabel("Full name")
+                         .textContentType(.name)
+                         .focused($focusedField, equals: .name)
+                         .submitLabel(.next)
+@@ -83,6 +85,7 @@ struct NativeRegistrationView: View {
+ 
+                 AuthLabeledField(title: "Email", isFocused: focusedField == .email) {
+                     TextField(text: $email, prompt: Text("you@wisc.edu").foregroundStyle(AuthPalette.textTertiary)) { Text("Email") }
++                        .accessibilityLabel("Email")
+                         .textInputAutocapitalization(.never)
+                         .keyboardType(.emailAddress)
+                         // `.username`, not `.emailAddress`: this is the account the
+@@ -105,6 +108,7 @@ struct NativeRegistrationView: View {
+ 
+                 AuthLabeledField(title: "Password", isFocused: focusedField == .password) {
+                     SecureField(text: $password, prompt: Text("At least 8 characters").foregroundStyle(AuthPalette.textTertiary)) { Text("Password") }
++                        .accessibilityLabel("Password")
+                         .textContentType(.newPassword)
+                         .focused($focusedField, equals: .password)
+                         .submitLabel(.next)
+@@ -117,6 +121,7 @@ struct NativeRegistrationView: View {
+ 
+                 AuthLabeledField(title: "Confirm password", isFocused: focusedField == .confirmPassword) {
+                     SecureField(text: $confirmPassword, prompt: Text("Repeat your password").foregroundStyle(AuthPalette.textTertiary)) { Text("Confirm password") }
++                        .accessibilityLabel("Confirm password")
+                         .textContentType(.newPassword)
+                         .focused($focusedField, equals: .confirmPassword)
+                         .submitLabel(.done)
+@@ -131,6 +136,10 @@ struct NativeRegistrationView: View {
+                     AuthInlineMessage(text: formError, systemImage: "exclamationmark.circle.fill", tone: .red)
+                 }
+ 
++                if session.registrationNeedsInviteLink {
++                    InviteLinkResendButton(email: normalizedEmail)
++                }
++
+                 Button {
+                     submit()
+                 } label: {
+@@ -166,6 +175,9 @@ struct NativeRegistrationView: View {
+         }
+         .onChange(of: password) { _, _ in formError = nil }
+         .onChange(of: confirmPassword) { _, _ in formError = nil }
++        .onChange(of: session.pendingInvite?.id) { _, _ in
++            if session.pendingInvite?.email == normalizedEmail { formError = nil }
++        }
+         .onAppear { focusedField = .name }
+     }
+ 
+@@ -176,7 +188,7 @@ struct NativeRegistrationView: View {
+     }
+ 
+     private func submit() {
+-        guard !isSubmitting else { return }
++        guard !isSubmitting, !session.registrationNeedsInviteLink else { return }
+         guard let validationError else {
+             focusedField = nil
+             formError = nil
+@@ -185,17 +197,19 @@ struct NativeRegistrationView: View {
+             let submittedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+             let submittedEmail = normalizedEmail
+             let submittedPassword = password
++            let submittedInvite = session.pendingInvite
+             Task {
+                 await session.register(
+                     name: submittedName,
+                     email: submittedEmail,
+-                    password: submittedPassword
++                    password: submittedPassword,
++                    inviteToken: submittedInvite?.email == submittedEmail ? submittedInvite?.token : nil
+                 )
+                 guard !Task.isCancelled else { return }
+                 isSubmitting = false
+                 if session.currentUser != nil {
+                     dismiss()
+-                } else {
++                } else if session.pendingInvite?.id == submittedInvite?.id {
+                     formError = session.error ?? "Your account couldn't be created. Please try again."
+                 }
+             }
+diff --git a/src/app/.well-known/apple-app-site-association/route.ts b/src/app/.well-known/apple-app-site-association/route.ts
+index 96bc053a4..49312d407 100644
+--- a/src/app/.well-known/apple-app-site-association/route.ts
++++ b/src/app/.well-known/apple-app-site-association/route.ts
+@@ -17,6 +17,10 @@ export function GET() {
+         {
+           appIDs: [APP_ID],
+           components: [
++            // Browser setup remains usable by older installed app versions.
++            { "/": "/login", "?": { web: "1" }, exclude: true },
++            // Claim only emailed invite links; ordinary login stays on the web.
++            { "/": "/login", "?": { invite: "?*" } },
+             { "/": "/bookings" },
+             { "/": "/bookings/*" },
+             { "/": "/reservations/*" },
+diff --git a/src/lib/email-template.ts b/src/lib/email-template.ts
+index 0abcd15ba..2d7163bc5 100644
+--- a/src/lib/email-template.ts
++++ b/src/lib/email-template.ts
+@@ -45,6 +45,8 @@ export type EmailContent = {
+   /** Label and value rows in a quiet card. */
+   facts?: EmailFact[];
+   action?: { label: string; url: string };
++  /** A quiet alternative when the recipient can complete the task two ways. */
++  secondaryAction?: { label: string; url: string };
+   /** Small grey line under the button. */
+   note?: string;
+   /** Small grey lines under the card. */
+@@ -162,6 +164,7 @@ ${
+         ${content.steps ? stepsHtml(content.steps) : ""}
+         ${content.facts && content.facts.length > 0 ? factsHtml(content.facts) : ""}
+         ${content.action ? buttonHtml(content.action) : ""}
++        ${content.secondaryAction ? `<p style="margin: 20px 0 0; font-size: 15px; line-height: 1.6;"><a href="${escapeEmailHtml(content.secondaryAction.url)}" style="color: ${EMAIL_THEME.brand};">${escapeEmailHtml(content.secondaryAction.label)}</a></p>` : ""}
+         ${
+           content.note
+             ? `<p style="margin: 16px 0 0; font-size: 14px; line-height: 1.5; color: ${EMAIL_THEME.muted};">${escapeEmailHtml(content.note)}</p>`
+@@ -192,6 +195,7 @@ ${
+     textParts.push(content.facts.map((fact) => `${fact.label}: ${fact.value}`).join("\n"));
+   }
+   if (content.action) textParts.push(`${content.action.label}: ${content.action.url}`);
++  if (content.secondaryAction) textParts.push(`${content.secondaryAction.label}: ${content.secondaryAction.url}`);
+   if (content.note) textParts.push(content.note);
+   textParts.push(...footerLines);
+   if (content.manageNotifications) textParts.push(`Manage notifications: ${settingsUrl}`);
+diff --git a/src/lib/services/invite-email.ts b/src/lib/services/invite-email.ts
+index 6d689ab56..476f1e1f7 100644
+--- a/src/lib/services/invite-email.ts
++++ b/src/lib/services/invite-email.ts
+@@ -37,6 +37,9 @@ export function buildInviteEmail({
+   const lead = (sentence: string) =>
+     first ? `Hi ${first}, ${sentence}` : `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}`;
+   const loginUrl = inviteLoginUrl(email, inviteToken);
++  // The primary browser path must remain available to installed 1.4 clients,
++  // which cannot read an invite token. Only the explicit app action is claimed.
++  const browserLoginUrl = inviteToken ? `${loginUrl}&web=1` : loginUrl;
+   const reminder = kind === "reminder";
+   const subject = reminder ? "Finish setting up your Wisconsin Creative account" : "You're invited to Wisconsin Creative";
+ 
+@@ -64,9 +67,10 @@ export function buildInviteEmail({
+             "Install the iPhone app to scan gear and get shift reminders",
+           ],
+         },
+-    action: { label: reminder ? "Finish setting up" : "Set up your account", url: loginUrl },
++    action: { label: reminder ? "Finish setting up" : inviteToken ? "Set up in browser" : "Set up your account", url: browserLoginUrl },
++    secondaryAction: inviteToken ? { label: "Set up in the iPhone app", url: loginUrl } : undefined,
+     note: inviteToken
+-      ? `Sign in with ${email}, using this link: it carries your invitation and works for 30 days. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
++      ? `Sign in with ${email}, using either setup link: each carries your invitation and works for 30 days. For setup in the iPhone app, install the latest version first. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
+       : `Sign in with ${email}. Use this exact address so we can find your invite.`,
+     footer: [
+       "Forget your password later? Choose Forgot password on the sign-in page and we'll email you a reset link.",
+@@ -90,8 +94,16 @@ export async function sendInviteEmail(input: {
+   allowedEmailId?: string;
+ }): Promise<InviteEmailStatus> {
+   if (!env.resendApiKey) return "not_configured";
+-  const inviteToken = input.allowedEmailId ? await issueInviteToken(input.allowedEmailId) : null;
+-  const { subject, html, text } = buildInviteEmail({ ...input, inviteToken });
+-  const delivered = await sendEmail({ to: input.email, subject, html, text });
+-  return delivered ? "sent" : "failed";
++  try {
++    const inviteToken = input.allowedEmailId ? await issueInviteToken(input.allowedEmailId) : null;
++    if (input.allowedEmailId && !inviteToken) return "failed";
++    const { subject, html, text } = buildInviteEmail({ ...input, inviteToken });
++    const delivered = await sendEmail({ to: input.email, subject, html, text });
++    return delivered ? "sent" : "failed";
++  } catch {
++    // Keep the caller's delivery receipt honest without exposing the address
++    // or raw inbox credential in a response or log.
++    console.error("[Invite] could not prepare or send the invitation");
++    return "failed";
++  }
+ }
+diff --git a/ios/Wisconsin/App/InviteSignupTestHarness.swift b/ios/Wisconsin/App/InviteSignupTestHarness.swift
+new file mode 100644
+index 000000000..83711d7e7
+--- /dev/null
++++ b/ios/Wisconsin/App/InviteSignupTestHarness.swift
+@@ -0,0 +1,78 @@
++#if DEBUG
++import Foundation
++import SwiftUI
++
++/// Uses the production root, parser, discovery, registration and Welcome views.
++/// The existing fixture URL protocol owns every API request in this scenario.
++struct InviteSignupHarnessView: View {
++    @Environment(SessionStore.self) private var session
++
++    var body: some View {
++        RootView()
++            .task {
++                if let raw = ProcessInfo.processInfo.environment["GT_FIXTURE_INVITE_URL"],
++                   let url = URL(string: raw) { session.receiveInviteURL(url) }
++            }
++    }
++}
++
++enum InviteSignupFixtureAPI {
++    static var enabled: Bool {
++        AppRuntimeMode.performanceScenario == .login && ProcessInfo.processInfo.environment["GT_FIXTURE_INVITE"] != nil
++    }
++
++    /// A local UI test can deliver a warm link through the app's registered
++    /// scheme without consulting Apple's CDN or opening a real website.
++    static func incomingLink(_ url: URL) -> URL? {
++        guard enabled, url.scheme == "wisconsin", url.host == "fixture-invite",
++              let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
++        var link = URLComponents(string: "https://wisconsincreative.com/login")!
++        link.queryItems = query
++        return link.url
++    }
++
++    static func response(for request: URLRequest) -> (status: Int, body: Data)? {
++        guard enabled else { return nil }
++        let mode = ProcessInfo.processInfo.environment["GT_FIXTURE_INVITE"]
++        let input = requestBody(request).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
++        let token = input["invite"] as? String ?? input["inviteToken"] as? String
++        switch request.url?.path {
++        case "/api/auth/discover":
++            let valid = token == "fixture-native-invite" || token == "fixture-refreshed-invite"
++            return json(200, ["flow": "onboarding", "inviteLink": valid ? "valid" : "required"])
++        case "/api/auth/register":
++            let valid = token == "fixture-refreshed-invite" || (token == "fixture-native-invite" && mode != "expired-on-submit")
++            guard valid else {
++                return json(403, ["error": "Open the link in your invite email to finish signing up.", "code": "INVITE_LINK_REQUIRED"])
++            }
++            return (201, try! JSONEncoder().encode(["user": OnboardingFixtureAPI.user]))
++        case "/api/auth/invite/resend":
++            if mode == "rate-limited" { return json(429, ["error": "Too many requests. Please try again later."]) }
++            if mode == "malformed" { return json(200, ["message": "No confirmed delivery state"]) }
++            return json(200, ["message": mode == "unconfigured" ? "Invite email is not configured yet. Contact Erik Role for your sign-up link." : "If that address has a pending invite, we sent the link.", "inviteEmailConfigured": mode != "unconfigured"])
++        default:
++            guard let body = OnboardingFixtureAPI.body(for: request) else { return nil }
++            return (200, body)
++        }
++    }
++
++    private static func json(_ status: Int, _ value: [String: Any]) -> (Int, Data) {
++        (status, try! JSONSerialization.data(withJSONObject: value))
++    }
++
++    private static func requestBody(_ request: URLRequest) -> Data? {
++        if let body = request.httpBody { return body }
++        guard let stream = request.httpBodyStream else { return nil }
++        stream.open()
++        defer { stream.close() }
++        var data = Data()
++        var buffer = [UInt8](repeating: 0, count: 4096)
++        while stream.hasBytesAvailable {
++            let count = stream.read(&buffer, maxLength: buffer.count)
++            guard count > 0 else { break }
++            data.append(buffer, count: count)
++        }
++        return data
++    }
++}
++#endif
+diff --git a/ios/Wisconsin/Core/AuthInviteLink.swift b/ios/Wisconsin/Core/AuthInviteLink.swift
+new file mode 100644
+index 000000000..ce06c5b53
+--- /dev/null
++++ b/ios/Wisconsin/Core/AuthInviteLink.swift
+@@ -0,0 +1,28 @@
++import Foundation
++
++/// Inbox proof stays in memory. It is never an API-host override, saved draft,
++/// route description, analytics field, or account-switch instruction.
++struct AuthInviteLink: Equatable, Identifiable {
++    let id = UUID()
++    let email: String
++    let token: String
++
++    static func parse(_ url: URL) -> AuthInviteLink? {
++        guard let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
++              parts.scheme?.lowercased() == "https",
++              parts.host?.lowercased() == AppEnvironment.canonicalHost,
++              parts.user == nil, parts.password == nil, parts.port == nil,
++              parts.fragment == nil, parts.path == "/login" else { return nil }
++        let query = parts.queryItems ?? []
++        guard !query.contains(where: { $0.name == "web" && $0.value == "1" }) else { return nil }
++        let emails = query.filter { $0.name == "email" }
++        let tokens = query.filter { $0.name == "invite" }
++        guard emails.count == 1, tokens.count == 1,
++              let email = emails[0].value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
++              email.count <= 254,
++              email.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#, options: .regularExpression) != nil,
++              let token = tokens[0].value?.trimmingCharacters(in: .whitespacesAndNewlines),
++              !token.isEmpty, token.count <= 128 else { return nil }
++        return AuthInviteLink(email: email, token: token)
++    }
++}
+diff --git a/ios/Wisconsin/Views/InviteLinkResendButton.swift b/ios/Wisconsin/Views/InviteLinkResendButton.swift
+new file mode 100644
+index 000000000..17ea02e8e
+--- /dev/null
++++ b/ios/Wisconsin/Views/InviteLinkResendButton.swift
+@@ -0,0 +1,50 @@
++import SwiftUI
++
++/// Shared native recovery for a missing link and a link retired during signup.
++/// A successful generic reply never exposes whether an address is invited.
++struct InviteLinkResendButton: View {
++    let email: String
++    @State private var sending = false
++    @State private var result: InviteResendResult?
++    @State private var error: String?
++
++    private var title: String {
++        if sending { return "Sending…" }
++        if let result { return result.inviteEmailConfigured ? "Link sent" : "Email unavailable" }
++        return "Email me my invite link"
++    }
++
++    var body: some View {
++        VStack(alignment: .leading, spacing: 12) {
++            if let result {
++                AuthInlineMessage(text: result.message, systemImage: "envelope.fill", tone: .blue)
++            }
++            if let error {
++                AuthInlineMessage(text: error, systemImage: "exclamationmark.circle.fill", tone: .red)
++            }
++            Button {
++                guard !sending, result == nil else { return }
++                sending = true
++                error = nil
++                Task {
++                    defer { sending = false }
++                    do {
++                        result = try await APIClient.shared.resendInviteLink(email: email)
++                    } catch {
++                        self.error = error.localizedDescription
++                    }
++                }
++            } label: {
++                HStack(spacing: 8) {
++                    if sending {
++                        ProgressView().controlSize(.small).tint(AuthPalette.onPrimary)
++                    }
++                    Text(title).fontWeight(.semibold)
++                }
++                .frame(maxWidth: .infinity)
++            }
++            .authButton(.primary)
++            .disabled(sending || result != nil)
++        }
++    }
++}

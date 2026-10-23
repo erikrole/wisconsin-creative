@@ -12,13 +12,13 @@ import { randomHex, tokenHash } from "@/lib/auth";
 export const INVITE_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
 /** Mint a fresh token for an unclaimed invite and return the raw value for the link. */
-export async function issueInviteToken(allowedEmailId: string): Promise<string> {
+export async function issueInviteToken(allowedEmailId: string): Promise<string | null> {
   const raw = randomHex(32);
-  await db.allowedEmail.update({
-    where: { id: allowedEmailId },
+  const issued = await db.allowedEmail.updateMany({
+    where: { id: allowedEmailId, claimedAt: null },
     data: { inviteTokenHash: await tokenHash(raw), inviteTokenIssuedAt: new Date() },
   });
-  return raw;
+  return issued.count === 1 ? raw : null;
 }
 
 /** True when `raw` is the current, unexpired token for this invite row. */

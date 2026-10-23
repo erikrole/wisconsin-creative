@@ -63,7 +63,7 @@
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/inventory-loss-reports.ts` | 618 |
-| `src/lib/services/invite-email.ts` | 98 |
+| `src/lib/services/invite-email.ts` | 110 |
 | `src/lib/services/invite-token.ts` | 34 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
@@ -217,7 +217,7 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
-| `src/lib/email-template.ts` | 202 |
+| `src/lib/email-template.ts` | 206 |
 | `src/lib/email.ts` | 147 |
 | `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |

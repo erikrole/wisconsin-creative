@@ -19,7 +19,7 @@ describe("iOS native login recovery flows", () => {
     expect(source).toContain('Button("Forgot password?")');
     expect(source).toContain("authDestination = .forgotPassword");
     expect(source).not.toContain('Button("Need an account?")');
-    expect(source).toContain("APIClient.shared.discoverAuth(email: submittedEmail)");
+    expect(source).toContain("APIClient.shared.discoverAuth(email: submittedEmail, invite: submittedToken)");
     expect(source).toContain("authDestination = .register(email: submittedEmail)");
     expect(source).not.toContain('Link("Forgot password?", destination:');
     expect(source).not.toContain('Link("Need an account?", destination:');

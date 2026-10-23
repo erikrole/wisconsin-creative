@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "@prisma/client";
 
 const tx = {
@@ -8,6 +8,7 @@ const tx = {
   },
   allowedEmail: {
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
   application: {
     findFirst: vi.fn(),
@@ -40,6 +41,8 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/auth", () => ({
   createSession: vi.fn(),
   hashPassword: vi.fn(),
+  tokenHash: vi.fn(async (raw: string) => "hashed-" + raw),
+  randomHex: vi.fn(),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -55,10 +58,6 @@ vi.mock("@/lib/audit", () => ({
 
 vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
-}));
-
-vi.mock("@/lib/services/invite-token", () => ({
-  inviteTokenMatches: vi.fn(async (_invite: unknown, raw: string | undefined) => raw === "valid-invite-token"),
 }));
 
 import { createSession, hashPassword } from "@/lib/auth";
@@ -89,6 +88,8 @@ function allowedInvite(role: Role) {
     collaboratorPolicyId: null,
     collaboratorPolicy: null,
     claimedAt: null,
+    inviteTokenHash: "hashed-valid-invite-token",
+    inviteTokenIssuedAt: new Date(),
   } as unknown as Awaited<ReturnType<typeof db.allowedEmail.findUnique>>;
 }
 
@@ -123,12 +124,15 @@ beforeEach(() => {
   vi.mocked(createAuditEntry).mockResolvedValue(undefined);
   vi.mocked(db.user.findUnique).mockResolvedValue(null);
   tx.allowedEmail.update.mockResolvedValue({});
+  tx.allowedEmail.updateMany.mockResolvedValue({ count: 1 });
   tx.application.findFirst.mockResolvedValue(null);
   tx.applicant.updateMany.mockResolvedValue({ count: 0 });
   tx.studentAreaAssignment.create.mockReset();
   tx.studentSportAssignment.create.mockReset();
   vi.mocked(createAuditEntriesTx).mockResolvedValue(undefined);
 });
+
+afterEach(() => { vi.useRealTimers(); });
 
 describe("POST /api/auth/register", () => {
   it.each([Role.STUDENT, Role.STAFF])("allows %s invites to register without Wiscard values", async (role) => {
@@ -334,9 +338,64 @@ describe("POST /api/auth/register", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(tx.allowedEmail.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(tx.allowedEmail.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ inviteTokenHash: null, inviteTokenIssuedAt: null }),
     }));
+  });
+
+  it("rejects a token that expired after the actual 30-day lifetime", async () => {
+    const invite = { ...allowedInvite(Role.STUDENT), inviteTokenIssuedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) };
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(invite as never);
+    const response = await POST(postRegister({ name: "Student User", email: "student@example.com", password: "long-enough-password" }), noParams);
+    expect(response.status).toBe(403);
+    expect((await response.json()).code).toBe("INVITE_LINK_REQUIRED");
+    expect(hashPassword).not.toHaveBeenCalled();
+    expect(createSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses an in-flight registration if resend rotates its token during password hashing", async () => {
+    const invite = allowedInvite(Role.STUDENT)!;
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(invite);
+    tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
+    let resumeHash!: (value: string) => void;
+    let hashingStarted!: () => void;
+    const started = new Promise<void>((resolve) => { hashingStarted = resolve; });
+    vi.mocked(hashPassword).mockImplementationOnce(() => {
+      hashingStarted();
+      return new Promise<string>((resolve) => { resumeHash = resolve; });
+    });
+    let currentHash = invite.inviteTokenHash;
+    tx.allowedEmail.updateMany.mockImplementationOnce(async ({ where }: { where: { inviteTokenHash?: string } }) => ({
+      count: where.inviteTokenHash === undefined || where.inviteTokenHash === currentHash ? 1 : 0,
+    }));
+    const pending = POST(postRegister({ name: "Student User", email: "student@example.com", password: "long-enough-password" }), noParams);
+    await started;
+    currentHash = "hashed-reissued-token";
+    resumeHash("hashed-password");
+    const response = await pending;
+    expect(response.status).toBe(403);
+    expect((await response.json()).code).toBe("INVITE_LINK_REQUIRED");
+    expect(createSession).not.toHaveBeenCalled();
+    expect(createAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it("does not claim an invitation whose token expires during password hashing", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-23T14:00:00Z"));
+    const issuedAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000 + 60_000);
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue({ ...allowedInvite(Role.STUDENT), inviteTokenIssuedAt: issuedAt } as never);
+    tx.user.create.mockResolvedValue(createdUser(Role.STUDENT, null));
+    vi.mocked(hashPassword).mockImplementationOnce(async () => {
+      vi.setSystemTime(new Date("2026-10-23T14:02:00Z"));
+      return "hashed-password";
+    });
+    tx.allowedEmail.updateMany.mockImplementationOnce(async ({ where }: { where: { inviteTokenIssuedAt?: { gt?: Date } } }) => ({
+      count: !where.inviteTokenIssuedAt?.gt || issuedAt > where.inviteTokenIssuedAt.gt ? 1 : 0,
+    }));
+    const response = await POST(postRegister({ name: "Student User", email: "student@example.com", password: "long-enough-password" }), noParams);
+    expect(response.status).toBe(403);
+    expect((await response.json()).code).toBe("INVITE_LINK_REQUIRED");
+    expect(createSession).not.toHaveBeenCalled();
   });
 
   it("returns one indistinguishable response for missing, claimed, and registered emails", async () => {

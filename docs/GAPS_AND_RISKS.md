@@ -100,6 +100,8 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
 
 ## Change Log
 
+- 2026-10-23: PR #620's native invite-token compatibility fix is local and unreleased. Inbox delivery, real shared-backend signup, Apple device/CDN association and an updated app release remain gates; the shipped 1.4 (36) binary cannot gain token-aware native signup through a web deployment. Keep browser-owned invitation setup available for existing installs. See `tasks/archive/native-invite-pr620-2026-10-23.md`.
+
 - 2026-10-22: GAP-66 now tracks the remaining shared-backend handoff, physical photo selection and deployment/distribution gates after local onboarding continuity and avatar recovery verification. Fixtures do not close authenticated rollout proof.
 - 2026-10-17: Closed GAP-89 by product decision: remove Events from Browse and use Schedule as the single event destination. Retained catalog code is not exposed. Latest inventory, reporting, and Browse builds pass with 222 native tests and 715 source contracts; Simulator presentation is captured in the mobile UI review. GAP-90 authenticated feature proof remains open. Earlier signed source launched on the iPhone 16 Pro; final UI installation was deferred at the user's request after the phone disconnected. Resource share-extension completion, production saves, and hardware flows remain unverified.
 - 2026-10-16: Native iOS now reads kits, item-family detail, and Battery Ops through the existing list and detail routes. Authoring, receiving, labels, count changes, and stale-flag repair stay on the web, so no registry gap opens. An Xcode build on a Mac is still required before calling the screens runtime-ready.

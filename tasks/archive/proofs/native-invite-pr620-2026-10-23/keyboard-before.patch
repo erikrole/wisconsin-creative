@@ -1,0 +1,1500 @@
+diff --git a/ios/Wisconsin.xcodeproj/project.pbxproj b/ios/Wisconsin.xcodeproj/project.pbxproj
+index 2df545a9e..d672871f6 100644
+--- a/ios/Wisconsin.xcodeproj/project.pbxproj
++++ b/ios/Wisconsin.xcodeproj/project.pbxproj
+@@ -72,9 +72,11 @@
+ 		2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
+ 		2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */; };
+ 		2F641BB2A7FBF81DEDEE7FE1 /* CurrentDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */; };
++		2F7DA9360562159A551FEF65 /* NativeInviteSignupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61CE8AE7D19F957C5BA61C46 /* NativeInviteSignupUITests.swift */; };
+ 		2FD2DC461CD2264F0A56E51E /* GearPickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7B22E7033F1442ADEF6691 /* GearPickModels.swift */; };
+ 		3039D7804BF2ACCD2BF288CF /* BlastComposeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7F6123BBD4F8AE0634CB2C /* BlastComposeViews.swift */; };
+ 		30A2174F020A46E7B8538492 /* CreateBookingPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFF5F65A92CEAED518EF6E6 /* CreateBookingPickers.swift */; };
++		3131C43C1F1C249ADEC0EE2D /* InviteLinkResendButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87073493430695BF033C5785 /* InviteLinkResendButton.swift */; };
+ 		31591DD0437B097C2510AB84 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BBAACBEA87B1EE9FEBC287 /* UserAvatarView.swift */; };
+ 		31BA906AD0D633053D4804B7 /* AccountSecuritySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */; };
+ 		321FDB303266285CC1A98953 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC7E600F4A64D29482B039E0 /* WhatsNewView.swift */; };
+@@ -90,6 +92,7 @@
+ 		3C75E1BEF022199B034CAACC /* BrandAssetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2795089BD5B00BFA48D63 /* BrandAssetsView.swift */; };
+ 		3F0879ADAE07E40D10144C86 /* ScheduleCalendarSubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796958C4A59FDC2C36ED1E38 /* ScheduleCalendarSubscriptionSheet.swift */; };
+ 		3F77C59C1B0F0446677A157F /* RecentIOSRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F53E9F27FBCB9721A82BF55 /* RecentIOSRegressionTests.swift */; };
++		407F26A5822F0E60EA4C4627 /* AuthInviteLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591CA93547DD4684FAD8D989 /* AuthInviteLinkTests.swift */; };
+ 		411CF014B25A6515F8E6869E /* CreateBookingEquipmentRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C885700380306D486A94C9 /* CreateBookingEquipmentRows.swift */; };
+ 		41891E6B69644BB1DB025CB9 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9DAB950F60885A23620BEC /* Brand.swift */; };
+ 		41B304E3F5ABE1BF6F9B94BB /* CheckoutReturnActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */; };
+@@ -269,6 +272,7 @@
+ 		DF903B01D6C6E80FD5ABB03E /* ProfileCompletionDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AD62D4B6264BA6FE15C183 /* ProfileCompletionDraft.swift */; };
+ 		DF9D5CD07F84E63E30627EBA /* AccountabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E70592C49A02FCFFAB9105A /* AccountabilityView.swift */; };
+ 		E05F7723FFEB7EB135EC8EA8 /* ScheduleEventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7F97C3C6D850E4FB17D6F8F /* ScheduleEventRow.swift */; };
++		E0E0603A93EA900F5EE87178 /* AuthInviteLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFDF0DA1120D0A5F5F131353 /* AuthInviteLink.swift */; };
+ 		E6F51692EA10D1DF6DA5F049 /* KioskSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E968BAF46C8E557831F73C27 /* KioskSuccessView.swift */; };
+ 		E74AB0C45B70B59CEBC79AC4 /* AppTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B208F1EB8DD4DA49DADC1CAB /* AppTabView.swift */; };
+ 		E92107A6B7830650DE247381 /* APIClient+Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2918FE493352DE21C25D8675 /* APIClient+Profile.swift */; };
+@@ -278,6 +282,7 @@
+ 		ECC2A2BC90EAD234C6BD598D /* LatestBrowseHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16A5B5D4E9AE06420C2C4C08 /* LatestBrowseHarness.swift */; };
+ 		ECC9462F50A2804BF6D7ED3D /* BlastArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */; };
+ 		EF7FE74D513941148FDDA452 /* ReportFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF5F57A830BEA38433C56E1 /* ReportFormatting.swift */; };
++		F115E2AED686200CDED10A68 /* InviteSignupTestHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9933579835C2FC6119CC88DC /* InviteSignupTestHarness.swift */; };
+ 		F177CB625773D440DFADA946 /* AccountabilityModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */; };
+ 		F2A0A3013F3F22792FA32C84 /* KioskComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348C1E3385689A947929A115 /* KioskComponents.swift */; };
+ 		F3AE80E47FC7B6AAA76035B6 /* KioskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA38BB094C95612DBF9F1C24 /* KioskStore.swift */; };
+@@ -429,6 +434,7 @@
+ 		552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSecuritySettingsView.swift; sourceTree = "<group>"; };
+ 		5740ABDA01126CBBB53F25EF /* ProfileCompletionWelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionWelcomeView.swift; sourceTree = "<group>"; };
+ 		58ABE954706326D6137979FB /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
++		591CA93547DD4684FAD8D989 /* AuthInviteLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthInviteLinkTests.swift; sourceTree = "<group>"; };
+ 		592769886AB12F6A842CC8CF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+ 		5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+ 		59BEC868CE07F10941FEBB5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+@@ -440,6 +446,7 @@
+ 		5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
+ 		609E4E02EB555D808A50CE2A /* UtilizationReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilizationReportView.swift; sourceTree = "<group>"; };
+ 		6148A160C162A021FF9DE4C0 /* FormModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormModels.swift; sourceTree = "<group>"; };
++		61CE8AE7D19F957C5BA61C46 /* NativeInviteSignupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeInviteSignupUITests.swift; sourceTree = "<group>"; };
+ 		649B6E0F68D9B5DB4D054656 /* KioskIdleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdleView.swift; sourceTree = "<group>"; };
+ 		64AD62D4B6264BA6FE15C183 /* ProfileCompletionDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionDraft.swift; sourceTree = "<group>"; };
+ 		64F14676788E6FA7CDD08D48 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+@@ -475,6 +482,7 @@
+ 		841B755DD26E463F2B624373 /* ReportModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportModelsTests.swift; sourceTree = "<group>"; };
+ 		843772771897AABEF8DD1F93 /* BannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BannerView.swift; sourceTree = "<group>"; };
+ 		84430D9886900EA2E8F3CB0B /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
++		87073493430695BF033C5785 /* InviteLinkResendButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteLinkResendButton.swift; sourceTree = "<group>"; };
+ 		88F162C9B5233CB44C35E9E5 /* WisconsinLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WisconsinLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+ 		88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingEventViews.swift; sourceTree = "<group>"; };
+ 		89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementSplashSheet.swift; sourceTree = "<group>"; };
+@@ -492,6 +500,7 @@
+ 		966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailSheet.swift; sourceTree = "<group>"; };
+ 		98D7A852B8982340011FD05F /* AnnouncementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementModels.swift; sourceTree = "<group>"; };
+ 		98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuarterHourTimePicker.swift; sourceTree = "<group>"; };
++		9933579835C2FC6119CC88DC /* InviteSignupTestHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteSignupTestHarness.swift; sourceTree = "<group>"; };
+ 		9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreboardView.swift; sourceTree = "<group>"; };
+ 		9C450858455B38900B99D9C1 /* ReportSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSession.swift; sourceTree = "<group>"; };
+ 		9CDE77AE37C01B8DA663C7CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+@@ -577,6 +586,7 @@
+ 		DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModelsTests.swift; sourceTree = "<group>"; };
+ 		DE250FADCDB66EDCBD5DF234 /* AvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityView.swift; sourceTree = "<group>"; };
+ 		DEF52CE902DAB5F4F5AFC87D /* SoftwareLoginModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareLoginModelTests.swift; sourceTree = "<group>"; };
++		DFDF0DA1120D0A5F5F131353 /* AuthInviteLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthInviteLink.swift; sourceTree = "<group>"; };
+ 		E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnActivityAttributes.swift; sourceTree = "<group>"; };
+ 		E15CD71193CFD39E493FF9B9 /* KioskChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskChrome.swift; sourceTree = "<group>"; };
+ 		E376E0961E9404F4D93C4B4E /* GearWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearWidgetPublisher.swift; sourceTree = "<group>"; };
+@@ -732,6 +742,7 @@
+ 				663DC1D3F890A7577C4D89D5 /* AppIntents.swift */,
+ 				B9D82991FC6AE45A56917938 /* AppIntentsData.swift */,
+ 				FF98C537202359B822B1D752 /* BookingEntity.swift */,
++				9933579835C2FC6119CC88DC /* InviteSignupTestHarness.swift */,
+ 				16A5B5D4E9AE06420C2C4C08 /* LatestBrowseHarness.swift */,
+ 				0CF2E588B9A1DA4F76309E88 /* NotificationActions.swift */,
+ 				F99A80ADF1EEA4CF4AE43367 /* OnboardingTestHarness.swift */,
+@@ -961,6 +972,7 @@
+ 				C235118B9D7CE7FA9E79421B /* APIClientResponseShapes.swift */,
+ 				38065600FA5A1C1AC4C8CC2F /* AppState.swift */,
+ 				D7BC639F2D52A9931FBEF8F3 /* AuthDesign.swift */,
++				DFDF0DA1120D0A5F5F131353 /* AuthInviteLink.swift */,
+ 				1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */,
+ 				4A9DAB950F60885A23620BEC /* Brand.swift */,
+ 				39565FFA7236A61DAD12D9BB /* DateFormats.swift */,
+@@ -990,6 +1002,7 @@
+ 		E4C0BE70BBCA61E06847F9A5 /* WisconsinUITests */ = {
+ 			isa = PBXGroup;
+ 			children = (
++				61CE8AE7D19F957C5BA61C46 /* NativeInviteSignupUITests.swift */,
+ 				382CC3A14FCDC4E920CCC863 /* OnboardingWalkthroughUITests.swift */,
+ 				B4AC4A5E9A1F61ABB128DDBD /* RecentIOSRegressionUITests.swift */,
+ 				B697AC8644C31499AB3D7408 /* ReportsScreenshotUITests.swift */,
+@@ -1028,6 +1041,7 @@
+ 				A5159F2511DF2C09D8E495B8 /* GuideMarkdown.swift */,
+ 				14DA88A1DF6F8D23066A07BC /* GuidesView.swift */,
+ 				64F14676788E6FA7CDD08D48 /* HomeView.swift */,
++				87073493430695BF033C5785 /* InviteLinkResendButton.swift */,
+ 				DD3AE6ABC6E4E6D32F563D8E /* ItemActivityView.swift */,
+ 				80CA4880F08046F8E23F079B /* ItemDetailView.swift */,
+ 				F12684601FE641B454D0219B /* ItemsView.swift */,
+@@ -1090,6 +1104,7 @@
+ 			children = (
+ 				264334A2FD54BFCA6ADD8B6D /* AccountabilityModelTests.swift */,
+ 				D1A401A3DB3D9E32E60965FB /* APIClientRetryTests.swift */,
++				591CA93547DD4684FAD8D989 /* AuthInviteLinkTests.swift */,
+ 				F1AB4E32967E7E27BF878BA9 /* BlastHistoryTests.swift */,
+ 				33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */,
+ 				E8C20C664649F7DA20E7EE91 /* BrandAssetModelTests.swift */,
+@@ -1353,6 +1368,7 @@
+ 			files = (
+ 				09B21E53A13846FA980ACCEE /* APIClientRetryTests.swift in Sources */,
+ 				F177CB625773D440DFADA946 /* AccountabilityModelTests.swift in Sources */,
++				407F26A5822F0E60EA4C4627 /* AuthInviteLinkTests.swift in Sources */,
+ 				2127E8FF340C558E288B43E7 /* BlastHistoryTests.swift in Sources */,
+ 				ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */,
+ 				2C6B96B64D01EF1B40948AFD /* BrandAssetModelTests.swift in Sources */,
+@@ -1391,6 +1407,7 @@
+ 			isa = PBXSourcesBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
++				2F7DA9360562159A551FEF65 /* NativeInviteSignupUITests.swift in Sources */,
+ 				D43D840F1E69810C5E0FADA3 /* OnboardingWalkthroughUITests.swift in Sources */,
+ 				CAA22DA410C36FA0B508A17B /* RecentIOSRegressionUITests.swift in Sources */,
+ 				CB4CE3E584F6CF6F481E5926 /* ReportsScreenshotUITests.swift in Sources */,
+@@ -1489,6 +1506,7 @@
+ 				C3C5D175C583096B0D645F24 /* AssetModels.swift in Sources */,
+ 				DC10577F4AF30D4E44E08B63 /* AssignStudentSheet.swift in Sources */,
+ 				B055ADFFD82943733382DB0D /* AuthDesign.swift in Sources */,
++				E0E0603A93EA900F5EE87178 /* AuthInviteLink.swift in Sources */,
+ 				56A81DDDEF06AB1D40D13B33 /* AvailabilityView.swift in Sources */,
+ 				922F655D9910FE2ECB1E7DD8 /* BadgeEarnedCelebration.swift in Sources */,
+ 				BF476A31687D54A1DB40F63B /* BadgeReportView.swift in Sources */,
+@@ -1556,6 +1574,8 @@
+ 				B1DDE3C06BD40F1F8615A227 /* HomeView.swift in Sources */,
+ 				179A2B76C8B92DAEC9EE336A /* InAppSafariView.swift in Sources */,
+ 				59047C1F15964210773081BC /* InventoryReadModels.swift in Sources */,
++				3131C43C1F1C249ADEC0EE2D /* InviteLinkResendButton.swift in Sources */,
++				F115E2AED686200CDED10A68 /* InviteSignupTestHarness.swift in Sources */,
+ 				D403B2F000A63EC5E1F72819 /* ItemActivityModels.swift in Sources */,
+ 				70A3E38B8611D73E220C8B59 /* ItemActivityView.swift in Sources */,
+ 				FC55F8C00EAB32F578B178F0 /* ItemDetailView.swift in Sources */,
+diff --git a/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/Wisconsin.xcscheme b/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/Wisconsin.xcscheme
+index 1e04fbad6..d8cc9ffa5 100644
+--- a/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/Wisconsin.xcscheme
++++ b/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/Wisconsin.xcscheme
+@@ -1,10 +1,11 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <Scheme
+    LastUpgradeVersion = "2700"
+-   version = "1.3">
++   version = "1.7">
+    <BuildAction
+       parallelizeBuildables = "YES"
+-      buildImplicitDependencies = "YES">
++      buildImplicitDependencies = "YES"
++      runPostActionsOnFailure = "NO">
+       <BuildActionEntries>
+          <BuildActionEntry
+             buildForTesting = "YES"
+@@ -15,7 +16,7 @@
+             <BuildableReference
+                BuildableIdentifier = "primary"
+                BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-               BuildableName = "Wisconsin Creative.app"
++               BuildableName = "Wisconsin.app"
+                BlueprintName = "Wisconsin"
+                ReferencedContainer = "container:Wisconsin.xcodeproj">
+             </BuildableReference>
+@@ -41,12 +42,13 @@
+       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+       shouldUseLaunchSchemeArgsEnv = "YES"
+-      codeCoverageEnabled = "YES">
++      codeCoverageEnabled = "YES"
++      onlyGenerateCoverageForSpecifiedTargets = "NO">
+       <MacroExpansion>
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-            BuildableName = "Wisconsin Creative.app"
++            BuildableName = "Wisconsin.app"
+             BlueprintName = "Wisconsin"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+@@ -65,6 +67,8 @@
+             </BuildableReference>
+          </TestableReference>
+       </Testables>
++      <CommandLineArguments>
++      </CommandLineArguments>
+    </TestAction>
+    <LaunchAction
+       buildConfiguration = "Debug"
+@@ -81,7 +85,7 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-            BuildableName = "Wisconsin Creative.app"
++            BuildableName = "Wisconsin.app"
+             BlueprintName = "Wisconsin"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+@@ -98,7 +102,7 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-            BuildableName = "Wisconsin Creative.app"
++            BuildableName = "Wisconsin.app"
+             BlueprintName = "Wisconsin"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+diff --git a/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinKiosk.xcscheme b/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinKiosk.xcscheme
+index 1748a89cd..050001fd7 100644
+--- a/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinKiosk.xcscheme
++++ b/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinKiosk.xcscheme
+@@ -1,10 +1,11 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <Scheme
+    LastUpgradeVersion = "2700"
+-   version = "1.3">
++   version = "1.7">
+    <BuildAction
+       parallelizeBuildables = "YES"
+-      buildImplicitDependencies = "YES">
++      buildImplicitDependencies = "YES"
++      runPostActionsOnFailure = "NO">
+       <BuildActionEntries>
+          <BuildActionEntry
+             buildForTesting = "YES"
+@@ -15,7 +16,7 @@
+             <BuildableReference
+                BuildableIdentifier = "primary"
+                BlueprintIdentifier = "58413BF8F25E6ACC210F6B81"
+-               BuildableName = "Wisconsin Kiosk.app"
++               BuildableName = "WisconsinKiosk.app"
+                BlueprintName = "WisconsinKiosk"
+                ReferencedContainer = "container:Wisconsin.xcodeproj">
+             </BuildableReference>
+@@ -27,12 +28,13 @@
+       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+       shouldUseLaunchSchemeArgsEnv = "YES"
+-      codeCoverageEnabled = "YES">
++      codeCoverageEnabled = "YES"
++      onlyGenerateCoverageForSpecifiedTargets = "NO">
+       <MacroExpansion>
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "58413BF8F25E6ACC210F6B81"
+-            BuildableName = "Wisconsin Kiosk.app"
++            BuildableName = "WisconsinKiosk.app"
+             BlueprintName = "WisconsinKiosk"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+@@ -51,6 +53,8 @@
+             </BuildableReference>
+          </TestableReference>
+       </Testables>
++      <CommandLineArguments>
++      </CommandLineArguments>
+    </TestAction>
+    <LaunchAction
+       buildConfiguration = "Debug"
+@@ -67,7 +71,7 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "58413BF8F25E6ACC210F6B81"
+-            BuildableName = "Wisconsin Kiosk.app"
++            BuildableName = "WisconsinKiosk.app"
+             BlueprintName = "WisconsinKiosk"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+@@ -84,7 +88,7 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "58413BF8F25E6ACC210F6B81"
+-            BuildableName = "Wisconsin Kiosk.app"
++            BuildableName = "WisconsinKiosk.app"
+             BlueprintName = "WisconsinKiosk"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+diff --git a/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinPerformance.xcscheme b/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinPerformance.xcscheme
+index 563dd4d6e..97efb53f8 100644
+--- a/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinPerformance.xcscheme
++++ b/ios/Wisconsin.xcodeproj/xcshareddata/xcschemes/WisconsinPerformance.xcscheme
+@@ -1,10 +1,11 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <Scheme
+    LastUpgradeVersion = "2700"
+-   version = "1.3">
++   version = "1.7">
+    <BuildAction
+       parallelizeBuildables = "YES"
+-      buildImplicitDependencies = "YES">
++      buildImplicitDependencies = "YES"
++      runPostActionsOnFailure = "NO">
+       <BuildActionEntries>
+          <BuildActionEntry
+             buildForTesting = "YES"
+@@ -15,7 +16,7 @@
+             <BuildableReference
+                BuildableIdentifier = "primary"
+                BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-               BuildableName = "Wisconsin Creative.app"
++               BuildableName = "Wisconsin.app"
+                BlueprintName = "Wisconsin"
+                ReferencedContainer = "container:Wisconsin.xcodeproj">
+             </BuildableReference>
+@@ -40,19 +41,21 @@
+       buildConfiguration = "Debug"
+       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+-      shouldUseLaunchSchemeArgsEnv = "YES">
++      shouldUseLaunchSchemeArgsEnv = "YES"
++      onlyGenerateCoverageForSpecifiedTargets = "NO">
+       <MacroExpansion>
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-            BuildableName = "Wisconsin Creative.app"
++            BuildableName = "Wisconsin.app"
+             BlueprintName = "Wisconsin"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+       </MacroExpansion>
+       <Testables>
+          <TestableReference
+-            skipped = "NO">
++            skipped = "NO"
++            parallelizable = "NO">
+             <BuildableReference
+                BuildableIdentifier = "primary"
+                BlueprintIdentifier = "D18DA3B499674D9B53F251BC"
+@@ -62,6 +65,8 @@
+             </BuildableReference>
+          </TestableReference>
+       </Testables>
++      <CommandLineArguments>
++      </CommandLineArguments>
+    </TestAction>
+    <LaunchAction
+       buildConfiguration = "Debug"
+@@ -78,7 +83,7 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-            BuildableName = "Wisconsin Creative.app"
++            BuildableName = "Wisconsin.app"
+             BlueprintName = "Wisconsin"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+@@ -95,7 +100,7 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "5731E598F30EDA43B52B4002"
+-            BuildableName = "Wisconsin Creative.app"
++            BuildableName = "Wisconsin.app"
+             BlueprintName = "Wisconsin"
+             ReferencedContainer = "container:Wisconsin.xcodeproj">
+          </BuildableReference>
+diff --git a/ios/Wisconsin/App/PerformanceTestHarness.swift b/ios/Wisconsin/App/PerformanceTestHarness.swift
+index 52de7f8a9..b12592539 100644
+--- a/ios/Wisconsin/App/PerformanceTestHarness.swift
++++ b/ios/Wisconsin/App/PerformanceTestHarness.swift
+@@ -80,7 +80,7 @@ struct PerformanceTestRootView: View {
+         case .staffProfile:
+             StaffProfileHarnessView()
+         case .login:
+-            LoginView()
++            InviteSignupHarnessView()
+         case .registration:
+             NavigationStack { NativeRegistrationView(initialEmail: "alex.onboarding@wisc.edu") }
+         case .onboarding:
+@@ -850,8 +850,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
+ 
+         // Unmapped paths answer 404, never 401: `APIError.notFound` stays local
+         // to the caller, while a 401 would tear down the harness session.
+-        var mapped = Self.body(for: request)
+-        var statusCode = mapped == nil ? 404 : 200
++        let inviteResponse = InviteSignupFixtureAPI.response(for: request)
++        var mapped = inviteResponse?.body ?? Self.body(for: request)
++        var statusCode = inviteResponse?.status ?? (mapped == nil ? 404 : 200)
+ #if DEBUG
+         // Review captures of Home's own states: `GT_FIXTURE_HOME=error` fails
+         // the dashboard load; `=empty` serves the all-clear payload with no drafts.
+diff --git a/ios/Wisconsin/App/WisconsinApp.swift b/ios/Wisconsin/App/WisconsinApp.swift
+index c17f61d1e..3df2f8ea3 100644
+--- a/ios/Wisconsin/App/WisconsinApp.swift
++++ b/ios/Wisconsin/App/WisconsinApp.swift
+@@ -61,12 +61,25 @@ struct WisconsinApp: App {
+                     }
+                 }
+                 .onOpenURL { url in
++#if DEBUG
++                    if let fixtureLink = InviteSignupFixtureAPI.incomingLink(url) {
++                        session.receiveInviteURL(fixtureLink)
++                        return
++                    }
++#endif
++                    if session.receiveInviteURL(url) { return }
+                     // Custom URLs and universal links share one parser. Query
+                     // parameters never open a mutation sheet — Extend stays a
+                     // deliberate action on booking detail.
+                     guard let route = GearTrackerRouteParser.parse(url) else { return }
+                     appState.apply(route)
+                 }
++                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
++                    guard let url = activity.webpageURL else { return }
++                    if session.receiveInviteURL(url) { return }
++                    guard let route = GearTrackerRouteParser.parse(url) else { return }
++                    appState.apply(route)
++                }
+                 .onContinueUserActivity(BookingHandoff.activityType) { activity in
+                     // Handoff from another device carries the web URL, which
+                     // the universal-link parser already routes.
+@@ -423,6 +436,15 @@ struct RootView: View {
+                     .animation(reduceMotion ? nil : .easeInOut, value: session.isOffline)
+             }
+         }
++        .alert("Use this invitation?", isPresented: Binding(
++            get: { session.pendingInvite != nil && session.currentUser != nil && !session.isInitialSessionValidationInFlight },
++            set: { _ in }
++        )) {
++            Button("Cancel", role: .cancel) { session.clearPendingInvite() }
++            Button("Sign out and continue") { Task { await session.logout() } }
++        } message: {
++            Text("You are signed in as \(session.currentUser?.email ?? "another account"). Sign out to set up the invited account.")
++        }
+         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: session.isRestoring)
+         .announcementSplash(eligibilityKey: announcementEligibilityKey)
+         .task(id: session.currentUser?.shellIdentity) {
+diff --git a/ios/Wisconsin/Core/APIClient+Auth.swift b/ios/Wisconsin/Core/APIClient+Auth.swift
+index 0d4b3432d..e3ad3c7fc 100644
+--- a/ios/Wisconsin/Core/APIClient+Auth.swift
++++ b/ios/Wisconsin/Core/APIClient+Auth.swift
+@@ -5,15 +5,16 @@ import Foundation
+ extension APIClient {
+     // MARK: - Auth
+ 
+-    func discoverAuth(email: String) async throws -> AuthDiscoveryResult {
++    func discoverAuth(email: String, invite: String? = nil) async throws -> AuthDiscoveryResult {
+         struct Body: Encodable {
+             let email: String
++            let invite: String?
+         }
+ 
+         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+         prepareAuthHost(for: normalizedEmail)
+         var req = request(path: "/api/auth/discover", method: "POST")
+-        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail))
++        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail, invite: invite))
+         return try await perform(req, broadcastsSessionExpiry: false)
+     }
+ 
+@@ -30,11 +31,12 @@ extension APIClient {
+         return resp.user
+     }
+ 
+-    func register(name: String, email: String, password: String) async throws -> CurrentUser {
++    func register(name: String, email: String, password: String, inviteToken: String? = nil) async throws -> CurrentUser {
+         struct Body: Encodable {
+             let name: String
+             let email: String
+             let password: String
++            let inviteToken: String?
+         }
+ 
+         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+@@ -43,12 +45,22 @@ extension APIClient {
+         req.httpBody = try JSONEncoder().encode(Body(
+             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+             email: normalizedEmail,
+-            password: password
++            password: password,
++            inviteToken: inviteToken
+         ))
+         let response: LoginResponse = try await perform(req, broadcastsSessionExpiry: false)
+         return response.user
+     }
+ 
++    func resendInviteLink(email: String) async throws -> InviteResendResult {
++        struct Body: Encodable { let email: String }
++        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
++        prepareAuthHost(for: normalizedEmail)
++        var req = request(path: "/api/auth/invite/resend", method: "POST")
++        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail))
++        return try await perform(req, broadcastsSessionExpiry: false)
++    }
++
+     func requestPasswordReset(email: String) async throws -> PasswordResetRequestResult {
+         struct Body: Encodable {
+             let email: String
+diff --git a/ios/Wisconsin/Core/APIClient.swift b/ios/Wisconsin/Core/APIClient.swift
+index b63107199..fe9eb4244 100644
+--- a/ios/Wisconsin/Core/APIClient.swift
++++ b/ios/Wisconsin/Core/APIClient.swift
+@@ -5,6 +5,7 @@ enum APIError: LocalizedError {
+     case sessionChanged
+     case notFound
+     case conflict(String)
++    case inviteLinkRequired(String)
+     case httpError(statusCode: Int, message: String)
+     case serverError(String)
+     case decodingError(Error)
+@@ -16,6 +17,7 @@ enum APIError: LocalizedError {
+         case .sessionChanged: "This request belonged to a previous sign-in and was cancelled."
+         case .notFound: "The requested item could not be found."
+         case .conflict(let msg): msg
++        case .inviteLinkRequired(let message): message
+         case .httpError(_, let message): message
+         case .serverError(let msg): msg
+         case .decodingError: "Unexpected response from server."
+@@ -155,10 +157,35 @@ enum AuthDiscoveryFlow: String, Decodable {
+     }
+ }
+ 
++enum InviteLinkStatus: String, Decodable {
++    case valid
++    case required
++
++    init(from decoder: Decoder) throws {
++        let value = try decoder.singleValueContainer().decode(String.self)
++        self = InviteLinkStatus(rawValue: value) ?? .required
++    }
++}
++
++struct InviteResendResult: Decodable {
++    let message: String
++    let inviteEmailConfigured: Bool
++}
++
+ struct AuthDiscoveryResult: Decodable {
+     let flow: AuthDiscoveryFlow
++    let inviteLink: InviteLinkStatus?
+ 
+     var isOnboarding: Bool { flow == .onboarding }
++
++    func needsInviteLink(token: String?) -> Bool {
++        guard isOnboarding else { return false }
++        switch inviteLink {
++        case .required: return true
++        case .valid: return token?.isEmpty != false
++        case nil: return false // Older servers do not require inbox proof yet.
++        }
++    }
+ }
+ 
+ enum AssetTextMutation {
+@@ -512,8 +539,11 @@ final class APIClient {
+             if request.url?.path != "/api/me" {
+                 NotificationCenter.default.post(name: .collaboratorPolicyMayHaveChanged, object: nil)
+             }
+-            let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
+-                ?? "You do not have access to this feature."
++            let body = try? JSONDecoder().decode(ServerErrorBody.self, from: data)
++            let message = body?.error ?? "You do not have access to this feature."
++            if request.url?.path == "/api/auth/register", body?.code == "INVITE_LINK_REQUIRED" {
++                throw APIError.inviteLinkRequired(message)
++            }
+             throw APIError.httpError(statusCode: http.statusCode, message: message)
+         case 409:
+             if let body = try? decoder.decode(ServerErrorBody.self, from: data), body.code == "ONBOARDING_CONFLICT" {
+diff --git a/ios/Wisconsin/Core/SessionStore.swift b/ios/Wisconsin/Core/SessionStore.swift
+index 632639436..c7078c1f4 100644
+--- a/ios/Wisconsin/Core/SessionStore.swift
++++ b/ios/Wisconsin/Core/SessionStore.swift
+@@ -39,6 +39,22 @@ final class SessionStore {
+     var isLoading = false
+     var isRestoring = true
+     var error: String?
++    var pendingInvite: AuthInviteLink?
++    private(set) var registrationNeedsInviteLink = false
++
++    @discardableResult
++    func receiveInviteURL(_ url: URL) -> Bool {
++        guard let invite = AuthInviteLink.parse(url) else { return false }
++        pendingInvite = invite
++        registrationNeedsInviteLink = false
++        error = nil
++        return true
++    }
++
++    func clearPendingInvite() {
++        pendingInvite = nil
++        registrationNeedsInviteLink = false
++    }
+     var isOffline = false
+     /// A cold launch with no cached session could not reach the server, so we
+     /// cannot yet say whether the stored cookie is valid. Held on the launch
+@@ -133,6 +149,9 @@ final class SessionStore {
+                 let user = try await APIClient.shared.login(email: email, password: password)
+                 guard self.authRequests.owns(requestToken) else { return }
+                 self.didSeedFromSnapshot = false
++                if self.pendingInvite?.email == email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
++                    self.clearPendingInvite()
++                }
+                 self.publishCurrentUserIfChanged(user)
+                 // Not during a forced change: that password is about to be replaced.
+                 if !user.forcePasswordChange {
+@@ -147,22 +166,35 @@ final class SessionStore {
+         await mutation.value
+     }
+ 
+-    func register(name: String, email: String, password: String) async {
++    func register(name: String, email: String, password: String, inviteToken: String? = nil) async {
+         let mutation = authMutations.enqueue { [weak self] in
+             guard let self else { return }
+             let requestToken = self.authRequests.begin()
+             self.isLoading = true
++            self.registrationNeedsInviteLink = false
+             self.error = nil
+             do {
+-                let user = try await APIClient.shared.register(name: name, email: email, password: password)
++                let user = try await APIClient.shared.register(name: name, email: email, password: password, inviteToken: inviteToken)
+                 guard self.authRequests.owns(requestToken) else { return }
+                 self.didSeedFromSnapshot = false
++                if self.pendingInvite?.email == email, self.pendingInvite?.token == inviteToken {
++                    self.clearPendingInvite()
++                }
+                 self.publishCurrentUserIfChanged(user)
+                 Task { await Self.upgradeToPasskeyAfterSignIn(password: password) }
+                 self.isOffline = false
+             } catch {
+                 guard self.authRequests.owns(requestToken) else { return }
+-                self.error = error.localizedDescription
++                if case APIError.inviteLinkRequired = error,
++                   let current = self.pendingInvite,
++                   current.email != email || current.token != inviteToken {
++                    // A newer inbox link arrived while this request was in flight.
++                    // Its proof is ready; do not mark it expired from an old reply.
++                    self.error = nil
++                } else {
++                    if case APIError.inviteLinkRequired = error { self.registrationNeedsInviteLink = true }
++                    self.error = error.localizedDescription
++                }
+             }
+             if self.authRequests.owns(requestToken) { self.isLoading = false }
+         }
+@@ -503,6 +535,6 @@ final class SessionStore {
+         if currentUser != user {
+             currentUser = user
+         }
+-        SessionSnapshot.save(user)
++        if !AppRuntimeMode.isPerformanceTesting { SessionSnapshot.save(user) }
+     }
+ }
+diff --git a/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift b/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift
+index ad11ce317..5f77dc033 100644
+--- a/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift
++++ b/ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift
+@@ -1718,7 +1718,7 @@ final class CreateBookingViewModel {
+             return true
+         case .httpError(let statusCode, _):
+             return (500...599).contains(statusCode)
+-        case .unauthorized, .notFound, .conflict:
++        case .unauthorized, .notFound, .conflict, .inviteLinkRequired:
+             return false
+         }
+     }
+diff --git a/ios/Wisconsin/Views/LoginView.swift b/ios/Wisconsin/Views/LoginView.swift
+index f96ddc525..8c710e6f1 100644
+--- a/ios/Wisconsin/Views/LoginView.swift
++++ b/ios/Wisconsin/Views/LoginView.swift
+@@ -11,6 +11,8 @@ struct LoginView: View {
+     @State private var activeAuthMethod: AuthMethod?
+     @State private var authDestination: AuthDestination?
+     @State private var passkeyAutoFillAttempt = 0
++    @State private var discoveryRequests = LatestRequestGeneration()
++    @State private var handledInviteID: UUID?
+     @FocusState private var focused: Field?
+     @AccessibilityFocusState private var accessibilityFocused: Field?
+ 
+@@ -19,6 +21,7 @@ struct LoginView: View {
+     private enum LoginStep {
+         case identity
+         case password
++        case invite
+     }
+ 
+     /// Re-arms AutoFill when the step changes and after a deliberate passkey
+@@ -82,9 +85,33 @@ struct LoginView: View {
+             discoveryLoading ? "Checking…" : "Continue"
+         case .password:
+             passwordLoading ? "Signing in…" : "Sign in"
++        case .invite:
++            "Email me my invite link"
+         }
+     }
+ 
++    private var inviteToken: String? {
++        guard session.pendingInvite?.email == trimmedEmail else { return nil }
++        return session.pendingInvite?.token
++    }
++
++    private func acceptPendingInvite() {
++        guard let invite = session.pendingInvite, invite.id != handledInviteID,
++              !session.isLoading, activeAuthMethod != .password, activeAuthMethod != .passkey else { return }
++        handledInviteID = invite.id
++        // A fresh link for the open registration updates its proof in place.
++        // Keep the name and password already entered in that sheet.
++        if case .register(let currentEmail) = authDestination, currentEmail == invite.email { return }
++        discoveryRequests.invalidate()
++        activeAuthMethod = nil
++        authDestination = nil
++        email = invite.email
++        password = ""
++        identityError = nil
++        setLoginStep(.identity)
++        advanceToPassword()
++    }
++
+     private func advanceToPassword() {
+         guard canContinue else { return }
+         focused = nil
+@@ -92,18 +119,26 @@ struct LoginView: View {
+         identityError = nil
+         activeAuthMethod = .discovery
+         let submittedEmail = trimmedEmail
++        let submittedToken = inviteToken
++        let requestToken = discoveryRequests.begin()
+         Task {
+-            defer { activeAuthMethod = nil }
++            defer {
++                if discoveryRequests.owns(requestToken) { activeAuthMethod = nil }
++            }
+             do {
+-                let result = try await APIClient.shared.discoverAuth(email: submittedEmail)
+-                guard !Task.isCancelled else { return }
++                let result = try await APIClient.shared.discoverAuth(email: submittedEmail, invite: submittedToken)
++                guard !Task.isCancelled, discoveryRequests.owns(requestToken) else { return }
+                 if result.isOnboarding {
+-                    authDestination = .register(email: submittedEmail)
++                    if result.needsInviteLink(token: submittedToken) {
++                        setLoginStep(.invite)
++                    } else {
++                        authDestination = .register(email: submittedEmail)
++                    }
+                 } else {
+                     setLoginStep(.password)
+                 }
+             } catch {
+-                guard !Task.isCancelled else { return }
++                guard !Task.isCancelled, discoveryRequests.owns(requestToken) else { return }
+                 identityError = error.localizedDescription
+             }
+         }
+@@ -112,6 +147,8 @@ struct LoginView: View {
+     private func changeEmail() {
+         guard !authBusy else { return }
+         focused = nil
++        session.clearPendingInvite()
++        discoveryRequests.invalidate()
+         password = ""
+         showPassword = false
+         identityError = nil
+@@ -167,6 +204,16 @@ struct LoginView: View {
+             guard loginStep == .identity else { return }
+             await session.armPasskeyAutoFill()
+         }
++        .onChange(of: session.pendingInvite?.id, initial: true) { _, _ in
++            acceptPendingInvite()
++        }
++        .onChange(of: authBusy) { _, busy in
++            if !busy { acceptPendingInvite() }
++        }
++        .onDisappear {
++            discoveryRequests.invalidate()
++            if activeAuthMethod == .discovery { activeAuthMethod = nil }
++        }
+         .onAppear {
+             if let notice = session.notice {
+                 AccessibilityNotification.Announcement(notice).post()
+@@ -178,11 +225,10 @@ struct LoginView: View {
+             }
+         }
+         .onChange(of: loginStep) { _, step in
+-            focused = step == .identity ? .email : .password
+-            accessibilityFocused = step == .identity ? .email : .password
+-            AccessibilityNotification.Announcement(
+-                step == .identity ? "Enter your email address" : "Enter your password"
+-            ).post()
++            focused = step == .identity ? .email : step == .password ? .password : nil
++            accessibilityFocused = focused
++            let announcement = step == .identity ? "Enter your email address" : step == .password ? "Enter your password" : "Open the link in your invite email"
++            AccessibilityNotification.Announcement(announcement).post()
+         }
+         .sheet(item: $authDestination) { destination in
+             NavigationStack {
+@@ -209,9 +255,12 @@ struct LoginView: View {
+             if loginStep == .identity {
+                 identityStep
+                     .transition(.opacity)
+-            } else {
++            } else if loginStep == .password {
+                 passwordStep
+                     .transition(.opacity)
++            } else {
++                inviteStep
++                    .transition(.opacity)
+             }
+ 
+             // Error
+@@ -220,6 +269,9 @@ struct LoginView: View {
+                     .accessibilityLabel("Sign in failed. \(error)")
+             }
+ 
++            if loginStep == .invite {
++                InviteLinkResendButton(email: trimmedEmail)
++            } else {
+             // The page's one saturated moment remains stable across both
+             // local steps so Continue becomes Sign in without layout churn.
+             Button {
+@@ -228,6 +280,8 @@ struct LoginView: View {
+                     advanceToPassword()
+                 case .password:
+                     submit()
++                case .invite:
++                    break
+                 }
+             } label: {
+                 HStack(spacing: 8) {
+@@ -244,6 +298,7 @@ struct LoginView: View {
+             }
+             .authButton(.primary)
+             .disabled(loginStep == .identity ? !canContinue : !canSubmit)
++            }
+ 
+             if loginStep == .identity {
+                 HStack(spacing: 12) {
+@@ -283,6 +338,29 @@ struct LoginView: View {
+         }
+     }
+ 
++    private var inviteStep: some View {
++        VStack(alignment: .leading, spacing: 12) {
++            HStack {
++                Text(trimmedEmail)
++                    .font(.subheadline.weight(.semibold))
++                    .textSelection(.enabled)
++                Spacer(minLength: 8)
++                Button("Change") { changeEmail() }
++                    .font(.footnote.weight(.semibold))
++                    .buttonStyle(.plain)
++                    .frame(minWidth: 44, minHeight: 44)
++                    .disabled(authBusy)
++            }
++            Text("Check your email")
++                .font(.headline)
++            Text("Choose Set up in the iPhone app in your invite email to create your account here. If the link has expired or you cannot find it, request a new one below.")
++                .font(.subheadline)
++                .foregroundStyle(AuthPalette.textSecondary)
++                .fixedSize(horizontal: false, vertical: true)
++        }
++        .foregroundStyle(AuthPalette.textPrimary)
++    }
++
+     private var identityStep: some View {
+         VStack(alignment: .leading, spacing: 8) {
+             Text("Email address")
+diff --git a/ios/Wisconsin/Views/NativeAuthViews.swift b/ios/Wisconsin/Views/NativeAuthViews.swift
+index 680f2b61f..d7c4987b0 100644
+--- a/ios/Wisconsin/Views/NativeAuthViews.swift
++++ b/ios/Wisconsin/Views/NativeAuthViews.swift
+@@ -53,7 +53,7 @@ struct NativeRegistrationView: View {
+             Self.isValidEmail(normalizedEmail) &&
+             password.count >= 8 &&
+             password == confirmPassword &&
+-            !isSubmitting
++            !isSubmitting && !session.registrationNeedsInviteLink
+     }
+ 
+     init(initialEmail: String = "") {
+@@ -71,6 +71,7 @@ struct NativeRegistrationView: View {
+             VStack(alignment: .leading, spacing: 18) {
+                 AuthLabeledField(title: "Full name", isFocused: focusedField == .name) {
+                     TextField(text: $name, prompt: Text("Your name").foregroundStyle(AuthPalette.textTertiary)) { Text("Full name") }
++                        .accessibilityLabel("Full name")
+                         .textContentType(.name)
+                         .focused($focusedField, equals: .name)
+                         .submitLabel(.next)
+@@ -83,6 +84,7 @@ struct NativeRegistrationView: View {
+ 
+                 AuthLabeledField(title: "Email", isFocused: focusedField == .email) {
+                     TextField(text: $email, prompt: Text("you@wisc.edu").foregroundStyle(AuthPalette.textTertiary)) { Text("Email") }
++                        .accessibilityLabel("Email")
+                         .textInputAutocapitalization(.never)
+                         .keyboardType(.emailAddress)
+                         // `.username`, not `.emailAddress`: this is the account the
+@@ -105,6 +107,7 @@ struct NativeRegistrationView: View {
+ 
+                 AuthLabeledField(title: "Password", isFocused: focusedField == .password) {
+                     SecureField(text: $password, prompt: Text("At least 8 characters").foregroundStyle(AuthPalette.textTertiary)) { Text("Password") }
++                        .accessibilityLabel("Password")
+                         .textContentType(.newPassword)
+                         .focused($focusedField, equals: .password)
+                         .submitLabel(.next)
+@@ -117,6 +120,7 @@ struct NativeRegistrationView: View {
+ 
+                 AuthLabeledField(title: "Confirm password", isFocused: focusedField == .confirmPassword) {
+                     SecureField(text: $confirmPassword, prompt: Text("Repeat your password").foregroundStyle(AuthPalette.textTertiary)) { Text("Confirm password") }
++                        .accessibilityLabel("Confirm password")
+                         .textContentType(.newPassword)
+                         .focused($focusedField, equals: .confirmPassword)
+                         .submitLabel(.done)
+@@ -131,6 +135,10 @@ struct NativeRegistrationView: View {
+                     AuthInlineMessage(text: formError, systemImage: "exclamationmark.circle.fill", tone: .red)
+                 }
+ 
++                if session.registrationNeedsInviteLink {
++                    InviteLinkResendButton(email: normalizedEmail)
++                }
++
+                 Button {
+                     submit()
+                 } label: {
+@@ -166,6 +174,9 @@ struct NativeRegistrationView: View {
+         }
+         .onChange(of: password) { _, _ in formError = nil }
+         .onChange(of: confirmPassword) { _, _ in formError = nil }
++        .onChange(of: session.pendingInvite?.id) { _, _ in
++            if session.pendingInvite?.email == normalizedEmail { formError = nil }
++        }
+         .onAppear { focusedField = .name }
+     }
+ 
+@@ -176,7 +187,7 @@ struct NativeRegistrationView: View {
+     }
+ 
+     private func submit() {
+-        guard !isSubmitting else { return }
++        guard !isSubmitting, !session.registrationNeedsInviteLink else { return }
+         guard let validationError else {
+             focusedField = nil
+             formError = nil
+@@ -185,17 +196,19 @@ struct NativeRegistrationView: View {
+             let submittedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+             let submittedEmail = normalizedEmail
+             let submittedPassword = password
++            let submittedInvite = session.pendingInvite
+             Task {
+                 await session.register(
+                     name: submittedName,
+                     email: submittedEmail,
+-                    password: submittedPassword
++                    password: submittedPassword,
++                    inviteToken: submittedInvite?.email == submittedEmail ? submittedInvite?.token : nil
+                 )
+                 guard !Task.isCancelled else { return }
+                 isSubmitting = false
+                 if session.currentUser != nil {
+                     dismiss()
+-                } else {
++                } else if session.pendingInvite?.id == submittedInvite?.id {
+                     formError = session.error ?? "Your account couldn't be created. Please try again."
+                 }
+             }
+diff --git a/ios/WisconsinTests/APIClientRetryTests.swift b/ios/WisconsinTests/APIClientRetryTests.swift
+index c69c9774a..23fc14600 100644
+--- a/ios/WisconsinTests/APIClientRetryTests.swift
++++ b/ios/WisconsinTests/APIClientRetryTests.swift
+@@ -30,6 +30,15 @@ private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
+     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+ 
+     override func startLoading() {
++        // Decoding failures send asynchronous diagnostic reports through the
++        // same session. They must not consume the next test's response script.
++        if request.url?.path == "/api/errors" {
++            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
++            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
++            client?.urlProtocol(self, didLoad: Data(#"{"data":{"stored":1}}"#.utf8))
++            client?.urlProtocolDidFinishLoading(self)
++            return
++        }
+         Self.lock.lock()
+         Self.requests.append(request)
+         let step = Self.steps.isEmpty ? Step.status(200) : Self.steps.removeFirst()
+@@ -67,6 +76,72 @@ final class APIClientRetryTests: XCTestCase {
+         return APIClient(session: URLSession(configuration: config), retryPolicy: fastPolicy)
+     }
+ 
++    private func jsonBody(_ request: URLRequest) throws -> [String: Any] {
++        var data = request.httpBody
++        if data == nil, let stream = request.httpBodyStream {
++            stream.open()
++            defer { stream.close() }
++            var body = Data()
++            var buffer = [UInt8](repeating: 0, count: 4096)
++            while stream.hasBytesAvailable {
++                let count = stream.read(&buffer, maxLength: buffer.count)
++                guard count > 0 else { break }
++                body.append(buffer, count: count)
++            }
++            data = body
++        }
++        return try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(data)) as? [String: Any])
++    }
++
++    func testInviteDiscoveryForwardsTheInboxProofWithTheNormalizedAddress() async throws {
++        let client = makeClient([.status(200, body: #"{"flow":"onboarding","inviteLink":"valid"}"#)])
++        let result = try await client.discoverAuth(email: " Alex@WISC.EDU ", invite: "raw-inbox-token")
++        XCTAssertFalse(result.needsInviteLink(token: "raw-inbox-token"))
++        let request = try XCTUnwrap(StubURLProtocol.recordedRequests.first)
++        XCTAssertEqual(request.url?.path, "/api/auth/discover")
++        let body = try jsonBody(request)
++        XCTAssertEqual(body["email"] as? String, "alex@wisc.edu")
++        XCTAssertEqual(body["invite"] as? String, "raw-inbox-token")
++    }
++
++    func testRegisterForwardsTheTokenAndReturnsTypedRecoveryForAnExpiredLink() async throws {
++        let client = makeClient([.status(403, body: #"{"error":"Open your new invite link.","code":"INVITE_LINK_REQUIRED"}"#)])
++        do {
++            _ = try await client.register(name: " Alex ", email: " Alex@WISC.EDU ", password: "fixture-password", inviteToken: "retired-token")
++            XCTFail("An expired link must not create a local session")
++        } catch APIError.inviteLinkRequired(let message) {
++            XCTAssertEqual(message, "Open your new invite link.")
++        }
++        let request = try XCTUnwrap(StubURLProtocol.recordedRequests.first)
++        XCTAssertEqual(request.url?.path, "/api/auth/register")
++        let body = try jsonBody(request)
++        XCTAssertEqual(body["inviteToken"] as? String, "retired-token")
++        XCTAssertEqual(body["email"] as? String, "alex@wisc.edu")
++        XCTAssertEqual(body["name"] as? String, "Alex")
++        XCTAssertEqual(StubURLProtocol.recordedRequests.count, 1)
++    }
++
++    func testInviteResendDecodesUnavailableWithoutClaimingDelivery() async throws {
++        let client = makeClient([.status(200, body: #"{"message":"Contact your administrator.","inviteEmailConfigured":false}"#)])
++        let result = try await client.resendInviteLink(email: " Alex@WISC.EDU ")
++        XCTAssertFalse(result.inviteEmailConfigured)
++        XCTAssertEqual(result.message, "Contact your administrator.")
++        let request = try XCTUnwrap(StubURLProtocol.recordedRequests.first)
++        XCTAssertEqual(request.url?.path, "/api/auth/invite/resend")
++        XCTAssertEqual(try jsonBody(request)["email"] as? String, "alex@wisc.edu")
++    }
++
++    func testMalformedInviteConfirmationIsAnErrorAndThePostIsNotRetried() async {
++        let client = makeClient([.status(200, body: #"{"message":"No delivery receipt"}"#)])
++        do {
++            _ = try await client.resendInviteLink(email: "alex@wisc.edu")
++            XCTFail("A missing delivery field must not be shown as Link sent")
++        } catch APIError.decodingError {
++            // Recovery remains retryable; no confirmed result was returned.
++        } catch { XCTFail("Unexpected error: \(error)") }
++        XCTAssertEqual(StubURLProtocol.recordedRequests.count, 1)
++    }
++
+     func testGetRetriesTransientServerErrorThenSucceeds() async throws {
+         let client = makeClient([
+             .status(503),
+diff --git a/src/app/.well-known/apple-app-site-association/route.ts b/src/app/.well-known/apple-app-site-association/route.ts
+index 96bc053a4..49312d407 100644
+--- a/src/app/.well-known/apple-app-site-association/route.ts
++++ b/src/app/.well-known/apple-app-site-association/route.ts
+@@ -17,6 +17,10 @@ export function GET() {
+         {
+           appIDs: [APP_ID],
+           components: [
++            // Browser setup remains usable by older installed app versions.
++            { "/": "/login", "?": { web: "1" }, exclude: true },
++            // Claim only emailed invite links; ordinary login stays on the web.
++            { "/": "/login", "?": { invite: "?*" } },
+             { "/": "/bookings" },
+             { "/": "/bookings/*" },
+             { "/": "/reservations/*" },
+diff --git a/src/lib/email-template.ts b/src/lib/email-template.ts
+index 0abcd15ba..2d7163bc5 100644
+--- a/src/lib/email-template.ts
++++ b/src/lib/email-template.ts
+@@ -45,6 +45,8 @@ export type EmailContent = {
+   /** Label and value rows in a quiet card. */
+   facts?: EmailFact[];
+   action?: { label: string; url: string };
++  /** A quiet alternative when the recipient can complete the task two ways. */
++  secondaryAction?: { label: string; url: string };
+   /** Small grey line under the button. */
+   note?: string;
+   /** Small grey lines under the card. */
+@@ -162,6 +164,7 @@ ${
+         ${content.steps ? stepsHtml(content.steps) : ""}
+         ${content.facts && content.facts.length > 0 ? factsHtml(content.facts) : ""}
+         ${content.action ? buttonHtml(content.action) : ""}
++        ${content.secondaryAction ? `<p style="margin: 20px 0 0; font-size: 15px; line-height: 1.6;"><a href="${escapeEmailHtml(content.secondaryAction.url)}" style="color: ${EMAIL_THEME.brand};">${escapeEmailHtml(content.secondaryAction.label)}</a></p>` : ""}
+         ${
+           content.note
+             ? `<p style="margin: 16px 0 0; font-size: 14px; line-height: 1.5; color: ${EMAIL_THEME.muted};">${escapeEmailHtml(content.note)}</p>`
+@@ -192,6 +195,7 @@ ${
+     textParts.push(content.facts.map((fact) => `${fact.label}: ${fact.value}`).join("\n"));
+   }
+   if (content.action) textParts.push(`${content.action.label}: ${content.action.url}`);
++  if (content.secondaryAction) textParts.push(`${content.secondaryAction.label}: ${content.secondaryAction.url}`);
+   if (content.note) textParts.push(content.note);
+   textParts.push(...footerLines);
+   if (content.manageNotifications) textParts.push(`Manage notifications: ${settingsUrl}`);
+diff --git a/src/lib/services/invite-email.ts b/src/lib/services/invite-email.ts
+index 6d689ab56..476f1e1f7 100644
+--- a/src/lib/services/invite-email.ts
++++ b/src/lib/services/invite-email.ts
+@@ -37,6 +37,9 @@ export function buildInviteEmail({
+   const lead = (sentence: string) =>
+     first ? `Hi ${first}, ${sentence}` : `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}`;
+   const loginUrl = inviteLoginUrl(email, inviteToken);
++  // The primary browser path must remain available to installed 1.4 clients,
++  // which cannot read an invite token. Only the explicit app action is claimed.
++  const browserLoginUrl = inviteToken ? `${loginUrl}&web=1` : loginUrl;
+   const reminder = kind === "reminder";
+   const subject = reminder ? "Finish setting up your Wisconsin Creative account" : "You're invited to Wisconsin Creative";
+ 
+@@ -64,9 +67,10 @@ export function buildInviteEmail({
+             "Install the iPhone app to scan gear and get shift reminders",
+           ],
+         },
+-    action: { label: reminder ? "Finish setting up" : "Set up your account", url: loginUrl },
++    action: { label: reminder ? "Finish setting up" : inviteToken ? "Set up in browser" : "Set up your account", url: browserLoginUrl },
++    secondaryAction: inviteToken ? { label: "Set up in the iPhone app", url: loginUrl } : undefined,
+     note: inviteToken
+-      ? `Sign in with ${email}, using this link: it carries your invitation and works for 30 days. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
++      ? `Sign in with ${email}, using either setup link: each carries your invitation and works for 30 days. For setup in the iPhone app, install the latest version first. Need a fresh one later? Enter your address on the sign-in page and choose Email me my invite link.`
+       : `Sign in with ${email}. Use this exact address so we can find your invite.`,
+     footer: [
+       "Forget your password later? Choose Forgot password on the sign-in page and we'll email you a reset link.",
+@@ -90,8 +94,16 @@ export async function sendInviteEmail(input: {
+   allowedEmailId?: string;
+ }): Promise<InviteEmailStatus> {
+   if (!env.resendApiKey) return "not_configured";
+-  const inviteToken = input.allowedEmailId ? await issueInviteToken(input.allowedEmailId) : null;
+-  const { subject, html, text } = buildInviteEmail({ ...input, inviteToken });
+-  const delivered = await sendEmail({ to: input.email, subject, html, text });
+-  return delivered ? "sent" : "failed";
++  try {
++    const inviteToken = input.allowedEmailId ? await issueInviteToken(input.allowedEmailId) : null;
++    if (input.allowedEmailId && !inviteToken) return "failed";
++    const { subject, html, text } = buildInviteEmail({ ...input, inviteToken });
++    const delivered = await sendEmail({ to: input.email, subject, html, text });
++    return delivered ? "sent" : "failed";
++  } catch {
++    // Keep the caller's delivery receipt honest without exposing the address
++    // or raw inbox credential in a response or log.
++    console.error("[Invite] could not prepare or send the invitation");
++    return "failed";
++  }
+ }
+diff --git a/ios/Wisconsin/App/InviteSignupTestHarness.swift b/ios/Wisconsin/App/InviteSignupTestHarness.swift
+new file mode 100644
+index 000000000..83711d7e7
+--- /dev/null
++++ b/ios/Wisconsin/App/InviteSignupTestHarness.swift
+@@ -0,0 +1,78 @@
++#if DEBUG
++import Foundation
++import SwiftUI
++
++/// Uses the production root, parser, discovery, registration and Welcome views.
++/// The existing fixture URL protocol owns every API request in this scenario.
++struct InviteSignupHarnessView: View {
++    @Environment(SessionStore.self) private var session
++
++    var body: some View {
++        RootView()
++            .task {
++                if let raw = ProcessInfo.processInfo.environment["GT_FIXTURE_INVITE_URL"],
++                   let url = URL(string: raw) { session.receiveInviteURL(url) }
++            }
++    }
++}
++
++enum InviteSignupFixtureAPI {
++    static var enabled: Bool {
++        AppRuntimeMode.performanceScenario == .login && ProcessInfo.processInfo.environment["GT_FIXTURE_INVITE"] != nil
++    }
++
++    /// A local UI test can deliver a warm link through the app's registered
++    /// scheme without consulting Apple's CDN or opening a real website.
++    static func incomingLink(_ url: URL) -> URL? {
++        guard enabled, url.scheme == "wisconsin", url.host == "fixture-invite",
++              let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
++        var link = URLComponents(string: "https://wisconsincreative.com/login")!
++        link.queryItems = query
++        return link.url
++    }
++
++    static func response(for request: URLRequest) -> (status: Int, body: Data)? {
++        guard enabled else { return nil }
++        let mode = ProcessInfo.processInfo.environment["GT_FIXTURE_INVITE"]
++        let input = requestBody(request).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
++        let token = input["invite"] as? String ?? input["inviteToken"] as? String
++        switch request.url?.path {
++        case "/api/auth/discover":
++            let valid = token == "fixture-native-invite" || token == "fixture-refreshed-invite"
++            return json(200, ["flow": "onboarding", "inviteLink": valid ? "valid" : "required"])
++        case "/api/auth/register":
++            let valid = token == "fixture-refreshed-invite" || (token == "fixture-native-invite" && mode != "expired-on-submit")
++            guard valid else {
++                return json(403, ["error": "Open the link in your invite email to finish signing up.", "code": "INVITE_LINK_REQUIRED"])
++            }
++            return (201, try! JSONEncoder().encode(["user": OnboardingFixtureAPI.user]))
++        case "/api/auth/invite/resend":
++            if mode == "rate-limited" { return json(429, ["error": "Too many requests. Please try again later."]) }
++            if mode == "malformed" { return json(200, ["message": "No confirmed delivery state"]) }
++            return json(200, ["message": mode == "unconfigured" ? "Invite email is not configured yet. Contact Erik Role for your sign-up link." : "If that address has a pending invite, we sent the link.", "inviteEmailConfigured": mode != "unconfigured"])
++        default:
++            guard let body = OnboardingFixtureAPI.body(for: request) else { return nil }
++            return (200, body)
++        }
++    }
++
++    private static func json(_ status: Int, _ value: [String: Any]) -> (Int, Data) {
++        (status, try! JSONSerialization.data(withJSONObject: value))
++    }
++
++    private static func requestBody(_ request: URLRequest) -> Data? {
++        if let body = request.httpBody { return body }
++        guard let stream = request.httpBodyStream else { return nil }
++        stream.open()
++        defer { stream.close() }
++        var data = Data()
++        var buffer = [UInt8](repeating: 0, count: 4096)
++        while stream.hasBytesAvailable {
++            let count = stream.read(&buffer, maxLength: buffer.count)
++            guard count > 0 else { break }
++            data.append(buffer, count: count)
++        }
++        return data
++    }
++}
++#endif
+diff --git a/ios/Wisconsin/Core/AuthInviteLink.swift b/ios/Wisconsin/Core/AuthInviteLink.swift
+new file mode 100644
+index 000000000..ce06c5b53
+--- /dev/null
++++ b/ios/Wisconsin/Core/AuthInviteLink.swift
+@@ -0,0 +1,28 @@
++import Foundation
++
++/// Inbox proof stays in memory. It is never an API-host override, saved draft,
++/// route description, analytics field, or account-switch instruction.
++struct AuthInviteLink: Equatable, Identifiable {
++    let id = UUID()
++    let email: String
++    let token: String
++
++    static func parse(_ url: URL) -> AuthInviteLink? {
++        guard let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
++              parts.scheme?.lowercased() == "https",
++              parts.host?.lowercased() == AppEnvironment.canonicalHost,
++              parts.user == nil, parts.password == nil, parts.port == nil,
++              parts.fragment == nil, parts.path == "/login" else { return nil }
++        let query = parts.queryItems ?? []
++        guard !query.contains(where: { $0.name == "web" && $0.value == "1" }) else { return nil }
++        let emails = query.filter { $0.name == "email" }
++        let tokens = query.filter { $0.name == "invite" }
++        guard emails.count == 1, tokens.count == 1,
++              let email = emails[0].value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
++              email.count <= 254,
++              email.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#, options: .regularExpression) != nil,
++              let token = tokens[0].value?.trimmingCharacters(in: .whitespacesAndNewlines),
++              !token.isEmpty, token.count <= 128 else { return nil }
++        return AuthInviteLink(email: email, token: token)
++    }
++}
+diff --git a/ios/Wisconsin/Views/InviteLinkResendButton.swift b/ios/Wisconsin/Views/InviteLinkResendButton.swift
+new file mode 100644
+index 000000000..17ea02e8e
+--- /dev/null
++++ b/ios/Wisconsin/Views/InviteLinkResendButton.swift
+@@ -0,0 +1,50 @@
++import SwiftUI
++
++/// Shared native recovery for a missing link and a link retired during signup.
++/// A successful generic reply never exposes whether an address is invited.
++struct InviteLinkResendButton: View {
++    let email: String
++    @State private var sending = false
++    @State private var result: InviteResendResult?
++    @State private var error: String?
++
++    private var title: String {
++        if sending { return "Sending…" }
++        if let result { return result.inviteEmailConfigured ? "Link sent" : "Email unavailable" }
++        return "Email me my invite link"
++    }
++
++    var body: some View {
++        VStack(alignment: .leading, spacing: 12) {
++            if let result {
++                AuthInlineMessage(text: result.message, systemImage: "envelope.fill", tone: .blue)
++            }
++            if let error {
++                AuthInlineMessage(text: error, systemImage: "exclamationmark.circle.fill", tone: .red)
++            }
++            Button {
++                guard !sending, result == nil else { return }
++                sending = true
++                error = nil
++                Task {
++                    defer { sending = false }
++                    do {
++                        result = try await APIClient.shared.resendInviteLink(email: email)
++                    } catch {
++                        self.error = error.localizedDescription
++                    }
++                }
++            } label: {
++                HStack(spacing: 8) {
++                    if sending {
++                        ProgressView().controlSize(.small).tint(AuthPalette.onPrimary)
++                    }
++                    Text(title).fontWeight(.semibold)
++                }
++                .frame(maxWidth: .infinity)
++            }
++            .authButton(.primary)
++            .disabled(sending || result != nil)
++        }
++    }
++}
+diff --git a/ios/WisconsinTests/AuthInviteLinkTests.swift b/ios/WisconsinTests/AuthInviteLinkTests.swift
+new file mode 100644
+index 000000000..cd7a93d4c
+--- /dev/null
++++ b/ios/WisconsinTests/AuthInviteLinkTests.swift
+@@ -0,0 +1,44 @@
++import XCTest
++@testable import Wisconsin
++
++final class AuthInviteLinkTests: XCTestCase {
++    func testAcceptsTheEmailedHTTPSLinkAndNormalizesOnlyTheAddress() throws {
++        let link = try XCTUnwrap(AuthInviteLink.parse(URL(string: "https://wisconsincreative.com/login?email=Alex%2BStudent%40WISC.EDU&invite=raw%2Btoken%2Fvalue&returnTo=https%3A%2F%2Fevil.example")!))
++        XCTAssertEqual(link.email, "alex+student@wisc.edu")
++        XCTAssertEqual(link.token, "raw+token/value")
++    }
++
++    func testRejectsUntrustedOrAmbiguousInboxProof() {
++        let urls = [
++            "http://wisconsincreative.com/login?email=alex@wisc.edu&invite=token",
++            "https://wisconsincreative.com.evil.example/login?email=alex@wisc.edu&invite=token",
++            "https://evil.example/login?email=alex@wisc.edu&invite=token",
++            "https://user:pass@wisconsincreative.com/login?email=alex@wisc.edu&invite=token",
++            "https://wisconsincreative.com:443/login?email=alex@wisc.edu&invite=token",
++            "https://wisconsincreative.com/other?email=alex@wisc.edu&invite=token",
++            "wisconsin://login?email=alex@wisc.edu&invite=token",
++            "https://wisconsincreative.com/login?email=alex@wisc.edu",
++            "https://wisconsincreative.com/login?invite=token",
++            "https://wisconsincreative.com/login?email=invalid&invite=token",
++            "https://wisconsincreative.com/login?email=alex@wisc.edu&invite=token&web=1",
++            "https://wisconsincreative.com/login?email=alex@wisc.edu&invite=",
++            "https://wisconsincreative.com/login?email=alex@wisc.edu&email=other@wisc.edu&invite=token",
++            "https://wisconsincreative.com/login?email=alex@wisc.edu&invite=one&invite=two",
++            "https://wisconsincreative.com/login?email=alex@wisc.edu&invite=token#another",
++            "https://wisconsincreative.com/login?email=alex@wisc.edu&invite=" + String(repeating: "x", count: 129)
++        ]
++        for raw in urls { XCTAssertNil(AuthInviteLink.parse(URL(string: raw)!), raw) }
++    }
++
++    func testDiscoveryRequiresCurrentProofAndToleratesTheOlderBackend() throws {
++        func decode(_ json: String) throws -> AuthDiscoveryResult {
++            try JSONDecoder().decode(AuthDiscoveryResult.self, from: Data(json.utf8))
++        }
++        XCTAssertTrue(try decode(#"{"flow":"onboarding","inviteLink":"required"}"#).needsInviteLink(token: "stale"))
++        XCTAssertTrue(try decode(#"{"flow":"onboarding","inviteLink":"valid"}"#).needsInviteLink(token: nil))
++        XCTAssertFalse(try decode(#"{"flow":"onboarding","inviteLink":"valid"}"#).needsInviteLink(token: "current"))
++        XCTAssertTrue(try decode(#"{"flow":"onboarding","inviteLink":"future-unknown-status"}"#).needsInviteLink(token: "current"))
++        XCTAssertFalse(try decode(#"{"flow":"password"}"#).needsInviteLink(token: nil))
++        XCTAssertFalse(try decode(#"{"flow":"onboarding"}"#).needsInviteLink(token: nil))
++    }
++}
+diff --git a/ios/WisconsinUITests/NativeInviteSignupUITests.swift b/ios/WisconsinUITests/NativeInviteSignupUITests.swift
+new file mode 100644
+index 000000000..d12ef5ea5
+--- /dev/null
++++ b/ios/WisconsinUITests/NativeInviteSignupUITests.swift
+@@ -0,0 +1,117 @@
++import XCTest
++
++@MainActor
++final class NativeInviteSignupUITests: XCTestCase {
++    private let email = "alex.onboarding@wisc.edu"
++
++    private func launch(_ mode: String, linked: Bool = false) -> XCUIApplication {
++        continueAfterFailure = false
++        let app = XCUIApplication()
++        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "login"
++        app.launchEnvironment["GT_FIXTURE_INVITE"] = mode
++        if linked {
++            app.launchEnvironment["GT_FIXTURE_INVITE_URL"] = "https://wisconsincreative.com/login?email=alex.onboarding%40wisc.edu&invite=fixture-native-invite"
++        }
++        app.launchArguments += ["-WisconsinThemeChoice", "light", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
++        app.launch()
++        return app
++    }
++
++    private func enterAddress(_ app: XCUIApplication) {
++        let field = app.textFields["Email address"]
++        XCTAssertTrue(field.waitForExistence(timeout: 15))
++        field.tap()
++        field.typeText(email)
++        app.buttons["Continue"].tap()
++    }
++
++    private func fillRegistration(_ app: XCUIApplication) {
++        let name = app.textFields["Full name"]
++        XCTAssertTrue(name.waitForExistence(timeout: 15))
++        type("Alex Student", into: name)
++        type("Student82A", into: app.secureTextFields["Password"])
++        type("Student82A", into: app.secureTextFields["Confirm password"])
++        XCTAssertTrue(app.buttons["Create account"].isEnabled, "Both password fields must receive the same input")
++        app.swipeUp()
++    }
++
++    private func type(_ text: String, into field: XCUIElement) {
++        field.tap()
++        let focus = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
++        XCTAssertEqual(XCTWaiter.wait(for: [focus], timeout: 5), .completed)
++        // UIKit focus changes can finish after the tap animation. Slow typing
++        // avoids sending the first key to the previous secure field on iOS 27.
++        for character in text { field.typeText(String(character)) }
++    }
++
++    func testColdInviteCreatesAccountAndEntersNativeWelcome() {
++        let app = launch("valid", linked: true)
++        fillRegistration(app)
++        attach(app, "native-valid-invite")
++        app.buttons["Create account"].tap()
++        XCTAssertTrue(app.staticTexts["Add your phone number"].waitForExistence(timeout: 15))
++        attach(app, "native-signup-welcome")
++    }
++
++    func testMissingLinkResendsOnceAndChangeResetsRecovery() {
++        let app = launch("required")
++        enterAddress(app)
++        XCTAssertTrue(app.staticTexts["Check your email"].waitForExistence(timeout: 10))
++        XCTAssertEqual(app.secureTextFields.count, 0)
++        attach(app, "native-missing-link")
++        app.buttons["Email me my invite link"].tap()
++        XCTAssertTrue(app.buttons["Link sent"].waitForExistence(timeout: 10))
++        XCTAssertFalse(app.buttons["Link sent"].isEnabled)
++        attach(app, "native-link-sent")
++        app.buttons["Change"].tap()
++        app.buttons["Continue"].tap()
++        XCTAssertTrue(app.buttons["Email me my invite link"].waitForExistence(timeout: 10))
++        XCTAssertTrue(app.buttons["Email me my invite link"].isEnabled)
++        app.open(URL(string: "wisconsin://fixture-invite?email=alex.onboarding%40wisc.edu&invite=fixture-refreshed-invite")!)
++        XCTAssertTrue(app.textFields["Full name"].waitForExistence(timeout: 10))
++    }
++
++    func testExpiredSubmitPreservesInputAndAcceptsTheRefreshedLink() {
++        let app = launch("expired-on-submit", linked: true)
++        fillRegistration(app)
++        app.buttons["Create account"].tap()
++        XCTAssertTrue(app.buttons["Email me my invite link"].waitForExistence(timeout: 10))
++        XCTAssertEqual(app.textFields["Full name"].value as? String, "Alex Student")
++        XCTAssertFalse(app.buttons["Create account"].isEnabled)
++        attach(app, "native-expired-link")
++        app.buttons["Email me my invite link"].tap()
++        XCTAssertTrue(app.buttons["Link sent"].waitForExistence(timeout: 10))
++        app.open(URL(string: "wisconsin://fixture-invite?email=alex.onboarding%40wisc.edu&invite=fixture-refreshed-invite")!)
++        let create = app.buttons["Create account"]
++        XCTAssertTrue(create.waitForExistence(timeout: 10))
++        XCTAssertTrue(create.isEnabled)
++        XCTAssertEqual(app.textFields["Full name"].value as? String, "Alex Student")
++        attach(app, "native-refreshed-link-preserves-input")
++        create.tap()
++        XCTAssertTrue(app.staticTexts["Add your phone number"].waitForExistence(timeout: 15))
++    }
++
++    func testUnavailableAndRateLimitedEmailRemainHonest() {
++        var app = launch("unconfigured")
++        enterAddress(app)
++        app.buttons["Email me my invite link"].tap()
++        XCTAssertTrue(app.buttons["Email unavailable"].waitForExistence(timeout: 10))
++        XCTAssertFalse(app.buttons["Email unavailable"].isEnabled)
++        XCTAssertFalse(app.buttons["Link sent"].exists)
++        attach(app, "native-email-unavailable")
++        app.terminate()
++        app = launch("rate-limited")
++        enterAddress(app)
++        app.buttons["Email me my invite link"].tap()
++        XCTAssertTrue(app.staticTexts["Too many requests. Wait a moment and try again."].waitForExistence(timeout: 10))
++        XCTAssertTrue(app.buttons["Email me my invite link"].isEnabled)
++        attach(app, "native-resend-rate-limited")
++    }
++
++    private func attach(_ app: XCUIApplication, _ name: String) {
++        let attachment = XCTAttachment(screenshot: app.screenshot())
++        attachment.name = name
++        attachment.lifetime = .keepAlways
++        add(attachment)
++    }
++}

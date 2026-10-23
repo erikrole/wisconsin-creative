@@ -5,15 +5,16 @@ import Foundation
 extension APIClient {
     // MARK: - Auth
 
-    func discoverAuth(email: String) async throws -> AuthDiscoveryResult {
+    func discoverAuth(email: String, invite: String? = nil) async throws -> AuthDiscoveryResult {
         struct Body: Encodable {
             let email: String
+            let invite: String?
         }
 
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         prepareAuthHost(for: normalizedEmail)
         var req = request(path: "/api/auth/discover", method: "POST")
-        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail))
+        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail, invite: invite))
         return try await perform(req, broadcastsSessionExpiry: false)
     }
 
@@ -30,11 +31,12 @@ extension APIClient {
         return resp.user
     }
 
-    func register(name: String, email: String, password: String) async throws -> CurrentUser {
+    func register(name: String, email: String, password: String, inviteToken: String? = nil) async throws -> CurrentUser {
         struct Body: Encodable {
             let name: String
             let email: String
             let password: String
+            let inviteToken: String?
         }
 
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -43,10 +45,20 @@ extension APIClient {
         req.httpBody = try JSONEncoder().encode(Body(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             email: normalizedEmail,
-            password: password
+            password: password,
+            inviteToken: inviteToken
         ))
         let response: LoginResponse = try await perform(req, broadcastsSessionExpiry: false)
         return response.user
+    }
+
+    func resendInviteLink(email: String) async throws -> InviteResendResult {
+        struct Body: Encodable { let email: String }
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        prepareAuthHost(for: normalizedEmail)
+        var req = request(path: "/api/auth/invite/resend", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(email: normalizedEmail))
+        return try await perform(req, broadcastsSessionExpiry: false)
     }
 
     func requestPasswordReset(email: String) async throws -> PasswordResetRequestResult {
