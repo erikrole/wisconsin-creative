@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-23",
+    "title": "Tighter account protections",
+    "type": "fixes",
+    "summary": "A few account details are now shared only with the people who need them, and account recovery resets every way into an account at once.",
+    "details": [
+      "Wiscard card details on a teammate's profile are visible only to that person, staff and admins.",
+      "When an admin resets someone's password, any passkeys on the account are cleared too, so the person sets everything up fresh after signing in with the temporary password.",
+      "Sign-in responds in the same time whether or not an address has an account."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 620
+  },
+  {
     "date": "2026-10-22",
     "title": "Print labels straight to USB",
     "type": "feature",
