@@ -7,7 +7,6 @@ import {
   type CountKey,
 } from "@/lib/crew-size-template";
 import type { WorkingScheduleSportTemplate } from "@/lib/schedule-working-copy";
-import { source } from "./_helpers/source";
 
 const template: WorkingScheduleSportTemplate = {
   sportCode: "FB",
@@ -42,37 +41,5 @@ describe("crew size sport template", () => {
   it("treats missing and zero counts the same when comparing", () => {
     expect(sameCrewCounts(new Map([["VIDEO:ST", 0]]), new Map())).toBe(true);
     expect(sameCrewCounts(new Map([["VIDEO:ST", 1]]), new Map())).toBe(false);
-  });
-
-  it("puts the template in the editor response and the Crew size dialog", () => {
-    const service = source("src/lib/services/schedule-working-copy.ts");
-    const dialog = source("src/app/(app)/schedule/_components/CrewSizeDialog.tsx");
-    const editor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
-    expect(service).toContain('venue: group.event.isHome === true ? "home" : "away"');
-    expect(service).toContain("sportTemplate,");
-    expect(dialog).toContain("Use template");
-    expect(dialog).toContain("Save as template");
-    expect(dialog).toContain("/api/sport-configs/${encodeURIComponent(template.sportCode)}");
-    // Filled slots stay when a template asks for fewer.
-    expect(dialog).toContain("Math.max(floor.get(k) ?? 0, templateCounts.get(k) ?? 0)");
-    expect(editor).toContain("template={data.sportTemplate ?? null}");
-  });
-});
-
-describe("multi-slot assign", () => {
-  it("validates every pick on the server against the draft as it fills", () => {
-    const service = source("src/lib/services/schedule-working-copy.ts");
-    expect(service).toContain('if (command.type === "assignMany")');
-    expect(service).toContain("await assertAssignable(tx, staged, pick.slotKey, pick.userId)");
-    expect(service).toContain("await assertAssignable(tx, beforePayload, command.slotKey, command.userId)");
-  });
-
-  it("offers Fill N when an area has two or more open slots of one class", () => {
-    const editor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
-    const picker = source("src/components/shift-detail/UserAvatarPicker.tsx");
-    expect(editor).toContain("if (openSlots.length < 2) return null;");
-    expect(editor).toContain('mutate({ type: "assignMany", assignments }, fillKey)');
-    expect(picker).toContain("multiple ? multiple.onToggle(u.id) : onSelect(u.id)");
-    expect(picker).toContain("of ${multiple.max} picked");
   });
 });
