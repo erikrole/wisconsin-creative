@@ -190,6 +190,15 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
     keywords: ["splash", "popup", "news", "whats new", "release", "banner", "message"],
   },
   {
+    href: "/settings/quick-links",
+    label: "Quick links",
+    requiredRole: "ADMIN",
+    group: "System",
+    description: "Everyday sites in the sidebar's Quick links menu, and who sees each one.",
+    keywords: ["links", "bookmarks", "shortcuts", "apm", "greenfly", "slate", "sheet", "sidebar", "websites"],
+    relatedHrefs: ["/settings/announcements"],
+  },
+  {
     href: "/settings/data-export",
     label: "Data exports",
     requiredRole: "ADMIN",

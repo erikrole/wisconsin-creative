@@ -2254,6 +2254,9 @@ tr.cursor-pointer td {
   --accent-soft: #eef2ff;
   --btn-primary-bg: #3e63dd;
   --btn-primary-bg-hover: #2f4bb0;
+  /* Badger red for the one brand-led action on a page (Home's New reservation). */
+  --brand-red: #c5050c;
+  --brand-red-hover: #a3040a;
   --border: #e8e8ec;
   --border-light: #eeeef1;
   --bg-surface: #f4f5f7;
@@ -2306,6 +2309,7 @@ tr.cursor-pointer td {
   --accent-soft: rgba(141, 164, 239, 0.14);
   --btn-primary-bg: #3e63dd;
   --btn-primary-bg-hover: #5472e4;
+  --brand-red-hover: #d7121a;
   /* Filled buttons keep the saturated blue so white labels stay readable; the
      lighter accent is for text and focus on the dark page. */
   --primary: var(--btn-primary-bg);

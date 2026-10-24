@@ -3545,3 +3545,21 @@ Indexes and constraints:
 - `@@unique([announcementId, userId])`
 - `@@index([userId])`
 - `@@map("announcement_dismissals")`
+
+## Model `QuickLink`
+
+Fields: 8
+
+- `id        String   @id @default(cuid())`
+- `label     String`
+- `url       String`
+- `detail    String?`
+- `roles     Role[]   @default([])`
+- `sortOrder Int      @default(0) @map("sort_order")`
+- `createdAt DateTime @default(now()) @map("created_at")`
+- `updatedAt DateTime @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([sortOrder])`
+- `@@map("quick_links")`

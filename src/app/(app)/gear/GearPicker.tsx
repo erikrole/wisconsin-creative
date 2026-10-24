@@ -56,7 +56,8 @@ import {
   type DraftLine,
 } from "./gear-pick-state";
 import { GearItemCard, gearItemAnchorId } from "./GearItemCard";
-import { GEAR_MY_KIT_QUERY_KEY, MyKit, MyKitPage } from "./MyKit";
+import { GEAR_MY_KIT_QUERY_KEY, MyKitPage, useMyGearKit } from "./MyKit";
+import { YourGear } from "./YourGear";
 import { GearPicksSheet, type GearPicksSheetMode } from "./GearPicksSheet";
 import { GearPreviewDialog, type GearPreview } from "./GearPreviewDialog";
 import { gearIntroSeen, GearPicksIntro } from "./GearPicksIntro";
@@ -406,6 +407,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
 
   const kit = GEAR_CATALOG.kits[fit];
   const allowanceLabel = formatUsd(allowanceCents);
+  const hasKitPieces = (useMyGearKit().data?.pieces.some((piece) => piece.source !== "PICK")) ?? false;
   const busy = saving !== null || reloading;
   const conflict = dirty && baseVersion !== serverVersion;
   const recoveryMessage = saveIssue ?? (conflict
@@ -444,7 +446,13 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
 
       {recovery}
 
-      <MyKit />
+      <YourGear
+        lines={lines}
+        readOnly={readOnly}
+        onPreview={setPreview}
+        onEditPicks={() => openSheet("list")}
+        onBrowse={() => document.getElementById("gear-catalog")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      />
 
       {readOnly && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm" role="status">
@@ -456,6 +464,7 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
         </div>
       )}
 
+      {!hasKitPieces && (
       <Collapsible className="mb-8 rounded-lg border border-border bg-card">
         <CollapsibleTrigger className="group flex min-h-20 w-full items-center gap-4 rounded-lg px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
           <span className="hidden shrink-0 -space-x-2 sm:flex" aria-hidden="true">
@@ -492,8 +501,9 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
           </ul>
         </CollapsibleContent>
       </Collapsible>
+      )}
 
-      <section aria-label="Catalog">
+      <section id="gear-catalog" aria-label="Catalog" className="scroll-mt-20">
         <div className="mb-4 flex items-baseline justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">Choose your gear</h2>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground" role="status">{visible.length} styles</span>

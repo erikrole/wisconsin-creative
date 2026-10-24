@@ -250,9 +250,9 @@ function HomeHeader({ name, now, canReserve, dayLine, sync, updatedLabel, refres
         )}
         {onRefresh && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="size-10"
+            className="size-10 text-muted-foreground hover:text-foreground"
             onClick={onRefresh}
             disabled={refreshing}
             aria-label="Refresh home"
@@ -261,8 +261,8 @@ function HomeHeader({ name, now, canReserve, dayLine, sync, updatedLabel, refres
           </Button>
         )}
         {canReserve && (
-          // The wc-fresh dark accent is a light tint; the button keeps the solid fill.
-          <Button asChild className="h-10 bg-[var(--btn-primary-bg)] text-white hover:bg-[var(--btn-primary-bg-hover)]">
+          // Home's one brand-led action wears Badger red, not the wc-fresh blue.
+          <Button asChild className="h-10 bg-[var(--brand-red)] text-white hover:bg-[var(--brand-red-hover)]">
             <Link href="/reservations/new"><PlusIcon data-icon="inline-start" />New reservation</Link>
           </Button>
         )}
@@ -299,7 +299,7 @@ function SectionHeader({ id, title, count, href, linkLabel = "View all" }: {
       {href && (
         <Link
           href={href}
-          className="-mr-2 flex min-h-10 items-center gap-0.5 rounded-md px-2 text-[13px] font-bold text-[var(--blue-text)] no-underline hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="-mr-2 flex min-h-10 items-center gap-0.5 rounded-md px-2 text-[13px] font-bold text-muted-foreground no-underline transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {linkLabel}
           <ChevronRightIcon className="size-3.5" aria-hidden="true" />
@@ -589,9 +589,10 @@ function FeaturedNext({ row, now, onTarget }: { row: UpNextItem; now: Date; onTa
   const target = row.target;
   const action = row.kind === "pickup" ? "View pickup" : row.kind === "shift" ? "Open event" : "Open";
   return (
-    <div className="mx-3 mt-1 mb-2 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-[var(--accent-soft)] px-4 py-3.5" data-featured-next>
+    <div className="mx-3 mt-1 mb-2 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-foreground/[0.045] px-4 py-3.5" data-featured-next>
       <div className="flex min-w-[min(100%,220px)] flex-1 basis-[220px] flex-col gap-0.5">
-        <p className="text-xs font-bold text-[var(--blue-text)]">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+          <span aria-hidden="true" className={cn("size-1.5 rounded-full", row.kind === "pickup" ? "bg-[var(--purple)]" : "bg-[var(--accent)]")} />
           {row.kind === "pickup" ? "Next pickup" : "Next up"} · {soon === "now" ? "happening now" : soon}
         </p>
         <p className="truncate text-base font-black text-foreground">{row.title}</p>
