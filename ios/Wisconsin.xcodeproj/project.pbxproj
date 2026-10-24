@@ -89,6 +89,7 @@
 		378EAC94D977370BCA1221DF /* Wisconsin-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FB3A4E91E54011106FA7A62 /* Wisconsin-Regular.ttf */; };
 		37F0EBD3CF55156C593EB7E5 /* GearWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = E376E0961E9404F4D93C4B4E /* GearWidgetPublisher.swift */; };
 		383ABBBBEAE924DCBCCAF277 /* SignatureStrokeRecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA6BB23E442CE2634F3482E3 /* SignatureStrokeRecorderTests.swift */; };
+		389CA991B4B8AC19201E870F /* KioskRetryPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A14E6E2AAC1445E9DAE3A9 /* KioskRetryPolicyTests.swift */; };
 		390F43409B451AAB78D2D0C9 /* WisconsinApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BDE438C8F05EAA14B299BB /* WisconsinApp.swift */; };
 		3A34548DD720E71C6B54BB31 /* ItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12684601FE641B454D0219B /* ItemsView.swift */; };
 		3C1AF895D25D70A9E5081E9B /* MissingUnitsReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC77DC85721D10BD0331AD0 /* MissingUnitsReportView.swift */; };
@@ -377,6 +378,7 @@
 		0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskShellView.swift; sourceTree = "<group>"; };
 		0E6123A836C8A0D47EA24AA1 /* EventCatalogModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCatalogModels.swift; sourceTree = "<group>"; };
 		1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTimeChipPicker.swift; sourceTree = "<group>"; };
+		13A14E6E2AAC1445E9DAE3A9 /* KioskRetryPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskRetryPolicyTests.swift; sourceTree = "<group>"; };
 		14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailsStep.swift; sourceTree = "<group>"; };
 		14DA88A1DF6F8D23066A07BC /* GuidesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidesView.swift; sourceTree = "<group>"; };
 		1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlastArchive.swift; sourceTree = "<group>"; };
@@ -987,6 +989,7 @@
 			children = (
 				7CB467BB9EEA5C6B7553E3B2 /* KioskCompletionPreparationTests.swift */,
 				8F93CDFD1D75D7CAC2D88211 /* KioskFlowRoutingTests.swift */,
+				13A14E6E2AAC1445E9DAE3A9 /* KioskRetryPolicyTests.swift */,
 			);
 			path = WisconsinKioskTests;
 			sourceTree = "<group>";
@@ -1445,6 +1448,7 @@
 			files = (
 				D95A4FC980027927CC581CBB /* KioskCompletionPreparationTests.swift in Sources */,
 				6D30C6F8EA800382F2619212 /* KioskFlowRoutingTests.swift in Sources */,
+				389CA991B4B8AC19201E870F /* KioskRetryPolicyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
