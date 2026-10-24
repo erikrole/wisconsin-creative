@@ -8,8 +8,8 @@
 | `@fontsource/barlow` | `^5.3.0` |
 | `@mdxeditor/editor` | `^4.3.3` |
 | `@neondatabase/serverless` | `1.2.0` |
-| `@prisma/adapter-neon` | `^6.19.3` |
-| `@prisma/client` | `^6.19.3` |
+| `@prisma/adapter-neon` | `^7.10.1` |
+| `@prisma/client` | `^7.10.1` |
 | `@sentry/nextjs` | `^10.76.2` |
 | `@simplewebauthn/browser` | `^13.3.0` |
 | `@simplewebauthn/server` | `^13.3.3` |
@@ -33,7 +33,7 @@
 | `geist` | `^1.7.2` |
 | `lucide-react` | `^0.577.0` |
 | `motion` | `^12.43.0` |
-| `next` | `^15.5.28` |
+| `next` | `^16.4.2` |
 | `postcss` | `^8.5.30` |
 | `qrcode` | `^1.5.4` |
 | `radix-ui` | `^1.8.1` |
@@ -61,7 +61,8 @@
 | `@eslint/eslintrc` | `^3.3.5` |
 | `@next/bundle-analyzer` | `^16.3.7` |
 | `@playwright/test` | `^1.63.0` |
-| `@types/node` | `^22.20.4` |
+| `@prisma/adapter-pg` | `^7.10.1` |
+| `@types/node` | `^24.19.2` |
 | `@types/qrcode` | `^1.5.6` |
 | `@types/react` | `^19.3.0` |
 | `@types/react-dom` | `^19.3.0` |
@@ -70,10 +71,10 @@
 | `dotenv` | `^16.6.1` |
 | `esbuild` | `0.28.1` |
 | `eslint` | `^9.39.4` |
-| `eslint-config-next` | `^15.5.28` |
+| `eslint-config-next` | `^16.4.2` |
 | `plist` | `^5.0.0` |
-| `prisma` | `^6.19.3` |
-| `typescript` | `5.9.3` |
+| `prisma` | `^7.10.1` |
+| `typescript` | `6.0.2` |
 | `vitest` | `^5.0.5` |
 
 ## Scripts
@@ -114,6 +115,7 @@
 - `ios:xcode:verify`: `bash scripts/ios-xcode-verify.sh`
 - `ios:xcode:verify:kiosk`: `IOS_SCHEME=WisconsinKiosk bash scripts/ios-xcode-verify.sh`
 - `lint`: `eslint .`
+- `lint:ci`: `eslint . --max-warnings=248`
 - `lint:summary`: `node scripts/lint-summary.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
@@ -137,8 +139,9 @@
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`
+- `test:postgres`: `node scripts/test-onboarding-postgres.mjs`
 - `test:watch`: `vitest`
-- `verify:docs`: `npm run codemap:check`
+- `verify:docs`: `node scripts/check-repo-hygiene.mjs && npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`
 
 ## Environment Variables From `.env.example`

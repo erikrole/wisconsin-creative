@@ -1146,6 +1146,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - 2026-08-20: Amended D-052 so `/licenses` is one Software destination with explicit Shared logins and Photo Mechanic licenses tabs. The default Shared logins view does not render or suggest Photo Mechanic pool controls; local transaction, response-minimization, POST reveal, and responsive-pool hardening remain rollout-proof gates.
 - 2026-08-19: Added D-052 for the shared Software Vault: dedicated AES-256-GCM ciphertext, a required `SOFTWARE_VAULT_KEY`, audience-gated internal/collaborator access, explicit audited/rate-limited password reveal, and no secret values in list responses or audit records. Migrations `0125`/`0126` and the admin runtime surface are live; student/collaborator and secret-lifecycle acceptance remain.
 - 2026-08-17: Added D-051 for rate-limited email-first discovery across web and native iOS. The existing allowlist and registration transaction remain authoritative; discovery returns only onboarding/password flow state, and old registration links now redirect to the app login surface.
+- 2026-10-24: Amended D-049. `npm run release` now dispatches the `GitHub Release` workflow, which tags `main` and writes notes from `src/lib/releases.json`. It no longer commits a version bump to `main` (which cost a Vercel deploy), so `package.json` `version` is not the release identity.
 - 2026-08-15: Added D-049 for monthly `YYYY.M.N` web release versioning,
   GitHub Release creation from pushed tags, and continued Vercel `main`
   production deployment.
