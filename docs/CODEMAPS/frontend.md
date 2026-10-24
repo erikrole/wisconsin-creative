@@ -177,14 +177,14 @@
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1045 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1041 |
 | `src/components/TradeBoard.tsx` | 940 |
-| `src/components/BookingListPage.tsx` | 918 |
+| `src/components/BookingListPage.tsx` | 919 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/Sidebar.tsx` | 798 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 710 |
-| `src/components/schedule/SportSetupWizard.tsx` | 680 |
+| `src/components/schedule/SportSetupWizard.tsx` | 681 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
