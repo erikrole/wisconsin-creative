@@ -23,20 +23,6 @@ export const EXCEPTIONS = [
     reason:
       "Compressed-body DoS in body-parser 2.0.0-2.3.0. The fix (2.4.0, 2026-10-22) is younger than the .npmrc min-release-age cooldown. Reached only through workflow > @workflow/cli > @workflow/web > express, the local workflow inspector, never the app's request path. Override body-parser to 2.4.0 once it clears the cooldown, then drop this exception.",
   },
-  {
-    id: "GHSA-5gmw-xhrv-c9v3",
-    package: "tinypool",
-    expires: "2026-11-06",
-    reason:
-      "Prototype-pollution gadget in tinypool worker options. Reached only through the dev-only test runner (vitest 3 > tinypool 1.x), which never receives untrusted options; the fix needs the vitest 5 major. Upgrade vitest, then drop this exception.",
-  },
-  {
-    id: "GHSA-85c8-ppgw-ccpr",
-    package: "tinypool",
-    expires: "2026-11-06",
-    reason:
-      "Prototype-pollution gadget in tinypool worker options. Reached only through the dev-only test runner (vitest 3 > tinypool 1.x), which never receives untrusted options; the fix needs the vitest 5 major. Upgrade vitest, then drop this exception.",
-  },
 ];
 
 const BLOCKING = new Set(["high", "critical"]);
