@@ -20,7 +20,7 @@ export function generateBaselineSql(connectionString = "postgresql://fixture:fix
     : process.env;
   const result = spawnSync(
     "npx",
-    ["prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", "prisma/schema.prisma", "--script"],
+    ["prisma", "migrate", "diff", "--from-empty", "--to-schema", "prisma/schema.prisma", "--script"],
     {
       cwd: process.cwd(),
       env: environment,

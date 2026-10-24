@@ -22,9 +22,6 @@ const baseConfig: NextConfig = {
   // has repeatedly exhausted its memory during the duplicate checks after
   // compiling this large App Router surface; keep the deployment build focused
   // on producing the already-verified application bundle.
-  eslint: {
-    ignoreDuringBuilds: isVercelDeployment,
-  },
   typescript: {
     ignoreBuildErrors: isVercelDeployment,
   },
@@ -42,7 +39,6 @@ const baseConfig: NextConfig = {
       "cmdk",
       "react-day-picker",
     ],
-    devtoolSegmentExplorer: false,
     // Sentry and Workflow both customize webpack, so Next does not enable its
     // separate build worker automatically. Isolate compilation and release
     // intermediate webpack data earlier to stay within Vercel's memory budget.

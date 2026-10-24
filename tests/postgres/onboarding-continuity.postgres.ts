@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { realpathSync } from "node:fs";
 import path from "node:path";
 
@@ -8,8 +9,7 @@ const connection = new URL(process.env.WC_ONBOARDING_POSTGRES_URL ?? "invalid:")
 if (!root.startsWith(`${realpathSync("/tmp")}/wc-onboarding-pg-`) || connection.hostname !== "localhost"
   || connection.username !== "wc_onboarding_test" || connection.pathname !== "/wc_onboarding_test"
   || connection.searchParams.get("host") !== path.join(root, "socket")) throw new Error("Refusing an unowned database.");
-connection.searchParams.set("connection_limit", "8");
-const client = new PrismaClient({ datasourceUrl: connection.href });
+const client = new PrismaClient({ adapter: new PrismaPg({ connectionString: connection.href, max: 8 }) });
 let gate: { remaining: number; ready: () => void; released: Promise<void> } | null = null;
 const db = client.$extends({ query: { user: { async findUnique({ args, query }) {
   const result = await query(args);
