@@ -7,10 +7,12 @@
     "details": [
       "The setup finish screen now says to sign in to the iPhone app with the same email and password.",
       "An empty Checkouts list explains that gear is checked out at the kiosk or in the iPhone app, and shows up here with its return time.",
-      "A new student's Home says nothing is scheduled yet and shifts appear once the team schedules them, instead of sending them to hunt for trades."
+      "A new student's Home says nothing is scheduled yet and shifts appear once the team schedules them, instead of sending them to hunt for trades.",
+      "In the next iPhone app update, a new student's Home welcomes them instead of saying they are caught up, the setup fields stay clear of the Continue bar when the keyboard opens, and long empty stretches on the Schedule show their end year."
     ],
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ],
     "pr": 670
   },
