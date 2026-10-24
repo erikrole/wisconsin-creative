@@ -8,6 +8,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -58,7 +59,8 @@ const BookingDetailsSheet = lazy(() => import("@/components/BookingDetailsSheet"
 
 export default function HomePage() {
   const { data: user, isLoading } = useCurrentUser();
-  if (isLoading) return <HomeSkeleton />;
+  const hydrated = useHydrated();
+  if (isLoading || !hydrated) return <HomeSkeleton />;
   if (user?.role === "COLLABORATOR") {
     return (
       <CollaboratorHome
