@@ -4,7 +4,7 @@ Last updated: 2026-10-22
 
 ## Start Here
 
-- Use `DESLOPPIFY.md` for standing cleanup policy (backlog closed 2026-06-22).
+- Use `docs/DESLOPPIFY.md` for standing cleanup policy (backlog closed 2026-06-22).
 - Use `tasks/repo-hygiene-cleanup-plan-2026-10-07.md` for the current hygiene slice and remaining database follow-ups.
 - Use `tasks/item-data-hygiene-status-2026-10-07.md` for item catalog data quality: what is done, physical queues, and Operations hygiene parity.
 - Use `tasks/item-cleanup-wizard-plan-2026-10-07.md` for the guided Cleanup wizard (legacy QR + missing serial).
