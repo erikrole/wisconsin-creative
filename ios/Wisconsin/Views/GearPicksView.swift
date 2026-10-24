@@ -31,7 +31,7 @@ final class GearPicksModel {
     var searchText = ""
 
     private var loadID = UUID()
-    private var hasLoaded = false
+    fileprivate var hasLoaded = false
 
     var canEdit: Bool {
         phase == .ready && cycle?.isOpen == true && !isSaving && !isReloading && conflictMessage == nil && !serverClosed
@@ -1138,3 +1138,77 @@ private func gearPickSwatch(_ hex: String) -> Color {
     let blue = Double(int & 0xFF) / 255
     return Color(red: red, green: green, blue: blue)
 }
+
+#if DEBUG
+/// Deterministic UA Gear states for light/dark/Dynamic Type captures.
+/// `GT_GEAR_FIXTURE` = picks | empty | closed; `GT_GEAR_ROUTE=catalog` pushes the catalog.
+struct GearPicksReviewFixture: View {
+    @State private var path: [GearCatalogRoute] = []
+    private let model: GearPicksModel
+    private let route: String?
+
+    init(scenario: String, route: String?) {
+        model = GearPicksModel.fixture(scenario)
+        self.route = route
+    }
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            GearPicksView(wrapsInNavigationStack: false, model: model)
+        }
+        .onAppear { if route == "catalog" { path = [GearCatalogRoute()] } }
+    }
+}
+
+extension GearPicksView {
+    init(wrapsInNavigationStack: Bool, model: GearPicksModel) {
+        self.wrapsInNavigationStack = wrapsInNavigationStack
+        _model = State(initialValue: model)
+    }
+}
+
+extension GearPicksModel {
+    static func fixture(_ scenario: String) -> GearPicksModel {
+        func color(_ code: String, _ label: String, _ swatch: String) -> GearPickPhoneColor {
+            .init(code: code, label: label, swatch: swatch, image: "")
+        }
+        func item(_ style: String, _ name: String, _ category: String, _ cents: Int, one: Bool = false) -> GearPickPhoneItem {
+            .init(style: style, name: name, fit: "MENS", category: category, priceCents: cents,
+                  sizeLabel: "Men's", sizes: one ? ["OSFA"] : ["S", "M", "L", "XL", "2XL"], sizesAreExact: false,
+                  oneSize: one, defaultSize: nil, kit: nil,
+                  colors: [color("600", "Cardinal", "#9b0000"), color("001", "Black", "#111111")])
+        }
+        let items = [
+            item("1370399", "Tech 2.0 Short Sleeve", "Tops", 2800),
+            item("1370400", "Storm Hoodie", "Tops", 6500),
+            item("1370401", "Wisconsin Quarter Zip Pullover", "Outerwear", 8500),
+            item("1370402", "Rival Fleece Jogger", "Bottoms", 5500),
+            item("1370403", "Team Beanie", "Accessories", 2500, one: true),
+            item("1370404", "Performance Cap", "Accessories", 2800, one: true),
+        ]
+        let catalog = GearPickPhoneCatalog(maxQuantity: 5, categories: ["Tops", "Outerwear", "Bottoms", "Accessories"], items: items)
+        let m = GearPicksModel()
+        m.catalog = catalog
+        m.participant = .init(id: "p1", fit: "MENS", allowanceCents: 30000)
+        let closed = scenario == "closed"
+        m.cycle = .init(id: "c1", title: "2026 UA gear", deadline: "2026-11-15T05:59:00Z", isOpen: !closed, launchedAt: "2026-10-01T15:00:00Z")
+        m.kit = .init(group: "Core kit", order: .init(placedAt: nil, expectedAt: nil), pieces: [
+            .init(sku: "K1", itemName: "Game Day Polo", colorLabel: "Cardinal", source: "CORE_KIT", size: "L"),
+            .init(sku: "K2", itemName: "Quarter Zip", colorLabel: "Black", source: "CORE_KIT", size: "L"),
+            .init(sku: "K3", itemName: "Windbreaker", colorLabel: "Black", source: "STANDARD_ISSUE", size: GearMyKitPiece.sizeNeeded),
+        ])
+        if scenario != "empty" {
+            func line(_ i: GearPickPhoneItem, _ c: Int, _ size: String?, _ q: Int) -> GearPickDraftLine {
+                .init(id: UUID(), sku: "\(i.style)-\(i.colors[c].code)", style: i.style, colorCode: i.colors[c].code,
+                      size: size, quantity: q, itemName: i.name, colorLabel: i.colors[c].label,
+                      unitPriceCents: i.priceCents, category: i.category)
+            }
+            m.lines = [line(items[0], 0, "L", 2), line(items[2], 1, "L", 1), line(items[4], 0, "OSFA", 1), line(items[1], 0, nil, 1)]
+            m.submittedAt = closed ? "2026-10-12T15:00:00Z" : nil
+        }
+        m.phase = .ready
+        m.hasLoaded = true
+        return m
+    }
+}
+#endif
