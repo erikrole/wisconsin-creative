@@ -5,7 +5,6 @@ import {
   getUrgency,
   formatCountdown,
   formatDateShort,
-  formatDuration,
   formatDateWithDayTime,
   isStartingToday,
   formatStartsIn,
@@ -19,20 +18,11 @@ import EmptyState from "@/components/EmptyState";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
 import { Label } from "@/components/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Check, Clock3, ShieldCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { handleAuthRedirect } from "@/lib/errors";
-import { bookingStatusDisplay, bookingStatusDotClassName } from "@/lib/booking-status-display";
+import { bookingStatusDisplay } from "@/lib/booking-status-display";
 import { UserAvatar } from "@/components/UserAvatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 /* ── Shared: Urgency Badge ────────────────────────────── */
 
@@ -385,129 +375,6 @@ function bookingOccupiesSchedule(status: string) {
   return status !== "CANCELLED";
 }
 
-/* ── Booking Kind Tab ───────────────────────────────────── */
-
-export function BookingKindTab({
-  kind, history, asset, now, onSelectBooking,
-}: {
-  kind: "CHECKOUT" | "RESERVATION";
-  history: AssetDetail["history"];
-  asset: AssetDetail;
-  now: Date;
-  onSelectBooking: (id: string) => void;
-}) {
-  const label = kind === "CHECKOUT" ? "checkouts" : "reservations";
-
-  // Deduplicate and filter bookings of this kind, sorted newest first
-  const allEntries = useMemo(() => {
-    const seen = new Set<string>();
-    const entries: AssetDetail["history"] = [];
-    for (const e of history) {
-      if (e.booking.kind === kind && !seen.has(e.booking.id)) {
-        seen.add(e.booking.id);
-        entries.push(e);
-      }
-    }
-    entries.sort((a, b) => new Date(b.booking.startsAt).getTime() - new Date(a.booking.startsAt).getTime());
-    return entries;
-  }, [history, kind]);
-
-  const activeBooking = asset.activeBooking;
-  const showActiveCard = activeBooking && activeBooking.kind === kind;
-  const showUpcoming = kind === "RESERVATION" && asset.upcomingReservations.length > 0;
-
-  return (
-    <div className="flex flex-col gap-4 mt-3.5">
-      {/* Active booking card at top of matching tab */}
-      {showActiveCard && activeBooking && (
-        <ActiveBookingCard booking={activeBooking} kind={kind} now={now} onSelectBooking={onSelectBooking} />
-      )}
-
-      {/* Upcoming reservations at top of Reservations tab */}
-      {showUpcoming && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Reservations</CardTitle>
-            <Badge variant="gray" size="sm">{asset.upcomingReservations.length}</Badge>
-          </CardHeader>
-          <CardContent className="p-0 py-1">
-            <UpcomingReservationsList reservations={asset.upcomingReservations} now={now} onSelectBooking={onSelectBooking} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All bookings — flat table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{kind === "CHECKOUT" ? "Checkouts" : "Reservations"}</CardTitle>
-          {allEntries.length > 0 && (
-            <Badge variant="gray" size="sm">{allEntries.length}</Badge>
-          )}
-        </CardHeader>
-        {allEntries.length === 0 ? (
-          <EmptyState
-            inline
-            icon="calendar"
-            title={`No ${label} for this item`}
-            description="Matching booking history will appear here after this item is used."
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Location</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allEntries.map((entry) => {
-                const b = entry.booking;
-                const from = formatDateWithDayTime(b.startsAt);
-                const to = formatDateWithDayTime(b.endsAt);
-                const dur = formatDuration(b.startsAt, b.endsAt);
-                const st = bookingStatusDisplay(b.status, b.kind);
-                return (
-                  <TableRow
-                    key={entry.id}
-                    className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]"
-                    tabIndex={0}
-                    aria-label={`Open booking ${b.title}`}
-                    onClick={() => onSelectBooking(b.id)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectBooking(b.id); } }}
-                  >
-                    <TableCell>
-                      <div className="brand-identity font-medium text-primary">{b.title}</div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className={`inline-block size-2 rounded-full ${bookingStatusDotClassName(st.variant)}`} />
-                        <span className="text-xs text-muted-foreground">{st.label}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{from.date}</div>
-                      <div className="text-xs text-muted-foreground">{from.dayTime}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{to.date}</div>
-                      <div className="text-xs text-muted-foreground">{to.dayTime}</div>
-                    </TableCell>
-                    <TableCell className="text-sm">{dur}</TableCell>
-                    <TableCell className="text-sm">{b.requester.name}</TableCell>
-                    <TableCell className="text-sm">{b.location.name}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
-    </div>
-  );
-}
-
 /* ── Calendar Tab ───────────────────────────────────────── */
 
 export function CalendarTab({ asset, onSelectBooking }: { asset: AssetDetail; onSelectBooking: (id: string) => void }) {
@@ -774,143 +641,6 @@ export function CalendarTab({ asset, onSelectBooking }: { asset: AssetDetail; on
           <Badge variant="purple" size="sm">Reservation</Badge>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ── Merged Bookings Tab ──────────────────────────────────── */
-
-type BookingFilter = "all" | "checkouts" | "reservations";
-
-export function BookingsTab({
-  history, asset, now, onSelectBooking,
-}: {
-  history: AssetDetail["history"];
-  asset: AssetDetail;
-  now: Date;
-  onSelectBooking: (id: string) => void;
-}) {
-  const [filter, setFilter] = useState<BookingFilter>("all");
-
-  const allEntries = useMemo(() => {
-    const seen = new Set<string>();
-    const entries: AssetDetail["history"] = [];
-    for (const e of history) {
-      if (!seen.has(e.booking.id)) {
-        seen.add(e.booking.id);
-        if (filter === "all" || (filter === "checkouts" && e.booking.kind === "CHECKOUT") || (filter === "reservations" && e.booking.kind === "RESERVATION")) {
-          entries.push(e);
-        }
-      }
-    }
-    entries.sort((a, b) => new Date(b.booking.startsAt).getTime() - new Date(a.booking.startsAt).getTime());
-    return entries;
-  }, [history, filter]);
-
-  const activeBooking = asset.activeBooking;
-  const showUpcoming = asset.upcomingReservations.length > 0;
-
-  return (
-    <div className="flex flex-col gap-4 mt-3.5">
-      {/* Active booking card */}
-      {activeBooking && (
-        <ActiveBookingCard booking={activeBooking} kind={activeBooking.kind} now={now} onSelectBooking={onSelectBooking} />
-      )}
-
-      {/* Upcoming reservations */}
-      {showUpcoming && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Reservations</CardTitle>
-            <Badge variant="gray" size="sm">{asset.upcomingReservations.length}</Badge>
-          </CardHeader>
-          <CardContent className="p-0 py-1">
-            <UpcomingReservationsList reservations={asset.upcomingReservations} now={now} onSelectBooking={onSelectBooking} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All bookings with filter toggle */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking History</CardTitle>
-          <ToggleGroup
-            type="single"
-            value={filter}
-            onValueChange={(value) => value && setFilter(value as BookingFilter)}
-            className="rounded-md border bg-background p-0.5"
-          >
-            <ToggleGroupItem value="all" className="h-8 px-3 text-xs">All</ToggleGroupItem>
-            <ToggleGroupItem value="checkouts" className="h-8 px-3 text-xs">Checkouts</ToggleGroupItem>
-            <ToggleGroupItem value="reservations" className="h-8 px-3 text-xs">Reservations</ToggleGroupItem>
-          </ToggleGroup>
-        </CardHeader>
-        {allEntries.length === 0 ? (
-          <EmptyState
-            inline
-            icon="calendar"
-            title={`${filter === "checkouts" ? "No checkouts" : filter === "reservations" ? "No reservations" : "No bookings"} for this item`}
-            description="Matching booking history will appear here after this item is used."
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Location</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allEntries.map((entry) => {
-                const b = entry.booking;
-                const from = formatDateWithDayTime(b.startsAt);
-                const to = formatDateWithDayTime(b.endsAt);
-                const dur = formatDuration(b.startsAt, b.endsAt);
-                const st = bookingStatusDisplay(b.status, b.kind);
-                return (
-                  <TableRow
-                    key={entry.id}
-                    className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]"
-                    tabIndex={0}
-                    aria-label={`Open booking ${b.title}`}
-                    onClick={() => onSelectBooking(b.id)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectBooking(b.id); } }}
-                  >
-                    <TableCell>
-                      <div className="brand-identity font-medium text-primary">{b.title}</div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className={`inline-block size-2 rounded-full ${bookingStatusDotClassName(st.variant)}`} />
-                        <span className="text-xs text-muted-foreground">{st.label}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={b.kind === "CHECKOUT" ? "blue" : "purple"} size="sm">
-                        {b.kind === "CHECKOUT" ? "CO" : "Res"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{from.date}</div>
-                      <div className="text-xs text-muted-foreground">{from.dayTime}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{to.date}</div>
-                      <div className="text-xs text-muted-foreground">{to.dayTime}</div>
-                    </TableCell>
-                    <TableCell className="text-sm">{dur}</TableCell>
-                    <TableCell className="text-sm">{b.requester.name}</TableCell>
-                    <TableCell className="text-sm">{b.location.name}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
     </div>
   );
 }
