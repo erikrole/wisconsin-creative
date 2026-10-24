@@ -188,8 +188,8 @@
 | `src/lib/breadcrumbs.ts` | 229 |
 | `src/lib/brother-chain.ts` | 71 |
 | `src/lib/brother-label-csv.ts` | 185 |
-| `src/lib/brother-label-render.ts` | 133 |
-| `src/lib/brother-usb.ts` | 180 |
+| `src/lib/brother-label-render.ts` | 134 |
+| `src/lib/brother-usb.ts` | 184 |
 | `src/lib/bulk-batteries.ts` | 80 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 221 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
