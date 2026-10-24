@@ -587,7 +587,10 @@ private struct ContactActionLabel: View {
                 .font(.title3)
             Text(title)
                 .font(.footnote.weight(.medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .foregroundStyle(.primary)
         .frame(maxWidth: .infinity, minHeight: 56)
         .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous))
