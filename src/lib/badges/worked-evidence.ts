@@ -1,3 +1,4 @@
+import { footballScoreForEvent } from "@/lib/football-results";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -44,6 +45,11 @@ const ASSIGNMENT_SELECT = {
               isHome: true,
               sportCode: true,
               result: true,
+              startsAt: true,
+              allDay: true,
+              rawStartsAt: true,
+              rawAllDay: true,
+              resultObservations: true,
               site: true,
               locationId: true,
               opponent: true,
@@ -66,6 +72,9 @@ const WORKER_SELECT = {
       isHome: true,
       sportCode: true,
       result: true,
+      rawStartsAt: true,
+      rawAllDay: true,
+      resultObservations: true,
       site: true,
       locationId: true,
       opponent: true,
@@ -106,6 +115,20 @@ function allDayAnchor(instant: Date, timeZone: string): Date {
 }
 
 /**
+ * Replaces a football event's raw provider rows with the verified score the
+ * badge rules read, so the stored snapshots never travel through evidence.
+ */
+function withFinalScore<
+  E extends { sportCode: string | null; opponent: string | null; site: string | null; result: string | null;
+    startsAt: Date; allDay: boolean; rawStartsAt: Date | null; rawAllDay: boolean | null;
+    resultObservations: Array<{ provider: "UW" | "ESPN"; externalId: string; snapshot: unknown;
+      observedAt: Date; lastAttemptAt: Date; lastError: string | null }> },
+>(event: E) {
+  const { resultObservations, ...rest } = event;
+  return { ...rest, finalScore: footballScoreForEvent(event, resultObservations) };
+}
+
+/**
  * An added worker rendered as shift evidence.
  *
  * The work window comes from the event itself, because that is what the person
@@ -134,7 +157,7 @@ function addedWorkerEvidence(worker: WorkerRow, timeZone: string): WorkedShiftEv
       // An added worker row does not say which area the person covered, and
       // guessing one would inflate the area-breadth rules.
       area: "",
-      shiftGroup: { event },
+      shiftGroup: { event: withFinalScore(event) },
     },
   };
 }
@@ -172,7 +195,14 @@ export async function loadWorkedShiftEvidence(
   );
 
   return [
-    ...assignments.map((assignment): WorkedShiftEvidence => ({ ...assignment, source: "ASSIGNMENT" })),
+    ...assignments.map((assignment): WorkedShiftEvidence => ({
+      ...assignment,
+      shift: {
+        ...assignment.shift,
+        shiftGroup: { event: withFinalScore(assignment.shift.shiftGroup.event) },
+      },
+      source: "ASSIGNMENT",
+    })),
     ...workers
       .filter((worker) => !assignedEventIds.has(worker.event.id))
       .map((worker) => addedWorkerEvidence(worker, timeZone)),

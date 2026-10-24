@@ -1,3 +1,4 @@
+import type { FootballScore } from "@/lib/football-results";
 import { ON_TIME_GRACE_MS } from "./types";
 import { unique } from "@/lib/utils";
 
@@ -80,6 +81,12 @@ export const automaticShiftRuleKeys = [
   "shift_scored_sports",
   "shift_winning_record",
   "shift_win_streak",
+  "shift_football_one_score",
+  "shift_football_ranked_win",
+  "shift_football_ranked_games",
+  "shift_football_overtime",
+  "shift_football_prime",
+  "shift_football_shutout",
   "shift_bounce_back",
   "shift_battle_tested",
   "shift_sites",
@@ -177,6 +184,11 @@ export type ShiftBadgeEvidence = {
         isHome: boolean | null;
         sportCode: string | null;
         result?: string | null;
+        /** Kickoff, read only by the football prime-time rule. */
+        startsAt?: Date | null;
+        allDay?: boolean;
+        /** Verified UW and ESPN final with poll rank, overtimes and TV; null until both sources agree. */
+        finalScore?: FootballScore | null;
         site?: string | null;
         locationId?: string | null;
         opponent?: string | null;
@@ -405,6 +417,45 @@ export function tradeAutomaticRuleCounts(trades: TradeBadgeEvidence[], userId: s
   return counts;
 }
 
+
+/** Prime time is a 6 p.m. or later local kickoff that ESPN lists a TV network for. */
+const PRIME_TIME_HOUR = 18;
+
+/**
+ * Football rules built from the verified UW and ESPN final. A game whose score
+ * the two sources do not agree on counts for nothing, and each game counts once
+ * even when the person worked several shifts on it.
+ */
+function footballGameCounts(assignments: ShiftBadgeEvidence[], timeZone: string) {
+  const games = new Map<string, NonNullable<ShiftBadgeEvidence["shift"]["shiftGroup"]["event"]["finalScore"]>>();
+  const kickoffs = new Map<string, { startsAt: Date | null | undefined; allDay: boolean | undefined }>();
+  assignments.forEach((assignment, index) => {
+    const event = assignment.shift.shiftGroup.event;
+    if (event.sportCode?.trim().toLowerCase() !== "fb" || event.finalScore?.status !== "verified") return;
+    const key = event.id ?? `row-${index}`;
+    games.set(key, event.finalScore);
+    kickoffs.set(key, { startsAt: event.startsAt, allDay: event.allDay });
+  });
+  const totals = {
+    shift_football_one_score: 0, shift_football_ranked_win: 0, shift_football_ranked_games: 0,
+    shift_football_overtime: 0, shift_football_prime: 0, shift_football_shutout: 0,
+  };
+  for (const [key, game] of games) {
+    const details = game.details;
+    if (game.margin !== null && Math.abs(game.margin) <= 3) totals.shift_football_one_score += 1;
+    if (details?.opponentRank) {
+      totals.shift_football_ranked_games += 1;
+      if (game.margin !== null && game.margin > 0) totals.shift_football_ranked_win += 1;
+    }
+    if (details && details.overtimes > 0) totals.shift_football_overtime += 1;
+    if (game.wisconsin !== null && game.opponent === 0 && game.margin !== null && game.margin > 0) totals.shift_football_shutout += 1;
+    const kickoff = kickoffs.get(key);
+    if (details && details.networks.length > 0 && kickoff?.startsAt && !kickoff.allDay
+      && localParts(kickoff.startsAt, timeZone).hour >= PRIME_TIME_HOUR) totals.shift_football_prime += 1;
+  }
+  return totals;
+}
+
 /**
  * Monday-anchored week key in institution time. Derived from the local date
  * rather than from UTC, so a Sunday-night checkout is not filed under the
@@ -592,6 +643,7 @@ export function shiftAutomaticRuleCounts(assignments: ShiftBadgeEvidence[], time
   counts.set("shift_bounce_back", bouncedBack ? 1 : 0);
   counts.set("shift_battle_tested", wins >= 3 && losses >= 3 ? 1 : 0);
   counts.set("shift_sites", sites.size);
+  Object.entries(footballGameCounts(assignments, timeZone)).forEach(([key, value]) => counts.set(key, value));
 
   return counts;
 }

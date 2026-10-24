@@ -50,7 +50,8 @@
 | `KitMembership` | 6 | 2 |
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
-| `CalendarEvent` | 42 | 7 |
+| `CalendarEvent` | 43 | 7 |
+| `GameResultObservation` | 9 | 3 |
 | `GameSnapshot` | 21 | 2 |
 | `WrappedRecap` | 6 | 2 |
 | `EventWorker` | 10 | 4 |
@@ -377,6 +378,11 @@
 - `HOME`
 - `AWAY`
 - `NEUTRAL`
+
+### `GameResultProvider`
+
+- `UW`
+- `ESPN`
 
 ### `ScheduleFollowSource`
 

@@ -57,6 +57,7 @@
 | `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
+| `src/lib/services/football-results.ts` | 139 |
 | `src/lib/services/game-record.ts` | 171 |
 | `src/lib/services/game-snapshots.ts` | 253 |
 | `src/lib/services/gear-handover-notify.ts` | 97 |
@@ -66,7 +67,7 @@
 | `src/lib/services/invite-email.ts` | 133 |
 | `src/lib/services/invite-token.ts` | 34 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
-| `src/lib/services/job-runs.ts` | 52 |
+| `src/lib/services/job-runs.ts` | 53 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
@@ -118,7 +119,7 @@
 | `src/lib/services/schedule-publication.ts` | 1133 |
 | `src/lib/services/schedule-template-review.ts` | 549 |
 | `src/lib/services/schedule-working-copy.ts` | 1208 |
-| `src/lib/services/scoreboard.ts` | 284 |
+| `src/lib/services/scoreboard.ts` | 290 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
@@ -230,6 +231,7 @@
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
+| `src/lib/football-results.ts` | 233 |
 | `src/lib/format.ts` | 320 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
@@ -589,6 +591,7 @@
 ### `/api/cron`
 
 - `/api/cron/audit-archive`
+- `/api/cron/football-results`
 - `/api/cron/live-activities`
 - `/api/cron/morning-refresh`
 - `/api/cron/notifications`
@@ -865,6 +868,7 @@
 
 ### `/api/scoreboard`
 
+- `/api/scoreboard/results/refresh`
 - `/api/scoreboard`
 
 ### `/api/seed`
