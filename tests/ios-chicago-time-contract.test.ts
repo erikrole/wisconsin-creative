@@ -35,7 +35,8 @@ describe("iOS app time zone", () => {
 
   it("only makes the gear pick row a button when there is something to do", () => {
     const picks = read("ios/Wisconsin/Views/GearPicksView.swift");
-    expect(picks).not.toContain("onTapGesture");
+    // Photo thumbnails keep their own tap; the row itself must not.
+    expect(picks).not.toMatch(/\.onTapGesture \{\s*\/\/ A missing size/);
     expect(picks).toContain("Opens your profile to add your size");
   });
 });
