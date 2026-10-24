@@ -22,7 +22,7 @@ describe("Board Sizes routing and page contract", () => {
   it("redirects the clean URLs onto dotted files the nonce middleware skips", () => {
     expect(nextConfigSource).toContain('{ source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false }');
     expect(nextConfigSource).toContain('{ source: "/tools", destination: "/apps", permanent: false }');
-    expect(readFileSync("src/middleware.ts", "utf8")).toContain(".*\\\\..*");
+    expect(readFileSync("src/proxy.ts", "utf8")).toContain(".*\\\\..*");
   });
 
   it("ships a strict CSP with no inline script or handlers", () => {

@@ -31,7 +31,7 @@ function buildContentSecurityPolicy(nonce: string) {
   return csp.filter(Boolean).join("; ");
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const csp = buildContentSecurityPolicy(nonce);
   const requestHeaders = new Headers(request.headers);
