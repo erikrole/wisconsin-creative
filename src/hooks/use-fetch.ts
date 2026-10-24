@@ -68,8 +68,7 @@ async function fetchJson(url: string, returnTo?: string, signal?: AbortSignal): 
  */
 export function useFetch<T = unknown>(options: UseFetchOptions<T>): UseFetchResult<T> {
   const { url, returnTo, refetchOnFocus = true, enabled = true, keepPreviousData = false, refetchOnMount } = options;
-  const transformRef = useRef(options.transform);
-  transformRef.current = options.transform;
+  const { transform } = options;
 
   const {
     data,
@@ -81,8 +80,8 @@ export function useFetch<T = unknown>(options: UseFetchOptions<T>): UseFetchResu
   } = useQuery<Record<string, unknown>, Error, T>({
     queryKey: ["fetch", url],
     queryFn: ({ signal }) => fetchJson(url, returnTo, signal),
+    // A fresh select each render, so it always uses this render's transform.
     select: (json) => {
-      const transform = transformRef.current;
       if (transform) return transform(json);
       return (json.data ?? json) as T;
     },

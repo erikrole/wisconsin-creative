@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import {
@@ -266,7 +266,9 @@ function useAccountSidebarPrefs(
   setHidden: (next: string[]) => void,
 ) {
   const latest = useRef({ pinned, hidden });
-  latest.current = { pinned, hidden };
+  useLayoutEffect(() => {
+    latest.current = { pinned, hidden };
+  });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function scheduleSave() {

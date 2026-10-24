@@ -196,7 +196,7 @@ jobs:
       - run: node scripts/audit-gate.mjs
         if: steps.scope.outputs.heavy == 'true'
 
-      # Warning budget only goes down. Next 16's React Compiler rules left 248
+      # Warning budget only goes down. Next 16's React Compiler rules left 248 (230 after the first cut)
       # (mostly set-state-in-effect); lower the number in lint:ci as they go.
       - run: npm run lint:ci
         if: steps.scope.outputs.heavy == 'true'

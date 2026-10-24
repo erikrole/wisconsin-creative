@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BROTHER_USB_LOCK, BrotherUsbPrinter, brotherUsbAccess, chooseBrotherUsb, isBrotherUsb, type BrotherUsbDevice } from "@/lib/brother-usb";
 import { LabelPrintController } from "@/lib/label-print-controller";
 import { PrintApiError, printJobApi, type PrintHistory } from "@/lib/label-print-client";
@@ -26,7 +26,7 @@ export function useUsbPrintJob(actor: PrintActor | null, onCompleted: (label: Pr
   const guard = useRef(false), stop = useRef(false), mirror = useRef<PrintEnvelope | null>(null);
   const announced = useRef(new Set<string>());
   const currentActor = useRef(actor), completedCallback = useRef(onCompleted);
-  currentActor.current = actor; completedCallback.current = onCompleted;
+  useLayoutEffect(() => { currentActor.current = actor; completedCallback.current = onCompleted; });
   const update = useCallback((value: PrintEnvelope | null) => {
     mirror.current = value; setEnvelope(value);
     if (value && value.job.actor.id === currentActor.current?.id) value.job.labels.forEach((label, i) => {

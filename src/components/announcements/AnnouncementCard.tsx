@@ -73,7 +73,7 @@ export function AnnouncementCard({
   const remaining = announcement.remaining ?? 0;
   const images = announcement.imageUrls ?? [];
   const inert = preview ? { tabIndex: -1, "aria-hidden": true as const } : {};
-  const scroll = useMoreBelow();
+  const { ref: scrollRef, onScroll, moreBelow } = useMoreBelow();
 
   return (
     <div
@@ -82,8 +82,8 @@ export function AnnouncementCard({
     >
       {/* Long messages scroll here while the buttons below stay put. */}
       <div
-        ref={scroll.ref}
-        onScroll={scroll.onScroll}
+        ref={scrollRef}
+        onScroll={onScroll}
         tabIndex={-1}
         data-announcement-scroll=""
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain outline-none"
@@ -160,7 +160,7 @@ export function AnnouncementCard({
           aria-hidden="true"
           className={cn(
             "pointer-events-none absolute inset-x-0 bottom-full h-10 bg-gradient-to-t from-popover to-transparent transition-opacity duration-200 motion-reduce:transition-none",
-            scroll.moreBelow ? "opacity-100" : "opacity-0",
+            moreBelow ? "opacity-100" : "opacity-0",
           )}
         />
         <Button
