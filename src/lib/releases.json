@@ -2,7 +2,7 @@
   {
     "date": "2026-10-24",
     "title": "Wiscard is now optional during setup",
-    "type": "fix",
+    "type": "improvement",
     "summary": "New teammates without a Wiscard can finish setting up their account.",
     "details": [
       "The Wiscard step can be skipped, so people who are not UW students are no longer stuck.",
