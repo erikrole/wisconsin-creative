@@ -481,6 +481,22 @@
   },
   {
     "date": "2026-10-22",
+    "title": "One on-time rule across the app",
+    "type": "improvement",
+    "summary": "The on-time rate on staff profiles now matches the Accountability report.",
+    "details": [
+      "A return counts as on time unless it came back after the due time plus the grace period.",
+      "A checkout still out past that point counts against the rate.",
+      "The rate only shows once someone has 3 or more completed or overdue checkouts."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 609
+  },
+  {
+    "date": "2026-10-22",
     "title": "Safer calendar and image links",
     "type": "improvement",
     "summary": "Links that staff paste for calendar feeds and item photos are now checked more carefully.",
