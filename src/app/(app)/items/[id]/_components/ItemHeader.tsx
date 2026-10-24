@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { InlineTitle } from "@/components/InlineTitle";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { Button } from "@/components/ui/button";
@@ -141,9 +141,10 @@ export function ItemHeader({
 }: ItemHeaderProps) {
   const attachmentKind = asset.parentAsset ? getAttachmentKind(asset) : null;
   const slotLabel = asset.parentAsset ? getSdCardSlotLabel(asset, asset.parentAsset.assetTag) : null;
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const { data: currentUser } = useCurrentUser();
   const imageSrc = normalizeAssetImageSrc(asset.imageUrl);
+  const imageFailed = imageSrc !== null && failedImageSrc === imageSrc;
   const isRetired = asset.computedStatus === "RETIRED";
   const isMaintenance = asset.computedStatus === "MAINTENANCE";
   // A new reservation can only start when the item's derived status is AVAILABLE.
@@ -198,10 +199,6 @@ export function ItemHeader({
       })}`
     : null;
 
-  useEffect(() => {
-    setImageFailed(false);
-  }, [imageSrc]);
-
   return (
     <>
       <DetailPageHeader
@@ -223,7 +220,7 @@ export function ItemHeader({
                   priority
                   className="aspect-square object-cover"
                   unoptimized={!isOptimizableAssetImageSrc(imageSrc)}
-                  onError={() => setImageFailed(true)}
+                  onError={() => setFailedImageSrc(imageSrc)}
                 />
                 {canEdit && (
                   <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity text-white">

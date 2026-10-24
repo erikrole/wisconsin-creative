@@ -183,7 +183,7 @@
 | `src/lib/booking-actions.ts` | 11 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
-| `src/lib/booking-display-title.ts` | 58 |
+| `src/lib/booking-display-title.ts` | 61 |
 | `src/lib/booking-status-display.ts` | 152 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 230 |
@@ -270,14 +270,14 @@
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
 | `src/lib/passkey-client.ts` | 126 |
-| `src/lib/passkey.ts` | 390 |
+| `src/lib/passkey.ts` | 398 |
 | `src/lib/password-rules.ts` | 16 |
 | `src/lib/permissions.ts` | 286 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 237 |
+| `src/lib/profile-completion.ts` | 240 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
@@ -354,7 +354,7 @@
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 43 |
-| `src/lib/title-normalization.ts` | 101 |
+| `src/lib/title-normalization.ts` | 115 |
 | `src/lib/unavailable-times.ts` | 185 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |

@@ -80,6 +80,7 @@ describe("server capture", () => {
 
   it("skips expected HTTP outcomes and Next control flow", () => {
     expect(buildServerErrorReport(new HttpError(401, "Authentication required"), { kind: "render_error" })).toBeNull();
+    expect(buildServerErrorReport(new Error("The router state header was sent but could not be parsed."), { kind: "render_error" })).toBeNull();
     expect(buildServerErrorReport(Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;replace;/login;307;" }), { kind: "render_error" })).toBeNull();
     expect(buildServerErrorReport(new HttpError(503, "Down"), { kind: "render_error" })).not.toBeNull();
   });

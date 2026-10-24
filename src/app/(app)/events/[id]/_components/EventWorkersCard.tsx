@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -34,6 +35,8 @@ type EventWorker = {
 type PickerUser = { id: string; name: string; role: string; avatarUrl?: string | null };
 
 const NOTE_MAX = 200;
+const NO_USERS: PickerUser[] = [];
+const NO_WORKERS: EventWorker[] = [];
 
 function roleLabel(role: string): string {
   return role.charAt(0) + role.slice(1).toLowerCase();
@@ -52,65 +55,51 @@ export function EventWorkersCard({
   isAdmin: boolean;
   eventHasEnded: boolean;
 }) {
-  const [workers, setWorkers] = useState<EventWorker[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const workersKey = ["calendar-event-workers", eventId] as const;
+  const workersQuery = useQuery({
+    queryKey: workersKey,
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`/api/calendar-events/${eventId}/workers`, { signal });
+      if (handleAuthRedirect(response)) throw new DOMException("Auth redirect", "AbortError");
+      if (!response.ok) {
+        const message = await parseErrorMessage(response, "Failed to load workers");
+        toast.error(message);
+        throw new Error(message);
+      }
+      const json = await parseJsonSafely<{ data?: EventWorker[] }>(response);
+      return json?.data ?? [];
+    },
+    // One toast per failed read; Retry is offered inline.
+    retry: false,
+  });
+  const workers = workersQuery.data ?? NO_WORKERS;
+  const loading = workersQuery.isFetching && !workersQuery.data;
   /**
    * A failed read must not render as an empty list. "No one has been added" is
    * a claim about the event; silently making it when the request failed would
    * hide a broken deploy behind a reassuring empty state.
    */
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [users, setUsers] = useState<PickerUser[]>([]);
+  const loadFailed = !loading && workersQuery.isError && !workersQuery.data;
+  const setWorkers = (next: EventWorker[]) => queryClient.setQueryData(workersKey, next);
+  const usersQuery = useQuery({
+    queryKey: ["users", "active-picker"],
+    queryFn: async ({ signal }) => {
+      const response = await fetch("/api/users?limit=200&active=true", { signal });
+      if (handleAuthRedirect(response) || !response.ok) throw new Error("Could not load people");
+      const json = await parseJsonSafely<{ data?: PickerUser[]; users?: PickerUser[] }>(response);
+      const list = json?.data ?? json?.users;
+      return Array.isArray(list) ? list : [];
+    },
+    enabled: isAdmin && eventHasEnded,
+    retry: false,
+  });
+  const users = usersQuery.data ?? NO_USERS;
   const [selectedUserId, setSelectedUserId] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const savingRef = useRef(false);
-
-  const load = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const response = await fetch(`/api/calendar-events/${eventId}/workers`, { signal });
-      if (signal?.aborted) return;
-      if (handleAuthRedirect(response)) return;
-      if (!response.ok) {
-        setLoadFailed(true);
-        toast.error(await parseErrorMessage(response, "Failed to load workers"));
-        return;
-      }
-      const json = await parseJsonSafely<{ data?: EventWorker[] }>(response);
-      setWorkers(json?.data ?? []);
-      setLoadFailed(false);
-    } catch (error) {
-      if (isAbortError(error)) return;
-      setLoadFailed(true);
-      toast.error("Failed to load workers");
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
-
-  useEffect(() => {
-    if (!isAdmin || !eventHasEnded) return;
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const response = await fetch("/api/users?limit=200&active=true", { signal: controller.signal });
-        if (controller.signal.aborted || handleAuthRedirect(response) || !response.ok) return;
-        const json = await parseJsonSafely<{ data?: PickerUser[]; users?: PickerUser[] }>(response);
-        const list = json?.data ?? json?.users;
-        if (Array.isArray(list)) setUsers(list);
-      } catch (error) {
-        if (isAbortError(error)) return;
-      }
-    })();
-    return () => controller.abort();
-  }, [isAdmin, eventHasEnded]);
 
   const addedIds = useMemo(() => new Set(workers.map((worker) => worker.user.id)), [workers]);
 
@@ -209,10 +198,7 @@ export function EventWorkersCard({
           <Button
             variant="outline"
             className="h-10 text-xs"
-            onClick={() => {
-              setLoading(true);
-              void load();
-            }}
+            onClick={() => void workersQuery.refetch()}
           >
             Retry
           </Button>

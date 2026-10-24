@@ -8,7 +8,9 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { sendShiftTradeAction } from "@/lib/shift-trade-actions";
 import { formatOperationalDateTime, formatRelativeTime } from "@/lib/format";
@@ -57,7 +59,8 @@ const BookingDetailsSheet = lazy(() => import("@/components/BookingDetailsSheet"
 
 export default function HomePage() {
   const { data: user, isLoading } = useCurrentUser();
-  if (isLoading) return <HomeSkeleton />;
+  const hydrated = useHydrated();
+  if (isLoading || !hydrated) return <HomeSkeleton />;
   if (user?.role === "COLLABORATOR") {
     return (
       <CollaboratorHome
@@ -235,7 +238,8 @@ function useRecentActivity(enabled: boolean) {
     },
     enabled: enabled && Boolean(userId),
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    // A Home tab left open overnight must not keep Neon awake; focus resumes it.
+    refetchInterval: () => (isBackgroundPollingPaused() ? false : 60_000),
     refetchOnWindowFocus: true,
   });
 }
@@ -462,7 +466,7 @@ function CollaboratorHome({ name, capabilities, readOnly }: { name: string; capa
   const gear = bookings.data?.map((b): GearRow => {
     // A draft is saved work, never a pickup.
     if (b.status === "DRAFT") {
-      return { id: b.id, title: b.title, detail: "Saved draft", due: "Draft", tone: "neutral", person: null };
+      return { id: b.id, title: b.title, detail: "Saved draft", due: "Draft", tone: "neutral", person: null, personAvatarUrl: null };
     }
     const pickup = b.status === "PENDING_PICKUP" || b.kind === "RESERVATION";
     return {
@@ -472,6 +476,7 @@ function CollaboratorHome({ name, capabilities, readOnly }: { name: string; capa
       due: pickup ? `Pickup ${formatOperationalDateTime(b.startsAt, now, { month: "short" })}` : shortDue(b.endsAt, now),
       tone: !pickup && new Date(b.endsAt).getTime() < now.getTime() ? "critical" : "neutral",
       person: null,
+      personAvatarUrl: null,
     };
   });
   const upcoming = events.data?.slice(0, 8).map((item): UpNextItem => ({

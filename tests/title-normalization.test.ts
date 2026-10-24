@@ -88,3 +88,13 @@ describe("operational title normalization", () => {
     expect(editRoute).toContain("patch.summary = derived");
   });
 });
+
+describe("camera and gear labels keep their caps", () => {
+  it("keeps ROAM2, SLOW1 and ROME 2 while still normalizing the rest", async () => {
+    const { normalizeBookingTitle } = await import("@/lib/title-normalization");
+    expect(normalizeBookingTitle("football vs usc ROAM2")).toBe("Football vs USC ROAM2");
+    expect(normalizeBookingTitle("SLOW1 kit")).toBe("SLOW1 Kit");
+    expect(normalizeBookingTitle("football vs USC ROME 2")).toBe("Football vs USC ROME 2");
+    expect(normalizeBookingTitle("MEDIA DAY")).toBe("Media Day");
+  });
+});

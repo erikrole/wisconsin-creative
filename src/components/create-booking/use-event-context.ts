@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type Dispatch } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { eventBookingTitle } from "@/lib/booking-display-title";
 import { toast } from "sonner";
 import {
@@ -14,6 +15,7 @@ import { roundUpToQuarterHour } from "@/lib/quarter-hour";
 import { isEventDerivedTitle } from "@/lib/reservation-reuse";
 
 const BOOKING_EVENT_LOOKAHEAD_DAYS = 30;
+const NO_EVENTS: CalendarEvent[] = [];
 
 type EventTitleSource = {
   summary: string;
@@ -114,10 +116,6 @@ export function useEventContext({
   };
 }) {
 
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
-  const [eventsLoadError, setEventsLoadError] = useState<false | "network" | "server">(false);
-  const [eventsReloadKey, setEventsReloadKey] = useState(0);
   const [myShiftForEvent, setMyShiftForEvent] = useState<{
     area: string;
     startsAt: string;
@@ -127,48 +125,44 @@ export function useEventContext({
   const autoSelectedEventRef = useRef(false);
 
   // ── Fetch events (all sports by default, filtered when sport selected) ──
-  useEffect(() => {
-    if (!tieToEvent || !open) {
-      setEvents([]);
-      setEventsLoadError(false);
-      return;
-    }
-    setEventsLoading(true);
-    setEventsLoadError(false);
-    const controller = new AbortController();
-    const now = new Date();
-    const rangeEnd = new Date(now.getTime() + BOOKING_EVENT_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000);
-    const params = new URLSearchParams({
-      startDate: now.toISOString(),
-      endDate: rangeEnd.toISOString(),
-      limit: "30",
-    });
-    if (sport) params.set("sportCode", sport);
-    fetch(`/api/calendar-events?${params}`, { signal: controller.signal })
-      .then(async (res) => {
+  const eventsEnabled = tieToEvent && open;
+  const eventsQuery = useQuery({
+    queryKey: ["booking-events", sport ?? null],
+    queryFn: async ({ signal }) => {
+      const now = new Date();
+      const rangeEnd = new Date(now.getTime() + BOOKING_EVENT_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000);
+      const params = new URLSearchParams({
+        startDate: now.toISOString(),
+        endDate: rangeEnd.toISOString(),
+        limit: "30",
+      });
+      if (sport) params.set("sportCode", sport);
+      try {
+        const res = await fetch(`/api/calendar-events?${params}`, { signal });
         if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
         if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load events"));
-        return parseJsonSafely<{ data?: CalendarEvent[] }>(res);
-      })
-      .then((json) => {
-        if (controller.signal.aborted) return;
-        setEvents(json?.data || []);
-        setEventsLoadError(false);
-        setEventsLoading(false);
-      })
-      .catch((err) => {
-        if (!isAbortError(err)) {
-          setEventsLoading(false);
-          setEventsLoadError(err instanceof TypeError ? "network" : "server");
-          toast.error("Couldn’t load events — try again");
-        }
-      });
-    return () => controller.abort();
-  }, [sport, tieToEvent, open, eventsReloadKey]);
+        const json = await parseJsonSafely<{ data?: CalendarEvent[] }>(res);
+        return json?.data || [];
+      } catch (err) {
+        if (!isAbortError(err)) toast.error("Couldn’t load events — try again");
+        throw err;
+      }
+    },
+    enabled: eventsEnabled,
+    // One toast per failed read; Retry is offered inline.
+    retry: false,
+  });
+  const events = eventsEnabled ? eventsQuery.data ?? NO_EVENTS : NO_EVENTS;
+  const eventsLoading = eventsEnabled && eventsQuery.isFetching;
+  const eventsLoadError: false | "network" | "server" =
+    eventsEnabled && eventsQuery.isError && !eventsQuery.isFetching && !isAbortError(eventsQuery.error)
+      ? eventsQuery.error instanceof TypeError ? "network" : "server"
+      : false;
 
+  const { refetch: refetchEvents } = eventsQuery;
   const retryEvents = useCallback(() => {
-    setEventsReloadKey((key) => key + 1);
-  }, []);
+    void refetchEvents();
+  }, [refetchEvents]);
 
   // ── Toggle an event in/out of the selection, enforcing cap and chronological order ──
   const toggleEvent = useCallback(

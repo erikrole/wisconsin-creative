@@ -106,8 +106,8 @@ export default function WelcomePage() {
           {collaborator
             ? "Add a profile photo so the team can recognize you. That’s the only step."
             : student
-              ? "A few details so the team can reach you and schedule you. Answers save to your account as you go, so you can continue here or in the iPhone app. Only the photo is optional."
-              : "A few details so the team can reach you and identify you at the kiosk. Answers save to your account as you go, so you can continue here or in the iPhone app. Only the photo is optional."}
+              ? "A few details so the team can reach you and schedule you. Answers save to your account as you go, so you can continue here or in the iPhone app. Your photo and Wiscard are optional."
+              : "A few details so the team can reach you and identify you at the kiosk. Answers save to your account as you go, so you can continue here or in the iPhone app. Your photo and Wiscard are optional."}
         </p>
       </header>
 

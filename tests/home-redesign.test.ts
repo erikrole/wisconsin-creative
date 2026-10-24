@@ -128,9 +128,9 @@ describe("Home day line and crew", () => {
   it("says what today holds in one line", async () => {
     const { daySummary } = await import("@/app/(app)/_home/home-model");
     const line = daySummary("STUDENT", sampleDashboard("STUDENT", NOW), NOW);
-    expect(line).toMatch(/^You’re on .+ at \d/);
-    expect(line).toContain("Your gear: 1 overdue, 1 due back today.");
-    expect(daySummary("STAFF", sampleDashboard("STAFF", NOW), NOW)).toContain("Team gear: 1 overdue, 3 due back today.");
+    expect(line).toMatch(/^You’re working .+ (tonight|today) at \d/);
+    expect(line).toContain("You have an overdue checkout.");
+    expect(daySummary("STAFF", sampleDashboard("STAFF", NOW), NOW)).not.toContain("Team gear");
     expect(daySummary("ADMIN", emptyDashboard("ADMIN"), NOW)).toBe("Nothing due today. You’re clear.");
   });
 
@@ -198,7 +198,9 @@ describe("Home recent activity", () => {
   it("phrases custody moves and ages them", () => {
     const rows = activityRows(sampleActivity(NOW), NOW);
     expect(rows[0]).toMatchObject({ who: "Maya Chen", verb: "returned", ago: "8m ago" });
-    expect(rows[1]?.verb).toBe("took out");
+    expect(rows[1]?.verb).toBe("checked out");
+    expect(rows[2]?.verb).toBe("picked up");
+    expect(rows[0]?.exactTime).toMatch(/CST|CDT/);
     expect(agoLabel(NOW.toISOString(), NOW)).toBe("Just now");
     expect(agoLabel(new Date(NOW.getTime() - 3 * 3_600_000).toISOString(), NOW)).toBe("3h ago");
   });

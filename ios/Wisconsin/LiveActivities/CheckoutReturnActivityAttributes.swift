@@ -43,6 +43,39 @@ extension CheckoutReturnActivityAttributes.ContentState.Urgency: Codable {
 }
 
 extension CheckoutReturnActivityAttributes.ContentState {
+    private enum CodingKeys: String, CodingKey {
+        case endsAt, now, nextNeedAt, allowsExtend, urgency
+    }
+
+    /// Push updates from the server carry dates as ISO 8601 text, while the
+    /// app starts activities with ActivityKit's numeric default. Accept both so
+    /// a push can never throw inside the widget extension (the SIGABRT in
+    /// LiveActivities on the Issues page).
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        endsAt = try Self.decodeDate(container, .endsAt)
+        now = try Self.decodeDate(container, .now)
+        nextNeedAt = try? Self.decodeDate(container, .nextNeedAt)
+        allowsExtend = (try? container.decode(Bool.self, forKey: .allowsExtend)) ?? false
+        urgency = (try? container.decode(Urgency.self, forKey: .urgency)) ?? .normal
+    }
+
+    private static func decodeDate(
+        _ container: KeyedDecodingContainer<CodingKeys>,
+        _ key: CodingKeys
+    ) throws -> Date {
+        if let seconds = try? container.decode(Double.self, forKey: key) {
+            return Date(timeIntervalSinceReferenceDate: seconds)
+        }
+        let text = try container.decode(String.self, forKey: key)
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = withFraction.date(from: text) { return date }
+        if let date = ISO8601DateFormatter().date(from: text) { return date }
+        throw DecodingError.dataCorruptedError(
+            forKey: key, in: container, debugDescription: "Unrecognized date \(text)")
+    }
+
     var isOverdue: Bool { now >= endsAt }
 
     func isOverdue(at date: Date) -> Bool {

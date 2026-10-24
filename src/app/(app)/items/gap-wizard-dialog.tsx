@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ImageOff, Package, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -52,15 +53,13 @@ interface Props {
 
 const GAP_FIELDS: GapField[] = ["department", "category"];
 const QUEUE_LIMIT = 8;
+const GAP_COUNTS_KEY = ["assets", "gap-counts"] as const;
+const PENDING_COUNTS: Record<GapField, number | null> = { category: null, department: null };
+const ZERO_COUNTS: Record<GapField, number | null> = { category: 0, department: 0 };
 
 export function GapWizardDialog({ open, onOpenChange, categories, departments, onAssigned }: Props) {
   const [stage, setStage] = useState<Stage>("pick");
   const [field, setField] = useState<GapField | null>(null);
-  const [counts, setCounts] = useState<{ category: number | null; department: number | null }>({
-    category: null,
-    department: null,
-  });
-  const [countError, setCountError] = useState<string | null>(null);
   const [queue, setQueue] = useState<GapItem[]>([]);
   const [skippedItems, setSkippedItems] = useState<GapItem[]>([]);
   const [assigned, setAssigned] = useState(0);
@@ -75,10 +74,10 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
 
   const item = queue[0] ?? null;
 
-  const loadCounts = useCallback(async () => {
-    setCountError(null);
-    setCounts({ category: null, department: null });
-    try {
+  const queryClient = useQueryClient();
+  const countsQuery = useQuery({
+    queryKey: GAP_COUNTS_KEY,
+    queryFn: async () => {
       const fetchCount = async (gap: GapField) => {
         const res = await fetch(`/api/assets?missing=${gap}&limit=1`);
         if (handleAuthRedirect(res)) return 0;
@@ -93,16 +92,27 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
         fetchCount("category"),
         fetchCount("department"),
       ]);
-      setCounts({ category, department });
-    } catch (err) {
-      setCounts({ category: 0, department: 0 });
-      setCountError(err instanceof Error ? err.message : "Could not count data gaps");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (open) void loadCounts();
-  }, [loadCounts, open]);
+      return { category, department };
+    },
+    enabled: open,
+    // Counts change as gaps are filled; read them fresh on every open.
+    staleTime: 0,
+    retry: false,
+  });
+  const countError = countsQuery.isError && !countsQuery.isFetching
+    ? countsQuery.error.message || "Could not count data gaps"
+    : null;
+  // A fresh read shows "Counting..." again, as the counts may be out of date.
+  const counts: Record<GapField, number | null> = countsQuery.isFetching
+    ? PENDING_COUNTS
+    : countsQuery.data ?? (countError ? ZERO_COUNTS : PENDING_COUNTS);
+  const { refetch: refetchCounts } = countsQuery;
+  const loadCounts = useCallback(() => void refetchCounts(), [refetchCounts]);
+  const setCounts = useCallback(
+    (update: (prev: Record<GapField, number | null>) => Record<GapField, number | null>) =>
+      queryClient.setQueryData<Record<GapField, number | null>>(GAP_COUNTS_KEY, (prev) => update(prev ?? PENDING_COUNTS)),
+    [queryClient],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -151,7 +161,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
     } finally {
       setLoading(false);
     }
-  }, [reviewingSkipped]);
+  }, [reviewingSkipped, setCounts]);
 
   const startWizard = useCallback(
     (gap: GapField) => {
@@ -228,7 +238,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
     } finally {
       setSaving(false);
     }
-  }, [categories, field, finishOrContinue, item, onAssigned, queue, selectedValue, skippedItems]);
+  }, [categories, field, finishOrContinue, item, onAssigned, queue, selectedValue, setCounts, skippedItems]);
 
   const handlePickAnother = useCallback(() => {
     setStage("pick");

@@ -101,7 +101,7 @@ export function HandoutBoard({ participants, students, handouts, pending, onAppl
           </ul>
         </>
       )}
-      <p className="mt-2 text-xs text-[#8B8D98]">Pieces are listed from each person’s kit and picks. A piece with no size on file can’t be handed out until the size is added.</p>
+      <p className="mt-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">Pieces are listed from each person’s kit and picks. A piece with no size on file can’t be handed out until the size is added.</p>
     </section>
   );
 }
@@ -126,7 +126,7 @@ function PersonRow({ person, open, pending, onToggle, onApply }: { person: Hando
       >
         <span className="min-w-0 flex-1">
           <span className="font-bold">{person.name}</span>
-          <span className="ml-2 text-xs text-[#8B8D98]">{person.group}</span>
+          <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{person.group}</span>
         </span>
         <span className="font-mono text-xs text-[#60646C] dark:text-muted-foreground">{person.handedCount} / {person.totalCount}</span>
         <span className={`w-24 text-right text-xs font-bold ${status.className}`}>{status.label}</span>
@@ -149,8 +149,8 @@ function PersonRow({ person, open, pending, onToggle, onApply }: { person: Hando
                   {piece.handed && <CheckIcon className="size-4" />}
                 </Button>
                 <span className="min-w-0 flex-1">
-                  <span className={`font-medium ${piece.handed ? "text-[#8B8D98] line-through" : ""}`}>{piece.itemName}</span>
-                  {piece.colorLabel && <span className="ml-2 text-xs text-[#8B8D98]">{piece.colorLabel}</span>}
+                  <span className={`font-medium ${piece.handed ? "text-[#6B6F7A] dark:text-muted-foreground line-through" : ""}`}>{piece.itemName}</span>
+                  {piece.colorLabel && <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{piece.colorLabel}</span>}
                   {piece.quantity > 1 && <span className="ml-2 font-mono text-xs">× {piece.quantity}</span>}
                 </span>
                 <span className={`rounded-md px-1.5 py-0.5 font-mono text-xs ${piece.blocked ? "border border-dashed border-[#E5B84A] bg-[#FFFBEA] text-[#AB6400]" : "bg-[#F0F1F3] dark:bg-white/10"}`}>{piece.size}</span>

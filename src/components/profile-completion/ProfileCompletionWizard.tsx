@@ -271,7 +271,7 @@ export function ProfileCompletionWizard({
     ? { title: "Add your phone number", description: "Add the personal phone number we should use to reach you." }
     : PROFILE_STEP_COPY[step];
   const requiresSetup = data?.completion.requiresSetup === true;
-  const isOptionalStep = step === "PHOTO" || (step === "APPAREL" && !requiresSetup);
+  const isOptionalStep = step === "PHOTO" || step === "WISCARD" || (step === "APPAREL" && !requiresSetup);
   const stepMotionContext = { direction: stepDirection, reduceMotion };
   const needsLegacyClassification = Boolean(
     !hasSimplePhoneStep && legacyPhone && !data?.profile.personalPhone && !data?.profile.workPhone,
