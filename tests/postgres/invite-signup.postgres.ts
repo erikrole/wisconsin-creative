@@ -132,7 +132,7 @@ describe("invite signup against owned disposable PostgreSQL", () => {
       expect(await tx.$queryRawUnsafe("SELECT invite_token_hash, invite_token_issued_at FROM allowed_emails ORDER BY id")).toEqual([{ invite_token_hash: null, invite_token_issued_at: null }, { invite_token_hash: null, invite_token_issued_at: null }]);
       await tx.$executeRawUnsafe("UPDATE allowed_emails SET invite_token_hash = 'fixture-hash' WHERE id = 'legacy-1'");
       await tx.$executeRawUnsafe("UPDATE allowed_emails SET invite_token_hash = 'fixture-hash' WHERE id = 'legacy-2'");
-    })).rejects.toMatchObject({ code: "P2010", meta: { code: "23505" } });
+    })).rejects.toMatchObject({ code: "P2010", meta: { driverAdapterError: { cause: { originalCode: "23505" } } } });
     // The failing uniqueness probe rolls back the entire private schema.
     expect(await client.$queryRawUnsafe("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'invite_migration_fixture'")).toEqual([]);
   });

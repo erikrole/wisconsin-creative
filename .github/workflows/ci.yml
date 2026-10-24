@@ -95,6 +95,10 @@ jobs:
         if: steps.scope.outputs.heavy == 'true'
       - run: node scripts/check-postgres-integrity.mjs
         if: steps.scope.outputs.heavy == 'true'
+      # Route and service tests against a disposable cluster the script owns
+      # (Unix socket only, current schema). Separate from the service above.
+      - run: npm run test:postgres
+        if: steps.scope.outputs.heavy == 'true'
       - name: Docs-only database check
         if: steps.scope.outputs.heavy == 'false'
         run: echo "Docs-only pull request. postgres-integrity reports success without a database run."
