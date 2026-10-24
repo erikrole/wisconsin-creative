@@ -3,10 +3,11 @@
     "date": "2026-10-24",
     "title": "Clearer first-week guidance",
     "type": "improvement",
-    "summary": "New students are told how to sign in to the app and where checkouts start.",
+    "summary": "New students are told how to sign in to the app, where checkouts start, and why Home has no shifts yet.",
     "details": [
       "The setup finish screen now says to sign in to the iPhone app with the same email and password.",
-      "An empty Checkouts list explains that gear is checked out at the kiosk or in the iPhone app, and shows up here with its return time."
+      "An empty Checkouts list explains that gear is checked out at the kiosk or in the iPhone app, and shows up here with its return time.",
+      "A new student's Home says nothing is scheduled yet and shifts appear once the team schedules them, instead of sending them to hunt for trades."
     ],
     "platforms": [
       "Web"

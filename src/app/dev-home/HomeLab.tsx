@@ -89,7 +89,7 @@ function buildProps(role: HomeRole, state: LabState, now: Date): Omit<HomeViewPr
     attention: ready(buildAttention({ role, data, claimedTrades: state === "empty" ? [] : trades.claimed, now })),
     upNext: ready(buildUpNext(data, now)),
     upNextEmpty: role === "STUDENT"
-      ? { title: "No shifts yet", description: "Pick up an open shift from a teammate on the Trade Board.", href: TRADE_BOARD_HREF, action: "Open Trade Board" }
+      ? { title: "Nothing scheduled yet", description: "Shifts show up here once the team schedules you. You can also pick one up on the Trade Board.", href: TRADE_BOARD_HREF, action: "Open Trade Board" }
       : undefined,
     myGear: ready(gearRows(data.myCheckouts.items, now, false)),
     dayLine: daySummary(role, data, now),
