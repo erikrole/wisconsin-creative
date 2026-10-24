@@ -303,6 +303,7 @@
 		F8198BB80C4CB84C0C12ED6A /* FloatingSearchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E89852F4DC85939BA9A8AA /* FloatingSearchButton.swift */; };
 		FBCE9485C52357F314061D25 /* ReservationDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4461DC62BDB05085191DB129 /* ReservationDraftStoreTests.swift */; };
 		FC55F8C00EAB32F578B178F0 /* ItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80CA4880F08046F8E23F079B /* ItemDetailView.swift */; };
+		FE57DAF967DAB72DD06A33E9 /* WebContractFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE309BC0254D6CA5E2207E52 /* WebContractFixtureTests.swift */; };
 		FEB0D17D856222BBA8478CC0 /* ScanResultHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5B889D242E8A0835B68845 /* ScanResultHeroCard.swift */; };
 		FF970D3BAC5C5F1FC59A799A /* ScanReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5E3C096214B8CB5202573F /* ScanReportView.swift */; };
 /* End PBXBuildFile section */
@@ -640,6 +641,7 @@
 		FB4AA8F791BB1EE9F9EBD8CA /* APIClient+Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "APIClient+Schedule.swift"; sourceTree = "<group>"; };
 		FBF5F57A830BEA38433C56E1 /* ReportFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportFormatting.swift; sourceTree = "<group>"; };
 		FC5B889D242E8A0835B68845 /* ScanResultHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanResultHeroCard.swift; sourceTree = "<group>"; };
+		FE309BC0254D6CA5E2207E52 /* WebContractFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebContractFixtureTests.swift; sourceTree = "<group>"; };
 		FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentDayTests.swift; sourceTree = "<group>"; };
 		FF98C537202359B822B1D752 /* BookingEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingEntity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1164,6 +1166,7 @@
 				8EE808994D4A26C719DA2432 /* ScoreboardModelsTests.swift */,
 				DA6BB23E442CE2634F3482E3 /* SignatureStrokeRecorderTests.swift */,
 				DEF52CE902DAB5F4F5AFC87D /* SoftwareLoginModelTests.swift */,
+				FE309BC0254D6CA5E2207E52 /* WebContractFixtureTests.swift */,
 			);
 			path = WisconsinTests;
 			sourceTree = "<group>";
@@ -1432,6 +1435,7 @@
 				1B4E293359A562A97EC501C0 /* ScoreboardModelsTests.swift in Sources */,
 				383ABBBBEAE924DCBCCAF277 /* SignatureStrokeRecorderTests.swift in Sources */,
 				581681815B6B5031BF8CB447 /* SoftwareLoginModelTests.swift in Sources */,
+				FE57DAF967DAB72DD06A33E9 /* WebContractFixtureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1756,7 +1760,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1764,7 +1768,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1778,7 +1782,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1786,7 +1790,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1840,14 +1844,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
@@ -1864,14 +1868,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
 				PRODUCT_NAME = "Wisconsin Creative";

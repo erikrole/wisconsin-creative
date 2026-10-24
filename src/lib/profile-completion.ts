@@ -93,7 +93,7 @@ export const PROFILE_STEP_COPY: Record<ProfileCompletionStep, { title: string; d
   },
   WISCARD: {
     title: "Link your Wiscard",
-    description: "Type the card number and issue code printed for your card. This is used for kiosk identification.",
+    description: "Type the card number and issue code printed for your card. This is used for kiosk identification. No Wiscard? You can skip this.",
   },
   STUDENT: {
     title: "Add your student details",
@@ -118,13 +118,16 @@ export const PROFILE_STEP_SHORT_LABELS: Record<ProfileCompletionStep, string> = 
   PHOTO: "Photo",
 };
 
+// Wiscard is optional: not everyone on the team is a UW student with a card
+// (it only powers kiosk scan identification), so it never blocks setup.
 const INTERNAL_OPERATIONAL_FIELDS: ProfileCompletionField[] = [
   "campusEmail",
   "athleticsEmail",
   "personalPhone",
   "workPhone",
-  "wiscard",
 ];
+
+const OPTIONAL_FIELDS: ProfileCompletionField[] = ["photo", "wiscard"];
 
 function applicableProfileFields(role: ProfileCompletionProfile["role"]): ProfileCompletionField[] {
   if (role === "COLLABORATOR") return ["photo"];
@@ -211,7 +214,7 @@ export function getProfileCompletion(profile: ProfileCompletionProfile, now = ne
   const profileComplete = missingFields.length === 0;
   const hiddenSmokeIdentity = profile.hiddenFromRoster === true;
   const requiredComplete = hiddenSmokeIdentity || applicableFields
-    .filter((field) => field !== "photo")
+    .filter((field) => !OPTIONAL_FIELDS.includes(field))
     .every((field) => completeByField[field]);
   const requiresSetup = requiresOnboarding(profile);
   const onboardingComplete = Boolean(profile.onboardingCompletedAt) || (!requiresSetup && profileComplete);

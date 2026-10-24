@@ -201,7 +201,9 @@ jobs:
       - run: npm run lint:ci
         if: steps.scope.outputs.heavy == 'true'
 
-      - run: npm run test:coverage
+      # Retries once only for the known Prisma adapter teardown panic (exit 134,
+      # no failed test). Any real test failure fails the job on the first run.
+      - run: node scripts/retry-prisma-teardown-panic.mjs npm run test:coverage
         if: steps.scope.outputs.heavy == 'true'
 
       - run: node scripts/coverage-summary.mjs

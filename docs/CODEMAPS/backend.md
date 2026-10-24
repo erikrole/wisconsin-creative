@@ -277,7 +277,7 @@
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 237 |
+| `src/lib/profile-completion.ts` | 240 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
