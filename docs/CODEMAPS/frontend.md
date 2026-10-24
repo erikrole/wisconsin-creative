@@ -171,7 +171,6 @@
 | File | Lines |
 |---|---:|
 | `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
-| `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1045 |
@@ -187,6 +186,7 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 680 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |
 | `src/components/CommandPalette.tsx` | 588 |
+| `src/components/ActivityTimeline.tsx` | 586 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
 | `src/components/ui/heatmap.tsx` | 434 |

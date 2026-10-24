@@ -30,8 +30,6 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/shift-trades.ts` | 1567 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1549 |
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1398 |
-| `src/components/ActivityTimeline.tsx` | 1388 |
-| `src/app/(app)/budget/BudgetView.tsx` | 1350 |
 | `src/app/api/assets/route.ts` | 1318 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/hooks/use-schedule-data.ts` | 1272 |
@@ -42,6 +40,8 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/app/(app)/staff/[id]/page.tsx` | 1160 |
 | `src/lib/services/shift-notifications.ts` | 1144 |
+| `src/lib/services/schedule-publication.ts` | 1133 |
+| `src/app/(app)/kits/[id]/page.tsx` | 1132 |
 
 ## High-Level Data Flow
 
