@@ -154,7 +154,7 @@ export function parseEspnFootballSchedule(payload: unknown, year: number, allowE
     const event = object(item);
     if (!Array.isArray(event.competitions) || event.competitions.length !== 1) throw new Error("ESPN competition is ambiguous");
     const competition = object(event.competitions[0]);
-    const competitors = z.array(z.record(z.unknown())).length(2).parse(competition.competitors);
+    const competitors = z.array(z.record(z.string(), z.unknown())).length(2).parse(competition.competitors);
     const ours = competitors.filter((row) => String(object(row.team).id) === "275");
     const opponents = competitors.filter((row) => String(object(row.team).id) !== "275");
     if (ours.length !== 1 || opponents.length !== 1) throw new Error("ESPN game teams did not match");
