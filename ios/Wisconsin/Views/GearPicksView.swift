@@ -719,6 +719,7 @@ struct GearMyKitSection: View {
     /// Called when a piece's photo is tapped; the parent presents the viewer.
     var onPhoto: ((GearPhotoItem) -> Void)? = nil
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// Four rows at a glance; the rest sit behind the disclosure.
     private let glance = 4
@@ -760,7 +761,9 @@ struct GearMyKitSection: View {
     @ViewBuilder
     private func row(_ piece: GearMyKitPiece) -> some View {
         let status = piece.status(order: kit.order)
-        HStack(alignment: .center, spacing: 12) {
+        let stacked = typeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+        layout {
             if let catalog {
                 let photo = image(for: piece, in: catalog)
                 GearPickThumbnail(path: photo, size: 56)
@@ -771,13 +774,13 @@ struct GearMyKitSection: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(piece.itemName)
                     .font(.gothamBold(size: 15, relativeTo: .subheadline))
-                    .lineLimit(1)
+                    .lineLimit(stacked ? nil : 1)
                 Text(piece.detail)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(stacked ? nil : 1)
             }
-            Spacer(minLength: 8)
+            if !stacked { Spacer(minLength: 8) }
             statusLabel(status)
         }
         .padding(.vertical, 6)
@@ -817,7 +820,7 @@ struct GearMyKitSection: View {
         }
         .font(.footnote.weight(weight))
         .foregroundStyle(tone)
-        .lineLimit(1)
+        .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
     }
 
     private func openProfile() {
