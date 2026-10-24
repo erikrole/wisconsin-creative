@@ -456,7 +456,7 @@ struct CreateBookingSheet: View {
 
     private func pageHeading(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 30, weight: .heavy))
+            .font(.title.weight(.heavy))
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
