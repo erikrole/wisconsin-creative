@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-24",
+    "title": "UA gear leads with your picks",
+    "type": "improvement",
+    "summary": "The UA Gear screen on iPhone now opens on everything you can expect to receive: your picks, then the gear in your kit, with the full assortment one tap away under Catalog.",
+    "details": [
+      "Your picks and your kit pieces both show a photo, color, size and status, and picks swipe to remove with a Review and submit button that stays in reach.",
+      "Catalog (top right) holds the full assortment with search; picked items keep their count badge.",
+      "Items still missing a size are flagged in orange so you can fix them before submitting.",
+      "Tap any item photo to see it full size, and pinch or double-tap to zoom."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 633
+  },
+  {
+    "date": "2026-10-24",
     "title": "Clearer validation messages",
     "type": "improvement",
     "summary": "Form and request validation moved to a newer checker, so a few default messages read differently, such as \"Too big: expected array to have <=5 items\" where a limit is exceeded.",
