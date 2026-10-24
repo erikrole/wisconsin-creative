@@ -17,9 +17,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Least privilege. The release-note check reads PR labels with gh pr view.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   postgres-integrity:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17
@@ -95,6 +101,7 @@ jobs:
 
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
       DIRECT_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
