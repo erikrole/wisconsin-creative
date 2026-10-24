@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { RotateCcwIcon, TimerIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -19,27 +20,33 @@ function scopeLabel(batch: BulkAssignmentBatch) {
   return `${batch.sportCodes.length} sports`;
 }
 
+const NO_BATCHES: BulkAssignmentBatch[] = [];
+
+async function fetchPendingBatches(signal: AbortSignal): Promise<BulkAssignmentBatch[]> {
+  const response = await fetch("/api/schedule/bulk-assignment/batches", { signal });
+  if (handleAuthRedirect(response)) throw new DOMException("Auth redirect", "AbortError");
+  if (!response.ok) throw new Error("Could not load staged batches");
+  const json = await parseJsonSafely<{ data?: { batches?: BulkAssignmentBatch[] } }>(response);
+  return json?.data?.batches ?? NO_BATCHES;
+}
+
 export function usePendingAssignmentBatches(enabled: boolean) {
-  const [batches, setBatches] = useState<BulkAssignmentBatch[]>([]);
+  // A failed poll is not worth interrupting the assignment flow for: keep the last list.
+  const { data, refetch } = useQuery({
+    queryKey: ["schedule", "bulk-assignment-batches"],
+    queryFn: ({ signal }) => fetchPendingBatches(signal),
+    enabled,
+    staleTime: 0,
+    retry: false,
+  });
+  const batches = data ?? NO_BATCHES;
 
-  const refresh = useCallback(async () => {
-    try {
-      const response = await fetch("/api/schedule/bulk-assignment/batches");
-      if (handleAuthRedirect(response)) return;
-      if (!response.ok) return;
-      const json = await parseJsonSafely<{ data?: { batches?: BulkAssignmentBatch[] } }>(response);
-      setBatches(json?.data?.batches ?? []);
-    } catch {
-      // A failed poll is not worth interrupting the assignment flow for.
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) return;
-    void refresh();
-  }, [enabled, refresh]);
-
-  return { batches: batches.filter((batch) => batch.cancellable), refresh };
+  return {
+    batches: batches.filter((batch) => batch.cancellable),
+    refresh: async () => {
+      await refetch();
+    },
+  };
 }
 
 /**

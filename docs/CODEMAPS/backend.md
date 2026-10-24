@@ -270,7 +270,7 @@
 | `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 212 |
 | `src/lib/passkey-client.ts` | 126 |
-| `src/lib/passkey.ts` | 390 |
+| `src/lib/passkey.ts` | 398 |
 | `src/lib/password-rules.ts` | 16 |
 | `src/lib/permissions.ts` | 286 |
 | `src/lib/preview-activity.ts` | 23 |

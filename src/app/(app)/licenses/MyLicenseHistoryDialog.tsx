@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Clock3, RefreshCw } from "lucide-react";
 import {
   Dialog,
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { formatRelativeTime } from "@/lib/format";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { readApiData } from "@/lib/errors";
 
 type HistoryEntry = {
   id: string;
@@ -31,38 +31,18 @@ type Props = {
   onOpenChange: (open: boolean) => void;
 };
 
-type HistoryResponse = {
-  data?: HistoryEntry[];
-};
-
 export function MyLicenseHistoryDialog({ open, onOpenChange }: Props) {
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-
-  const loadHistory = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const res = await fetch("/api/licenses/my/history", { signal });
-      if (handleAuthRedirect(res)) return;
-      if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not load license history"));
-      const json = await parseJsonSafely<HistoryResponse>(res);
-      setHistory(json?.data ?? []);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      setLoadError(true);
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const controller = new AbortController();
-    void loadHistory(controller.signal);
-    return () => controller.abort();
-  }, [loadHistory, open]);
+  const historyQuery = useQuery({
+    queryKey: ["licenses", "my-history"],
+    queryFn: async ({ signal }) =>
+      readApiData<HistoryEntry[]>(await fetch("/api/licenses/my/history", { signal }), "Could not load license history"),
+    enabled: open,
+    // Every open shows the latest claims; cached rows stay up while it refreshes.
+    staleTime: 0,
+  });
+  const history = historyQuery.data ?? [];
+  const loading = historyQuery.isPending && open;
+  const loadError = historyQuery.isError && !historyQuery.data;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,7 +65,7 @@ export function MyLicenseHistoryDialog({ open, onOpenChange }: Props) {
           ) : loadError ? (
             <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
               <span>License history could not load.</span>
-              <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => void loadHistory()}>
+              <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => void historyQuery.refetch()}>
                 <RefreshCw data-icon="inline-start" />
                 Retry
               </Button>
