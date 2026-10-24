@@ -171,7 +171,7 @@ function earnedBadgesFromPayload(payload: Prisma.JsonValue | undefined): EarnedB
 }
 
 /** "A", "A and B", "A, B and C", "A, B and 3 more". */
-export function listBadgeNames(names: string[]): string {
+function listBadgeNames(names: string[]): string {
   if (names.length <= 1) return names[0] ?? "a new badge";
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
   if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;

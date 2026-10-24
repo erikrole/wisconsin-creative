@@ -853,7 +853,7 @@ function FirmwareWatchPanel({
 
 /* ── QR Code Visual ─────────────────────────────────────── */
 
-export function QRCodeCanvas({
+function QRCodeCanvas({
   value,
   size,
   margin = 2,
@@ -888,7 +888,7 @@ export function QRCodeCanvas({
 
 /* ── QR Modal ──────────────────────────────────────────── */
 
-export function QRModal({
+function QRModal({
   asset,
   canEdit,
   onRefresh,

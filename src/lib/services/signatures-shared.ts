@@ -27,7 +27,7 @@ export type Actor = { id: string; role: Role };
 
 export const CREATIVE_STAFF_SOURCE_PREFIX = "creative-staff:";
 
-export const SIGNATURE_SAVE_STALE_MS = 60_000;
+const SIGNATURE_SAVE_STALE_MS = 60_000;
 
 export const SIGNATURE_ZIP_MAX_ENTRIES = 1_000;
 
@@ -35,7 +35,7 @@ export const SIGNATURE_ZIP_MAX_BYTES = 50 * 1024 * 1024;
 
 export const SIGNATURE_ZIP_READ_CONCURRENCY = 8;
 
-export const SIGNATURE_CLEANUP_CONCURRENCY = 8;
+const SIGNATURE_CLEANUP_CONCURRENCY = 8;
 
 export const SIGNATURE_DETAIL_PRIOR_REVISION_LIMIT = 5;
 
@@ -45,7 +45,7 @@ export const SIGNATURE_ROSTER_APPLY_TIMEOUT_MS = 30_000;
 
 export const STALE_SIGNATURE_CAPTURE_MESSAGE = "This person was already signed or changed on another iPad; this iPad's draft was kept. Return to the roster before trying again";
 
-export const CREATIVE_STAFF_TITLE_MARKERS = ["Creative", "Digital Media"] as const;
+const CREATIVE_STAFF_TITLE_MARKERS = ["Creative", "Digital Media"] as const;
 
 export const creativeStaffTitleFilters = CREATIVE_STAFF_TITLE_MARKERS.map((marker) => ({
   title: { contains: marker, mode: "insensitive" as const },
@@ -164,7 +164,7 @@ export function canDonateSignatureRosterCapture(capture: SignatureRosterApplyCap
   );
 }
 
-export const artifactRevisionSelect = {
+const artifactRevisionSelect = {
   id: true,
   revision: true,
   state: true,
@@ -249,7 +249,7 @@ export const collectionInclude = {
   },
 } satisfies Prisma.SignatureCollectionInclude;
 
-export const canonicalCaptureInclude = {
+const canonicalCaptureInclude = {
   collection: {
     select: { id: true, sportCode: true, season: true, status: true, settingsVersion: true, penSettings: true },
   },
@@ -402,7 +402,7 @@ export async function cleanupSignatureRevisions(revisions: Array<{ id: string; p
   return { cleaned: cleaned.length, failed };
 }
 
-export async function mapWithConcurrency<T, R>(items: T[], concurrency: number, worker: (item: T) => Promise<R>) {
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, worker: (item: T) => Promise<R>) {
   const results = new Array<R>(items.length);
   let nextIndex = 0;
   const run = async () => {

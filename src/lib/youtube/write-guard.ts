@@ -7,7 +7,7 @@ import { snapshotsEqual, YouTubeToolError, type VideoSnapshot, type VideoStatus 
 
 export type GuardFailure = "conflict" | "excluded" | "unapproved" | "invalid" | "verificationMismatch";
 
-export class GuardError extends YouTubeToolError {
+class GuardError extends YouTubeToolError {
   constructor(readonly reason: GuardFailure) {
     super(
       {

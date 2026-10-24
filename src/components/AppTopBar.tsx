@@ -10,7 +10,7 @@ import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
 
 /** Quiet icon button shared by every top bar control, so hover, focus and size stay identical. */
-export const topBarButtonClass = cn(
+const topBarButtonClass = cn(
   "relative inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-transparent text-[color:var(--sidebar-text)] no-underline shadow-none outline-none",
   "transition-colors duration-150 hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] hover:no-underline",
   "focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)] active:scale-100",

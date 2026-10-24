@@ -94,7 +94,7 @@ export function formatUsd(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export function sizeKindForCategory(category: string): GearSizeKind {
+function sizeKindForCategory(category: string): GearSizeKind {
   if (category === "Footwear") return "FOOTWEAR";
   if (category === "Headwear") return "HEADWEAR";
   return "APPAREL";
@@ -194,7 +194,7 @@ export function defaultGearPickSize(item: GearCatalogItem, profile: GearPickSize
 }
 
 /** Sizes the picker offers. Exact lists are enforced; apparel without a list still accepts other text up to 12 characters. */
-export function gearPickSizeChoices(item: GearCatalogItem): { sizes: string[]; exact: boolean } {
+function gearPickSizeChoices(item: GearCatalogItem): { sizes: string[]; exact: boolean } {
   if (isOneSizeItem(item)) return { sizes: [GEAR_ONE_SIZE], exact: true };
   if (item.sizes && item.sizes.length > 0) return { sizes: item.sizes, exact: true };
   return { sizes: [...GEAR_APPAREL_SIZES], exact: false };

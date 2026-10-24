@@ -12,6 +12,7 @@ import { hasCollaboratorCapability } from "@/lib/collaborator-access";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { gearStatusForBooking, gearStatusPriority } from "@/lib/booking-status-display";
 import { unique } from "@/lib/utils";
+import { settledReader } from "@/lib/settled";
 
 const DASHBOARD_LIMIT = { max: 30, windowMs: 60_000 };
 
@@ -21,17 +22,7 @@ const sortOverdueFirst = (a: { isOverdue: boolean; endsAt: string }, b: { isOver
   return new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime();
 };
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[dashboard] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("dashboard");
 
 // Prioritize bodies and lenses in gear avatar display
 function sortItemsByCategory(

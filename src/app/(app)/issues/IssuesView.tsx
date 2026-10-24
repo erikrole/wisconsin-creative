@@ -15,7 +15,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRelativeTime, pluralize } from "@/lib/format";
 import type { Breadcrumb } from "@/lib/error-reporting/grouping";
-import { parseErrorMessage } from "@/lib/errors";
+import { parseErrorMessage, readApiData } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import {
   ActionTimeline,
@@ -24,7 +24,6 @@ import {
   PlatformBadge,
   Sparkline,
   StatusPill,
-  readJson,
   versionText,
 } from "./issue-ui";
 
@@ -147,7 +146,7 @@ function IssueList() {
       const params = new URLSearchParams({ status });
       if (platform) params.set("platform", platform);
       if (debounced) params.set("q", debounced);
-      return readJson(await fetch(`/api/issues?${params}`, { signal }), "Couldn't load issues");
+      return readApiData(await fetch(`/api/issues?${params}`, { signal }), "Couldn't load issues");
     },
   });
   const now = useMemo(() => new Date(), [list.dataUpdatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -236,7 +235,7 @@ function ReportsList({ focusReportId }: { focusReportId: string | null }) {
   const focusRef = useRef<HTMLLIElement | null>(null);
   const list = useQuery<ReportList>({
     queryKey: ["issues", "reports", status],
-    queryFn: async ({ signal }) => readJson(await fetch(`/api/support-reports?status=${status}`, { signal }), "Couldn't load problem reports"),
+    queryFn: async ({ signal }) => readApiData(await fetch(`/api/support-reports?status=${status}`, { signal }), "Couldn't load problem reports"),
   });
   const now = useMemo(() => new Date(), [list.dataUpdatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 

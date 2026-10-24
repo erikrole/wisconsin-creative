@@ -133,7 +133,7 @@ export function crewSlotState(hasAssignment: boolean, requestCount = 0): CrewSlo
   return requestCount > 0 ? "requested" : "open";
 }
 
-export function crewSlotStateLabel(state: CrewSlotState, requestCount = 0): string {
+function crewSlotStateLabel(state: CrewSlotState, requestCount = 0): string {
   if (state === "filled") return "Filled";
   if (state === "requested") return `${requestCount} request${requestCount === 1 ? "" : "s"} waiting`;
   return "Open";

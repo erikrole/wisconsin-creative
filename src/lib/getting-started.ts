@@ -19,11 +19,11 @@ export type GettingStartedRow = (typeof GETTING_STARTED_ROWS)[number];
 export type GettingStartedState = { done: GettingStartedRow[]; dismissed: boolean };
 
 /** How long after an account is created the card offers itself. */
-export const GETTING_STARTED_WINDOW_DAYS = 14;
+const GETTING_STARTED_WINDOW_DAYS = 14;
 
-export const EMPTY_GETTING_STARTED: GettingStartedState = { done: [], dismissed: false };
+const EMPTY_GETTING_STARTED: GettingStartedState = { done: [], dismissed: false };
 
-export function isGettingStartedRow(value: unknown): value is GettingStartedRow {
+function isGettingStartedRow(value: unknown): value is GettingStartedRow {
   return typeof value === "string" && (GETTING_STARTED_ROWS as readonly string[]).includes(value);
 }
 

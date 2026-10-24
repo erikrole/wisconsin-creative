@@ -13,7 +13,7 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import { sendShiftTradeAction } from "@/lib/shift-trade-actions";
 import { formatOperationalDateTime, formatRelativeTime } from "@/lib/format";
 import type { CreateBookingContext } from "../dashboard-types";
-import { FlaggedReportDialog } from "../dashboard/flagged-items-banner";
+import { FlaggedReportDialog } from "../dashboard/flagged-report-dialog";
 import { GearPicksBanner } from "../dashboard/gear-picks-banner";
 import { ProfileCompletionBanner } from "../dashboard/profile-completion-banner";
 import { WrappedBanner } from "@/components/wrapped/WrappedBanner";

@@ -11,8 +11,8 @@
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { HttpError } from "./http";
-import { Redis } from "@upstash/redis";
-import { cacheNamespace, isolatedIntegrationValue } from "@/lib/environment-safety";
+import { cacheNamespace } from "@/lib/environment-safety";
+import { getUpstashRedis } from "@/lib/redis";
 
 type RateLimitConfig = {
   /** Maximum requests allowed in the window. */
@@ -62,37 +62,13 @@ function checkRateLimitMemory(key: string, config: RateLimitConfig): RateLimitRe
   return { allowed: true, remaining: config.max - entry.count, resetAt: entry.resetAt };
 }
 
-// --- Upstash Redis backend (lazy, memoized) ---
-
-let redis: Redis | null | undefined;
-
-function getRedis(): Redis | null {
-  if (redis !== undefined) return redis;
-  const url = isolatedIntegrationValue("UPSTASH_REDIS_REST_URL") || isolatedIntegrationValue("KV_REST_API_URL");
-  const token = isolatedIntegrationValue("UPSTASH_REDIS_REST_TOKEN") || isolatedIntegrationValue("KV_REST_API_TOKEN");
-  if (!url || !token) {
-    redis = null;
-    return redis;
-  }
-
-  try {
-    const parsedUrl = new URL(url);
-    redis = parsedUrl.protocol === "https:" ? new Redis({ url, token }) : null;
-  } catch {
-    // Malformed or placeholder local configuration is equivalent to Redis
-    // being unconfigured. Keep auth available through the memory fallback.
-    redis = null;
-  }
-  return redis;
-}
-
 // One ephemeral cache shared by every limiter so repeated hits in the same
 // instance short-circuit without a Redis round-trip.
 const ephemeralCache = new Map<string, number>();
 const limiterCache = new Map<string, Ratelimit>();
 
 function getLimiter(config: RateLimitConfig): Ratelimit | null {
-  const client = getRedis();
+  const client = getUpstashRedis();
   if (!client) return null;
 
   const cacheKey = `${config.max}:${config.windowMs}`;

@@ -24,7 +24,7 @@ export type DeliveryRecord = {
   latencyBucket?: string | null;
 };
 
-export const DELIVERY_RETENTION_DAYS = 180;
+const DELIVERY_RETENTION_DAYS = 180;
 
 export function latencyBucket(ms: number): string {
   if (ms < 1_000) return "under_1s";

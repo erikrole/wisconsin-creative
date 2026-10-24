@@ -65,6 +65,19 @@ export async function parseJsonSafely<T>(res: Response): Promise<T | null> {
   }
 }
 
+/**
+ * Read the `data` of a `{ data }` API response, throwing an Error whose
+ * message is safe to show. A 401 sends the browser to sign in (returning to
+ * `returnTo`, by default the current page) and throws so callers stop.
+ */
+export async function readApiData<T>(res: Response, fallback: string, returnTo?: string): Promise<T> {
+  if (handleAuthRedirect(res, returnTo)) throw new Error("Signing in again");
+  if (!res.ok) throw new Error(await parseErrorMessage(res, fallback));
+  const json = await parseJsonSafely<{ data?: T }>(res);
+  if (!json?.data) throw new Error(fallback);
+  return json.data;
+}
+
 /** User-facing error messages by kind. */
 export const ERROR_MESSAGES: Record<FetchErrorKind, { title: string; description: string }> = {
   auth: {
