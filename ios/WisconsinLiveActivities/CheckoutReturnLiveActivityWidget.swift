@@ -558,7 +558,12 @@ extension Date {
 
     func formatted(_ style: Date.FormatStyle) -> String {
         var pinned = style
-        if pinned.timeZone == TimeZone.current {
+        // Pin everything except a style that deliberately names GMT/UTC
+        // (date-only labels). Styles built without a zone carry the system one.
+        let zone = pinned.timeZone
+        let isExplicitUTC = (zone.identifier == "GMT" || zone.identifier == "UTC")
+            && zone != TimeZone.autoupdatingCurrent
+        if !isExplicitUTC {
             pinned.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
         }
         return pinned.format(self)
