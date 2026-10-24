@@ -23,7 +23,7 @@ const manualAwardSchema = z.object({
   const hasCustomDefinition = Boolean(value.customDefinition);
   if (hasDefinition === hasCustomDefinition) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["definitionId"],
       message: "Choose an existing badge or define one custom badge",
     });

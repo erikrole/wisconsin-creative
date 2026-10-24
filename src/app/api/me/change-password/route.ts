@@ -24,7 +24,7 @@ export const POST = withAuth(async (req, { user }) => {
     body = schema.parse(await req.json());
   } catch (err) {
     if (err instanceof z.ZodError) {
-      throw new HttpError(400, err.errors[0]?.message ?? "Invalid request.");
+      throw new HttpError(400, err.issues[0]?.message ?? "Invalid request.");
     }
     throw err;
   }

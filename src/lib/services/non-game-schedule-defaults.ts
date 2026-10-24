@@ -17,7 +17,7 @@ export const nonGameScheduleDefaultsSchema = z.object({
     const seen = new Set<ShiftArea>();
     rows.forEach((row, index) => {
       if (seen.has(row.area)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [index, "area"], message: "Areas must be unique" });
+        ctx.addIssue({ code: "custom", path: [index, "area"], message: "Areas must be unique" });
       }
       seen.add(row.area);
     });

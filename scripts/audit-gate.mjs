@@ -24,13 +24,6 @@ export const EXCEPTIONS = [
       "Compressed-body DoS in body-parser 2.0.0-2.3.0. The fix (2.4.0, 2026-10-22) is younger than the .npmrc min-release-age cooldown. Reached only through workflow > @workflow/cli > @workflow/web > express, the local workflow inspector, never the app's request path. Override body-parser to 2.4.0 once it clears the cooldown, then drop this exception.",
   },
   {
-    id: "GHSA-mrhx-c7xc-m3w5",
-    package: "zod",
-    expires: "2026-11-20",
-    reason:
-      "Memory exhaustion validating oversized constrained collections; every release below 4.6.6 is affected. The transitive zod 4 copies are overridden to 4.6.7, but the app's direct zod 3 (148 files) needs the zod 4 major. API bodies are capped by the Vercel function payload limit, which bounds the input. Migrate to zod 4, then drop this exception.",
-  },
-  {
     id: "GHSA-5gmw-xhrv-c9v3",
     package: "tinypool",
     expires: "2026-11-06",
