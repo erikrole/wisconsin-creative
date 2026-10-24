@@ -175,8 +175,11 @@ jobs:
       - run: node scripts/audit-gate.mjs
         if: steps.scope.outputs.heavy == 'true'
 
-      - run: npm test
+      - run: npm run test:coverage
         if: steps.scope.outputs.heavy == 'true'
+
+      - run: node scripts/coverage-summary.mjs
+        if: steps.scope.outputs.heavy == 'true' && always()
 
       - run: npm run build:app
         if: steps.scope.outputs.heavy == 'true'
