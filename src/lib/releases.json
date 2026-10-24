@@ -1,7 +1,7 @@
 [
   {
     "date": "2026-10-24",
-    "title": "Creative Wrapped: more accurate hours and team totals",
+    "title": "Wrapped hours and team totals fixed",
     "type": "fixes",
     "summary": "A dry run of the fall recap fixed how hours and team numbers are counted.",
     "details": [
