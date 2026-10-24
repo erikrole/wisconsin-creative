@@ -42,7 +42,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.scope.outputs.needed != 'false'
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm install --global npm@11.17.0 vercel@59.11.7
         if: steps.scope.outputs.needed != 'false'
