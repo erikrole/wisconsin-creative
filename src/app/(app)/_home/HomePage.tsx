@@ -462,7 +462,7 @@ function CollaboratorHome({ name, capabilities, readOnly }: { name: string; capa
   const gear = bookings.data?.map((b): GearRow => {
     // A draft is saved work, never a pickup.
     if (b.status === "DRAFT") {
-      return { id: b.id, title: b.title, detail: "Saved draft", due: "Draft", tone: "neutral", person: null };
+      return { id: b.id, title: b.title, detail: "Saved draft", due: "Draft", tone: "neutral", person: null, personAvatarUrl: null };
     }
     const pickup = b.status === "PENDING_PICKUP" || b.kind === "RESERVATION";
     return {
@@ -472,6 +472,7 @@ function CollaboratorHome({ name, capabilities, readOnly }: { name: string; capa
       due: pickup ? `Pickup ${formatOperationalDateTime(b.startsAt, now, { month: "short" })}` : shortDue(b.endsAt, now),
       tone: !pickup && new Date(b.endsAt).getTime() < now.getTime() ? "critical" : "neutral",
       person: null,
+      personAvatarUrl: null,
     };
   });
   const upcoming = events.data?.slice(0, 8).map((item): UpNextItem => ({

@@ -1,6 +1,24 @@
 [
   {
     "date": "2026-10-24",
+    "title": "A clearer, friendlier Dashboard",
+    "type": "improvement",
+    "summary": "The Dashboard reads more naturally and the right side now shows what is really happening today.",
+    "details": [
+      "The sidebar highlights in Badger red, and the Creative Wrapped preview is hidden until mid-November.",
+      "The greeting now says things like “You’re working football vs USC tonight at 6:30 PM,” and recent activity says checked out, picked up or returned, with the exact time on hover.",
+      "A shift and its gear pickup for the same event now show as one Up next row, and camera labels such as ROAM2 keep their capitals.",
+      "Working today uses call times, so a night game no longer shows as live in the morning.",
+      "Coming up labels every event Home, Away, Neutral or Non-game, and Team gear out shows avatars and sits above it.",
+      "Missing battery units can be marked found or written off right from the Missing Units report."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-24",
     "title": "Photo reminder respects Not now",
     "type": "fixes",
     "summary": "On the iPhone app, tapping Not now on the photo step at the end of setup no longer brings the photo reminder straight back.",
