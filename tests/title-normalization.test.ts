@@ -98,3 +98,11 @@ describe("camera and gear labels keep their caps", () => {
     expect(normalizeBookingTitle("MEDIA DAY")).toBe("Media Day");
   });
 });
+
+describe("parenthesized position tags", () => {
+  it("keeps (GC) and (ROAM2) when a title is saved", async () => {
+    const { normalizeBookingTitle } = await import("@/lib/title-normalization");
+    expect(normalizeBookingTitle("Football vs USC (GC)")).toBe("Football vs USC (GC)");
+    expect(normalizeBookingTitle("Football vs USC (ROAM2)")).toBe("Football vs USC (ROAM2)");
+  });
+});

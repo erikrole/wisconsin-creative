@@ -491,7 +491,7 @@ export const GET = withAuth(async (req, { user }) => {
   const lostSkuIds = lostBulkUnitsRaw.map((r) => r.bulkSkuId);
 
   // Run the two post-parallel dependent queries concurrently
-  const [shiftGearBookingsResult, lostBulkSkuNamesResult] = await Promise.allSettled([
+  const [shiftGearBookingsResult, lostBulkSkuNamesResult, lostBulkUnitNumbersResult] = await Promise.allSettled([
     shiftEventIds.length > 0
       ? db.booking.findMany({
           where: {
@@ -513,6 +513,14 @@ export const GET = withAuth(async (req, { user }) => {
       ? db.bulkSku.findMany({
           where: { id: { in: lostSkuIds } },
           select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+    // Which units, so a lost row can be settled right from the dashboard.
+    lostSkuIds.length > 0
+      ? db.bulkSkuUnit.findMany({
+          where: { bulkSkuId: { in: lostSkuIds }, status: "LOST" },
+          select: { bulkSkuId: true, unitNumber: true },
+          orderBy: [{ bulkSkuId: "asc" }, { unitNumber: "asc" }],
         })
       : Promise.resolve([]),
   ]);
@@ -540,12 +548,18 @@ export const GET = withAuth(async (req, { user }) => {
   }>, "lostBulkSkuNames", partialFailures);
 
   // Resolve lost bulk unit SKU names
-  let lostBulkUnits: Array<{ skuName: string; count: number }> = [];
+  const lostBulkUnitNumbers = settledValue(lostBulkUnitNumbersResult, [] as Array<{
+    bulkSkuId: string;
+    unitNumber: number;
+  }>, "lostBulkUnitNumbers", partialFailures);
+  let lostBulkUnits: Array<{ skuName: string; count: number; bulkSkuId: string; units: number[] }> = [];
   if (lostBulkUnitsRaw.length > 0) {
     const nameMap = new Map(lostBulkSkuNames.map((s) => [s.id, s.name]));
     lostBulkUnits = lostBulkUnitsRaw.map((r) => ({
       skuName: nameMap.get(r.bulkSkuId) ?? "Unknown",
       count: r._count.id,
+      bulkSkuId: r.bulkSkuId,
+      units: lostBulkUnitNumbers.filter((u) => u.bulkSkuId === r.bulkSkuId).map((u) => u.unitNumber),
     }));
   }
 
