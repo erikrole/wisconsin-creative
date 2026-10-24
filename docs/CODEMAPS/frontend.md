@@ -217,6 +217,7 @@
 | `src/hooks/use-form-submit.ts` | 188 |
 | `src/hooks/use-gear-picks.ts` | 47 |
 | `src/hooks/use-getting-started.ts` | 108 |
+| `src/hooks/use-hydrated.ts` | 13 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
 | `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 69 |

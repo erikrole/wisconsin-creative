@@ -14,14 +14,14 @@
 | `@simplewebauthn/browser` | `^14.0.0` |
 | `@simplewebauthn/server` | `^14.0.3` |
 | `@tailwindcss/postcss` | `^4.3.3` |
-| `@tanstack/query-sync-storage-persister` | `^5.104.0` |
-| `@tanstack/react-query` | `^5.104.0` |
-| `@tanstack/react-query-persist-client` | `^5.104.0` |
+| `@tanstack/query-sync-storage-persister` | `^5.104.3` |
+| `@tanstack/react-query` | `^5.104.3` |
+| `@tanstack/react-query-persist-client` | `^5.104.3` |
 | `@tanstack/react-table` | `^8.21.3` |
 | `@upstash/ratelimit` | `^2.2.0` |
 | `@upstash/redis` | `^1.38.0` |
 | `@vercel/analytics` | `2.0.1` |
-| `@vercel/blob` | `^2.8.1` |
+| `@vercel/blob` | `^2.8.2` |
 | `@vercel/functions` | `3.10.1` |
 | `@vercel/speed-insights` | `2.0.0` |
 | `bcryptjs` | `^3.0.3` |
@@ -30,20 +30,20 @@
 | `cmdk` | `^1.1.1` |
 | `date-fns` | `^4.4.0` |
 | `exceljs` | `4.4.0` |
-| `geist` | `^1.7.2` |
+| `geist` | `^1.8.1` |
 | `lucide-react` | `^1.59.0` |
 | `motion` | `^14.3.0` |
 | `next` | `^16.4.2` |
 | `postcss` | `^8.5.30` |
 | `qrcode` | `^1.5.4` |
 | `radix-ui` | `^1.8.1` |
-| `react` | `^19.3.0` |
+| `react` | `^19.3.1` |
 | `react-day-picker` | `^10.0.2` |
-| `react-dom` | `^19.3.0` |
+| `react-dom` | `^19.3.1` |
 | `react-markdown` | `^10.1.0` |
 | `recharts` | `^3.10.1` |
 | `remark-gfm` | `^4.0.1` |
-| `resend` | `^6.32.1` |
+| `resend` | `^6.34.1` |
 | `sharp` | `0.35.5` |
 | `sonner` | `^2.0.8` |
 | `tailwind-merge` | `^3.7.0` |
@@ -58,9 +58,9 @@
 
 | Package | Version |
 |---|---|
-| `@eslint/eslintrc` | `^3.3.5` |
-| `@next/bundle-analyzer` | `^16.3.7` |
-| `@playwright/test` | `^1.63.0` |
+| `@eslint/eslintrc` | `^3.3.7` |
+| `@next/bundle-analyzer` | `^16.4.2` |
+| `@playwright/test` | `^1.64.1` |
 | `@prisma/adapter-pg` | `^7.10.1` |
 | `@types/node` | `^24.19.2` |
 | `@types/qrcode` | `^1.5.6` |
@@ -70,12 +70,12 @@
 | `@vitest/coverage-v8` | `^5.0.5` |
 | `axe-core` | `^4.14.0` |
 | `dotenv` | `^16.6.1` |
-| `esbuild` | `0.28.1` |
+| `esbuild` | `0.28.2` |
 | `eslint` | `^9.39.4` |
 | `eslint-config-next` | `^16.4.2` |
 | `plist` | `^5.0.0` |
 | `prisma` | `^7.10.1` |
-| `typescript` | `6.0.2` |
+| `typescript` | `6.0.3` |
 | `vitest` | `^5.0.5` |
 
 ## Scripts
