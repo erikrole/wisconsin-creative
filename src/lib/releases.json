@@ -1,11 +1,12 @@
 [
   {
     "date": "2026-10-24",
-    "title": "\"Not now\" on the profile photo stays put",
+    "title": "Photo reminder respects Not now",
     "type": "fixes",
     "summary": "On the iPhone app, tapping Not now on the photo step at the end of setup no longer brings the photo reminder straight back.",
     "details": [
-      "The reminder now waits a day, the same as Not now anywhere else."
+      "Setup still finishes when you skip the photo.",
+      "The photo reminder now waits a day, the same as Not now anywhere else."
     ],
     "platforms": [
       "iOS"
