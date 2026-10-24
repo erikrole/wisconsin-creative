@@ -15,12 +15,17 @@ const NOW = new Date("2026-10-26T15:00:00.000Z");
 const USER_ID = "cm0000000000000000student1";
 
 const mocks = vi.hoisted(() => {
+  // Onboarding versions are HMACs of the session secret; pin it so the
+  // fixtures do not depend on the machine running them.
+  const previousSecret = process.env.SESSION_SECRET;
+  process.env.SESSION_SECRET = "0".repeat(64);
   process.env.SESSION_COOKIE_NAME ??= "wc_session";
   return {
-  sessionFindUnique: vi.fn(),
-  userFindUnique: vi.fn(),
-  notificationFindMany: vi.fn(),
-  notificationCount: vi.fn(),
+    previousSecret,
+    sessionFindUnique: vi.fn(),
+    userFindUnique: vi.fn(),
+    notificationFindMany: vi.fn(),
+    notificationCount: vi.fn(),
   };
 });
 
@@ -141,6 +146,8 @@ beforeAll(() => {
 });
 afterAll(() => {
   vi.useRealTimers();
+  if (mocks.previousSecret === undefined) delete process.env.SESSION_SECRET;
+  else process.env.SESSION_SECRET = mocks.previousSecret;
 });
 
 beforeEach(() => {
