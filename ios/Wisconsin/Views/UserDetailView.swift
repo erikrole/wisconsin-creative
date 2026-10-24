@@ -17,6 +17,7 @@ struct UserDetailView: View {
     @State private var pushedBookingId: String?
     @State private var selectedShift: MyShift?
     @State private var isLoading = true
+    @State private var toast: Toast?
     @State private var error: String?
     @State private var showBadgeGallery = false
     @State private var selectedBadge: UserBadge?
@@ -42,6 +43,11 @@ struct UserDetailView: View {
                 ScrollView {
                     VStack(spacing: Brand.Space.sm) {
                         profileHeader(detail)
+                        if !isViewingSelf && (!detail.email.isEmpty || detail.contactPhone != nil) {
+                            ContactDetailsCard(detail: detail) { message in
+                                toast = Toast(message: message, icon: "checkmark.circle.fill", role: .success)
+                            }
+                        }
                         if !isCollaboratorDirectoryViewer {
                             StaffRightNowSection(
                                 payload: rightNow,
@@ -73,6 +79,7 @@ struct UserDetailView: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
+        .toast($toast)
         .navigationTitle(detail?.name ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -170,7 +177,7 @@ struct UserDetailView: View {
 
             // Contact as things you do, not addresses to read -- and only for
             // other people. Offering to email or call yourself is a dead end.
-            if detail.id != session.currentUser?.id && (!detail.email.isEmpty || detail.phone?.isEmpty == false) {
+            if detail.id != session.currentUser?.id && (!detail.email.isEmpty || detail.contactPhone != nil) {
                 ContactActions(detail: detail)
                     .padding(.horizontal, Brand.Space.lg)
                     .padding(.top, Brand.Space.sm)
@@ -537,52 +544,125 @@ private struct BadgeProgressRow: View {
 
 // MARK: - Contact
 
-/// Email and phone as two equal actions. Neutral-tinted: reaching someone is
-/// not a custody state, and blue here collided with the checked-out blue used
-/// three rows down.
+/// Message, call and email as equal actions (the Contacts / WhatsApp pattern),
+/// then the numbers and address themselves so they can be read and copied.
+/// Neutral-tinted: reaching someone is not a custody state, and blue here
+/// collided with the checked-out blue used three rows down.
 private struct ContactActions: View {
     let detail: AppUserDetail
 
-    private var phoneURL: URL? {
-        guard let phone = detail.phone, !phone.isEmpty else { return nil }
-        return URL(string: "tel:\(phone.filter { $0.isNumber || $0 == "+" })")
-    }
-
     var body: some View {
         HStack(spacing: Brand.Space.sm) {
-            if let url = URL(string: "mailto:\(detail.email)") {
+            if let sms = ContactInfo.url(scheme: "sms", phone: detail.contactPhone) {
+                Link(destination: sms) {
+                    ContactActionLabel(systemImage: "message.fill", title: "Message")
+                }
+                .accessibilityLabel("Text \(detail.name)")
+            }
+            if let tel = ContactInfo.url(scheme: "tel", phone: detail.contactPhone) {
+                Link(destination: tel) {
+                    ContactActionLabel(systemImage: "phone.fill", title: "Call")
+                }
+                .accessibilityLabel("Call \(detail.name)")
+            }
+            if !detail.email.isEmpty, let url = URL(string: "mailto:\(detail.email)") {
                 Link(destination: url) {
                     ContactActionLabel(systemImage: "envelope.fill", title: "Email")
                 }
                 .accessibilityLabel("Email \(detail.name) at \(detail.email)")
-            }
-            if let phoneURL {
-                Link(destination: phoneURL) {
-                    ContactActionLabel(systemImage: "phone.fill", title: "Call")
-                }
-                .accessibilityLabel("Call \(detail.name)")
             }
         }
         .padding(.top, 2)
     }
 }
 
-private struct ContactActionLabel: View {
-    let systemImage: String
-    let title: String
+enum ContactInfo {
+    /// Digits and a leading plus only, which is what tel: and sms: accept.
+    static func url(scheme: String, phone: String?) -> URL? {
+        guard let phone, !phone.isEmpty else { return nil }
+        let digits = phone.filter { $0.isNumber || $0 == "+" }
+        guard !digits.isEmpty else { return nil }
+        return URL(string: "\(scheme):\(digits)")
+    }
+}
+
+extension AppUserDetail {
+    /// The number the quick buttons use: personal first, work as the fallback.
+    var contactPhone: String? {
+        if let phone, !phone.isEmpty { return phone }
+        if let workPhone, !workPhone.isEmpty { return workPhone }
+        return nil
+    }
+}
+
+/// The values behind the buttons. Hold any row to copy it.
+private struct ContactDetailsCard: View {
+    let detail: AppUserDetail
+    let onCopy: (String) -> Void
+
+    private var rows: [(label: String, value: String, kind: Kind)] {
+        var out: [(String, String, Kind)] = []
+        if !detail.email.isEmpty { out.append(("Email", detail.email, .email)) }
+        if let phone = detail.phone, !phone.isEmpty { out.append(("Phone", phone, .phone)) }
+        if let work = detail.workPhone, !work.isEmpty, work != detail.phone {
+            out.append(("Work phone", work, .phone))
+        }
+        return out
+    }
+
+    private enum Kind { case email, phone }
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.caption.weight(.semibold))
-                .accessibilityHidden(true)
-            Text(title)
-                .font(.subheadline.weight(.semibold))
+        VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                if index > 0 { Divider().padding(.leading, Brand.Space.md) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(row.label)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text(row.value)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Brand.Space.md)
+                .padding(.vertical, 10)
+                .frame(minHeight: 56)
+                .contentShape(Rectangle())
+                .contextMenu {
+                    Button { copy(row.value, label: row.label) } label: {
+                        Label("Copy \(row.label.lowercased())", systemImage: "doc.on.doc")
+                    }
+                    switch row.kind {
+                    case .phone:
+                        if let url = ContactInfo.url(scheme: "sms", phone: row.value) {
+                            Link(destination: url) { Label("Message", systemImage: "message") }
+                        }
+                        if let url = ContactInfo.url(scheme: "tel", phone: row.value) {
+                            Link(destination: url) { Label("Call", systemImage: "phone") }
+                        }
+                    case .email:
+                        if let url = URL(string: "mailto:\(row.value)") {
+                            Link(destination: url) { Label("Email", systemImage: "envelope") }
+                        }
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityHint("Hold to copy")
+                .accessibilityAction(named: "Copy") { copy(row.value, label: row.label) }
+            }
         }
-        .foregroundStyle(Color.primary)
-        .frame(maxWidth: .infinity, minHeight: 40)
-        .background(Color.cardSurfaceRaised, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.hairline, lineWidth: 0.5))
+        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
+                .strokeBorder(Color.hairline, lineWidth: 0.5)
+        )
+    }
+
+    private func copy(_ value: String, label: String) {
+        UIPasteboard.general.string = value
+        Haptics.success()
+        onCopy("\(label) copied")
     }
 }
 
