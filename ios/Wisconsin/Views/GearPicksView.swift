@@ -335,7 +335,7 @@ struct GearPicksView: View {
             }
             .confirmationDialog("Leave without saving?", isPresented: $confirmLeave, titleVisibility: .visible) {
                 Button("Leave without saving", role: .destructive) { dismiss() }
-                Button("Keep editing", role: .cancel) {}
+                Button("Keep Editing", role: .cancel) {}
             } message: {
                 Text("Your unsaved picks are still only on this phone.")
             }
@@ -763,7 +763,7 @@ struct GearMyKitSection: View {
         let status = piece.status(order: kit.order)
         let stacked = typeSize.isAccessibilitySize
         let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
-        layout {
+        let content = layout {
             if let catalog {
                 let photo = image(for: piece, in: catalog)
                 GearPickThumbnail(path: photo, size: 56)
@@ -784,11 +784,17 @@ struct GearMyKitSection: View {
             statusLabel(status)
         }
         .padding(.vertical, 6)
-        .accessibilityElement(children: .combine)
         .contentShape(Rectangle())
-        .onTapGesture {
-            // A missing size is the one thing a person can fix from here.
-            if status == .needsSize { openProfile() }
+
+        // A missing size is the one thing a person can fix from here, so only
+        // that row is a button. The others are plain rows, not dead taps.
+        if status == .needsSize {
+            Button(action: openProfile) { content }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityHint("Opens your profile to add your size")
+        } else {
+            content.accessibilityElement(children: .combine)
         }
     }
 
