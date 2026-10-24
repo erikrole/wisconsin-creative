@@ -6,7 +6,7 @@ const PILL = "inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 p
  * The designation vocabulary for what the department gives a person:
  * standard issue (dashed grey, $0 to the budget), core kit (purple), and their own picks (teal).
  */
-export function StandardIssuePill({ count }: { count: number }) {
+function StandardIssuePill({ count }: { count: number }) {
   return (
     <span className={`${PILL} border border-dashed border-[#BFC1CC] bg-[#F7F7F9] text-[#60646C] dark:border-white/25 dark:bg-white/5 dark:text-muted-foreground`}>
       Standard issue · {count}
@@ -14,11 +14,11 @@ export function StandardIssuePill({ count }: { count: number }) {
   );
 }
 
-export function CoreKitPill({ count }: { count: number }) {
+function CoreKitPill({ count }: { count: number }) {
   return <span className={`${PILL} bg-[#F3EBFB] text-[#6E3AA8] dark:bg-[#8E4EC6]/20 dark:text-[#CBA8EE]`}>Core kit · {count}</span>;
 }
 
-export function PicksPill({ count }: { count: number }) {
+function PicksPill({ count }: { count: number }) {
   return <span className={`${PILL} bg-[#E3F6F3] text-[#0B7A6D] dark:bg-[#12A594]/20 dark:text-[#6FD6C8]`}>Picks · {count}</span>;
 }
 

@@ -91,8 +91,14 @@ describe("Home page contracts", () => {
 
   it("names the refresh action and keeps header actions at 40px", () => {
     expect(view).toContain('aria-label="Refresh home"');
-    expect(view).toContain('className="size-10"');
-    expect(view).toContain('<Button asChild className="h-10 bg-[var(--btn-primary-bg)]');
+    expect(view).toContain('className="size-10 text-muted-foreground hover:text-foreground"');
+    // New reservation wears Badger red, not the wc-fresh blue.
+    expect(view).toContain('<Button asChild className="h-10 bg-[var(--brand-red)]');
+  });
+
+  it("shows the Creative Wrapped banner once, inside Home", () => {
+    expect(page).not.toContain("WrappedBanner");
+    expect(home).toContain("<WrappedBanner />");
   });
 
   it("never offers New reservation to students or read-only previews", () => {

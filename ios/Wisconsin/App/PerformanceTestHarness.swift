@@ -80,7 +80,7 @@ struct PerformanceTestRootView: View {
         case .staffProfile:
             StaffProfileHarnessView()
         case .login:
-            LoginView()
+            InviteSignupHarnessView()
         case .registration:
             NavigationStack { NativeRegistrationView(initialEmail: "alex.onboarding@wisc.edu") }
         case .onboarding:
@@ -137,6 +137,8 @@ struct PerformanceTestRootView: View {
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
             AnnouncementHarnessView()
+        case .signatureCollections, .signatureRoster, .signatureCapture:
+            SignatureHarnessView(scenario: scenario)
         }
     }
 }
@@ -850,8 +852,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
 
         // Unmapped paths answer 404, never 401: `APIError.notFound` stays local
         // to the caller, while a 401 would tear down the harness session.
-        var mapped = Self.body(for: request)
-        var statusCode = mapped == nil ? 404 : 200
+        let inviteResponse = InviteSignupFixtureAPI.response(for: request)
+        var mapped = inviteResponse?.body ?? Self.body(for: request)
+        var statusCode = inviteResponse?.status ?? (mapped == nil ? 404 : 200)
 #if DEBUG
         // Review captures of Home's own states: `GT_FIXTURE_HOME=error` fails
         // the dashboard load; `=empty` serves the all-clear payload with no drafts.
@@ -995,13 +998,13 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/dashboard/activity": return HomeFixtureAPI.activity
         case "/api/scoreboard": return RecentIOSReviewFixtures.scoreboard(TeamScoreboardFixtureAPI.scoreboard)
         case "/api/wrapped": return WrappedFixtureAPI.recap
-        case "/api/users/\(ScoreboardFixtureAPI.userId)/scoreboard":
+        case "/api/users/\(ScoreboardFixtureAPI.userId)/scoreboard", "/api/users/\(ProfileFixtureAPI.otherUserId)/scoreboard":
             return ScoreboardFixtureAPI.scoreboard(for: request)
-        case "/api/users/\(ScoreboardFixtureAPI.userId)":
+        case "/api/users/\(ScoreboardFixtureAPI.userId)", "/api/users/\(ProfileFixtureAPI.otherUserId)":
             return ProfileFixtureAPI.userDetail
-        case "/api/users/\(ScoreboardFixtureAPI.userId)/right-now":
+        case "/api/users/\(ScoreboardFixtureAPI.userId)/right-now", "/api/users/\(ProfileFixtureAPI.otherUserId)/right-now":
             return ProfileFixtureAPI.rightNow
-        case "/api/badges/user/\(ScoreboardFixtureAPI.userId)":
+        case "/api/badges/user/\(ScoreboardFixtureAPI.userId)", "/api/badges/user/\(ProfileFixtureAPI.otherUserId)":
             return ProfileFixtureAPI.badgeProfile
         case "/api/shift-trades": return TradeBoardFixtureAPI.trades
         case "/api/schedule/open-work": return TradeBoardFixtureAPI.openWork
@@ -3887,9 +3890,12 @@ enum ProfileFixtureAPI {
     } }
     """.utf8)
 
+    /// A teammate distinct from the signed-in fixture user, so contact actions show.
+    static let otherUserId = "fixture-jordan"
+
     static let userDetail = Data("""
     { "data": {
-      "id": "\(ScoreboardFixtureAPI.userId)",
+      "id": "\(otherUserId)",
       "name": "Jordan Lee",
       "email": "jordan.lee@wisc.edu",
       "role": "STAFF",
@@ -4595,7 +4601,7 @@ struct UserDetailHarnessBody: View {
 
     var body: some View {
         Group {
-            if seeded { UserDetailView(userId: ScoreboardFixtureAPI.userId) } else { Color.clear }
+            if seeded { UserDetailView(userId: ProfileFixtureAPI.otherUserId) } else { Color.clear }
         }
         .onAppear {
             session.currentUser = ScheduleFixtures.staffUser

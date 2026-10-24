@@ -97,6 +97,7 @@ Reports/ReportChrome.swift             |                             | exempt-sh
 Reports/ReportSession.swift            |                             | exempt-infra
 LoginView.swift                        | login                       | audit
 NativeAuthViews.swift                  | login                       | audit
+InviteLinkResendButton.swift            |                             | exempt-shared
 PasswordSetupView.swift                | login                       | audit
 LaunchView.swift                       |                             | exempt-tiny
 Welcome/ProfileCompletionWelcomeView.swift | welcome                  | audit
@@ -117,6 +118,9 @@ SettingsView.swift                     | profile                     | audit
 ReportProblemSheet.swift               | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 SharedLoginsView.swift                 | shared-logins               | audit
+Signatures/SignaturesView.swift        | signatures                  | audit
+Signatures/SignatureCaptureView.swift  | signatures                  | audit
+Signatures/SignatureCanvasView.swift   | signatures                  | audit
 GuidesView.swift                       | resources                   | audit
 BrandAssetsView.swift                  | brand-assets                | audit
 GearPicksView.swift                    | gear-picks                  | audit

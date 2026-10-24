@@ -7,7 +7,7 @@
 export const LABEL_CATALOG_PAGE_SIZE = 200;
 
 /** Matches `PAGINATION_MAX_OFFSET` in `src/lib/http.ts`. */
-export const LABEL_CATALOG_MAX_OFFSET = 10_000;
+const LABEL_CATALOG_MAX_OFFSET = 10_000;
 
 export type LabelCatalogPage<TAsset, TFamily> = {
   data?: TAsset[];
@@ -20,7 +20,7 @@ export type LabelCatalog<TAsset, TFamily> = {
   families: TFamily[];
 };
 
-export function labelCatalogPagePath(search: string, offset: number): string {
+function labelCatalogPagePath(search: string, offset: number): string {
   const params = new URLSearchParams({
     limit: String(LABEL_CATALOG_PAGE_SIZE),
     sort: "assetTag",
@@ -60,7 +60,7 @@ function dedupeRows<T>(rows: T[]): T[] {
  * Offsets after the first page. Throws when `total` cannot be read without
  * passing the API offset cap, so the caller does not present a short list.
  */
-export function labelCatalogFollowupOffsets(total: number, firstPageCount: number): number[] {
+function labelCatalogFollowupOffsets(total: number, firstPageCount: number): number[] {
   if (firstPageCount < LABEL_CATALOG_PAGE_SIZE || total <= firstPageCount) return [];
   const maxReadable = LABEL_CATALOG_MAX_OFFSET + LABEL_CATALOG_PAGE_SIZE;
   if (total > maxReadable) {

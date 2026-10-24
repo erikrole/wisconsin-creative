@@ -3,7 +3,6 @@ import {
   BookingKind,
   BookingStatus,
   CheckinReportType,
-  BulkMovementKind,
   BulkUnitStatus,
   Prisma,
   ScanPhase,
@@ -27,7 +26,7 @@ export function wasReturnedOnTime(endsAt: Date, completedAt: Date) {
  * names both the returner (actor) and the owner they returned it for. Shared
  * custody has no owner to name.
  */
-export function returnedForOwnerId(
+function returnedForOwnerId(
   booking: { requesterUserId: string | null; custodyScope: BookingCustodyScope | string | null },
   actorUserId: string,
 ): string | null {

@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 const root = "public/qrcode";
 const html = readFileSync(join(root, "index.html"), "utf8");
 const nextConfigSource = readFileSync("next.config.ts", "utf8");
-const middlewareSource = readFileSync("src/middleware.ts", "utf8");
+const middlewareSource = readFileSync("src/proxy.ts", "utf8");
 const serviceWorkerSource = readFileSync("public/sw.js", "utf8");
 
 describe("QR Studio static tool at /qrcode", () => {

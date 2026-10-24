@@ -1,0 +1,20 @@
+name: Idea
+description: A change or feature you want to see
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the job or pain, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      options: [Web, iOS app, Kiosk, Not sure]

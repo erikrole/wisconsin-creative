@@ -107,12 +107,12 @@ describe("booking create validation", () => {
       ...basePayload,
       serializedAssetIds: [ids.asset],
       eventIds: tooManyEventIds,
-    })).toThrow(`Array must contain at most ${MAX_LINKED_EVENTS_PER_BOOKING} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_LINKED_EVENTS_PER_BOOKING} items`);
     expect(() => createCheckoutSchema.parse({
       ...basePayload,
       serializedAssetIds: [ids.asset],
       eventIds: tooManyEventIds,
-    })).toThrow(`Array must contain at most ${MAX_LINKED_EVENTS_PER_BOOKING} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_LINKED_EVENTS_PER_BOOKING} items`);
   });
 
   it("rejects duplicate bulk items before booking creation", () => {
@@ -150,16 +150,16 @@ describe("booking create validation", () => {
     expect(() => createReservationSchema.parse({
       ...basePayload,
       serializedAssetIds: [...maximum, cuid(MAX_EQUIPMENT_SELECTIONS_PER_REQUEST)],
-    })).toThrow(`Array must contain at most ${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} items`);
     expect(() => availabilitySchema.parse({
       locationId: ids.location,
       startsAt: basePayload.startsAt,
       endsAt: basePayload.endsAt,
       serializedAssetIds: [...maximum, cuid(MAX_EQUIPMENT_SELECTIONS_PER_REQUEST)],
-    })).toThrow(`Array must contain at most ${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} items`);
     expect(() => updateBookingSchema.parse({
       serializedAssetIds: [...maximum, cuid(MAX_EQUIPMENT_SELECTIONS_PER_REQUEST)],
-    })).toThrow(`Array must contain at most ${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} items`);
   });
 
   it("bounds bulk-line fan-out and rejects unsafe quantities", () => {
@@ -172,11 +172,11 @@ describe("booking create validation", () => {
     expect(() => createReservationSchema.parse({
       ...basePayload,
       bulkItems: [...maximum, { bulkSkuId: cuid(MAX_BULK_SKU_LINES_PER_REQUEST), quantity: 1 }],
-    })).toThrow(`Array must contain at most ${MAX_BULK_SKU_LINES_PER_REQUEST} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_BULK_SKU_LINES_PER_REQUEST} items`);
     expect(() => createReservationSchema.parse({
       ...basePayload,
       bulkItems: [{ bulkSkuId: ids.bulk, quantity: MAX_BULK_QUANTITY_PER_LINE + 1 }],
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_QUANTITY_PER_LINE}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_QUANTITY_PER_LINE}`);
   });
 
   it("caps only numbered item-family materialization, not quantity-tracked stock", () => {

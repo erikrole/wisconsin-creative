@@ -687,6 +687,7 @@ struct AppUserDetail: Codable, Identifiable {
     let locationId: String?
     let location: String?
     let phone: String?
+    let workPhone: String?
     let primaryArea: String?
     let avatarUrl: String?
     let active: Bool

@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { withWorkflow } from "workflow/next";
 
@@ -12,6 +12,9 @@ const isVercelDeployment = process.env.VERCEL === "1";
 const baseConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Next 16.4 dev otherwise appends generated rules to AGENTS.md; this repo's
+  // AGENTS.md is the hand-maintained contract.
+  agentRules: false,
   // Error reports from the browser carry the deploy they came from.
   env: {
     NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "",
@@ -22,9 +25,6 @@ const baseConfig: NextConfig = {
   // has repeatedly exhausted its memory during the duplicate checks after
   // compiling this large App Router surface; keep the deployment build focused
   // on producing the already-verified application bundle.
-  eslint: {
-    ignoreDuringBuilds: isVercelDeployment,
-  },
   typescript: {
     ignoreBuildErrors: isVercelDeployment,
   },
@@ -42,7 +42,6 @@ const baseConfig: NextConfig = {
       "cmdk",
       "react-day-picker",
     ],
-    devtoolSegmentExplorer: false,
     // Sentry and Workflow both customize webpack, so Next does not enable its
     // separate build worker automatically. Isolate compilation and release
     // intermediate webpack data earlier to stay within Vercel's memory budget.

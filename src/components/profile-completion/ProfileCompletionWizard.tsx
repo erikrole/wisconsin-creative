@@ -36,6 +36,7 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import { OPEN_PROFILE_COMPLETION_EVENT } from "@/lib/profile-completion-events";
 import {
   PROFILE_STEP_COPY,
+  PROFILE_FIELD_SHORT_LABELS,
   PROFILE_STEP_SHORT_LABELS,
   visibleProfileSteps,
   type ProfileCompletionStep,
@@ -824,11 +825,22 @@ export function ProfileCompletionWizard({
                 />
                 <p className="text-xs text-muted-foreground">JPEG, PNG, or WebP. You can crop and reposition before saving.</p>
               </div>
+              {!data.completion.requiredComplete && (
+                <p className="text-sm text-muted-foreground">
+                  To finish, go back and add your {data.completion.missingFields
+                    .filter((field) => field !== "photo")
+                    .map((field) => PROFILE_FIELD_SHORT_LABELS[field])
+                    .join(", ")}.
+                </p>
+              )}
             </div>
           )}
               </div>
   );
 
+  // The photo is optional: setup finishes without one and the profile keeps
+  // a snoozable reminder.
+  const skippingPhoto = isLastStep && step === "PHOTO" && !canContinue;
   const actions = (
     <>
       {!requiresSetup && step !== "PHOTO" && (
@@ -854,8 +866,8 @@ export function ProfileCompletionWizard({
         onClick={step === "PHOTO" ? finishPhotoStep : isOptionalStep && !canContinue ? skipOptionalStep : saveCurrentStep}
         disabled={saving || needsProfileRefresh || (step === "PHOTO" && !data.completion.requiredComplete) || (!canContinue && !isOptionalStep)}
       >
-        {saving ? <Spinner data-icon="inline-start" /> : isLastStep ? <CheckIcon data-icon="inline-start" /> : null}
-        {isLastStep ? "Finish" : isOptionalStep && !canContinue ? "Skip for now" : "Continue"}
+        {saving ? <Spinner data-icon="inline-start" /> : isLastStep && !skippingPhoto ? <CheckIcon data-icon="inline-start" /> : null}
+        {skippingPhoto ? "Skip for now" : isLastStep ? "Finish" : isOptionalStep && !canContinue ? "Skip for now" : "Continue"}
         {!saving && !isLastStep && <ArrowRightIcon data-icon="inline-end" />}
       </Button>
     </>

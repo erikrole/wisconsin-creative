@@ -15,7 +15,7 @@ const schema = z
   .superRefine((value, ctx) => {
     if (value.reason === AccountabilityExclusionReason.OTHER && !value.note) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["note"],
         message: "An explanation is required for Other",
       });

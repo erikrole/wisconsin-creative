@@ -6,7 +6,7 @@ import { subtractSerializedTurnaroundBuffer } from "@/lib/booking-availability-w
 type Client = Prisma.TransactionClient | PrismaClient;
 
 /** How far ahead the kiosk looks for the next claim on this gear. */
-export const EXTEND_WINDOW_HORIZON_MS = 365 * 24 * 60 * 60 * 1000;
+const EXTEND_WINDOW_HORIZON_MS = 365 * 24 * 60 * 60 * 1000;
 const MAX_BULK_CANDIDATES = 50;
 
 export type KioskExtendWindow = {

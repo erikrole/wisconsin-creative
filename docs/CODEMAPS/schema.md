@@ -1313,7 +1313,7 @@ Indexes and constraints:
 
 ## Model `CalendarEvent`
 
-Fields: 42
+Fields: 43
 
 - `id              String                @id @default(cuid())`
 - `sourceId        String?               @map("source_id")`
@@ -1357,6 +1357,7 @@ Fields: 42
 - `workers         EventWorker[]`
 - `combinedInto    CalendarEvent?        @relation("CalendarEventCombination", fields: [combinedIntoId], references: [id], onDelete: SetNull)`
 - `combinedEvents  CalendarEvent[]       @relation("CalendarEventCombination")`
+- `resultObservations GameResultObservation[]`
 
 Indexes and constraints:
 
@@ -1367,6 +1368,30 @@ Indexes and constraints:
 - `@@index([combinedIntoId])`
 - `@@index([archivedAt])`
 - `@@map("calendar_events")`
+
+## Enum `GameResultProvider`
+
+Values: `UW`, `ESPN`
+
+## Model `GameResultObservation`
+
+Fields: 9
+
+- `id            String             @id @default(cuid())`
+- `eventId       String             @map("event_id")`
+- `provider      GameResultProvider`
+- `externalId    String             @map("external_id")`
+- `snapshot      Json`
+- `observedAt    DateTime           @map("observed_at")`
+- `lastAttemptAt DateTime           @map("last_attempt_at")`
+- `lastError     String?            @map("last_error")`
+- `event         CalendarEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([eventId, provider])`
+- `@@unique([provider, externalId])`
+- `@@map("game_result_observations")`
 
 ## Enum `ScheduleFollowSource`
 
@@ -1910,7 +1935,7 @@ Indexes and constraints:
 
 ## Model `AllowedEmail`
 
-Fields: 18
+Fields: 20
 
 - `id                   String               @id @default(cuid())`
 - `email                String               @unique`
@@ -1922,6 +1947,8 @@ Fields: 18
 - `preloadedPrimaryArea ShiftArea?           @map("preloaded_primary_area")`
 - `preloadedAreas       ShiftArea[]          @default([]) @map("preloaded_areas")`
 - `preloadedSportCodes  String[]             @default([]) @map("preloaded_sport_codes")`
+- `inviteTokenHash      String?              @unique @map("invite_token_hash")`
+- `inviteTokenIssuedAt  DateTime?            @map("invite_token_issued_at")`
 - `createdById          String               @map("created_by_id")`
 - `claimedAt            DateTime?            @map("claimed_at")`
 - `claimedById          String?              @map("claimed_by_id")`
@@ -3543,3 +3570,21 @@ Indexes and constraints:
 - `@@unique([announcementId, userId])`
 - `@@index([userId])`
 - `@@map("announcement_dismissals")`
+
+## Model `QuickLink`
+
+Fields: 8
+
+- `id        String   @id @default(cuid())`
+- `label     String`
+- `url       String`
+- `detail    String?`
+- `roles     Role[]   @default([])`
+- `sortOrder Int      @default(0) @map("sort_order")`
+- `createdAt DateTime @default(now()) @map("created_at")`
+- `updatedAt DateTime @updatedAt @map("updated_at")`
+
+Indexes and constraints:
+
+- `@@index([sortOrder])`
+- `@@map("quick_links")`

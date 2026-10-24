@@ -1,7 +1,4 @@
-export {
-  canPerformBookingAction,
-  getAllowedBookingActions,
-} from "@/lib/booking-action-policy";
+export { getAllowedBookingActions } from "@/lib/booking-action-policy";
 
 export type {
   ActorContext,

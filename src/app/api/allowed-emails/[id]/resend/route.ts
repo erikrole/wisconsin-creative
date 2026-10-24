@@ -24,7 +24,8 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
   if (entry.claimedAt) throw new HttpError(409, "This person already signed in, so there is nothing to resend.");
 
   await enforceRateLimit(`allowed-emails:resend:${entry.id}`, RESEND_LIMIT);
-  const emailStatus = await sendInviteEmail({ email: entry.email, name: entry.preloadedName, kind: "reminder" });
+  // Unclaimed means they have never signed in, so they get the invite itself.
+  const emailStatus = await sendInviteEmail({ email: entry.email, name: entry.preloadedName, allowedEmailId: entry.id });
 
   // The audit entry records that a send was attempted and how it ended, never the address.
   await createAuditEntry({

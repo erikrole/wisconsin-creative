@@ -16,7 +16,7 @@ import { WEEK_DAYS, defaultWeeklyEndsOn, localToday, type BlockedRange } from "@
  * scheduling and the staff Availability tab read them unchanged.
  */
 
-export async function postUnavailable(userId: string, body: Record<string, unknown>) {
+async function postUnavailable(userId: string, body: Record<string, unknown>) {
   const res = await fetch(`/api/users/${userId}/availability`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -45,6 +45,15 @@ describe("iOS UA gear picks", () => {
     expect(screen).toContain("@ViewBuilder");
   });
 
+  it("leads with the picks and moves the assortment behind Catalog", () => {
+    const screen = view();
+
+    expect(screen).toContain("private var picksSection");
+    expect(screen).toContain("struct GearCatalogView: View");
+    expect(screen).toContain('Text("Catalog")');
+    expect(screen).toContain("Review and submit");
+  });
+
   it("keeps sizing, allowance, and stale-save problems in product language", () => {
     const rules = models();
 

@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "7bf5f38658611eb7da72a71c482f1514b7e03bc8",
+  "sourcePatchSha256": "c3a49e054c1d1e64b9d9fca5f95515d4bce4ef5eb283fb3762d4643645f10be4",
+  "settings": {
+    "device": "Playwright Chromium",
+    "viewport": [
+      390,
+      844
+    ],
+    "fixture": "security620-unconfigured-invite-v1",
+    "role": "public",
+    "route": "/login?email=student%40example.test",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-23T14:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

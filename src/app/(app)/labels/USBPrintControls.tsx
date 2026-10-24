@@ -9,7 +9,9 @@ const time = (value: string) => new Date(value).toLocaleString(undefined, { date
 function BatchDetails({ job }: { job: PrintJob }) {
   const download = () => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(job, null, 2)], { type: "application/json" }));
-    const link = document.createElement("a"); link.href = url; link.download = `label-print-${job.id}.json`; link.click(); URL.revokeObjectURL(url);
+    const link = document.createElement("a"); link.href = url; link.download = `label-print-${job.id}.json`; link.click();
+    // Revoking in the same tick can cancel the download in Safari and Firefox.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return <><ol className="mt-2 max-h-52 list-decimal space-y-2 overflow-auto pl-5">{job.labels.map((label, i) => {
     const outcome = job.outcomes[i]!;

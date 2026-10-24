@@ -9,7 +9,7 @@ export function generateQrCode(): string {
   return generateAssetQrCode();
 }
 
-export function getFiscalYearOptions(): string[] {
+function getFiscalYearOptions(): string[] {
   const now = new Date();
   const calYear = now.getFullYear();
   const currentFY = now.getMonth() >= 6 ? calYear + 1 : calYear;

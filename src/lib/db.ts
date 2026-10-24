@@ -5,7 +5,7 @@ import { attachDatabasePool } from "@vercel/functions/db-connections";
 class ManagedNeonAdapter extends PrismaNeon {
   override async connect() {
     const adapter = await super.connect();
-    // Prisma 6 creates its pool lazily. Register that actual pool with Fluid
+    // Prisma creates its pool lazily. Register that actual pool with Fluid
     // compute so idle connections are released before an instance suspends.
     attachDatabasePool(adapter.underlyingDriver());
     return adapter;

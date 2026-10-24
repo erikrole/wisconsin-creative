@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { Prisma, PrismaClient, Role } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import type { AuthUser } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
 import { checkpointSchema, createPrintJobSchema, printJobSchema, remainingLabels } from "@/lib/label-print-job";
@@ -20,7 +21,7 @@ suite("print job service on disposable PostgreSQL", () => {
   beforeAll(async () => {
     const target = new URL(connection!);
     if (target.hostname !== "127.0.0.1" || target.pathname !== "/wc_integrity_test") throw new Error("Refusing a non-disposable print test database");
-    holder.db = new PrismaClient({ datasourceUrl: connection });
+    holder.db = new PrismaClient({ adapter: new PrismaPg({ connectionString: connection }) });
     const count = await holder.db.$queryRaw<{ count: bigint }[]>`SELECT count(*) FROM pg_tables WHERE schemaname='public'`;
     if (Number(count[0]!.count) !== 0) throw new Error("Refusing a nonempty print test database");
     await holder.db.$executeRawUnsafe('CREATE TABLE users (id TEXT PRIMARY KEY)');

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-20
+- Last Updated: 2026-10-23
 - Status: Active
 - Version: V1
 
@@ -149,6 +149,8 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-10-23: **Native emailed-invite signup prepared locally for PR #620.** The native app accepts the canonical HTTPS inbox link in memory, sends its token through discovery and registration, and offers resend when a link is absent or has expired. Fresh links preserve the same student's entered name/password and supersede older discovery/error results. An existing session requires explicit sign-out. Invite emails retain a browser-owned primary action (`web=1`) and raw fallback for installed 1.4 clients; native setup is an explicit secondary action for the updated app. Source/build/fixture evidence is recorded in `tasks/archive/native-invite-pr620-2026-10-23.md`. This is not included in the released 1.4 (36); live inbox, device association/CDN, shared-backend mutation and distribution remain separate gates.
 
 - 2026-10-22: **Resumable setup and profile photos (local).** Native Welcome consumes account save versions, autosaves validated field groups, preserves dirty answers during refresh, exposes explicit conflict recovery, refreshes on foreground, and records FINISH even when photo is skipped. The photo editor uses system pan/pinch, a circular guide and VoiceOver actions without sliders; failed uploads retain the crop. Profile now owns add/change/remove after onboarding. Uploads send a frozen photo version, actor and upload ID, reconcile lost responses, and refresh the account avatar. Getting started progress syncs with web using account-scoped row-only retries. iPhone 18 Pro Max simulator walkthrough and physical crop/retry/Reset and PhotosPicker selection/decoding/cancellation pass. A physical zoom-feedback regression was fixed by keeping UIKit gestures authoritative and freezing the export crop during Save. Authenticated two-way handoff, photo-free completion/relaunch, and physical PhotosPicker upload with web 512px WebP read-back pass against the branch-owned Managed preview at `84586e71f`. Final hosted source `09561456e` confirms the web Continue fix and preserves the physical handoff accounts and saved photo. Production/native distribution remain open in `tasks/onboarding-continuity-2026-10-22.md`.
 

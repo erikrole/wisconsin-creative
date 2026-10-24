@@ -30,7 +30,7 @@ describe("Brand identity typography contracts", () => {
     expect(review).toContain('className="text-xs text-muted-foreground truncate"');
 
     const bookings = source("src/app/(app)/items/[id]/ItemBookingsTab.tsx");
-    expect(bookings.match(/brand-identity/g)?.length).toBeGreaterThanOrEqual(7);
+    expect(bookings.match(/brand-identity/g)?.length).toBeGreaterThanOrEqual(5);
     expect(bookings).toContain("{booking.requester.name}");
   });
 

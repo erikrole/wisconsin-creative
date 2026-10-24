@@ -1,0 +1,6 @@
+# Default owner. Review is requested automatically; it is not a required check.
+*                       @erikrole
+/.github/               @erikrole
+/prisma/                @erikrole
+/vercel.json            @erikrole
+/scripts/audit-gate.mjs @erikrole

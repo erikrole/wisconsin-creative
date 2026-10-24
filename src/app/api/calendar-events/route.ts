@@ -55,14 +55,14 @@ const createCalendarEventSchema = z.object({
   if (value.eventType === "non-game") return;
   if (!value.sportCode) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["sportCode"],
       message: "Sport is required for a game event",
     });
   }
   if (!value.opponent) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["opponent"],
       message: "Opponent is required for a game event",
     });

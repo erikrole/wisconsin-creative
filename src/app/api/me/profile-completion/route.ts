@@ -157,7 +157,7 @@ export const PATCH = withAuth(async (req, { user }) => {
     body = patchSchema.parse(await req.json());
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new HttpError(400, error.errors[0]?.message ?? "Invalid profile details");
+      throw new HttpError(400, error.issues[0]?.message ?? "Invalid profile details");
     }
     throw error;
   }
@@ -299,7 +299,13 @@ export const PATCH = withAuth(async (req, { user }) => {
       if ((before.onboardingRequired || body.step === "SNOOZE") && getProfileCompletion(next).requiredComplete && !before.onboardingCompletedAt) {
         next = await tx.user.update({
           where: { id: user.id },
-          data: { onboardingRequired: false, onboardingCompletedAt: new Date(), profilePromptSnoozedUntil: null },
+          // "Not now" on the photo also finishes setup for older apps; keep
+          // that snooze so the photo prompt does not reappear at once.
+          data: {
+            onboardingRequired: false,
+            onboardingCompletedAt: new Date(),
+            profilePromptSnoozedUntil: body.step === "SNOOZE" ? next.profilePromptSnoozedUntil : null,
+          },
           select: profileSelect,
         });
       }

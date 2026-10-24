@@ -191,3 +191,28 @@ extension Date {
         return "\(days)d late"
     }
 }
+
+// MARK: - America/Chicago formatting
+
+/// `Date.formatted(...)` reads the system time zone, not `NSTimeZone.default`,
+/// so a phone set to Pacific showed Pacific clock times. These overloads are
+/// chosen over Foundation's for the app's own call sites and pin Central. A
+/// style that already names a zone (Reports' date-only labels use GMT) keeps it.
+extension Date {
+    func formatted(date: Date.FormatStyle.DateStyle, time: Date.FormatStyle.TimeStyle) -> String {
+        formatted(Date.FormatStyle(date: date, time: time))
+    }
+
+    func formatted(_ style: Date.FormatStyle) -> String {
+        var pinned = style
+        // Pin everything except a style that deliberately names GMT/UTC
+        // (date-only labels). Styles built without a zone carry the system one.
+        let zone = pinned.timeZone
+        let isExplicitUTC = (zone.identifier == "GMT" || zone.identifier == "UTC")
+            && zone != TimeZone.autoupdatingCurrent
+        if !isExplicitUTC {
+            pinned.timeZone = NotificationPrefsViewModel.appTimeZone
+        }
+        return pinned.format(self)
+    }
+}

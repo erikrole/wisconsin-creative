@@ -20,7 +20,7 @@ Options go after `--`: `npm run review -- 543 --no-db --no-open --port 3200`, an
 
 ## Start or resume a branch
 
-Use Node 22 (`.nvmrc`), the repository's npm version, and Vercel CLI 59.11.7 (`npm install --global vercel@59.11.7`). Use one named Git feature branch for one task, regardless of whether Claude, Cursor, or Codex continues it.
+Use Node 24 (`.nvmrc`), the repository's npm version, and Vercel CLI 59.11.7 (`npm install --global vercel@59.11.7`). Use one named Git feature branch for one task, regardless of whether Claude, Cursor, or Codex continues it.
 
 ```sh
 npm ci

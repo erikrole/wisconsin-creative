@@ -1,3 +1,4 @@
+import { appTzDateKey } from "@/lib/app-time";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { BulkUnitStatus, Prisma } from "@prisma/client";
@@ -56,7 +57,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
   );
   const csv = [header, ...rows].join("\n");
 
-  const filename = `brother-labels-${fileSlug(sku.name)}-${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `brother-labels-${fileSlug(sku.name)}-${appTzDateKey(new Date())}.csv`;
 
   return new NextResponse(csv, {
     headers: {

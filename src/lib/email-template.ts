@@ -45,6 +45,8 @@ export type EmailContent = {
   /** Label and value rows in a quiet card. */
   facts?: EmailFact[];
   action?: { label: string; url: string };
+  /** Quiet text links under the button, for other ways to complete the task. */
+  secondaryAction?: { label: string; url: string } | { label: string; url: string }[];
   /** Small grey line under the button. */
   note?: string;
   /** Small grey lines under the card. */
@@ -111,6 +113,7 @@ function buttonHtml(action: NonNullable<EmailContent["action"]>): string {
 export function renderEmail(content: EmailContent): RenderedEmail {
   const logoUrl = `${env.appUrl}/email/logo.png`;
   const settingsUrl = `${env.appUrl}/settings/notifications`;
+  const secondaryLinks = content.secondaryAction ? [content.secondaryAction].flat() : [];
   const eyebrowColor = content.urgent ? EMAIL_THEME.danger : EMAIL_THEME.muted;
 
   const footerLines: string[] = [...(content.footer ?? [])];
@@ -162,6 +165,7 @@ ${
         ${content.steps ? stepsHtml(content.steps) : ""}
         ${content.facts && content.facts.length > 0 ? factsHtml(content.facts) : ""}
         ${content.action ? buttonHtml(content.action) : ""}
+        ${secondaryLinks.map((link, index) => `<p style="margin: ${index === 0 ? 20 : 8}px 0 0; font-size: 15px; line-height: 1.6;"><a href="${escapeEmailHtml(link.url)}" style="color: ${EMAIL_THEME.brand};">${escapeEmailHtml(link.label)}</a></p>`).join("")}
         ${
           content.note
             ? `<p style="margin: 16px 0 0; font-size: 14px; line-height: 1.5; color: ${EMAIL_THEME.muted};">${escapeEmailHtml(content.note)}</p>`
@@ -192,6 +196,7 @@ ${
     textParts.push(content.facts.map((fact) => `${fact.label}: ${fact.value}`).join("\n"));
   }
   if (content.action) textParts.push(`${content.action.label}: ${content.action.url}`);
+  for (const link of secondaryLinks) textParts.push(`${link.label}: ${link.url}`);
   if (content.note) textParts.push(content.note);
   textParts.push(...footerLines);
   if (content.manageNotifications) textParts.push(`Manage notifications: ${settingsUrl}`);

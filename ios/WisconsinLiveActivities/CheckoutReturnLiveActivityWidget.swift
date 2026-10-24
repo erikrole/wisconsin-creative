@@ -22,6 +22,12 @@ private extension Color {
 
 @main
 struct WisconsinLiveActivitiesBundle: WidgetBundle {
+    /// This extension is its own process, so the app's launch-time default
+    /// does not reach it. Due times and weekdays here are America/Chicago too.
+    init() {
+        NSTimeZone.default = TimeZone(identifier: "America/Chicago") ?? .current
+    }
+
     var body: some Widget {
         CheckoutReturnLiveActivityWidget()
         NextShiftWidget()
@@ -539,5 +545,27 @@ private func previewState(
 extension CheckoutReturnActivityAttributes {
     fileprivate static var preview: CheckoutReturnActivityAttributes {
         previewAttributes()
+    }
+}
+
+/// `Date.formatted(...)` reads the system zone, not `NSTimeZone.default`; these
+/// overloads (chosen over Foundation's inside this extension) pin Central, like
+/// the same pair in the app's DateFormats.swift.
+extension Date {
+    func formatted(date: Date.FormatStyle.DateStyle, time: Date.FormatStyle.TimeStyle) -> String {
+        formatted(Date.FormatStyle(date: date, time: time))
+    }
+
+    func formatted(_ style: Date.FormatStyle) -> String {
+        var pinned = style
+        // Pin everything except a style that deliberately names GMT/UTC
+        // (date-only labels). Styles built without a zone carry the system one.
+        let zone = pinned.timeZone
+        let isExplicitUTC = (zone.identifier == "GMT" || zone.identifier == "UTC")
+            && zone != TimeZone.autoupdatingCurrent
+        if !isExplicitUTC {
+            pinned.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
+        }
+        return pinned.format(self)
     }
 }

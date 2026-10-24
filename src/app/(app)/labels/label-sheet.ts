@@ -13,6 +13,9 @@ import { MAX_BULK_UNIT_NUMBER } from "@/lib/request-limits";
 /** Most labels one sheet entry can ask for; a typo should not queue 10,000 prints. */
 export const MAX_COPIES = 500;
 
+/** Most copies one USB batch sends; matches the print job schema cap. */
+export const MAX_USB_LABELS = 500;
+
 /** How an item family prints. Serialized items never carry this. */
 export type FamilySource = {
   skuId: string;
@@ -279,7 +282,7 @@ export function preparedSheet(cart: CartEntry[], unitsBySku: UnitsBySku) {
   const labels: PrintLabel[] = [];
   for (const group of groups) for (const entry of group.entries) {
     for (const [rowIndex, row] of entryRows(entry, entry.family ? unitsBySku[entry.family.skuId] : undefined).entries()) {
-      for (let copy = 0; copy < clampCopies(row.copies) && labels.length <= 500; copy++) {
+      for (let copy = 0; copy < clampCopies(row.copies) && labels.length < MAX_USB_LABELS; copy++) {
         labels.push({ copyId: `${entry.id}:${rowIndex}:${copy}`, entryId: entry.id,
           row: { kind: row.kind, dept: row.dept, model: row.model, number: row.number, qrCodeValue: row.qrCodeValue, copies: 1 },
           ...(printsUnits(entry) ? { unit: { skuId: entry.family!.skuId, number: Number(row.number) } } : {}) });

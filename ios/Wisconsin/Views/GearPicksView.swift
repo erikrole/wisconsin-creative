@@ -31,7 +31,7 @@ final class GearPicksModel {
     var searchText = ""
 
     private var loadID = UUID()
-    private var hasLoaded = false
+    fileprivate var hasLoaded = false
 
     var canEdit: Bool {
         phase == .ready && cycle?.isOpen == true && !isSaving && !isReloading && conflictMessage == nil && !serverClosed
@@ -300,7 +300,9 @@ struct GearPicksView: View {
     @State private var model = GearPicksModel()
     @State private var showReview = false
     @State private var confirmLeave = false
+    @State private var viewing: GearPhotoItem?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     @ViewBuilder
     var body: some View {
@@ -319,9 +321,13 @@ struct GearPicksView: View {
             .toolbar { toolbar }
             .refreshable { await model.load(replacingDraft: !model.isDirty) }
             .task { await model.loadIfNeeded() }
+            .navigationDestination(for: GearCatalogRoute.self) { _ in
+                GearCatalogView(model: model)
+            }
             .navigationDestination(for: GearPickStyleRoute.self) { route in
                 GearPickItemView(style: route.style, model: model)
             }
+            .gearPhotoViewer($viewing)
             .sheet(isPresented: $showReview) {
                 NavigationStack {
                     GearPicksReviewView(model: model)
@@ -329,7 +335,7 @@ struct GearPicksView: View {
             }
             .confirmationDialog("Leave without saving?", isPresented: $confirmLeave, titleVisibility: .visible) {
                 Button("Leave without saving", role: .destructive) { dismiss() }
-                Button("Keep editing", role: .cancel) {}
+                Button("Keep Editing", role: .cancel) {}
             } message: {
                 Text("Your unsaved picks are still only on this phone.")
             }
@@ -342,15 +348,10 @@ struct GearPicksView: View {
                 Button("Back", systemImage: "chevron.backward") { confirmLeave = true }
             }
         }
-        if model.phase == .ready {
+        if model.phase == .ready, model.catalog != nil {
             ToolbarItem(placement: .topBarTrailing) {
-                if model.canEdit && model.pickCount > 0 {
-                    // The one primary action: review what you have picked.
-                    Button("Review (\(model.pickCount))") { showReview = true }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.statusText(.green))
-                } else {
-                    Button(model.canEdit ? "Review" : "Your picks") { showReview = true }
+                NavigationLink(value: GearCatalogRoute()) {
+                    Text("Catalog")
                 }
             }
         }
@@ -394,59 +395,120 @@ struct GearPicksView: View {
     }
 
     private var readyList: some View {
-        let sections = model.sections()
-        return ScrollView {
-            LazyVStack(alignment: .leading, spacing: Brand.Space.lg) {
-                summary
-                if let kit = model.kit {
-                    GroupBox { GearMyKitSection(kit: kit) }
-                }
-                if model.catalog == nil {
-                    Text("The catalog didn't load, so you can review a saved list but not add gear.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else if sections.isEmpty {
-                    ContentUnavailableView {
-                        Label("No gear matches", systemImage: "tshirt")
-                    } description: {
-                        Text("Try a different name, color, or style number.")
-                    } actions: {
-                        if !model.searchText.isEmpty {
-                            Button("Clear search") { model.searchText = "" }
-                        }
-                    }
-                } else {
-                    ForEach(sections, id: \.category) { section in
-                        VStack(alignment: .leading, spacing: Brand.Space.sm) {
-                            Text(section.category)
-                                .font(.title3.weight(.bold))
-                                .accessibilityAddTraits(.isHeader)
-                            LazyVGrid(
-                                columns: [GridItem(.flexible(), spacing: 14, alignment: .top),
-                                          GridItem(.flexible(), spacing: 14, alignment: .top)],
-                                spacing: 18
-                            ) {
-                                ForEach(section.items) { item in
-                                    NavigationLink(value: GearPickStyleRoute(style: item.style)) {
-                                        GearPickCatalogTile(item: item, picked: model.pickCount(for: item.style))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-                }
+        List {
+            Section { summary }
+            picksSection
+            if let kit = model.kit { GearMyKitSection(kit: kit, catalog: model.catalog, collapses: false) { viewing = $0 } }
+            Section {} footer: {
                 Text(footerText)
-                    .font(.footnote)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .safeAreaInset(edge: .bottom) { reviewBar }
+    }
+
+    /// What the person has picked so far, front and centre. The full assortment
+    /// lives behind the Catalog button.
+    private var picksSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Your picks")
+                    .font(.gothamBold(size: 17, relativeTo: .headline))
+                Text(picksSubtitle)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, Brand.Space.md)
-            .padding(.top, Brand.Space.xs)
-            .padding(.bottom, Brand.Space.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 4)
+            .listRowSeparator(.hidden)
+            if model.lines.isEmpty {
+                emptyPicks
+            } else {
+                ForEach(model.lines) { line in
+                    pickRow(line)
+                }
+            }
         }
-        .scrollDismissesKeyboard(.interactively)
-        .background(Color(.systemGroupedBackground))
-        .searchable(text: $model.searchText, prompt: "Search gear")
+    }
+
+    private var picksSubtitle: String {
+        if model.lines.isEmpty {
+            return model.canEdit ? "Choose what you'd like from this year's catalog." : "Nothing was saved for this cycle."
+        }
+        let count = model.pickCount
+        return "\(count) \(count == 1 ? "item" : "items") · \(GearPickMoney.format(model.totalCents))"
+    }
+
+    @ViewBuilder
+    private var emptyPicks: some View {
+        if model.canEdit, model.catalog != nil {
+            NavigationLink(value: GearCatalogRoute()) {
+                Label("Browse the catalog", systemImage: "square.grid.2x2")
+                    .foregroundStyle(Color.statusText(.green))
+            }
+        } else if model.catalog == nil {
+            Text("The catalog didn't load, so you can review a saved list but not add gear.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func pickRow(_ line: GearPickDraftLine) -> some View {
+        let item = model.item(style: line.style)
+        let price = (item?.priceCents ?? line.unitPriceCents) * line.quantity
+        NavigationLink(value: GearPickStyleRoute(style: line.style)) {
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+            layout {
+                let photo = item?.colors.first { $0.code == line.colorCode }?.image
+                GearPickThumbnail(path: photo, size: 56)
+                    .opensPhoto(GearPhotoItem(path: photo, title: line.itemName, subtitle: line.colorLabel), $viewing)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(line.itemName)
+                        .font(.gothamBold(size: 15, relativeTo: .subheadline))
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                    Text(pickDetail(line))
+                        .font(.footnote)
+                        .foregroundStyle(line.size == nil && item?.oneSize != true ? Color.statusText(.orange) : .secondary)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                }
+                if !typeSize.isAccessibilitySize { Spacer(minLength: 8) }
+                Text(GearPickMoney.format(price))
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .swipeActions {
+            if model.canEdit {
+                Button("Remove", role: .destructive) { model.remove(id: line.id) }
+            }
+        }
+    }
+
+    private func pickDetail(_ line: GearPickDraftLine) -> String {
+        var parts = [line.colorLabel, line.size.map { "Size \($0)" } ?? "Size needed"]
+        if line.quantity > 1 { parts.append("×\(line.quantity)") }
+        return parts.joined(separator: " · ")
+    }
+
+    /// One primary action, pinned: review and submit what you have picked.
+    @ViewBuilder
+    private var reviewBar: some View {
+        if model.canEdit && model.pickCount > 0 {
+            Button {
+                showReview = true
+            } label: {
+                Text(model.submittedAt == nil ? "Review and submit" : "Review changes")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(Color.statusText(.green))
+            .padding(.horizontal, Brand.Space.md)
+            .padding(.vertical, Brand.Space.sm)
+            .background(.bar)
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        }
     }
 
     private var summary: some View {
@@ -517,19 +579,154 @@ struct GearPicksView: View {
     }
 }
 
+/// A photo someone tapped, shown larger with its name.
+struct GearPhotoItem: Identifiable {
+    let id = UUID()
+    let path: String?
+    let title: String
+    let subtitle: String
+}
+
+/// Native full-size look at a gear photo: pinch or double-tap to zoom.
+private struct GearPhotoViewer: View {
+    let item: GearPhotoItem
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+    @State private var baseScale: CGFloat = 1
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: Brand.Space.md) {
+                AsyncImage(url: item.path.flatMap(GearPickImage.url(for:))) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFit()
+                    } else if phase.error != nil {
+                        Image(systemName: "photo").font(.largeTitle).foregroundStyle(.tertiary)
+                    } else {
+                        ProgressView()
+                    }
+                }
+                .scaleEffect(scale)
+                .gesture(
+                    MagnifyGesture()
+                        .onChanged { scale = min(max(baseScale * $0.magnification, 1), 5) }
+                        .onEnded { _ in baseScale = scale }
+                )
+                .onTapGesture(count: 2) {
+                    withAnimation(.spring) {
+                        scale = scale > 1 ? 1 : 2.5
+                        baseScale = scale
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+                .accessibilityLabel("\(item.title), \(item.subtitle)")
+                Text(item.subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, Brand.Space.md)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(item.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private extension View {
+    func gearPhotoViewer(_ item: Binding<GearPhotoItem?>) -> some View {
+        sheet(item: item) { GearPhotoViewer(item: $0) }
+    }
+
+    /// Makes a thumbnail open the larger photo without stealing the row's own tap.
+    func opensPhoto(_ item: GearPhotoItem, _ viewing: Binding<GearPhotoItem?>) -> some View {
+        onTapGesture { viewing.wrappedValue = item }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Shows a larger photo")
+    }
+}
+
+struct GearCatalogRoute: Hashable {}
+
+/// The full assortment, one pushed screen away from the main picks list.
+struct GearCatalogView: View {
+    var model: GearPicksModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// One column at accessibility sizes so names don't truncate.
+    private var columns: [GridItem] {
+        let count = typeSize.isAccessibilitySize ? 1 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: 14, alignment: .top), count: count)
+    }
+
+    var body: some View {
+        let sections = model.sections()
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: Brand.Space.lg) {
+                if sections.isEmpty {
+                    ContentUnavailableView {
+                        Label("No gear matches", systemImage: "tshirt")
+                    } description: {
+                        Text("Try a different name, color, or style number.")
+                    } actions: {
+                        if !model.searchText.isEmpty {
+                            Button("Clear search") { model.searchText = "" }
+                        }
+                    }
+                } else {
+                    ForEach(sections, id: \.category) { section in
+                        VStack(alignment: .leading, spacing: Brand.Space.sm) {
+                            Text(section.category)
+                                .font(.title3.weight(.bold))
+                                .accessibilityAddTraits(.isHeader)
+                            LazyVGrid(columns: columns, spacing: 18) {
+                                ForEach(section.items) { item in
+                                    NavigationLink(value: GearPickStyleRoute(style: item.style)) {
+                                        GearPickCatalogTile(item: item, picked: model.pickCount(for: item.style))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Brand.Space.md)
+            .padding(.top, Brand.Space.xs)
+            .padding(.bottom, Brand.Space.lg)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(Color(.systemGroupedBackground))
+        .searchable(text: Bindable(model).searchText, prompt: "Search gear")
+        .navigationTitle("Catalog")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 /// "My kit": what you are getting and where each piece stands. Calm on
 /// purpose: a light header, one sentence of status, then a short list with one
 /// detail line each and status as plain secondary text beside a small glyph.
 struct GearMyKitSection: View {
     let kit: GearMyKit
+    /// With a catalog the rows get photos; with `collapses` off every piece shows.
+    var catalog: GearPickPhoneCatalog? = nil
+    var collapses = true
+    /// Called when a piece's photo is tapped; the parent presents the viewer.
+    var onPhoto: ((GearPhotoItem) -> Void)? = nil
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// Four rows at a glance; the rest sit behind the disclosure.
     private let glance = 4
     @State private var showsAll = false
 
     private var shown: [GearMyKitPiece] {
-        showsAll ? kit.pieces : Array(kit.pieces.prefix(glance))
+        showsAll || !collapses ? kit.pieces : Array(kit.pieces.prefix(glance))
     }
 
     var body: some View {
@@ -551,7 +748,7 @@ struct GearMyKitSection: View {
                 row(piece)
                     .listRowSeparator(.hidden)
             }
-            if kit.pieces.count > glance {
+            if collapses, kit.pieces.count > glance {
                 Button(showsAll ? "Show fewer" : "Show all \(kit.pieces.count)") {
                     withAnimation { showsAll.toggle() }
                 }
@@ -564,26 +761,48 @@ struct GearMyKitSection: View {
     @ViewBuilder
     private func row(_ piece: GearMyKitPiece) -> some View {
         let status = piece.status(order: kit.order)
-        HStack(alignment: .center, spacing: 12) {
+        let stacked = typeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+        let content = layout {
+            if let catalog {
+                let photo = image(for: piece, in: catalog)
+                GearPickThumbnail(path: photo, size: 56)
+                    .onTapGesture { onPhoto?(GearPhotoItem(path: photo, title: piece.itemName, subtitle: piece.colorLabel)) }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint("Shows a larger photo")
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(piece.itemName)
                     .font(.gothamBold(size: 15, relativeTo: .subheadline))
-                    .lineLimit(1)
+                    .lineLimit(stacked ? nil : 1)
                 Text(piece.detail)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(stacked ? nil : 1)
             }
-            Spacer(minLength: 8)
+            if !stacked { Spacer(minLength: 8) }
             statusLabel(status)
         }
         .padding(.vertical, 6)
-        .accessibilityElement(children: .combine)
         .contentShape(Rectangle())
-        .onTapGesture {
-            // A missing size is the one thing a person can fix from here.
-            if status == .needsSize { openProfile() }
+
+        // A missing size is the one thing a person can fix from here, so only
+        // that row is a button. The others are plain rows, not dead taps.
+        if status == .needsSize {
+            Button(action: openProfile) { content }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityHint("Opens your profile to add your size")
+        } else {
+            content.accessibilityElement(children: .combine)
         }
+    }
+
+    private func image(for piece: GearMyKitPiece, in catalog: GearPickPhoneCatalog) -> String? {
+        for item in catalog.items {
+            if let color = item.colors.first(where: { "\(item.style)-\($0.code)" == piece.sku }) { return color.image }
+        }
+        return nil
     }
 
     @ViewBuilder
@@ -607,7 +826,7 @@ struct GearMyKitSection: View {
         }
         .font(.footnote.weight(weight))
         .foregroundStyle(tone)
-        .lineLimit(1)
+        .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
     }
 
     private func openProfile() {
@@ -694,6 +913,7 @@ struct GearPickItemView: View {
     @State private var size: String
     @State private var quantity: Int
     @State private var kitPrompt: KitPrompt?
+    @State private var viewing: GearPhotoItem?
 
     init(style: String, model: GearPicksModel) {
         self.style = style
@@ -723,6 +943,7 @@ struct GearPickItemView: View {
         }
         .navigationTitle(model.item(style: style)?.name ?? "Gear")
         .navigationBarTitleDisplayMode(.inline)
+        .gearPhotoViewer($viewing)
         .alert(kitPrompt?.title ?? "Included in your standard issue", isPresented: kitPresented) {
             Button("Add to picks") { confirmKitAdd() }
             Button("Cancel", role: .cancel) { kitPrompt = nil }
@@ -746,6 +967,7 @@ struct GearPickItemView: View {
             if let color {
                 Section {
                     GearPickThumbnail(path: color.image, size: 220)
+                        .opensPhoto(GearPhotoItem(path: color.image, title: item.name, subtitle: color.label), $viewing)
                         .frame(maxWidth: .infinity)
                         .listRowBackground(Color.clear)
                     Text(GearPickMoney.format(item.priceCents))
@@ -1029,3 +1251,82 @@ private func gearPickSwatch(_ hex: String) -> Color {
     let blue = Double(int & 0xFF) / 255
     return Color(red: red, green: green, blue: blue)
 }
+
+#if DEBUG
+/// Deterministic UA Gear states for light/dark/Dynamic Type captures.
+/// `GT_GEAR_FIXTURE` = picks | empty | closed; `GT_GEAR_ROUTE=catalog` pushes the catalog.
+struct GearPicksReviewFixture: View {
+    @State private var path = NavigationPath()
+    @State private var viewing: GearPhotoItem?
+    private let model: GearPicksModel
+    private let route: String?
+
+    init(scenario: String, route: String?) {
+        model = GearPicksModel.fixture(scenario)
+        self.route = route
+    }
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            GearPicksView(wrapsInNavigationStack: false, model: model)
+        }
+        .gearPhotoViewer($viewing)
+        .onAppear {
+            if route == "catalog" { path.append(GearCatalogRoute()) }
+            if route == "viewer" { viewing = GearPhotoItem(path: model.lines.first.flatMap { model.item(style: $0.style)?.colors.first?.image }, title: "Tech 2.0 Short Sleeve", subtitle: "Cardinal") }
+        }
+    }
+}
+
+extension GearPicksView {
+    init(wrapsInNavigationStack: Bool, model: GearPicksModel) {
+        self.wrapsInNavigationStack = wrapsInNavigationStack
+        _model = State(initialValue: model)
+    }
+}
+
+extension GearPicksModel {
+    static func fixture(_ scenario: String) -> GearPicksModel {
+        func color(_ code: String, _ label: String, _ swatch: String) -> GearPickPhoneColor {
+            .init(code: code, label: label, swatch: swatch, image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwCAIAAACxN37FAAAD5ElEQVR42u3dQW6DMBRFUe9/FV1k1HE76hREwfZ7HOkuIM4/QQk4MD6fb6mm4S0Q0BLQEtAS0AJaAloCWgJaAlpAS0BLQEtAS0ALaAloCWgJaAloAS0BLQEtAS0BLaAloCWgJaAloAW0BLQEtAS0BLSAloCWgJaAvqmvMX7b+eWZEdBnHf8V8TpNDegDx1mgyQb6wHEoaLJfCvrQ8eY4ol880Gscd4B+oezBcZaGprUAvUBzGeh61oPmF4IuNj1oDhp/5aKAnj34TcZfuSig1wy+FXSf6UFzxOxb1wX0sqkvnH3ruoBeOfJVs29dF9BbaJ48++KlAb3LyKcNvnhpQO818gmDL14a0DuO/LnZt64L6ICp3z771nUBHTP1WwT0rQjo+NlfQ1C2HKCrZt8a0DRjDTTNTL8BNEZM94AGiOke0Ogw3QMaGqZ7QOPCdAloSpjuAc0H1j2gsWC6BzQQTPeARoHpHtAQMN0D2viZ7gFt8EyXgDZvpntAmzTWPaANmOke0EbLdA9oQ2W6B7Rxao7pQbOaTA+a1WR6oKwm047QcoRmWq/9Ds202s5yMK2289BM02wvh2i220522/WZ9rE56axvS/Syfxakj6rmwGmD/9amfbG5oM1fsDY17Zv6ZXD+JLsdaz89/2nOfTk2Mu1cyi3y0jWX3NvOycEb8UVrbrj7qLPdt/vL1Rx/f2iXbx46oIZq3vQO/vNHAvRDUwD67LvpAvuEH3BxmlMfGmTHyLTza1maIx/rZgvU5BPGQZrzHrxpT9+Si3kpmsMejWyT6sKr0xGaYx5eb9d1zeYhoIEGGmiggQYaaKCBBhpooIEGGmiggRbQQAMNNNBAAw000EADDTTQAhpooIEGGmiggQYaaKCBBlpAAw000EADDTTQQAMNNNBAC2iggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQaaWqCBBhpooIEGGmiggQYaaKAFNNBAAw000EADDTTQQAMNtIAGGmiggQYaaKCBBhpooIEW0EADDTTQQAMNNNBAAw000AIaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBFtBAAw000EADDTTQQAMNNNACGmiggQYaaKCBBhpooIEGWkADDTTQEtAS0BLQAloCWgJaAloCWkBLQEtAS0BLQAtoCWgJaAloAS0BLQEtAS0BLaAloCWgJaAloAW0BLQEtAS0BLSAloCWgJaAloAW0BLQ0qJ+AFbRz0oIcPLEAAAAAElFTkSuQmCC")
+        }
+        func item(_ style: String, _ name: String, _ category: String, _ cents: Int, one: Bool = false) -> GearPickPhoneItem {
+            .init(style: style, name: name, fit: "MENS", category: category, priceCents: cents,
+                  sizeLabel: "Men's", sizes: one ? ["OSFA"] : ["S", "M", "L", "XL", "2XL"], sizesAreExact: false,
+                  oneSize: one, defaultSize: nil, kit: nil,
+                  colors: [color("600", "Cardinal", "#9b0000"), color("001", "Black", "#111111")])
+        }
+        let items = [
+            item("1370399", "Tech 2.0 Short Sleeve", "Tops", 2800),
+            item("1370400", "Storm Hoodie", "Tops", 6500),
+            item("1370401", "Wisconsin Quarter Zip Pullover", "Outerwear", 8500),
+            item("1370402", "Rival Fleece Jogger", "Bottoms", 5500),
+            item("1370403", "Team Beanie", "Accessories", 2500, one: true),
+            item("1370404", "Performance Cap", "Accessories", 2800, one: true),
+        ]
+        let catalog = GearPickPhoneCatalog(maxQuantity: 5, categories: ["Tops", "Outerwear", "Bottoms", "Accessories"], items: items)
+        let m = GearPicksModel()
+        m.catalog = catalog
+        m.participant = .init(id: "p1", fit: "MENS", allowanceCents: 30000)
+        let closed = scenario == "closed"
+        m.cycle = .init(id: "c1", title: "2026 UA gear", deadline: "2026-11-15T05:59:00Z", isOpen: !closed, launchedAt: "2026-10-01T15:00:00Z")
+        m.kit = .init(group: "Core kit", order: .init(placedAt: nil, expectedAt: nil), pieces: [
+            .init(sku: "K1", itemName: "Game Day Polo", colorLabel: "Cardinal", source: "CORE_KIT", size: "L"),
+            .init(sku: "K2", itemName: "Quarter Zip", colorLabel: "Black", source: "CORE_KIT", size: "L"),
+            .init(sku: "K3", itemName: "Windbreaker", colorLabel: "Black", source: "STANDARD_ISSUE", size: GearMyKitPiece.sizeNeeded),
+        ])
+        if scenario != "empty" {
+            func line(_ i: GearPickPhoneItem, _ c: Int, _ size: String?, _ q: Int) -> GearPickDraftLine {
+                .init(id: UUID(), sku: "\(i.style)-\(i.colors[c].code)", style: i.style, colorCode: i.colors[c].code,
+                      size: size, quantity: q, itemName: i.name, colorLabel: i.colors[c].label,
+                      unitPriceCents: i.priceCents, category: i.category)
+            }
+            m.lines = [line(items[0], 0, "L", 2), line(items[2], 1, "L", 1), line(items[4], 0, "OSFA", 1), line(items[1], 0, nil, 1)]
+            m.submittedAt = closed ? "2026-10-12T15:00:00Z" : nil
+        }
+        m.phase = .ready
+        m.hasLoaded = true
+        return m
+    }
+}
+#endif

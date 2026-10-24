@@ -18,7 +18,7 @@ export function parseDay(value: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
 }
 
-export function formatDay(date: Date): string {
+function formatDay(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
@@ -62,7 +62,7 @@ export const LibraryWindow = {
 const LONG_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const AP_MONTHS = ["Jan.", "Feb.", "March", "April", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."];
 
-export function longDate(day: string): string | null {
+function longDate(day: string): string | null {
   const date = parseDay(day);
   return date ? `${LONG_MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}` : null;
 }
@@ -203,7 +203,7 @@ export const SPORTS = [
 export const UNASSIGNED = "Unassigned";
 
 /** Videos the user marked as never-touch. */
-export const PROTECTED_VIDEO_IDS = new Set(["Bge051LX6DM", "Dj6ZKiRqx5w"]);
+const PROTECTED_VIDEO_IDS = new Set(["Bge051LX6DM", "Dj6ZKiRqx5w"]);
 
 export interface VideoIdentity {
   sport: string;
@@ -215,7 +215,7 @@ export interface VideoIdentity {
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-export function sportFromTitle(title: string): string {
+function sportFromTitle(title: string): string {
   const lower = title.toLowerCase().replace(/’/g, "'");
   const matches = SPORTS.filter((sport) => new RegExp(`\\b${escapeRegExp(sport.toLowerCase())}\\b`).test(lower));
   return matches.length === 1 && matches[0] ? matches[0] : UNASSIGNED;
@@ -230,7 +230,7 @@ const MONTHS: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4,
 const FULL_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
 /** Reads `Sept. 26, 2026`, `Oct 1 2026` or `October 1, 2026`; null when the text is not a real date. */
-export function dayFromTitleDate(text: string): string | null {
+function dayFromTitleDate(text: string): string | null {
   const match = /^([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/.exec(text.trim());
   if (!match?.[1] || !match[2] || !match[3]) return null;
   const word = match[1].toLowerCase();

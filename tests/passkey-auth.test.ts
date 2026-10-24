@@ -458,6 +458,8 @@ describe("automatic passkey upgrade after password sign-in", () => {
     expect(verifyPassword).toHaveBeenCalledWith("password-hash", "correct-password");
     expect(generateRegistrationOptions).toHaveBeenCalledWith(expect.objectContaining({
       authenticatorSelection: { residentKey: "required", userVerification: "preferred" },
+      // Pinned: SimpleWebAuthn 14 would otherwise offer ML-DSA-44 first on Node 24.
+      supportedAlgorithmIDs: [-8, -7, -257],
     }));
     expect(dbMock.passkeyChallenge.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ type: "REGISTRATION", automatic: true }),
@@ -510,7 +512,7 @@ describe("automatic passkey upgrade after password sign-in", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(verifyRegistrationResponse).toHaveBeenCalledWith(expect.objectContaining({ requireUserVerification: false }));
+    expect(verifyRegistrationResponse).toHaveBeenCalledWith(expect.objectContaining({ requireUserVerification: false, supportedAlgorithmIDs: [-8, -7, -257] }));
     expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
       action: "passkey_registered",
       after: expect.objectContaining({ automatic: true }),

@@ -278,7 +278,7 @@ export function availabilityRiskBadgeLabel(risk: AvailabilityRiskLike) {
   }
 }
 
-export function availabilityRiskTitle(risks: AvailabilityRiskLike[] | undefined) {
+function availabilityRiskTitle(risks: AvailabilityRiskLike[] | undefined) {
   return risks?.map(availabilityRiskMessage).join(" · ") || "Availability notice";
 }
 

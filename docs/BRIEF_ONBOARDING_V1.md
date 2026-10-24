@@ -5,7 +5,7 @@
 - Owner: Wisconsin Athletics Creative Product
 - Status: Active - invite-first V1 shipped and launch-smoked
 - Version: V1
-- Last Updated: 2026-10-21
+- Last Updated: 2026-10-23
 - Decision Reference: D-037, D-051
 
 ## Problem
@@ -27,7 +27,7 @@ The security model still needs to prevent unauthorized access. The fix is one fi
 2. Domain-wide automatic access, such as accepting every address from one school domain.
 3. Self-service role requests.
 4. Directory sync, SCIM, SSO, Entra, or Google Workspace automation.
-5. Email delivery as a required dependency for V1. If delivery is not configured, operators can still send an email blast or copy the generic app login link.
+5. Any bypass of inbox proof when invite email is unavailable. An operator can still stage an invitation, but a generic login link cannot claim it; token delivery must be restored before first-time setup can complete.
 6. Pre-created user profiles without any password. `User.passwordHash` is required today, so that needs a later schema and setup-token slice.
 
 ## Product Direction
@@ -50,6 +50,7 @@ Public registration and login responses must stay generic where membership discl
 8. Every create, claim, skip, resend, and retry action must be audit logged.
 9. Bulk endpoints need row-count bounds and rate limits sized for shared-network student onboarding.
 10. Import output must not contain passwords.
+11. Claiming an invite requires the one-time token from its emailed link (D-037, 2026-10-23 amendment). Web and updated native clients offer a rate-limited resend to the invited address only. Native proof stays in memory, is bound to that address, and never changes the API host or automatically switches a signed-in account. Browser-owned email setup remains usable by older installed clients.
 
 ## V1 Scope
 1. A documented onboarding lifecycle centered on `AllowedEmail` invites.

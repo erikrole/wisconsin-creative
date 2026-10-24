@@ -273,7 +273,7 @@ function SheetEntry({
               </span>
             )}
           </div>
-          <div className={cn("truncate text-xs", missingQr || unitsFailed ? "text-destructive" : "text-muted-foreground", !unitMode && !missingQr && "font-mono")}>
+          <div className={cn("truncate text-xs", missingQr || unitsFailed ? "text-destructive" : "text-muted-foreground", !unitMode && !missingQr && Boolean(entry.qrCodeValue) && "font-mono")}>
             {meta}
           </div>
         </div>
@@ -540,10 +540,10 @@ export function PrintSheet({
       aria-label="Print sheet"
       className={cn("no-print flex flex-col overflow-y-auto rounded-[var(--radius)] border border-border bg-card", className)}
     >
-      <header className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-border/70 bg-card px-4 py-3">
+      <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border/70 bg-card px-4">
         <div>
           <h2 className="text-base">Print sheet</h2>
-          <p className="text-xs tabular-nums text-muted-foreground">
+          <p className="text-xs tabular-nums text-muted-foreground" aria-live="polite">
             {cart.length === 0 ? "Ready when you are" : `${plural(total, "label")} · ${plural(cart.length, "selection")}`}
           </p>
         </div>
@@ -572,7 +572,8 @@ export function PrintSheet({
         <div className="shrink-0">
           <ul className="divide-y divide-border/60">
             {groups.flatMap((group) => [
-              <li key={`heading-${group.kind}`} className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-[var(--bg-surface)]/90 px-4 py-1.5 text-xs font-bold text-muted-foreground backdrop-blur">
+              // top-16 matches the sheet header's h-16, so the heading sits below it instead of sliding underneath.
+              <li key={`heading-${group.kind}`} className="sticky top-16 z-10 flex items-center justify-between border-b border-border/60 bg-[var(--bg-surface)]/90 px-4 py-1.5 text-xs font-bold text-muted-foreground backdrop-blur">
                 <span>{LABEL_KINDS[group.kind].label}</span>
                 <span className="font-normal tabular-nums">
                   {plural(printableCount(rows.filter((row) => row.kind === group.kind)), "label")}
@@ -627,7 +628,8 @@ export function PrintSheet({
                 <Button
                   variant="outline"
                   className="h-10 min-w-0 flex-1 justify-between"
-                  disabled={Boolean(blocked)}
+                  // P-touch merges the CSV itself, so the USB bitmap and font checks do not gate it.
+                  disabled={Boolean(choicesBlocked || draftIssue)}
                   aria-label={`Download ${file.file}, ${plural(file.labels, "label")}${downloaded[file.kind] === file.csv ? ", current version downloaded" : downloaded[file.kind] ? ", updated since last download" : ""}`}
                   onClick={() => {
                     download(file.file, file.csv);

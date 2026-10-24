@@ -10,7 +10,7 @@ const ORIGIN = "https://uwbadgers.com";
 const TIMEOUT_MS = 20_000;
 const MAX_REDIRECTS = 3;
 
-export function allowedUrl(value: string | URL): boolean {
+function allowedUrl(value: string | URL): boolean {
   let url: URL;
   try {
     url = new URL(value);

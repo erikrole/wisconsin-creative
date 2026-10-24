@@ -33,6 +33,7 @@ struct NativeRegistrationView: View {
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var formError: String?
+    @State private var formErrorInviteID: UUID?
     @State private var isSubmitting = false
     private let emailIsLocked: Bool
     @FocusState private var focusedField: Field?
@@ -53,7 +54,7 @@ struct NativeRegistrationView: View {
             Self.isValidEmail(normalizedEmail) &&
             password.count >= 8 &&
             password == confirmPassword &&
-            !isSubmitting
+            !isSubmitting && !session.registrationNeedsInviteLink
     }
 
     init(initialEmail: String = "") {
@@ -66,11 +67,13 @@ struct NativeRegistrationView: View {
         AuthScreen(
             title: "Set up account",
             subtitle: "Your invited email is approved. Create a password, then add the details needed for work.",
-            showsMark: false
+            showsMark: false,
+            avoidsKeyboard: true
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 AuthLabeledField(title: "Full name", isFocused: focusedField == .name) {
                     TextField(text: $name, prompt: Text("Your name").foregroundStyle(AuthPalette.textTertiary)) { Text("Full name") }
+                        .accessibilityLabel("Full name")
                         .textContentType(.name)
                         .focused($focusedField, equals: .name)
                         .submitLabel(.next)
@@ -83,6 +86,7 @@ struct NativeRegistrationView: View {
 
                 AuthLabeledField(title: "Email", isFocused: focusedField == .email) {
                     TextField(text: $email, prompt: Text("you@wisc.edu").foregroundStyle(AuthPalette.textTertiary)) { Text("Email") }
+                        .accessibilityLabel("Email")
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                         // `.username`, not `.emailAddress`: this is the account the
@@ -105,6 +109,7 @@ struct NativeRegistrationView: View {
 
                 AuthLabeledField(title: "Password", isFocused: focusedField == .password) {
                     SecureField(text: $password, prompt: Text("At least 8 characters").foregroundStyle(AuthPalette.textTertiary)) { Text("Password") }
+                        .accessibilityLabel("Password")
                         .textContentType(.newPassword)
                         .focused($focusedField, equals: .password)
                         .submitLabel(.next)
@@ -117,6 +122,7 @@ struct NativeRegistrationView: View {
 
                 AuthLabeledField(title: "Confirm password", isFocused: focusedField == .confirmPassword) {
                     SecureField(text: $confirmPassword, prompt: Text("Repeat your password").foregroundStyle(AuthPalette.textTertiary)) { Text("Confirm password") }
+                        .accessibilityLabel("Confirm password")
                         .textContentType(.newPassword)
                         .focused($focusedField, equals: .confirmPassword)
                         .submitLabel(.done)
@@ -127,8 +133,12 @@ struct NativeRegistrationView: View {
                     fieldNote("Passwords do not match.")
                 }
 
-                if let formError {
+                if let formError, formErrorInviteID == session.pendingInvite?.id {
                     AuthInlineMessage(text: formError, systemImage: "exclamationmark.circle.fill", tone: .red)
+                }
+
+                if session.registrationNeedsInviteLink {
+                    InviteLinkResendButton(email: normalizedEmail)
                 }
 
                 Button {
@@ -166,6 +176,9 @@ struct NativeRegistrationView: View {
         }
         .onChange(of: password) { _, _ in formError = nil }
         .onChange(of: confirmPassword) { _, _ in formError = nil }
+        .onChange(of: session.pendingInvite?.id) { _, _ in
+            if session.pendingInvite?.email == normalizedEmail { formError = nil }
+        }
         .onAppear { focusedField = .name }
     }
 
@@ -176,7 +189,7 @@ struct NativeRegistrationView: View {
     }
 
     private func submit() {
-        guard !isSubmitting else { return }
+        guard !isSubmitting, !session.registrationNeedsInviteLink else { return }
         guard let validationError else {
             focusedField = nil
             formError = nil
@@ -185,23 +198,27 @@ struct NativeRegistrationView: View {
             let submittedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
             let submittedEmail = normalizedEmail
             let submittedPassword = password
+            let submittedInvite = session.pendingInvite
             Task {
                 await session.register(
                     name: submittedName,
                     email: submittedEmail,
-                    password: submittedPassword
+                    password: submittedPassword,
+                    inviteToken: submittedInvite?.email == submittedEmail ? submittedInvite?.token : nil
                 )
                 guard !Task.isCancelled else { return }
                 isSubmitting = false
                 if session.currentUser != nil {
                     dismiss()
-                } else {
+                } else if session.pendingInvite?.id == submittedInvite?.id {
+                    formErrorInviteID = submittedInvite?.id
                     formError = session.error ?? "Your account couldn't be created. Please try again."
                 }
             }
             return
         }
 
+        formErrorInviteID = session.pendingInvite?.id
         formError = validationError
     }
 

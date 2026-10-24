@@ -1,7 +1,6 @@
 import { Lato } from "next/font/google";
 import HomePage from "./_home/HomePage";
 import HomeTheme from "./_home/HomeTheme";
-import { WrappedBanner } from "@/components/wrapped/WrappedBanner";
 
 const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], variable: "--font-lato", display: "swap" });
 
@@ -10,7 +9,6 @@ export default function Home() {
   return (
     <div className={`wc-fresh ${lato.variable}`}>
       <HomeTheme classNames={`wc-fresh ${lato.variable}`} />
-      <WrappedBanner />
       <HomePage />
     </div>
   );

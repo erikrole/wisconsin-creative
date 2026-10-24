@@ -1,3 +1,5 @@
+import { institutionDateKey } from "@/lib/format";
+
 export type CsvValue = boolean | Date | null | number | string | undefined;
 
 export function escapeReportCsvValue(value: CsvValue) {
@@ -11,7 +13,7 @@ export function buildReportCsv(rows: CsvValue[][]) {
 }
 
 export function reportExportFilename(filenameBase: string, now = new Date()) {
-  return `${filenameBase}-${now.toISOString().slice(0, 10)}.csv`;
+  return `${filenameBase}-${institutionDateKey(now)}.csv`;
 }
 
 export function formatReportExportSuccess({

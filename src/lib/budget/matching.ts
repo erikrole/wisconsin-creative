@@ -30,7 +30,7 @@ export type MatchResult = {
   reasons: string[];
 };
 
-export const MIN_SUGGESTION_SCORE = 45;
+const MIN_SUGGESTION_SCORE = 45;
 
 const STOP_WORDS = new Set([
   "the", "and", "for", "with", "kit", "set", "pack", "body", "new", "black", "white", "silver", "gray", "grey",
@@ -106,9 +106,4 @@ export function scoreLineItemMatch(line: MatchLine, item: MatchItem): MatchResul
     confidence: score >= 90 ? "high" : score >= 65 ? "likely" : "possible",
     reasons,
   };
-}
-
-/** The same signals from the other side: an item looking for the line that paid for it. */
-export function scoreItemLineMatch(item: MatchItem, line: MatchLine): MatchResult | null {
-  return scoreLineItemMatch(line, item);
 }

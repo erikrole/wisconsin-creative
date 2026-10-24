@@ -50,7 +50,8 @@
 | `KitMembership` | 6 | 2 |
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
-| `CalendarEvent` | 42 | 7 |
+| `CalendarEvent` | 43 | 7 |
+| `GameResultObservation` | 9 | 3 |
 | `GameSnapshot` | 21 | 2 |
 | `WrappedRecap` | 6 | 2 |
 | `EventWorker` | 10 | 4 |
@@ -74,7 +75,7 @@
 | `BlastRecipient` | 12 | 4 |
 | `FavoriteItem` | 6 | 3 |
 | `FavoriteItemFamily` | 6 | 4 |
-| `AllowedEmail` | 18 | 4 |
+| `AllowedEmail` | 20 | 4 |
 | `CollaboratorAffiliation` | 8 | 2 |
 | `CollaboratorPolicy` | 11 | 2 |
 | `CollaboratorPolicyGrant` | 5 | 3 |
@@ -140,6 +141,7 @@
 | `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |
 | `AnnouncementDismissal` | 6 | 3 |
+| `QuickLink` | 8 | 2 |
 
 ## Enums
 
@@ -377,6 +379,11 @@
 - `HOME`
 - `AWAY`
 - `NEUTRAL`
+
+### `GameResultProvider`
+
+- `UW`
+- `ESPN`
 
 ### `ScheduleFollowSource`
 

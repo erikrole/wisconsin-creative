@@ -7,6 +7,10 @@ import type { LabelBitmap } from "./brother-label-render";
 const unusableDevices = new WeakSet<BrotherUsbDevice>();
 const VENDOR = 0x04f9, PRODUCT = 0x20e1;
 export const BROTHER_USB_LOCK = "qr-print-pt-d610bt";
+/** The one printer this helper drives; other USB devices (a scanner, a keyboard) are ignored. */
+export function isBrotherUsb(device: { vendorId: number; productId: number } | undefined): boolean {
+  return Boolean(device && device.vendorId === VENDOR && device.productId === PRODUCT);
+}
 type Endpoint = { endpointNumber: number; direction: "in" | "out"; type: string };
 type Alternate = { alternateSetting: number; interfaceClass: number; endpoints: Endpoint[] };
 export interface BrotherUsbDevice {
@@ -25,7 +29,7 @@ export function brotherUsbAccess(): UsbAccess | undefined {
 export async function chooseBrotherUsb() {
   const usb = brotherUsbAccess();
   if (!usb) throw new Error("Use Chrome or Edge on this computer for USB printing.");
-  const granted = (await usb.getDevices()).filter((device) => device.vendorId === VENDOR && device.productId === PRODUCT);
+  const granted = (await usb.getDevices()).filter(isBrotherUsb);
   if (granted.length === 1) return granted[0]!;
   return usb.requestDevice({ filters: [{ vendorId: VENDOR, productId: PRODUCT }] });
 }
@@ -50,7 +54,7 @@ export class BrotherUsbPrinter {
   async open() {
     try {
       if (unusableDevices.has(this.device)) throw new Error("Reconnect the USB cable and reload this helper before printing again.");
-      if (this.device.vendorId !== VENDOR || this.device.productId !== PRODUCT) throw new Error("Select the Brother PT-D610BT.");
+      if (!isBrotherUsb(this.device)) throw new Error("Select the Brother PT-D610BT.");
       await this.device.open();
       if (!this.device.configuration) await this.device.selectConfiguration(1);
       const interfaces = this.device.configuration?.interfaces ?? [];

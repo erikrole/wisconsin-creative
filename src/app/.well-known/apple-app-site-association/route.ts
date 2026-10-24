@@ -17,6 +17,10 @@ export function GET() {
         {
           appIDs: [APP_ID],
           components: [
+            // Browser setup remains usable by older installed app versions.
+            { "/": "/login", "?": { web: "1" }, exclude: true },
+            // Claim only emailed invite links; ordinary login stays on the web.
+            { "/": "/login", "?": { invite: "?*" } },
             { "/": "/bookings" },
             { "/": "/bookings/*" },
             { "/": "/reservations/*" },

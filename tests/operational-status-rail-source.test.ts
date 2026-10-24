@@ -47,7 +47,6 @@ describe("operational status rail source contract", () => {
   it("migrates page-level operational summaries without converting analytical reports", () => {
     const migratedPages = [
       "src/app/(app)/operations/OperationsClient.tsx",
-      "src/app/(app)/bulk-inventory/batteries/page.tsx",
       "src/app/(app)/notifications/page.tsx",
       "src/app/(app)/kits/page.tsx",
       "src/app/(app)/licenses/page.tsx",

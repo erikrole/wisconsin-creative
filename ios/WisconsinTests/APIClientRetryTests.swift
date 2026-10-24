@@ -30,6 +30,15 @@ private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        // Decoding failures send asynchronous diagnostic reports through the
+        // same session. They must not consume the next test's response script.
+        if request.url?.path == "/api/errors" {
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: Data(#"{"data":{"stored":1}}"#.utf8))
+            client?.urlProtocolDidFinishLoading(self)
+            return
+        }
         Self.lock.lock()
         Self.requests.append(request)
         let step = Self.steps.isEmpty ? Step.status(200) : Self.steps.removeFirst()
@@ -65,6 +74,72 @@ final class APIClientRetryTests: XCTestCase {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [StubURLProtocol.self]
         return APIClient(session: URLSession(configuration: config), retryPolicy: fastPolicy)
+    }
+
+    private func jsonBody(_ request: URLRequest) throws -> [String: Any] {
+        var data = request.httpBody
+        if data == nil, let stream = request.httpBodyStream {
+            stream.open()
+            defer { stream.close() }
+            var body = Data()
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while stream.hasBytesAvailable {
+                let count = stream.read(&buffer, maxLength: buffer.count)
+                guard count > 0 else { break }
+                body.append(buffer, count: count)
+            }
+            data = body
+        }
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(data)) as? [String: Any])
+    }
+
+    func testInviteDiscoveryForwardsTheInboxProofWithTheNormalizedAddress() async throws {
+        let client = makeClient([.status(200, body: #"{"flow":"onboarding","inviteLink":"valid"}"#)])
+        let result = try await client.discoverAuth(email: " Alex@WISC.EDU ", invite: "raw-inbox-token")
+        XCTAssertFalse(result.needsInviteLink(token: "raw-inbox-token"))
+        let request = try XCTUnwrap(StubURLProtocol.recordedRequests.first)
+        XCTAssertEqual(request.url?.path, "/api/auth/discover")
+        let body = try jsonBody(request)
+        XCTAssertEqual(body["email"] as? String, "alex@wisc.edu")
+        XCTAssertEqual(body["invite"] as? String, "raw-inbox-token")
+    }
+
+    func testRegisterForwardsTheTokenAndReturnsTypedRecoveryForAnExpiredLink() async throws {
+        let client = makeClient([.status(403, body: #"{"error":"Open your new invite link.","code":"INVITE_LINK_REQUIRED"}"#)])
+        do {
+            _ = try await client.register(name: " Alex ", email: " Alex@WISC.EDU ", password: "fixture-password", inviteToken: "retired-token")
+            XCTFail("An expired link must not create a local session")
+        } catch APIError.inviteLinkRequired(let message) {
+            XCTAssertEqual(message, "Open your new invite link.")
+        }
+        let request = try XCTUnwrap(StubURLProtocol.recordedRequests.first)
+        XCTAssertEqual(request.url?.path, "/api/auth/register")
+        let body = try jsonBody(request)
+        XCTAssertEqual(body["inviteToken"] as? String, "retired-token")
+        XCTAssertEqual(body["email"] as? String, "alex@wisc.edu")
+        XCTAssertEqual(body["name"] as? String, "Alex")
+        XCTAssertEqual(StubURLProtocol.recordedRequests.count, 1)
+    }
+
+    func testInviteResendDecodesUnavailableWithoutClaimingDelivery() async throws {
+        let client = makeClient([.status(200, body: #"{"message":"Contact your administrator.","inviteEmailConfigured":false}"#)])
+        let result = try await client.resendInviteLink(email: " Alex@WISC.EDU ")
+        XCTAssertFalse(result.inviteEmailConfigured)
+        XCTAssertEqual(result.message, "Contact your administrator.")
+        let request = try XCTUnwrap(StubURLProtocol.recordedRequests.first)
+        XCTAssertEqual(request.url?.path, "/api/auth/invite/resend")
+        XCTAssertEqual(try jsonBody(request)["email"] as? String, "alex@wisc.edu")
+    }
+
+    func testMalformedInviteConfirmationIsAnErrorAndThePostIsNotRetried() async {
+        let client = makeClient([.status(200, body: #"{"message":"No delivery receipt"}"#)])
+        do {
+            _ = try await client.resendInviteLink(email: "alex@wisc.edu")
+            XCTFail("A missing delivery field must not be shown as Link sent")
+        } catch APIError.decodingError {
+            // Recovery remains retryable; no confirmed result was returned.
+        } catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertEqual(StubURLProtocol.recordedRequests.count, 1)
     }
 
     func testGetRetriesTransientServerErrorThenSucceeds() async throws {

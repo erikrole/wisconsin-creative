@@ -46,8 +46,6 @@ export function defaultShiftConfigs(): ShiftConfig[] {
 }
 
 /** Big 6 sports that are NOT grouped by gender */
-export const BIG_6 = new Set(["FB", "MBB", "MHKY", "WHKY", "WBB", "VB"]);
-
 export type SportGroup = {
   label: string;
   codes: string[];

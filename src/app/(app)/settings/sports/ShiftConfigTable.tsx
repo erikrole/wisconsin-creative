@@ -21,7 +21,7 @@ import {
 import { SettingsGroup } from "../_components/SettingsGroup";
 
 /** Call-time options: 0, 15, 30, 45, 60 ... 240 minutes */
-export const CALL_TIME_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240];
+const CALL_TIME_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240];
 
 type CountField = "homeStaffCount" | "homeStudentCount" | "awayStaffCount" | "awayStudentCount";
 

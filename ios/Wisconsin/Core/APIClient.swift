@@ -5,6 +5,7 @@ enum APIError: LocalizedError {
     case sessionChanged
     case notFound
     case conflict(String)
+    case inviteLinkRequired(String)
     case httpError(statusCode: Int, message: String)
     case serverError(String)
     case decodingError(Error)
@@ -16,6 +17,7 @@ enum APIError: LocalizedError {
         case .sessionChanged: "This request belonged to a previous sign-in and was cancelled."
         case .notFound: "The requested item could not be found."
         case .conflict(let msg): msg
+        case .inviteLinkRequired(let message): message
         case .httpError(_, let message): message
         case .serverError(let msg): msg
         case .decodingError: "Unexpected response from server."
@@ -155,10 +157,35 @@ enum AuthDiscoveryFlow: String, Decodable {
     }
 }
 
+enum InviteLinkStatus: String, Decodable {
+    case valid
+    case required
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = InviteLinkStatus(rawValue: value) ?? .required
+    }
+}
+
+struct InviteResendResult: Decodable {
+    let message: String
+    let inviteEmailConfigured: Bool
+}
+
 struct AuthDiscoveryResult: Decodable {
     let flow: AuthDiscoveryFlow
+    let inviteLink: InviteLinkStatus?
 
     var isOnboarding: Bool { flow == .onboarding }
+
+    func needsInviteLink(token: String?) -> Bool {
+        guard isOnboarding else { return false }
+        switch inviteLink {
+        case .required: return true
+        case .valid: return token?.isEmpty != false
+        case nil: return false // Older servers do not require inbox proof yet.
+        }
+    }
 }
 
 enum AssetTextMutation {
@@ -512,8 +539,11 @@ final class APIClient {
             if request.url?.path != "/api/me" {
                 NotificationCenter.default.post(name: .collaboratorPolicyMayHaveChanged, object: nil)
             }
-            let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
-                ?? "You do not have access to this feature."
+            let body = try? JSONDecoder().decode(ServerErrorBody.self, from: data)
+            let message = body?.error ?? "You do not have access to this feature."
+            if request.url?.path == "/api/auth/register", body?.code == "INVITE_LINK_REQUIRED" {
+                throw APIError.inviteLinkRequired(message)
+            }
             throw APIError.httpError(statusCode: http.statusCode, message: message)
         case 409:
             if let body = try? decoder.decode(ServerErrorBody.self, from: data), body.code == "ONBOARDING_CONFLICT" {
@@ -550,6 +580,54 @@ final class APIClient {
             let msg = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
                 ?? "Server error (\(http.statusCode))"
             throw APIError.httpError(statusCode: http.statusCode, message: msg)
+        }
+    }
+
+    // MARK: - Signatures (iPad Apple Pencil capture; STAFF/ADMIN)
+
+    func signatureCollections() async throws -> [SignatureCollectionSummary] {
+        let resp: SignatureCollectionListResponse = try await perform(request(path: "/api/signatures/collections"))
+        return resp.collections
+    }
+
+    func signatureCollection(id: String) async throws -> SignatureCollectionDetail {
+        try await perform(request(path: "/api/signatures/collections/\(id)"))
+    }
+
+    func signatureCaptureBootstrap(collectionId: String, memberId: String) async throws -> SignatureCaptureBootstrap {
+        try await perform(request(path: "/api/signatures/collections/\(collectionId)/members/\(memberId)"))
+    }
+
+    /// Idempotent by `requestId`: replaying the same request after an
+    /// ambiguous failure returns the original committed result.
+    func saveSignatureCapture(
+        collectionId: String,
+        memberId: String,
+        body: SignatureCaptureRequest
+    ) async throws -> SignatureCaptureResult {
+        var req = request(path: "/api/signatures/collections/\(collectionId)/capture/\(memberId)", method: "POST")
+        req.httpBody = try JSONEncoder().encode(body)
+        return try await perform(req)
+    }
+
+    /// Inline transparent PNG of a READY revision (`signature:download`), for
+    /// the roster preview. Revisions are immutable, so callers may cache by ID.
+    func signatureArtifactPNG(revisionId: String) async throws -> Data {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response, _) = try await authenticatedData(for: request(path: "/api/signatures/artifacts/\(revisionId)/png"))
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.networkError(error)
+        }
+        guard let http = response as? HTTPURLResponse else { throw APIError.serverError("Invalid response") }
+        switch http.statusCode {
+        case 200...299: return data
+        case 401: throw APIError.unauthorized
+        case 404: throw APIError.notFound
+        default: throw APIError.httpError(statusCode: http.statusCode, message: "Signature preview unavailable")
         }
     }
 
