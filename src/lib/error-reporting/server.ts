@@ -31,6 +31,16 @@ function isExpectedHttpError(error: unknown): boolean {
   return typeof status === "number" && status < 500;
 }
 
+/**
+ * Next throws this when a browser or proxy sends a truncated or stale
+ * `Next-Router-State-Tree` header (usually one client across a deploy, hitting
+ * several pages at once). The client retries with a full load, so it is noise.
+ */
+function isMalformedRouterStateHeader(error: unknown): boolean {
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === "string" && message.startsWith("The router state header was sent but could not be parsed");
+}
+
 function deployInfo() {
   return {
     appBuild: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
@@ -39,7 +49,7 @@ function deployInfo() {
 }
 
 export function buildServerErrorReport(error: unknown, context: ServerErrorContext): ErrorReportInput | null {
-  if (isNextControlFlow(error) || isExpectedHttpError(error)) return null;
+  if (isNextControlFlow(error) || isExpectedHttpError(error) || isMalformedRouterStateHeader(error)) return null;
   const err = error instanceof Error ? error : new Error(typeof error === "string" ? error : "Non-error thrown");
   const route = context.routePath ?? routeTemplate(context.path);
   const method = context.method?.toUpperCase();

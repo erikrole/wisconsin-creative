@@ -33,6 +33,21 @@
   },
   {
     "date": "2026-10-24",
+    "title": "Fewer page errors on Home",
+    "type": "fixes",
+    "summary": "Home and New reservation no longer hit a brief display error when they open.",
+    "details": [
+      "The pages now wait for your device's clock before showing the greeting, date and default times.",
+      "The iPhone app's return countdown on the Lock Screen is more tolerant of how its updates arrive."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 662
+  },
+  {
+    "date": "2026-10-24",
     "title": "Photo reminder respects Not now",
     "type": "fixes",
     "summary": "On the iPhone app, tapping Not now on the photo step at the end of setup no longer brings the photo reminder straight back.",

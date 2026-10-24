@@ -41,6 +41,9 @@ describe("iOS checkout return Live Activity source contract", () => {
     expect(attributes).toContain("var allowsExtend: Bool");
     expect(attributes).toContain("var requesterAvatarUrl: String?");
     expect(attributes).toContain("enum Urgency");
+    // Pushes send ISO text, the app sends numeric dates: decode both.
+    expect(attributes).toContain("init(from decoder: Decoder) throws");
+    expect(attributes).toContain("ISO8601DateFormatter");
     expect(widget).toContain("ActivityConfiguration(for: CheckoutReturnActivityAttributes.self)");
     expect(widget).toContain("CheckoutReturnLockScreen(context: context, now: timeline.date)");
     expect(widget).toContain("ExpandedReturnStatus(context: context, now: timeline.date)");
