@@ -1,0 +1,72 @@
+{
+  "data": {
+    "profile": {
+      "id": "cm0000000000000000student1",
+      "name": "Bucky Badger",
+      "role": "STUDENT",
+      "email": "bucky@wisc.edu",
+      "athleticsEmail": null,
+      "phone": null,
+      "personalPhone": null,
+      "workPhone": null,
+      "workPhoneNotApplicable": false,
+      "wiscardCardNumber": null,
+      "wiscardIssueCode": null,
+      "studentYearOverride": null,
+      "gradYear": null,
+      "graduationTerm": null,
+      "topSizeFit": null,
+      "topSize": null,
+      "shoeSizeSystem": null,
+      "shoeSize": null,
+      "avatarUrl": null,
+      "profilePromptSnoozedUntil": null,
+      "onboardingRequired": true,
+      "onboardingCompletedAt": null
+    },
+    "completion": {
+      "operationalReady": false,
+      "requiredComplete": false,
+      "requiresSetup": true,
+      "onboardingComplete": false,
+      "profileComplete": false,
+      "isComplete": false,
+      "isSnoozed": false,
+      "shouldPrompt": true,
+      "snoozedUntil": null,
+      "completedCount": 1,
+      "totalCount": 7,
+      "missingFields": [
+        "personalPhone",
+        "wiscard",
+        "studentYear",
+        "clothingSize",
+        "shoeSize",
+        "photo"
+      ],
+      "firstIncompleteStep": "PHONES",
+      "completeByField": {
+        "campusEmail": true,
+        "athleticsEmail": false,
+        "personalPhone": false,
+        "workPhone": false,
+        "wiscard": false,
+        "studentYear": false,
+        "anticipatedGraduation": false,
+        "clothingSize": false,
+        "shoeSize": false,
+        "photo": false
+      }
+    },
+    "versions": {
+      "EMAIL": "8ed9e19ed3df02b55ca83ea89003de4dd83807ea1eaf6947d860ec287d5ac7f3",
+      "PERSONAL_PHONE": "74daaf68b3a9c26ed074f98deeb4ab59f97d57a05ed8af20e2b5c9ec055aa0fc",
+      "WORK_PHONE": "8a4edb8303a6f1ef69f1b232c2b8e5ebbb609aa64846aa21e093f6d31ad8970c",
+      "WISCARD": "898d27b690187cf50501d1bc65f371421109f915602a87acc2012bb36d00f6a5",
+      "STUDENT": "37bebae4bae2e2bc535cf8bc2938cfe0da8b4f0ad0875c5c975e22f6e3ced3c0",
+      "GRADUATION": "1c3f9944d7e08534e79933c720403bf753cd144563df37498f116e4e830fadf3",
+      "CLOTHING": "1fb42f77feca1f858ea75c821539d3358725283a84982a45b246fa6ba86bd7b9",
+      "SHOES": "e72d2733c15dfbf136962366cc2a14474d8f742352ce1cca40fb2be168b225a7"
+    }
+  }
+}

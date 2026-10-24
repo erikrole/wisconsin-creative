@@ -1,0 +1,19 @@
+{
+  "user": {
+    "id": "cm0000000000000000student1",
+    "email": "bucky@wisc.edu",
+    "name": "Bucky Badger",
+    "role": "STUDENT",
+    "affiliation": null,
+    "collaboratorProfile": null,
+    "collaboratorPolicy": null,
+    "capabilities": [],
+    "staffingType": "ST",
+    "avatarUrl": null,
+    "forcePasswordChange": false,
+    "onboardingRequired": true,
+    "accountCreatedAt": "2026-10-23T21:00:00.000Z"
+  },
+  "canViewHiddenUsers": false,
+  "canViewUsageAnalytics": false
+}
