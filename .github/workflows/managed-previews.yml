@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 25
     steps:
       # Always use trusted default-branch orchestration. Forks receive no secrets.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -39,10 +39,10 @@ jobs:
         run: node scripts/preview-ci-gate.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.scope.outputs.needed != 'false'
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm install --global npm@11.17.0 vercel@59.11.7
         if: steps.scope.outputs.needed != 'false'

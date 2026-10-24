@@ -48,6 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BucketBar, RecordMeter, ScoreboardDataRegion } from "@/components/scoreboard/ScoreboardVisuals";
+import { FootballFinalScore } from "@/components/scoreboard/FootballFinalScore";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
 
 type ResultFilter = PersonScoreboardResultFilter;
@@ -335,6 +336,7 @@ function EventRow({ event, linkEvents }: { event: ScoreboardEvent; linkEvents: b
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{matchupLabel(event)}</p>
+        <FootballFinalScore score={event.finalScore} />
         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           <SiteIcon site={event.site} />
           <span className="truncate">{siteLabel(event.site)} · {event.venue ?? "Venue not recorded"}</span>

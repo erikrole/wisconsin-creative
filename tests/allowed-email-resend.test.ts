@@ -47,14 +47,14 @@ describe("POST /api/allowed-emails/[id]/resend", () => {
     expect(sendInviteEmail).not.toHaveBeenCalled();
   });
 
-  it("emails a reminder for a pending invite and audits the attempt without the address", async () => {
+  it("emails the invite again for a pending invite and audits the attempt without the address", async () => {
     asRole("ADMIN");
     vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(invite as never);
     vi.mocked(sendInviteEmail).mockResolvedValue("sent");
     const res = await POST(req(), ctx);
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ data: { emailStatus: "sent" } });
-    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "mia@wisc.edu", name: "Mia Sato", kind: "reminder" });
+    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "mia@wisc.edu", name: "Mia Sato", allowedEmailId: "inv-1" });
     expect(enforceRateLimit).toHaveBeenCalledWith("allowed-emails:resend:inv-1", expect.objectContaining({ max: 3 }));
     const audit = vi.mocked(createAuditEntry).mock.calls[0]![0];
     expect(audit).toMatchObject({ entityId: "inv-1", action: "invite_resent", after: { emailStatus: "sent" } });

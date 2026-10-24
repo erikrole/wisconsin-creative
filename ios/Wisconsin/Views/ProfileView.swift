@@ -28,6 +28,8 @@ struct ProfileView: View {
     @State private var ownCheckouts: [Booking] = []
     @State private var ownReservations: [Booking] = []
     @State private var ownShifts: [MyShift] = []
+    /// Next Up requests that failed. Without this a dropped connection read as "Nothing coming up".
+    @State private var nextUpLoadFailed = false
     @State private var ownHours: MyHours?
     @State private var hoursLoading = true
     @State private var showBadgeGallery = false
@@ -149,6 +151,7 @@ struct ProfileView: View {
         Section {
             profileIdentity
                 .padding(.vertical, 6)
+            if session.currentUser?.isReadOnlyRolePreview != true { ProfileAvatarEditor() }
         }
         .listRowBackground(Color(.secondarySystemGroupedBackground))
     }
@@ -210,15 +213,27 @@ struct ProfileView: View {
     @ViewBuilder
     private var nextUpSection: some View {
         Section {
-            ProfileNextUpCard(
-                checkouts: ownCheckouts,
-                reservations: ownReservations,
-                shifts: ownShifts,
-                openBooking: { pushedBookingId = $0 },
-                openShift: { selectedShift = $0 }
-            )
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
+            if nextUpLoadFailed && ownCheckouts.isEmpty && ownReservations.isEmpty && ownShifts.isEmpty {
+                HStack {
+                    Label("Couldn't load what's coming up", systemImage: "exclamationmark.triangle")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                    Button("Try again") { Task { await loadOwnProfile() } }
+                        .font(.subheadline.weight(.semibold))
+                        .buttonStyle(.borderless)
+                }
+            } else {
+                ProfileNextUpCard(
+                    checkouts: ownCheckouts,
+                    reservations: ownReservations,
+                    shifts: ownShifts,
+                    openBooking: { pushedBookingId = $0 },
+                    openShift: { selectedShift = $0 }
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
         }
     }
 
@@ -277,6 +292,7 @@ struct ProfileView: View {
         ownCheckouts = checkouts?.data ?? []
         ownReservations = reservations?.data ?? []
         ownShifts = shifts ?? []
+        nextUpLoadFailed = checkouts == nil || reservations == nil || shifts == nil
     }
 
     /// Your own week and month, the same totals the website shows on your

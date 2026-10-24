@@ -1,5 +1,5 @@
 import { unique } from "@/lib/utils";
-const DEFAULT_LOW_BATTERY_THRESHOLD = 10;
+import { batteryLowThreshold } from "@/lib/bulk-batteries";
 
 type BatteryCameraLike = {
   brand?: string | null;
@@ -14,6 +14,8 @@ type BatterySkuLike = {
   category?: string | null;
   categoryName?: string | null;
   availableQuantity?: number | null;
+  /** Units owned (not retired); sets the relative low-stock line. */
+  ownedQuantity?: number | null;
   currentQuantity?: number | null;
   minThreshold?: number | null;
 };
@@ -84,6 +86,23 @@ const BATTERY_COMPATIBILITY_RULES: BatteryCompatibilityRule[] = [
   },
 ];
 
+/**
+ * True when `term` appears in `text` as its own model token: not glued to a
+ * preceding letter or digit, and not followed by a digit. A plain `includes`
+ * let "r5" claim a Canon R50 and "a1" claim an A10, which attributed the wrong
+ * battery family to a camera. A trailing letter is fine ("a7" in "a7iv").
+ */
+function hasModelTerm(text: string, term: string) {
+  let from = text.indexOf(term);
+  while (from !== -1) {
+    const before = from === 0 ? "" : (text[from - 1] ?? "");
+    const after = text[from + term.length] ?? "";
+    if (!/[a-z0-9]/.test(before) && !/[0-9]/.test(after)) return true;
+    from = text.indexOf(term, from + 1);
+  }
+  return false;
+}
+
 function haystack(parts: Array<string | null | undefined>) {
   return parts.filter(Boolean).join(" ").toLowerCase();
 }
@@ -110,10 +129,8 @@ function quantityForSku(sku: BatterySkuLike) {
 }
 
 function thresholdForSkus(skus: BatterySkuLike[]) {
-  return Math.max(
-    DEFAULT_LOW_BATTERY_THRESHOLD,
-    ...skus.map((sku) => sku.minThreshold ?? 0),
-  );
+  const owned = skus.reduce((sum, sku) => sum + (sku.ownedQuantity ?? quantityForSku(sku)), 0);
+  return batteryLowThreshold(Math.max(0, ...skus.map((sku) => sku.minThreshold ?? 0)), owned);
 }
 
 export function getBatteryCompatibilitySummaries(args: {
@@ -128,7 +145,7 @@ export function getBatteryCompatibilitySummaries(args: {
   return rules.flatMap((rule) => {
     const matchingCameras = cameras.filter((camera) => {
       const text = haystack([camera.brand, camera.model]);
-      return rule.cameraModelTerms.some((term) => text.includes(term));
+      return rule.cameraModelTerms.some((term) => hasModelTerm(text, term));
     });
     if (matchingCameras.length === 0) return [];
 

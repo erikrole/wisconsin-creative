@@ -8,8 +8,10 @@ import { canViewHiddenUsers } from "@/lib/user-visibility";
 import { canViewUsageAnalytics } from "@/lib/usage-analytics";
 
 export const GET = withAuth(async (_req, { user }) => {
+  // Lets Home show first-weeks guidance without widening the session lookup.
+  const account = await db.user.findUnique({ where: { id: user.id }, select: { createdAt: true } });
   return ok({
-    user,
+    user: { ...user, accountCreatedAt: account?.createdAt.toISOString() ?? null },
     canViewHiddenUsers: canViewHiddenUsers(user),
     canViewUsageAnalytics: canViewUsageAnalytics(user),
   });

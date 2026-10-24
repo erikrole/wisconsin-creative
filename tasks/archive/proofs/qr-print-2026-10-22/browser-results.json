@@ -1,0 +1,13 @@
+{
+  "results": [
+    "Invalid picks block export; corrected picks export exact CSV; changed CSV resets download state; successive downloads retain all 3 units for marking.",
+    "Large numeric input stays responsive; fixed-frame number preview keeps QR in place and text within frame; sheet edits survive reload.",
+    "Malformed unit responses fail visibly, block partial downloads, and recover with Try again.",
+    "Tablet review shortcut, keyboard filter focus, and phone-width overflow smoke pass."
+  ],
+  "pageErrors": [],
+  "previewFit": {
+    "text": 13.2574462890625,
+    "frame": 13.34375
+  }
+}

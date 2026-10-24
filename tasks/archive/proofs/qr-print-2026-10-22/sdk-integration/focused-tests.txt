@@ -1,0 +1,17 @@
+
+ RUN  v3.2.7 /Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative
+
+ ✓ tests/label-catalog.test.ts (4 tests) 5ms
+ ✓ tests/label-sheet.test.ts (22 tests) 6ms
+ ✓ tests/labels-accessibility.test.ts (3 tests) 2ms
+ ✓ tests/brother-label-csv.test.ts (20 tests) 4ms
+ ✓ tests/label-template-bindings.test.ts (4 tests) 5ms
+ ✓ tests/brother-usb.test.ts (21 tests) 21ms
+ ✓ tests/label-print-recovery.test.ts (25 tests) 39ms
+ ✓ tests/bulk-unit-label-export-route.test.ts (10 tests) 15ms
+
+ Test Files  8 passed (8)
+      Tests  109 passed (109)
+   Start at  16:16:57
+   Duration  474ms (transform 307ms, setup 81ms, collect 504ms, tests 97ms, environment 1ms, prepare 345ms)
+

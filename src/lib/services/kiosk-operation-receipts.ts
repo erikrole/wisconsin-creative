@@ -18,13 +18,13 @@ const retryLifetimeMs = 7 * 24 * 60 * 60 * 1000;
  * answer with a rejection envelope rather than a bare 409, or the iPad retries
  * the same bytes forever behind "Check Previous Handoff".
  */
-export class KioskOperationTerminalError extends HttpError {
+class KioskOperationTerminalError extends HttpError {
   constructor(message: string) {
     super(409, message);
   }
 }
 
-export function kioskOperationRejection(message: string) {
+function kioskOperationRejection(message: string) {
   return { success: false, operationRejected: true, error: message };
 }
 

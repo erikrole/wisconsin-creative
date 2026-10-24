@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import ActivityTimeline, { type AuditEntry } from "@/components/ActivityTimeline";
-import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 
 type HistoryScope = "all" | "asset" | "booking";
 
@@ -17,6 +18,19 @@ const scopeLabels: Record<HistoryScope, string> = {
   asset: "Item updates",
   booking: "Bookings",
 };
+
+type ActivityPage = { data: AuditEntry[]; nextCursor: string | null };
+
+async function fetchActivityPage(endpoint: string, cursor: string | null, signal: AbortSignal): Promise<ActivityPage> {
+  const url = new URL(endpoint, window.location.origin);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const res = await fetch(url.toString(), { signal });
+  if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+  if (!res.ok) throw new Error("Failed to load activity history");
+  const json = await parseJsonSafely<{ data?: AuditEntry[]; nextCursor?: string | null }>(res);
+  if (!Array.isArray(json?.data)) throw new Error("Failed to load activity history");
+  return { data: json.data, nextCursor: json.nextCursor ?? null };
+}
 
 /* ── Activity Feed Component ── */
 
@@ -29,10 +43,6 @@ export default function ActivityFeed({
   assetName?: string;
   endpoint?: string;
 }) {
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [scope, setScope] = useState<HistoryScope>("all");
 
   const scopedEndpoint = useMemo(() => {
@@ -41,49 +51,19 @@ export default function ActivityFeed({
     return `/api/assets/${assetId}/activity?${params.toString()}`;
   }, [assetId, endpoint, scope]);
 
-  const loadActivity = useCallback((signal?: AbortSignal, cursor?: string | null) => {
-    const append = !!cursor;
-    setLoading(true);
-    setFetchError(false);
-
-    const url = new URL(scopedEndpoint, window.location.origin);
-    if (cursor) url.searchParams.set("cursor", cursor);
-
-    fetch(url.toString(), { signal })
-      .then((res) => {
-        if (handleAuthRedirect(res)) return null;
-        if (!res.ok) {
-          setFetchError(true);
-          return null;
-        }
-        return parseJsonSafely<{ data?: AuditEntry[]; nextCursor?: string | null }>(res);
-      })
-      .then((json) => {
-        if (signal?.aborted) return;
-        if (Array.isArray(json?.data)) {
-          const entriesData = json.data;
-          setEntries((prev) => append ? [...prev, ...entriesData] : entriesData);
-          setNextCursor(json.nextCursor ?? null);
-        } else {
-          setFetchError(true);
-        }
-      })
-      .catch((err) => {
-        if (isAbortError(err)) return;
-        setFetchError(true);
-      })
-      .finally(() => {
-        if (!signal?.aborted) setLoading(false);
-      });
-  }, [scopedEndpoint]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setEntries([]);
-    setNextCursor(null);
-    loadActivity(controller.signal);
-    return () => controller.abort();
-  }, [loadActivity]);
+  const activity = useInfiniteQuery({
+    queryKey: ["item-activity", scopedEndpoint],
+    queryFn: ({ pageParam, signal }) => fetchActivityPage(scopedEndpoint, pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    staleTime: 0,
+  });
+  const entries = useMemo(
+    () => activity.data?.pages.flatMap((page) => page.data) ?? [],
+    [activity.data],
+  );
+  const loading = activity.isFetching;
+  const fetchError = activity.isError || activity.isFetchNextPageError;
 
   if (loading && entries.length === 0) {
     return (
@@ -101,7 +81,7 @@ export default function ActivityFeed({
         <Button
           variant="outline"
           className="h-10 mt-3"
-          onClick={() => loadActivity()}
+          onClick={() => void activity.refetch()}
         >
           Retry
         </Button>
@@ -146,8 +126,8 @@ export default function ActivityFeed({
           <ActivityTimeline
             entries={entries}
             loading={loading}
-            hasMore={!!nextCursor}
-            onLoadMore={() => loadActivity(undefined, nextCursor)}
+            hasMore={activity.hasNextPage}
+            onLoadMore={() => void activity.fetchNextPage()}
             context="item"
             entityName={assetName}
           />

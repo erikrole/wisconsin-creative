@@ -3,7 +3,7 @@
   "version": "2026.04.08.1",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "packageManager": "npm@11.17.0",
   "browserslist": {
@@ -22,7 +22,7 @@
     ]
   },
   "overrides": {
-    "esbuild": "0.28.1",
+    "esbuild": "$esbuild",
     "vite": "7.3.7",
     "fast-uri": "3.1.8",
     "http-cache-semantics": "4.3.0",
@@ -44,12 +44,12 @@
       "nanoid": "3.3.18"
     },
     "proxy-addr": "2.0.8",
-    "sharp": "0.35.5",
+    "sharp": "$sharp",
     "source-map-js": "1.2.2",
-    "undici": "7.29.1",
-    "vite": "7.3.7",
+    "undici": "7.30.1",
     "@workflow/core": {
-      "nanoid": "5.1.16"
+      "nanoid": "5.1.16",
+      "zod": "4.6.7"
     },
     "@xmldom/xmldom": "0.9.12",
     "@xhmikosr/decompress": "11.1.4",
@@ -58,6 +58,27 @@
     "devalue": "5.9.4",
     "@prisma/config@6.19.3": {
       "deepmerge-ts": "8.0.2"
+    },
+    "@vercel/cli-config": {
+      "zod": "4.6.7"
+    },
+    "@vercel/cli-auth": {
+      "zod": "4.6.7"
+    },
+    "@vercel/functions": {
+      "zod": "4.6.7"
+    },
+    "@workflow/cli": {
+      "zod": "4.6.7"
+    },
+    "@workflow/world": {
+      "zod": "4.6.7"
+    },
+    "@workflow/world-local": {
+      "zod": "4.6.7"
+    },
+    "@workflow/world-vercel": {
+      "zod": "4.6.7"
     }
   },
   "scripts": {
@@ -71,10 +92,11 @@
     "analyze": "node scripts/run-next.mjs analyze",
     "start": "node scripts/run-next.mjs start",
     "lint": "eslint .",
+    "lint:ci": "eslint . --max-warnings=194",
     "lint:summary": "node scripts/lint-summary.mjs",
     "codemap": "node scripts/generate-codemaps.mjs",
     "codemap:check": "node scripts/generate-codemaps.mjs --check",
-    "verify:docs": "npm run codemap:check",
+    "verify:docs": "node scripts/check-repo-hygiene.mjs && npm run codemap:check",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:migrate:new": "prisma migrate dev",
@@ -95,6 +117,8 @@
     "consolidate:battery-families": "node --env-file=.env scripts/consolidate-battery-families.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:postgres": "node scripts/test-onboarding-postgres.mjs",
+    "test:browser": "playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts",
     "test:watch": "vitest",
     "test:e2e:smoke": "playwright test",
     "test:performance:web": "node scripts/check-web-performance.mjs",
@@ -128,20 +152,20 @@
     "@fontsource/barlow": "^5.3.0",
     "@mdxeditor/editor": "^4.3.3",
     "@neondatabase/serverless": "1.2.0",
-    "@prisma/adapter-neon": "^6.19.3",
-    "@prisma/client": "^6.19.3",
-    "@sentry/nextjs": "^10.76.2",
-    "@simplewebauthn/browser": "^13.3.0",
-    "@simplewebauthn/server": "^13.3.3",
+    "@prisma/adapter-neon": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "@sentry/nextjs": "^11.8.0",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.3",
     "@tailwindcss/postcss": "^4.3.3",
-    "@tanstack/query-sync-storage-persister": "^5.104.0",
-    "@tanstack/react-query": "^5.104.0",
-    "@tanstack/react-query-persist-client": "^5.104.0",
+    "@tanstack/query-sync-storage-persister": "^5.104.3",
+    "@tanstack/react-query": "^5.104.3",
+    "@tanstack/react-query-persist-client": "^5.104.3",
     "@tanstack/react-table": "^8.21.3",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.38.0",
-    "@vercel/analytics": "1.6.1",
-    "@vercel/blob": "^2.8.1",
+    "@vercel/analytics": "2.0.1",
+    "@vercel/blob": "^2.8.2",
     "@vercel/functions": "3.10.1",
     "@vercel/speed-insights": "2.0.0",
     "bcryptjs": "^3.0.3",
@@ -150,20 +174,21 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "exceljs": "4.4.0",
-    "geist": "^1.7.2",
-    "lucide-react": "^0.577.0",
-    "motion": "^12.43.0",
-    "next": "^15.5.26",
+    "geist": "^1.8.1",
+    "lucide-react": "^1.59.0",
+    "motion": "^14.3.0",
+    "next": "^16.4.2",
     "postcss": "^8.5.30",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.8.1",
-    "react": "^19.3.0",
-    "react-day-picker": "^9.14.0",
-    "react-dom": "^19.3.0",
+    "react": "^19.3.1",
+    "react-day-picker": "^10.0.2",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
-    "resend": "^6.32.1",
+    "resend": "^6.34.1",
+    "sharp": "0.35.5",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.2.1",
@@ -171,23 +196,27 @@
     "vaul": "^1.1.2",
     "web-push": "^3.6.7",
     "workflow": "4.8.13",
-    "zod": "^3.24.2"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^16.3.7",
-    "@playwright/test": "^1.63.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^22.20.4",
+    "@eslint/eslintrc": "^3.3.7",
+    "@next/bundle-analyzer": "^16.4.2",
+    "@playwright/test": "^1.64.1",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@types/node": "^24.19.2",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/web-push": "^3.6.4",
-    "@vitest/coverage-v8": "^3.2.6",
+    "@vitest/coverage-v8": "^5.0.5",
+    "axe-core": "^4.14.0",
+    "dotenv": "^16.6.1",
+    "esbuild": "0.28.2",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^15.5.26",
+    "eslint-config-next": "^16.4.2",
     "plist": "^5.0.0",
-    "prisma": "^6.19.3",
-    "typescript": "5.9.3",
-    "vitest": "^3.0.6"
+    "prisma": "^7.10.1",
+    "typescript": "6.0.3",
+    "vitest": "^5.0.5"
   }
 }

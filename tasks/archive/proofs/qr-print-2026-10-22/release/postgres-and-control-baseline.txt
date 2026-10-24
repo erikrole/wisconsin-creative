@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 /Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative
+
+ ✓ tests/operational-target-baseline.test.ts (4 tests) 33ms
+ ✓ tests/label-print-jobs.postgres.test.ts (12 tests) 955ms
+   ✓ print job service on disposable PostgreSQL > bounds UTF-8 history pages while preserving a large active receipt and every paginated batch  809ms
+
+ Test Files  2 passed (2)
+      Tests  16 passed (16)
+   Start at  16:35:01
+   Duration  1.34s (transform 84ms, setup 20ms, collect 242ms, tests 988ms, environment 0ms, prepare 55ms)
+

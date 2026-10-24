@@ -1,29 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Download, FileDown, Minus, Pencil, Plus, RotateCcw, X } from "lucide-react";
+import { Check, Download, FileDown, Minus, Pencil, Plus, RotateCcw, X, ZoomIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LABEL_KINDS, type LabelKind } from "@/lib/brother-label-csv";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import { LabelPreview } from "./LabelPreview";
+import { USBPrintControls } from "./USBPrintControls";
+import { usePrintPreflight } from "./use-print-preflight";
 import {
+  preparedSheet,
   KIND_ORDER,
   MAX_COPIES,
   clampCopies,
   entryKind,
+  entryPrintIssue,
   entryRows,
   parseUnitPick,
   printableCount,
   printsUnits,
   selectedUnitNumbers,
-  sheetRows,
   templateFiles,
   textEdited,
   unitKindOf,
@@ -46,7 +50,11 @@ async function readUnits(skuId: string, signal?: AbortSignal): Promise<SheetUnit
   if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
   if (!res.ok) throw new Error("server");
   const json = await parseJsonSafely<{ data?: SheetUnit[] }>(res);
-  return json?.data ?? [];
+  if (!Array.isArray(json?.data) || !json.data.every((unit) =>
+    Number.isSafeInteger(unit.unitNumber) && unit.unitNumber > 0 && typeof unit.status === "string" &&
+    (unit.labelPrintedAt === null || typeof unit.labelPrintedAt === "string")
+  )) throw new Error("server");
+  return json.data;
 }
 
 /** Unit lists for every numbered family on the sheet that prints unit labels. */
@@ -66,8 +74,9 @@ export function useSheetUnits(cart: CartEntry[]) {
     unitsBySku[skuId] = results[index]?.data;
     if (results[index]?.isError) failed.add(skuId);
   });
-  const loading = results.some((result) => result.isLoading);
-  return { unitsBySku, loading, failed };
+  const loading = results.some((result) => result.isPending);
+  const retry = () => { results.forEach((result) => { if (result.isError) void result.refetch(); }); };
+  return { unitsBySku, loading, failed, retry };
 }
 
 function download(filename: string, csv: string) {
@@ -94,10 +103,10 @@ function Stepper({
   label: string;
 }) {
   return (
-    <div className="inline-flex h-9 items-center rounded-full border border-border bg-background">
+    <div className="inline-flex h-10 items-center rounded-full border border-border bg-background focus-within:ring-[3px] focus-within:ring-ring/50">
       <button
         type="button"
-        className="grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-40"
+        className="grid size-10 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
         onClick={() => onChange(clampCopies(value - 1))}
         disabled={value <= 1}
         aria-label={`One fewer ${label}`}
@@ -113,7 +122,7 @@ function Stepper({
       />
       <button
         type="button"
-        className="grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-40"
+        className="grid size-10 cursor-pointer place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
         onClick={() => onChange(clampCopies(value + 1))}
         disabled={value >= MAX_COPIES}
         aria-label={`One more ${label}`}
@@ -171,7 +180,7 @@ function EntryEditor({ entry, onUpdate }: { entry: CartEntry; onUpdate: (patch: 
         >
           {KIND_ORDER.map((kind) => (
             <option key={kind} value={kind}>
-              {LABEL_KINDS[kind].template}
+              {LABEL_KINDS[kind].label}
             </option>
           ))}
         </NativeSelect>
@@ -202,10 +211,12 @@ function SheetEntry({
   onUpdate,
   onRemove,
   onMarkPrinted,
+  renderIssue,
 }: {
   entry: CartEntry;
   units: SheetUnit[] | undefined;
   unitsFailed: boolean;
+  renderIssue?: string;
   /** Unit numbers in the CSV that was downloaded for this entry, still unmarked. Null when there is nothing to mark. */
   downloadedUnits: number[] | null;
   onUpdate: (patch: Partial<CartEntry>) => void;
@@ -214,21 +225,23 @@ function SheetEntry({
 }) {
   const [editing, setEditing] = useState(false);
   const [marking, setMarking] = useState(false);
+  const issueId = useId();
   const family = entry.family;
   const unitMode = printsUnits(entry);
   const counted = family && !family.trackByNumber;
   const unitNumbers = selectedUnitNumbers(entry, units);
   const unknown = unknownPickedNumbers(entry, units);
   const pickInvalid = family?.unitScope === "pick" ? parseUnitPick(family.unitPick ?? "").invalid : [];
+  const issue = entryPrintIssue(entry, units) || renderIssue;
   const labels = printableCount(entryRows(entry, units));
   const kind = entryKind(entry);
-  const missingQr = LABEL_KINDS[kind].needsQr && !entry.qrCodeValue;
+  const missingQr = LABEL_KINDS[kind].needsQr && !(unitMode ? family?.binQrCodeValue : entry.qrCodeValue)?.trim();
   const active = units?.filter((unit) => unit.status !== "RETIRED") ?? [];
   const unprinted = active.filter((unit) => !unit.labelPrintedAt).length;
   const firstUnit = unitNumbers[0];
   const edited = textEdited(entry);
-  const toMark = (downloadedUnits ?? []).filter((n) => !units?.find((u) => u.unitNumber === n)?.labelPrintedAt);
-  const canMark = unitMode && toMark.length > 0;
+  const toMark = (downloadedUnits ?? []).filter((n) => units?.some((u) => u.unitNumber === n && u.status !== "RETIRED" && !u.labelPrintedAt));
+  const canMark = unitMode && !unitsFailed && toMark.length > 0;
 
   const meta = unitMode
     ? !units
@@ -236,16 +249,20 @@ function SheetEntry({
         ? "Units could not load"
         : "Loading units…"
       : unitNumbers.length === 0
-        ? family?.unitScope === "pick"
+        ? active.length === 0
+          ? "No active units to label"
+          : family?.unitScope === "pick"
           ? "Type unit numbers to print"
           : "Every unit already has a label"
-        : `${plural(unitNumbers.length, "unit label")} · ${compactRanges(unitNumbers)}`
+        : issue
+          ? "Fix unit selection before printing"
+          : `${plural(unitNumbers.length, "unit label")} · ${compactRanges(unitNumbers)}`
     : missingQr
-      ? "No QR code, so the CSV skips it"
+      ? "An item QR code is required"
       : entry.qrCodeValue || entry.name;
 
   return (
-    <li className="px-4 py-3">
+    <li className="px-4 py-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -256,7 +273,7 @@ function SheetEntry({
               </span>
             )}
           </div>
-          <div className={cn("truncate text-xs", missingQr || unitsFailed ? "text-destructive" : "text-muted-foreground", !unitMode && !missingQr && "font-mono")}>
+          <div className={cn("truncate text-xs", missingQr || unitsFailed ? "text-destructive" : "text-muted-foreground", !unitMode && !missingQr && Boolean(entry.qrCodeValue) && "font-mono")}>
             {meta}
           </div>
         </div>
@@ -279,33 +296,48 @@ function SheetEntry({
         </div>
       </div>
 
-      <div className="mt-2 overflow-x-auto pb-1">
-        {unitMode ? (
-          <LabelPreview
-            kind={kind}
-            dept=""
-            model=""
-            number={firstUnit ? String(firstUnit) : "1"}
-            qrCodeValue={`${family!.binQrCodeValue}-${firstUnit ?? 1}`}
-          />
-        ) : (
-          <button
-            type="button"
-            className="block cursor-pointer rounded-[4px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            onClick={() => setEditing(true)}
-            aria-label={`Edit printed text for ${entry.title}`}
-          >
-            <LabelPreview kind={kind} dept={entry.dept} model={entry.model} number={entry.number} qrCodeValue={entry.qrCodeValue} />
-          </button>
+      <div className="mt-3">
+        {unitMode && !firstUnit ? <p className="rounded-lg bg-muted/40 p-4 text-xs text-muted-foreground">Choose active unit numbers to preview a label.</p> : (
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="group flex w-full cursor-pointer flex-col gap-3 rounded-lg border border-border/70 bg-muted/35 p-4 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                aria-label={`Enlarge label preview for ${entry.title}`}
+              >
+                <span className="flex w-full items-center justify-between text-xs text-muted-foreground">
+                  <span>{unitMode ? `Unit ${firstUnit} preview` : "Label preview"}</span>
+                  <ZoomIn className="size-3.5 transition-colors group-hover:text-foreground" />
+                </span>
+                <span className="grid min-h-20 w-full place-items-center">
+                  <LabelPreview kind={kind} dept={unitMode ? "" : entry.dept} model={unitMode ? "" : entry.model} number={unitMode ? String(firstUnit) : entry.number} qrCodeValue={unitMode ? `${family!.binQrCodeValue}-${firstUnit}` : entry.qrCodeValue} />
+                </span>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[640px]">
+              <DialogHeader className="block">
+                <DialogTitle>{entry.title}</DialogTitle>
+                <DialogDescription className="mt-1">{unitMode ? `Unit ${firstUnit} · ` : ""}{LABEL_KINDS[kind].label} · 12 mm white-on-black tape</DialogDescription>
+              </DialogHeader>
+              <div className="grid min-h-60 place-items-center bg-muted/35 px-6 py-10">
+                <LabelPreview kind={kind} dept={unitMode ? "" : entry.dept} model={unitMode ? "" : entry.model} number={unitMode ? String(firstUnit) : entry.number} qrCodeValue={unitMode ? `${family!.binQrCodeValue}-${firstUnit}` : entry.qrCodeValue} height={152} />
+              </div>
+              <p className="px-6 pb-6 text-center text-xs text-muted-foreground">Gotham XNarrow Bold{LABEL_KINDS[kind].needsQr ? " · Medium Small QR" : ""}. This preview matches the USB print layout.</p>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
+
+      {issue && (!unitMode || (units && family?.unitScope !== "pick")) && (
+        <p role="status" className="mt-2 text-xs text-destructive">{issue}</p>
+      )}
 
       {family?.trackByNumber && (
         <ToggleGroup
           type="single"
           value={family.mode}
           onValueChange={(mode) => mode && onUpdate({ family: { ...family, mode: mode as "family" | "units" } })}
-          className="mt-2 w-full [&>button]:min-h-9 [&>button]:flex-1 [&>button]:text-xs"
+          className="mt-2 w-full [&>button]:min-h-10 [&>button]:flex-1 [&>button]:text-xs"
           aria-label={`What to print for ${entry.title}`}
         >
           <ToggleGroupItem value="family">Family label</ToggleGroupItem>
@@ -319,7 +351,7 @@ function SheetEntry({
             type="single"
             value={family!.unitScope}
             onValueChange={(scope) => scope && onUpdate({ family: { ...family!, unitScope: scope as UnitScope } })}
-            className="w-full [&>button]:min-h-9 [&>button]:flex-1 [&>button]:text-xs"
+            className="w-full [&>button]:min-h-10 [&>button]:flex-1 [&>button]:text-xs"
             aria-label={`Which units of ${entry.title}`}
           >
             <ToggleGroupItem value="unprinted">Not printed{units ? ` · ${unprinted}` : ""}</ToggleGroupItem>
@@ -332,17 +364,18 @@ function SheetEntry({
                 value={family!.unitPick ?? ""}
                 onChange={(e) => onUpdate({ family: { ...family!, unitPick: e.target.value } })}
                 placeholder="7, or 12-18, or 3, 9, 20-24"
-                inputMode="numeric"
+                aria-invalid={issue ? true : undefined}
+                aria-describedby={issue ? issueId : undefined}
                 aria-label={`Unit numbers of ${entry.title} to print`}
               />
-              {(pickInvalid.length > 0 || unknown.length > 0) && (
-                <p className="text-xs text-destructive">
+              {issue && (
+                <p id={issueId} role="status" className="text-xs text-destructive">
                   {[
-                    pickInvalid.length > 0 ? `Can't read ${pickInvalid.join(", ")}` : "",
+                    pickInvalid.length > 0 ? `Can't read ${pickInvalid.slice(0, 4).join(", ")}. ${issue}` : "",
                     unknown.length > 0 ? `No active unit ${compactRanges(unknown)}` : "",
                   ]
                     .filter(Boolean)
-                    .join(". ")}
+                    .join(". ") || issue}
                 </p>
               )}
             </div>
@@ -357,7 +390,7 @@ function SheetEntry({
             >
               {UNIT_KINDS.map((option) => (
                 <option key={option} value={option}>
-                  {LABEL_KINDS[option].template}
+                  {LABEL_KINDS[option].label}
                 </option>
               ))}
             </NativeSelect>
@@ -386,7 +419,7 @@ function SheetEntry({
 
       {canMark && (
         <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-[var(--accent-soft)] px-3 py-2 text-xs">
-          <span>Stuck these on?</span>
+          <span>Printed and applied?</span>
           <Button
             size="sm"
             className="h-10"
@@ -430,7 +463,9 @@ export function PrintSheet({
   onRemove,
   onClear,
   className,
+  onUndo, canUndo, draftIssue, draftActions,
 }: {
+  onUndo?: () => void; canUndo?: boolean; draftIssue?: string; draftActions?: React.ReactNode;
   cart: CartEntry[];
   onUpdate: (id: string, patch: Partial<CartEntry>) => void;
   onRemove: (id: string) => void;
@@ -438,20 +473,19 @@ export function PrintSheet({
   className?: string;
 }) {
   const queryClient = useQueryClient();
-  const { unitsBySku, loading, failed } = useSheetUnits(cart);
-  const [downloaded, setDownloaded] = useState<Set<LabelKind>>(new Set());
+  const { unitsBySku, loading, failed, retry } = useSheetUnits(cart);
+  const [downloaded, setDownloaded] = useState<Partial<Record<LabelKind, string>>>({});
   // Exactly which units went out in a downloaded CSV, per family, so "Mark printed"
   // never covers units that were added or re-picked after the download.
   const [exportedUnits, setExportedUnits] = useState<Record<string, number[]>>({});
   const { data: me } = useCurrentUser();
   const canMarkPrinted = me?.role === "ADMIN" || me?.role === "STAFF";
-  const rows = useMemo(() => sheetRows(cart, unitsBySku), [cart, unitsBySku]);
-  const files = useMemo(() => templateFiles(rows), [rows]);
-  const total = printableCount(rows);
-  const groups = KIND_ORDER.map((kind) => ({
-    kind,
-    entries: cart.filter((entry) => entryKind(entry) === kind),
-  })).filter((group) => group.entries.length > 0);
+  const prepared = preparedSheet(cart, unitsBySku);
+  const { rows, groups, labels: usbLabels, total } = prepared;
+  const preflight = usePrintPreflight(usbLabels);
+  const files = useMemo(() => total <= 500 ? templateFiles(rows) : [], [rows, total]);
+  const choicesBlocked = loading || failed.size > 0 || cart.some((entry) => entryPrintIssue(entry, entry.family ? unitsBySku[entry.family.skuId] : undefined));
+  const blocked = Boolean(choicesBlocked || draftIssue || (total > 0 && !preflight.ready));
 
   const markPrinted = async (entry: CartEntry, unitNumbers: number[]) => {
     const skuId = entry.family!.skuId;
@@ -493,94 +527,118 @@ export function PrintSheet({
       const skuId = entry.family!.skuId;
       exported[skuId] = Array.from(new Set([...(exported[skuId] ?? []), ...selectedUnitNumbers(entry, unitsBySku[skuId])]));
     }
-    setExportedUnits((prev) => ({ ...prev, ...exported }));
+    setExportedUnits((prev) => {
+      const next = { ...prev };
+      for (const [skuId, numbers] of Object.entries(exported)) next[skuId] = Array.from(new Set([...(prev[skuId] ?? []), ...numbers]));
+      return next;
+    });
   };
 
   return (
     <section
       id="print-sheet"
       aria-label="Print sheet"
-      className={cn("no-print flex flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-card", className)}
+      className={cn("no-print flex flex-col overflow-y-auto rounded-[var(--radius)] border border-border bg-card", className)}
     >
-      <header className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+      <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border/70 bg-card px-4">
         <div>
           <h2 className="text-base">Print sheet</h2>
-          <p className="text-xs tabular-nums text-muted-foreground">
-            {cart.length === 0 ? "Nothing added yet" : `${plural(total, "label")} from ${plural(cart.length, "line")}`}
+          <p className="text-xs tabular-nums text-muted-foreground" aria-live="polite">
+            {cart.length === 0 ? "Ready when you are" : `${plural(total, "label")} · ${plural(cart.length, "selection")}`}
           </p>
         </div>
+        <div className="flex items-center gap-1">{canUndo && <Button variant="ghost" size="sm" className="h-10" onClick={onUndo}><RotateCcw className="size-3.5" />Undo</Button>}
         {cart.length > 0 && (
           <Button variant="ghost" size="sm" className="h-10 text-muted-foreground" onClick={onClear}>
             Clear
           </Button>
-        )}
+        )}</div>
       </header>
+      {(draftIssue || draftActions) && <div className="flex flex-col gap-2 border-b border-border px-4 py-3 text-xs">{draftIssue && <p role="alert" className="text-destructive">{draftIssue}</p>}{draftActions}</div>}
 
       {cart.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
           <div className="flex flex-col items-center gap-1.5 opacity-80">
-            <LabelPreview kind="body" dept="FB" model="FX3" number="1" qrCodeValue="wisconsin-creative" height={56} />
-            <LabelPreview kind="battery" dept="" model="" number="12" qrCodeValue="wisconsin-creative-12" className="opacity-60" />
+            <LabelPreview kind="body" dept="FB" model="FX3" number="1" qrCodeValue="c62a82d7" />
           </div>
           <div>
-            <div className="text-sm font-bold">Pick gear to label</div>
+            <div className="text-sm font-bold">Your labels appear here</div>
             <p className="mx-auto mt-1 max-w-64 text-xs text-muted-foreground">
-              Add items or families from the list. Set how many, then download a CSV for each P-touch template.
+              Add items or families from the list, set how many, then print straight to the Brother over USB.
             </p>
           </div>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {groups.map((group) => (
-            <div key={group.kind}>
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-[var(--bg-surface)]/90 px-4 py-1.5 text-xs font-bold text-muted-foreground backdrop-blur">
-                <span>{LABEL_KINDS[group.kind].template}</span>
+        <div className="shrink-0">
+          <ul className="divide-y divide-border/60">
+            {groups.flatMap((group) => [
+              // top-16 matches the sheet header's h-16, so the heading sits below it instead of sliding underneath.
+              <li key={`heading-${group.kind}`} className="sticky top-16 z-10 flex items-center justify-between border-b border-border/60 bg-[var(--bg-surface)]/90 px-4 py-1.5 text-xs font-bold text-muted-foreground backdrop-blur">
+                <span>{LABEL_KINDS[group.kind].label}</span>
                 <span className="font-normal tabular-nums">
                   {plural(printableCount(rows.filter((row) => row.kind === group.kind)), "label")}
                 </span>
-              </div>
-              <ul className="divide-y divide-border/60">
-                {group.entries.map((entry) => (
-                  <SheetEntry
-                    key={entry.id}
-                    entry={entry}
-                    units={entry.family ? unitsBySku[entry.family.skuId] : undefined}
-                    unitsFailed={Boolean(entry.family && failed.has(entry.family.skuId))}
-                    downloadedUnits={
-                      canMarkPrinted && entry.family && printsUnits(entry) ? exportedUnits[entry.family.skuId] ?? null : null
-                    }
-                    onUpdate={(patch) => onUpdate(entry.id, patch)}
-                    onRemove={() => onRemove(entry.id)}
-                    onMarkPrinted={(numbers) => markPrinted(entry, numbers)}
-                  />
-                ))}
-              </ul>
-            </div>
-          ))}
+              </li>,
+              ...group.entries.map((entry) => (
+                <SheetEntry
+                  key={entry.id}
+                  entry={entry}
+                  units={entry.family ? unitsBySku[entry.family.skuId] : undefined}
+                  renderIssue={preflight.issues[entry.id]}
+                  unitsFailed={Boolean(entry.family && failed.has(entry.family.skuId))}
+                  downloadedUnits={
+                    canMarkPrinted && entry.family && printsUnits(entry) ? exportedUnits[entry.family.skuId] ?? null : null
+                  }
+                  onUpdate={(patch) => onUpdate(entry.id, patch)}
+                  onRemove={() => onRemove(entry.id)}
+                  onMarkPrinted={(numbers) => markPrinted(entry, numbers)}
+                />
+              )),
+            ])}
+          </ul>
         </div>
       )}
 
-      {cart.length > 0 && (
-        <footer className="flex flex-col gap-2 border-t border-border/70 bg-[var(--bg-surface)]/60 px-4 py-3">
+      <footer className="flex shrink-0 flex-col gap-2 border-t border-border/70 bg-[var(--bg-surface)]/60 px-4 py-3">
+          {failed.size > 0 ? (
+            <div role="alert" className="flex items-center justify-between gap-2 text-xs text-destructive">
+              <span>Unit numbers could not load. Printing is paused to keep the sheet complete.</span>
+              <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={retry}>Try again</Button>
+            </div>
+          ) : choicesBlocked && !loading ? (
+            <p role="status" className="text-xs text-destructive">Fix the label choices above before printing.</p>
+          ) : null}
+          {total > 0 && total <= 500 && !choicesBlocked && !draftIssue && <p role="status" className="text-xs text-muted-foreground">{preflight.ready ? "Ready · Text, font and QR identities checked · Prints in sheet order" : Object.keys(preflight.issues).length ? "Fix the label issues above before printing." : `Checking ${preflight.done} of ${Math.min(total, 500)} labels…`}</p>}
+          {Object.keys(preflight.issues).length > 0 && <Button variant="outline" size="sm" className="h-10" onClick={preflight.retry}>Retry label checks</Button>}
+          <USBPrintControls labels={usbLabels} total={total} blocked={Boolean(blocked)} onCompleted={(label) => {
+            if (!label.unit) return;
+            const { skuId, number } = label.unit;
+            setExportedUnits((prev) => ({ ...prev, [skuId]: Array.from(new Set([...(prev[skuId] ?? []), number])) }));
+          }} />
+          <details className="text-xs">
+            <summary className="cursor-pointer py-2 text-muted-foreground">Export CSV for P-touch Editor</summary>
+          <div className="flex flex-col gap-2 pt-1">
           {files.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               {loading ? "Loading unit numbers…" : "Nothing on the sheet can print yet."}
             </p>
           ) : (
-            files.map((file, index) => (
+            files.map((file) => (
               <div key={file.kind} className="flex gap-2">
                 <Button
-                  variant={index === 0 ? "default" : "outline"}
+                  variant="outline"
                   className="h-10 min-w-0 flex-1 justify-between"
-                  disabled={loading}
+                  // P-touch merges the CSV itself, so the USB bitmap and font checks do not gate it.
+                  disabled={Boolean(choicesBlocked || draftIssue)}
+                  aria-label={`Download ${file.file}, ${plural(file.labels, "label")}${downloaded[file.kind] === file.csv ? ", current version downloaded" : downloaded[file.kind] ? ", updated since last download" : ""}`}
                   onClick={() => {
                     download(file.file, file.csv);
-                    setDownloaded((prev) => new Set(prev).add(file.kind));
+                    setDownloaded((prev) => ({ ...prev, [file.kind]: file.csv }));
                     recordExport(file.kind);
                   }}
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    {downloaded.has(file.kind) ? <Check className="size-4" /> : <Download className="size-4" />}
+                    {downloaded[file.kind] === file.csv ? <Check className="size-4" /> : <Download className="size-4" />}
                     <span className="truncate">{file.file}</span>
                   </span>
                   <span className="tabular-nums opacity-80">{plural(file.labels, "label")}</span>
@@ -594,11 +652,13 @@ export function PrintSheet({
             ))
           )}
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Open the matching template in P-touch Editor (the file button next to each CSV), connect the CSV as its
-            database, then print all records.
+            Open the matching template in P-touch Editor (the file button). If asked to locate its database,
+            choose Reopen, then Browse and select the CSV. Keep the header row option checked. Confirm a record
+            and its text fit before printing. CSV templates use their own layout. A single-record CSV may not merge in P-touch; use USB printing instead.
           </p>
+          </div>
+          </details>
         </footer>
-      )}
     </section>
   );
 }

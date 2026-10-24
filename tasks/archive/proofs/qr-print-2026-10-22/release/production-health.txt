@@ -1,0 +1,61 @@
+Prisma migration health
+Local migrations: 207
+Applied local migrations: 207/207
+Newest local migration: 0202_label_print_jobs (applied)
+Pending local migrations: none
+Unresolved failed rows: none
+Applied DB-only migrations: none
+Rolled-back rows:
+- 0052_calendar_source_sync_lease
+- 0062_kiosk_session_expires_at
+- 0077_add_bulk_sku_unit_label_tracking
+Applied SQL checksum mismatches: none
+Unverified applied SQL checksums: none
+Unexpected duplicate receipts: none
+Preview baseline: original SQL provenance UNKNOWN:
+- 0001_manual_constraints
+- 0002_source_reservation_id
+- 0003_phase1_models
+- 0004_event_booking_linkage
+- 0005_add_categories
+- 0006_asset_policy_toggles
+- 0007_numbered_bulk_unit_tracking
+- 0008_escalation_config
+- 0009_item_bundling
+- 0009_shift_calendar
+- 0010_favorite_items
+- 0011_booking_ref_number
+- 0012_add_password_reset_token
+- 0013_shift_assignment_booking_link
+- 0014_add_user_avatar_url
+- 0015_make_serial_number_optional
+- 0016_add_user_active_field
+- 0017_add_source_payload
+- 0018_add_booking_kit_id
+- 0019_add_location_is_home_venue
+- 0020_add_performance_indexes
+- 0021_add_trigram_search_indexes
+- 0022_add_booking_photos
+- 0023_add_checkin_item_reports
+- 0024_add_calendar_event_is_hidden
+- 0025_consolidate_departments
+- 0026_add_allowed_emails
+- 0027_seed_allowed_emails
+- 0028_add_bulk_sku_images_and_kit_bulk_members
+- 0029_add_kiosk_devices
+- 0030_add_sport_call_times
+- 0035_add_shift_assignment_conflict
+- 0036_add_travel_roster
+- 0037_add_shift_archiving
+- 0038_add_bulk_sku_fields
+- 0039_add_pending_pickup_status
+- 0040_add_device_tokens
+- 0041_reseed_escalation_rules
+- 0043_license_codes
+- 0044_license_claim_user_set_null
+- 0045_drop_guide_order
+- 0046_user_notification_prefs
+- 0048_user_profile_fields
+Preview baseline: verified historical SQL version differs from local:
+- 0071_add_event_subtitle
+OK: production-2026-09-22 preserved, forward SQL verified, and asset overlap protection present. Historical exceptions remain above.

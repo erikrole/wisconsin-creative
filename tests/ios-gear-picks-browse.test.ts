@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const browse = () => source("ios/Wisconsin/Views/BrowseView.swift");
 const view = () => source("ios/Wisconsin/Views/GearPicksView.swift");
 const models = () => source("ios/Wisconsin/Models/GearPickModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 
 describe("iOS UA gear picks", () => {
   it("adds a participant row for internal roles and keeps collaborators off it", () => {
@@ -42,6 +43,15 @@ describe("iOS UA gear picks", () => {
     expect(screen).toContain("Included in your standard issue");
     expect(screen).toContain("Discard and reload");
     expect(screen).toContain("@ViewBuilder");
+  });
+
+  it("leads with the picks and moves the assortment behind Catalog", () => {
+    const screen = view();
+
+    expect(screen).toContain("private var picksSection");
+    expect(screen).toContain("struct GearCatalogView: View");
+    expect(screen).toContain('Text("Catalog")');
+    expect(screen).toContain("Review and submit");
   });
 
   it("keeps sizing, allowance, and stale-save problems in product language", () => {

@@ -21,6 +21,10 @@ export type CurrentUser = {
   capabilities?: string[];
   avatarUrl?: string | null;
   forcePasswordChange?: boolean;
+  accountCreatedAt?: string | null;
+  /** "ST" for student workers, who manage their own availability. */
+  staffingType?: string | null;
+  onboardingRequired?: boolean;
   preview?: {
     actualRole: "ADMIN";
     role: "STAFF" | "STUDENT" | "COLLABORATOR";
@@ -47,6 +51,7 @@ export function useCurrentUser(initialUser?: CurrentUser) {
       };
     },
     initialData: initialUser ?? undefined,
+    initialDataUpdatedAt: initialUser ? 0 : undefined,
     staleTime: 5 * 60_000,
   });
 }

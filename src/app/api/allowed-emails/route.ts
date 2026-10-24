@@ -7,6 +7,8 @@ import { requirePermission } from "@/lib/rbac";
 import { createAllowedEmailSchema, createAllowedEmailBulkSchema } from "@/lib/validation";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { shouldIncludeHiddenUsers } from "@/lib/user-visibility";
+import { createAuditEntry } from "@/lib/audit";
+import { sendInviteEmail } from "@/lib/services/invite-email";
 import {
   createAllowedEmailInvite,
   createAllowedEmailInvitesBulk,
@@ -69,6 +71,10 @@ export const GET = withAuth(async (req, { user }) => {
   return ok({ data, total, limit, offset });
 });
 
+// A 50-row roster with paced invite emails takes about 30 seconds.
+export const maxDuration = 60;
+const BULK_INVITE_EMAIL_GAP_MS = 600;
+
 /** Add a single allowed email or bulk add */
 export const POST = withAuth(async (req, { user }) => {
   requirePermission(user.role, "allowed_email", "create");
@@ -80,12 +86,29 @@ export const POST = withAuth(async (req, { user }) => {
   if (Array.isArray(body.emails)) {
     const { emails } = createAllowedEmailBulkSchema.parse(body);
 
-    const result = await createAllowedEmailInvitesBulk({ actor: user, emails });
+    const { createdEntries, ...result } = await createAllowedEmailInvitesBulk({ actor: user, emails });
+    if (body?.sendInvite !== true) return ok(result, 201);
 
-    return ok(
-      result,
-      201
-    );
+    // Same opt-in as a single add, one email per new non-collaborator invite.
+    // Sequential and paced to stay under the email provider's rate limit.
+    const emailed = { sent: 0, failed: 0, notConfigured: 0 };
+    for (const [index, entry] of createdEntries.entries()) {
+      if (entry.role === "COLLABORATOR") continue;
+      if (index > 0) await new Promise((resolve) => setTimeout(resolve, BULK_INVITE_EMAIL_GAP_MS));
+      const emailStatus = await sendInviteEmail({ email: entry.email, name: entry.preloadedName, allowedEmailId: entry.id });
+      if (emailStatus === "sent") emailed.sent += 1;
+      else if (emailStatus === "failed") emailed.failed += 1;
+      else emailed.notConfigured += 1;
+      await createAuditEntry({
+        actorId: user.id,
+        actorRole: user.role,
+        entityType: "allowed_email",
+        entityId: entry.id,
+        action: "invite_sent",
+        after: { emailStatus },
+      });
+    }
+    return ok({ ...result, emailed }, 201);
   }
 
   // Single add
@@ -95,6 +118,21 @@ export const POST = withAuth(async (req, { user }) => {
 
   const result = await createAllowedEmailInvite({ actor: user, ...invite, email });
   if (result.skipped) return ok(result, 201);
+
+  // Opt-in per add: the invite is the one automatic email a new person gets.
+  // Collaborators are onboarded by their organization, not this email.
+  if (body?.sendInvite === true && invite.role !== "COLLABORATOR") {
+    const emailStatus = await sendInviteEmail({ email, name: "preloadedName" in invite ? invite.preloadedName : null, allowedEmailId: result.entry.id });
+    await createAuditEntry({
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "allowed_email",
+      entityId: result.entry.id,
+      action: "invite_sent",
+      after: { emailStatus },
+    });
+    return ok({ ...result.entry, emailStatus }, 201);
+  }
 
   return ok(result.entry, 201);
 });

@@ -5,7 +5,7 @@
 - Owner: Wisconsin Athletics Creative Product
 - Status: Active - invite-first V1 shipped and launch-smoked
 - Version: V1
-- Last Updated: 2026-08-17
+- Last Updated: 2026-10-23
 - Decision Reference: D-037, D-051
 
 ## Problem
@@ -27,7 +27,7 @@ The security model still needs to prevent unauthorized access. The fix is one fi
 2. Domain-wide automatic access, such as accepting every address from one school domain.
 3. Self-service role requests.
 4. Directory sync, SCIM, SSO, Entra, or Google Workspace automation.
-5. Email delivery as a required dependency for V1. If delivery is not configured, operators can still send an email blast or copy the generic app login link.
+5. Any bypass of inbox proof when invite email is unavailable. An operator can still stage an invitation, but a generic login link cannot claim it; token delivery must be restored before first-time setup can complete.
 6. Pre-created user profiles without any password. `User.passwordHash` is required today, so that needs a later schema and setup-token slice.
 
 ## Product Direction
@@ -50,6 +50,7 @@ Public registration and login responses must stay generic where membership discl
 8. Every create, claim, skip, resend, and retry action must be audit logged.
 9. Bulk endpoints need row-count bounds and rate limits sized for shared-network student onboarding.
 10. Import output must not contain passwords.
+11. Claiming an invite requires the one-time token from its emailed link (D-037, 2026-10-23 amendment). Web and updated native clients offer a rate-limited resend to the invited address only. Native proof stays in memory, is bound to that address, and never changes the API host or automatically switches a signed-in account. Browser-owned email setup remains usable by older installed clients.
 
 ## V1 Scope
 1. A documented onboarding lifecycle centered on `AllowedEmail` invites.
@@ -60,7 +61,7 @@ Public registration and login responses must stay generic where membership discl
 6. Status and follow-up controls for pending, claimed, stale, and failed rows.
 7. Native iOS forced-password handling for reset/recovery users before the normal app shell.
 8. Focused tests for bulk role boundaries, duplicates, existing records, audit writes, and forced-password access.
-9. Role-aware Welcome setup on web and native iOS after registration or sign-in, with a one-day continue-later path.
+9. Role-aware Welcome setup on web and native iOS after registration or sign-in. New internal accounts complete every required step before app access; only the photo step may be skipped. Existing returning-user reminders retain a one-day snooze.
 10. Derived operational-readiness and profile-completion status for all active accounts in the staff/admin onboarding view.
 11. Email-first discovery on web and native iOS, with the old registration route retained only as a compatibility redirect.
 
@@ -75,6 +76,16 @@ Public registration and login responses must stay generic where membership discl
 8. iOS `CurrentUser` keeps `forcePasswordChange` so the native shell can route reset/recovery users correctly after login and `/api/me`.
 9. `POST /api/auth/discover` is rate-limited by IP and normalized email, returns only `onboarding` or `password`, and never replaces the registration allowlist check.
 
+## Cross-device continuation (2026-10-22 local implementation)
+
+Validated field-group saves are account-backed, with conflict-safe versions and resume derived from saved answers. `onboardingCompletedAt` records the Finish decision independently of optional photo presence. Existing accounts are not backfilled into a required gate. Apparel choices offer Men’s/Women’s separately for clothing and shoes, preserving saved legacy/custom values. Private unfinished text remains in memory and is explicitly unsaved until acknowledged; Getting started retry copies contain only account-scoped row IDs.
+
+- [x] Disposable PostgreSQL proves partial saves, distinct-group contention, stale same-group rejection, safe replay, audit rollback, photo-free Finish and legacy SNOOZE.
+- [x] Chromium components prove dirty-input recovery, delayed-read ordering, custom-size entry, denied-storage checklist sync and crop retry.
+- [x] iPhone 18 Pro Max simulator proves the required student sequence, apparel choices, photo skip/finish and crop retry presentation.
+- [ ] Authenticate one preview student on web and iOS; verify web→iOS and iOS→web continuation, relaunch and skipped-photo completion against the shared backend.
+- [ ] Deploy migration/server changes, distribute the native build, and verify physical photo selection before production readiness.
+
 ## Acceptance Criteria
 - [x] Operator can onboard a roster-sized batch without manually switching between Users and Allowed Emails.
 - [x] Operator can add invite-to-register access without a temporary-password handoff.
@@ -88,8 +99,8 @@ Public registration and login responses must stay generic where membership discl
 - [x] Docs, task plan, web tests, API tests, and iOS verification are updated before shipping.
 - [x] New web registrations enter role-aware setup, and active-account readiness remains derived from canonical profile fields.
 - [x] Native iOS mirrors the role-aware setup contract without caching private profile values on device.
-- [ ] Web and native iOS discover an unclaimed allowed email from the normal login surface and complete password setup through the existing registration transaction.
-- [ ] Legacy `/register` links redirect to `/login`, and onboarding-status operators copy the generic app login link.
+- [x] Web and native iOS discover an unclaimed allowed email from the normal login surface and complete password setup through the existing registration transaction. (Web `LoginForm`, iOS `APIClient` discover call, `tests/auth-discovery-route.test.ts`, `tests/register-route.test.ts`; an authenticated rollout smoke is still outstanding.)
+- [x] Legacy `/register` links redirect to `/login`, and onboarding-status operators copy the generic app login link. (`src/app/register/page.tsx`; the Onboarding Status "copy login link" action.)
 
 ## Launch Notes
 1. Native iOS owns invite-gated registration and password-recovery requests through the existing APIs, while reset-link completion remains web-owned. Native also owns the authenticated profile-completion experience.

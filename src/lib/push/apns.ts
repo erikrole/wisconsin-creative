@@ -120,7 +120,7 @@ interface SendOpts {
 }
 
 type APNsInterruptionLevel = "passive" | "active" | "time-sensitive";
-export const DEFAULT_APNS_INTERRUPTION_LEVEL: APNsInterruptionLevel = "passive";
+const DEFAULT_APNS_INTERRUPTION_LEVEL: APNsInterruptionLevel = "passive";
 
 function sendOne(
   client: http2.ClientHttp2Session,
@@ -412,6 +412,12 @@ export async function sendPush(
     relevanceScore?: number;
     /** Replaces an earlier alert with the same id instead of stacking. */
     collapseId?: string;
+    /**
+     * Matched by the iOS Focus filter (`CreativeFocusFilter`) to decide which
+     * alerts break through a Focus: the catalog group (gear, schedule,
+     * account, admin), or "blast" for staff blasts.
+     */
+    filterCriteria?: string;
   }
 ): Promise<DispatchResult> {
   const notification = {
@@ -423,6 +429,7 @@ export async function sendPush(
       ...(opts.relevanceScore !== undefined ? { "relevance-score": opts.relevanceScore } : {}),
       "interruption-level": opts.interruptionLevel ?? DEFAULT_APNS_INTERRUPTION_LEVEL,
       ...(opts.category ? { category: opts.category } : {}),
+      ...(opts.filterCriteria ? { "filter-criteria": opts.filterCriteria } : {}),
     },
     ...(opts.payload ?? {}),
   };

@@ -177,7 +177,7 @@ export function StackGrid({ groups }: { groups: StackGroup[] }) {
   );
 }
 
-export function ProductMockup({ mockup, featured = false, compact = false }: { mockup: ShowroomMockup; featured?: boolean; compact?: boolean }) {
+function ProductMockup({ mockup, featured = false, compact = false }: { mockup: ShowroomMockup; featured?: boolean; compact?: boolean }) {
   return (
     <figure
       aria-label={`${mockup.title} mockup with fictional data`}

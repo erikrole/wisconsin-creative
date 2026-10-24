@@ -1,0 +1,17 @@
+{
+  "source": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "version": "1.4",
+  "build": "36",
+  "bundle": "com.erikrole.Wisconsin",
+  "ipaSHA256": "e3f79fefc6cf27c97f7a2560369f58f1e7b82586dccca8723720a8c8c5fada5a",
+  "signature": "deep strict verified",
+  "releasePreviewKeys": "absent",
+  "uploaded": false,
+  "submitted": false,
+  "appleValidationRecord": {
+    "id": "fad6d74e-e330-43bd-8632-b29831b501f1",
+    "state": "AWAITING_UPLOAD",
+    "origin": "Xcode local App Store export validation; exact ID verified in ContentDelivery.log",
+    "ipaBytesUploaded": false
+  }
+}

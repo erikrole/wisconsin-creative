@@ -71,6 +71,18 @@ function isForcePasswordAllowed(req: Request): boolean {
   );
 }
 
+function isOnboardingAllowed(req: Request, user: AuthUser): boolean {
+  const path = new URL(req.url).pathname;
+  if (isForcePasswordAllowed(req) && (path !== "/api/profile" || user.forcePasswordChange)) return true;
+  return (req.method === "GET" && path === "/api/me")
+    || ((req.method === "GET" || req.method === "PATCH") && path === "/api/me/profile-completion")
+    || (["GET", "POST", "DELETE"].includes(req.method) && path === `/api/users/${encodeURIComponent(user.id)}/avatar`)
+    || (req.method === "POST" && [
+      "/api/auth/passkey/registration/options", "/api/auth/passkey/registration/verify",
+      "/api/diagnostics",
+    ].includes(path));
+}
+
 /**
  * Authenticated API route handler.
  * Wraps try/catch, calls requireAuth(), and resolves dynamic params.
@@ -96,6 +108,9 @@ export function withAuth<P extends Record<string, string> = Record<string, strin
       if (user.forcePasswordChange && !isForcePasswordAllowed(req)) {
         throw new HttpError(403, "Password change required before continuing");
       }
+      if (user.onboardingRequired && !isOnboardingAllowed(req, user)) {
+        throw new HttpError(403, "Complete your required setup before continuing", { code: "ONBOARDING_REQUIRED" });
+      }
       if (user.preview && isRolePreviewBlockedRequest(req)) {
         throw new HttpError(403, "Preview mode is read-only");
       }
@@ -120,7 +135,15 @@ type KioskCtx<P extends Record<string, string> = Record<string, string>> = {
  * CSRF origin check included for mutating requests.
  */
 export function withKiosk<P extends Record<string, string> = Record<string, string>>(
-  handler: (req: Request, ctx: KioskCtx<P>) => Promise<NextResponse>
+  handler: (req: Request, ctx: KioskCtx<P>) => Promise<NextResponse>,
+  options: {
+    /**
+     * Runs after the CSRF and role-preview checks and before the database
+     * session lookup. Return a response to answer without touching Neon, or
+     * null to continue to `handler`.
+     */
+    withoutDatabase?: (req: Request) => Promise<NextResponse | null>;
+  } = {},
 ) {
   return async (req: Request, context: { params: Promise<P> }): Promise<NextResponse> => {
     try {
@@ -131,6 +154,8 @@ export function withKiosk<P extends Record<string, string> = Record<string, stri
       if (await readRolePreviewFromRequest(req)) {
         throw new HttpError(403, "Kiosk access is unavailable in role preview");
       }
+      const early = options.withoutDatabase ? await options.withoutDatabase(req) : null;
+      if (early) return early;
       const kiosk = await requireKiosk();
       const params = (context?.params ? await context.params : {}) as P;
       const response = await handler(tagRequestJsonParseErrors(req), { kiosk, params });

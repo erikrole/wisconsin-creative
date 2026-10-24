@@ -1,0 +1,124 @@
+{
+  "title": "Native invite signup",
+  "eyebrow": "Wisconsin Creative \u00b7 Local PR #620 follow-up \u00b7 2026-10-23",
+  "lede": "The updated iPhone client accepts the emailed invitation, creates the account, and enters native Welcome. This local implementation is not part of the released 1.4 (36) app.",
+  "stats": [
+    {
+      "k": "Swift unit checks",
+      "v": "29 passed",
+      "n": "Real parser, session safety and URLProtocol request/response contracts."
+    },
+    {
+      "k": "Native UI scenarios",
+      "v": "4 passed",
+      "n": "Cold link, resend/reset, expired-link refresh and provider failures."
+    },
+    {
+      "k": "Distribution",
+      "v": "Unreleased",
+      "n": "No merge, production deployment or App Store upload. Local proof predates the authorized PR push."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Account creation stays native",
+      "note": "After-only fixture evidence on iPhone 18 Pro Max, iOS 27.0, 440\u00d7956 logical points. No comparable invite-aware screen existed in released 1.4. Secure fields are obscured in app screenshots; the UI test verifies matching input and button reachability.",
+      "shots": [
+        {
+          "image": "native-valid-invite.png",
+          "title": "Invited address stays locked. The account action remains reachable while entering a password.",
+          "cap": "Invited address stays locked. The account action remains reachable while entering a password.",
+          "tag": "Local fixture"
+        },
+        {
+          "image": "native-signup-welcome.png",
+          "title": "A successful register response enters the existing native Welcome flow.",
+          "cap": "A successful register response enters the existing native Welcome flow.",
+          "tag": "Local fixture"
+        }
+      ]
+    },
+    {
+      "heading": "A missing link has a clear recovery path",
+      "shots": [
+        {
+          "image": "native-missing-link.png",
+          "title": "The invited student requests an inbox link without seeing password controls.",
+          "cap": "The invited student requests an inbox link without seeing password controls.",
+          "tag": "Local fixture"
+        },
+        {
+          "image": "native-link-sent.png",
+          "title": "One successful response disables repeat sending; Change resets this recovery state.",
+          "cap": "One successful response disables repeat sending; Change resets this recovery state.",
+          "tag": "Local fixture"
+        }
+      ]
+    },
+    {
+      "heading": "An expired link preserves the form",
+      "shots": [
+        {
+          "image": "native-expired-link.png",
+          "title": "An expired-token rejection preserves the entered name and passwords and offers resend.",
+          "cap": "An expired-token rejection preserves the entered name and passwords and offers resend.",
+          "tag": "Local fixture"
+        },
+        {
+          "image": "native-refreshed-link-preserves-input.png",
+          "title": "A new link for the same address removes the obsolete warning and enables the existing form. Submitting reaches Welcome.",
+          "cap": "A new link for the same address removes the obsolete warning and enables the existing form. Submitting reaches Welcome.",
+          "tag": "Local fixture"
+        }
+      ]
+    },
+    {
+      "heading": "Delivery states remain honest",
+      "shots": [
+        {
+          "image": "native-email-unavailable.png",
+          "title": "An unconfigured provider does not claim the email was sent.",
+          "cap": "An unconfigured provider does not claim the email was sent.",
+          "tag": "Local fixture"
+        },
+        {
+          "image": "native-resend-rate-limited.png",
+          "title": "A rate-limit rejection explains the wait and remains retryable.",
+          "cap": "A rate-limit rejection explains the wait and remains retryable.",
+          "tag": "Local fixture"
+        },
+        {
+          "image": "invite-email-mobile.png",
+          "title": "Rendered email keeps browser setup as the primary action, with explicit updated-app setup underneath.",
+          "cap": "Rendered email keeps browser setup as the primary action, with explicit updated-app setup underneath.",
+          "tag": "Local fixture"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Inbox proof reaches the guarded route",
+      "was": "Released 1.4 sends no invite token when registering. PR #620 requires it.",
+      "now": "The new client validates the canonical HTTPS link, keeps its token in memory, and forwards it through discovery and registration."
+    },
+    {
+      "h": "Existing installs keep a browser path",
+      "was": "Claiming every emailed setup link as a universal link could also intercept links on installed 1.4 clients.",
+      "now": "The primary and raw email links use web=1, excluded before the native AASA rule. Native setup is an explicit alternative for the updated app."
+    }
+  ],
+  "verification": [
+    "29 Swift unit tests passed; 4 native UI scenarios passed. The refreshed-link warning regression was checked again after the final fix.",
+    "Simulator build and unsigned generic iOS release build passed. Web TypeScript, changed-file ESLint and the database-free app build passed.",
+    "Native/companion source and email contracts, XcodeGen consistency, documentation verification and diff whitespace checks passed.",
+    "Independent client/security review closed the older-client link interception and stale registration error findings."
+  ],
+  "notes": [
+    "All API requests in the native scenarios use the existing fixture URL protocol. No account, database, inbox or provider mutation was performed.",
+    "Cold-link intake uses the fixture launch URL. Warm delivery uses an explicitly DEBUG-only custom URL bridge into the production HTTPS parser. Apple universal-link association/CDN behavior is not proved by this test.",
+    "The shared simulator contained another preview app claiming the same custom scheme. Final warm-link checks used an isolated instance of the same required iPhone model; the original simulator and its apps were preserved.",
+    "The earlier keyboard diagnostic captures and source patches are retained separately. Their final scroll offsets were not measured, so they are not presented as a matched visual pair.",
+    "Live token delivery, actual shared-backend registration, physical-device association and a future app distribution remain rollout gates. PR #620 is still draft and unmerged."
+  ]
+}

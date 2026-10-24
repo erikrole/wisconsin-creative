@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS asynchronous request ownership", () => {
   it("prevents a stale session restore from repopulating local auth state", () => {
@@ -22,17 +23,17 @@ describe("iOS asynchronous request ownership", () => {
   });
 
   it("rejects successful responses from an obsolete authenticated account", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const authenticatedData = apiClient.slice(
-      apiClient.indexOf("private func authenticatedData"),
-      apiClient.indexOf("private func broadcastSessionExpiry"),
+      apiClient.indexOf("func authenticatedData"),
+      apiClient.indexOf("func broadcastSessionExpiry"),
     );
-    const perform = apiClient.slice(apiClient.indexOf("private func perform"));
+    const perform = apiClient.slice(apiClient.indexOf("func perform"));
 
     expect(authenticatedData).toMatch(
       /let requestBoundary = authSessionBoundary\.capture\(\)[\s\S]*?session\.data\(for: request\)[\s\S]*?guard authSessionBoundary\.owns\(requestBoundary\) else \{\s*throw APIError\.sessionChanged\s*\}/,
     );
-    expect(perform).toMatch(/catch let error as APIError \{\s*throw error\s*\}/);
+    expect(perform).toMatch(/catch let error as APIError \{\s*(?:try Task\.checkCancellation\(\)\s*)?throw error\s*\}/);
   });
 
   it.each([

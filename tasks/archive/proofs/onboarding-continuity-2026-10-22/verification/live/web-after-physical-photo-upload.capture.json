@@ -1,0 +1,27 @@
+{
+  "evidence": "Web profile displays the physical PhotosPicker upload; actual stored WebP dimensions and technical-image pixels verified",
+  "sourceRevision": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "sourcePatchSHA256": null,
+  "deploymentId": "dpl_4CajpSPWg7DoouQgzcxbtL1X68py",
+  "managedRunId": 39835882763,
+  "imageSHA256": "1d67c856a0779789a6dfa04da7a28e3b6265d708fd9e05cbfc1d8c9a5883a287",
+  "testDriverSHA256": "41d3af07c898cdcf432cfc4994d123e27684a73feae65b9bf075232ca2605db1",
+  "settings": {
+    "browser": "156.0.8078.4",
+    "viewport": {
+      "width": 1280,
+      "height": 1000
+    },
+    "fixture": "none; synthetic invited student on its own managed preview",
+    "role": "STUDENT",
+    "route": "/settings/profile",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "capturedAt": "2026-10-22T19:19:31.565Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "baseline": "After-only authenticated evidence"
+}

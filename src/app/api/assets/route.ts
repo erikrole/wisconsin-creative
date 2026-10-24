@@ -10,6 +10,7 @@ import { buildDerivedStatusWhere, enrichAssetsWithStatusFromLoaded } from "@/lib
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
 import { summarizeItemFamilyState, summarizeNumberedFamilyCounts } from "@/lib/item-family-state";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
+import { missingAssetIds } from "@/lib/services/damage-cases";
 import {
   buildAssetTagSortFields,
   compareItemAssetTags,
@@ -979,9 +980,12 @@ export const GET = withAuth(async (req, { user }) => {
 
   // Attach isFavorited for current user
   const favoriteAssetIds = new Set(favoriteItems.map((f) => f.assetId));
+  const missingIds = await missingAssetIds(enrichedWithBookings.filter((a) => a.computedStatus === "MAINTENANCE").map((a) => a.id));
   const enrichedWithFavorites = enrichedWithBookings.map((a) => ({
     ...a,
     isFavorited: favoriteAssetIds.has(a.id),
+    // Held because staff are looking for it, not because it is in the shop.
+    missing: missingIds.has(a.id),
   }));
   const favoriteBulkSkuIds = new Set(favoriteItemFamilies.map((f) => f.bulkSkuId));
   bulkItems = bulkItems.map((b) => ({

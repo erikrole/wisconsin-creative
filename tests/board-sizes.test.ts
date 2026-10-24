@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
@@ -22,7 +22,7 @@ describe("Board Sizes routing and page contract", () => {
   it("redirects the clean URLs onto dotted files the nonce middleware skips", () => {
     expect(nextConfigSource).toContain('{ source: "/board-sizes", destination: "/board-sizes/index.html", permanent: false }');
     expect(nextConfigSource).toContain('{ source: "/tools", destination: "/apps", permanent: false }');
-    expect(readFileSync("src/middleware.ts", "utf8")).toContain(".*\\\\..*");
+    expect(readFileSync("src/proxy.ts", "utf8")).toContain(".*\\\\..*");
   });
 
   it("ships a strict CSP with no inline script or handlers", () => {
@@ -57,10 +57,181 @@ describe("Board Sizes routing and page contract", () => {
     expect(app).toContain("image/svg+xml");
     expect(app).toContain("width=\"' + w + '\" height=\"' + h + '\"");
     expect(app).toMatch(/share(:| =) params\.get\('share'\) === '1'/);
-    expect(app).toMatch(/if \(state\.share\) \{[^}]*el\['side-foot'\]\.hidden = true;/);
+    expect(app).toMatch(/if \(state\.share\) \{[^}]*apps\.hidden = true;/);
     expect(app).toContain("if (DATA.links && DATA.links.aeTemplate)");
     expect(html).toContain('href="#content"');
     expect(html).toContain('id="content"');
+  });
+});
+
+describe("Board Sizes wc-fresh shell and hardening", () => {
+  it("self-hosts Lato from the shared static-tool font files and keeps the Badger red accent", () => {
+    for (const weight of ["Regular", "Bold", "Black"]) {
+      expect(html).toContain(`url("/Lato-${weight}.woff2")`);
+      expect(readdirSync("public")).toContain(`Lato-${weight}.woff2`);
+    }
+    expect(html).not.toContain("Gotham");
+    expect(html).toContain("--accent: #c5050c");
+    expect(html).toMatch(/font-src 'self'/);
+  });
+
+  it("never lets a malformed #link throw", () => {
+    expect(app).toContain("function safeDecode(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }");
+    expect(app.replace(/function safeDecode[^\n]*/, "")).not.toContain("decodeURIComponent(");
+  });
+
+  it("falls back to a legacy copy when the async clipboard is missing or refused", () => {
+    expect(app).toContain("navigator.clipboard.writeText(text).then(ok, fallback)");
+    expect(app).toContain("document.execCommand('copy')");
+  });
+
+  it("makes the More menus keyboard operable", () => {
+    const menu = app.slice(app.indexOf("function moreMenu"), app.indexOf("function shareItem"));
+    expect(menu).toContain("role', 'menu'");
+    expect(menu).toContain("'ArrowDown'");
+    expect(menu).toMatch(/e\.key === 'Escape'[\s\S]*sum\.focus\(\)/);
+    expect(html).toContain('aria-controls="top-links"');
+  });
+});
+
+describe("Board Sizes art preview and board comps", () => {
+  it("keeps previewed art on the device", () => {
+    const preview = app.slice(app.indexOf("/* ---------------- art preview"), app.indexOf("function renderBoard"));
+    expect(preview).toContain("URL.createObjectURL(file)");
+    expect(preview).toContain("URL.revokeObjectURL");
+    expect(preview).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon/);
+    expect(html).toMatch(/img-src data: blob:/);
+    expect(html).toMatch(/connect-src 'none'/);
+  });
+
+  it("places pinned pieces first, then exact zones, the exact board, the same shape, else fits and flags", () => {
+    const place = app.slice(app.indexOf("function placeArts"), app.indexOf("function artThumb"));
+    const order = ["'Stretched onto '", "'Exact size for ' + names(mine)", "'Exact size for this board' + oddNote", "'For ' + home.label", "'Same shape as the board at '", "'Same shape as ' + names([shape])", "Not a size on this board"];
+    const at = order.map((t) => place.indexOf(t));
+    expect(at.every((i) => i >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    // Same-size pieces share the zones in turn (left wing, right wing).
+    expect(place).toContain("j % rest.length === i");
+    // A filename that names a zone or canvas key wins among same-size zones.
+    expect(place).toContain("nameScore(p.art.name, rowLabels(r))");
+  });
+
+  it("takes several pieces, videos included, and makes a mockup without uploading anything", () => {
+    expect(app).toContain("artInput.multiple = true;");
+    expect(app).toContain("artInput.accept = 'image/*,video/mp4,video/webm,video/quicktime';");
+    expect(app).toContain("svgNode('foreignObject'");
+    expect(app).toContain("cv.toBlob(function (blob) {");
+    expect(html).toContain("media-src blob:;");
+  });
+
+  it("checks exports against every canvas a content type needs", () => {
+    expect(app).toContain("el.view.appendChild(exportsTray(rows));");
+    expect(app).toContain("' of ' + rows.length + ' canvases covered'");
+    expect(app).toContain("function artView() { return !!((state.display || state.content) && !state.query && !state.page); }");
+  });
+
+  it("keeps pieces through a reload in IndexedDB only, and forgets them on remove", () => {
+    expect(app).toContain("var ART_DB = 'board-sizes-art';");
+    expect(app).toContain("st.put({ id: a.key, order: a.id, name: a.file.name || a.name, label: a.name, type: a.file.type || '', blob: a.file, pin: a.pin });");
+    expect(app.slice(app.indexOf("function dropArt"), app.indexOf("function clearArt"))).toContain("forgetArt(a);");
+    expect(app).toContain("render(false);\n  restoreArts();");
+  });
+
+  it("takes whole export folders and plays board videos together", () => {
+    expect(app).toContain("folderInput.setAttribute('webkitdirectory', '');");
+    expect(app).toContain("droppedFiles(e.dataTransfer, function (files) { addArt(files, pin); });");
+    expect(app).toContain("function syncVideos(fromStart) {");
+    expect(app).toContain("var MAX_ART = 40;");
+  });
+
+  it("matches real export names to zones and forgives H.264's odd-pixel crop", () => {
+    const src = app.slice(app.indexOf("var NAME_SYN"), app.indexOf("function oddNote"));
+    const ctx: Record<string, unknown> = {};
+    runInNewContext(src + "; this.nameScore = nameScore; this.sizeFits = sizeFits;", ctx);
+    const score = ctx.nameScore as (f: string, l: string[]) => number;
+    const fits = ctx.sizeFits as (a: { w: number; h: number }, w: number, h: number) => boolean;
+    // Word order and house shorthand: "Short Wing Left" is Wing Short-Left; SEZ is south.
+    expect(score("Honorary Captain - Wagner - Short Wing Left.mp4", ["North Board", "Wing Short-Left"])).toBeGreaterThan(score("Honorary Captain - Wagner - Short Wing Left.mp4", ["North Board", "Wing Short-Right"]));
+    expect(score("Honorary Captain - Wagner - Short Wing Left.mp4", ["North Board", "Wing Short-Right"])).toBe(0);
+    expect(score("Run Out_Upper Left Full_FINAL_1.mp4", ["South Upper Fascia", "Fullscreen-Left"])).toBeGreaterThan(1);
+    expect(score("South Lower AD Windows Left.mp4", ["North Board", "Ad-Bottom Left"])).toBe(0);
+    expect(score("TOP_AD_LEFT_v02.mov", ["North Board", "Ad-Top Left", "TOP_AD_LEFT"])).toBeGreaterThan(2);
+    expect(fits({ w: 1724, h: 60 }, 1725, 60)).toBe(true);
+    expect(fits({ w: 1724, h: 60 }, 1726, 60)).toBe(false);
+  });
+
+  it("keeps a folder of exports tidy: sequences once, no duplicates, other boards linked, the sheet kept aside", () => {
+    expect(app).toContain("var SEQ = /^(.*?)(\\d{3,})\\.(png|jpe?g|webp|tiff?|exr|dpx)$/i;");
+    expect(app).toContain("if (have[k]) { dupes++; return false; }");
+    expect(app).toContain("p.note = 'For ' + home.label + '.';");
+    expect(app).toContain("'Full-system sheet, kept for reference.'");
+    expect(app).toContain("while (artActive < 4 && artQueue.length)");
+  });
+
+  it("downloads an After Effects comps script for a whole board", () => {
+    expect(app).toContain("aeScript({ name: v.name + ' ' + d.name, board: true }, rows)");
+    expect(app).toContain("one for the whole board and one per distinct zone size");
+  });
+});
+
+describe("Board Sizes review fixes", () => {
+  it("keeps URL and search lookups off Object.prototype", () => {
+    expect(app).toContain("function dict() { return Object.create(null); }");
+    for (const name of ["venueById", "BY_ID", "KEYS", "KEY_ID", "CONTENT", "TERM"]) expect(app).toContain(`var ${name} = dict();`);
+    expect(app).toContain("state.page = own(PAGES, params.get('p'))");
+    expect(app).toContain("(own(SYNONYMS, w) ? SYNONYMS[w] : [])");
+  });
+
+  it("draws the requested view before following a #zone, so ?d=board#zone is never blank", () => {
+    expect(app).toMatch(/render\(false\);\n  restoreArts\(\);\n  if \(initialHash && !state\.query && !state\.content && !state\.page\) goTo\(initialHash, false, false\);/);
+  });
+
+  it("matches art to zones with no recorded position", () => {
+    expect(app).toContain("(no position on file, shown fit to the board)");
+  });
+
+  it("writes the AE script with a BOM and flags disputed frame rates", () => {
+    expect(app).toContain("return '\\uFEFF' + [");
+    expect(app).toContain("sources disagree, so this uses");
+  });
+
+  it("moves focus to the new view and closes the phone menu on focus out", () => {
+    expect(app).toContain("el.title.focus({ preventScroll: true });");
+    expect(app).toContain("el['top-links'].addEventListener('focusout'");
+    expect(app).not.toContain("TERM.stills");
+  });
+});
+
+describe("Board Sizes shared tool header", () => {
+  it("uses the shared tool header: name top left, Apps top right", () => {
+    expect(html).toMatch(/<header class="topbar">\s*<div class="topbar-in">\s*<span class="brand">[\s\S]*?<span class="brand-name">Board Sizes<\/span>\s*<\/span>[\s\S]*?<a class="wc-apps" href="\/apps">[\s\S]*?<\/a>\s*<\/div>\s*<nav class="venue-tabs"/);
+    expect(html).not.toContain("wc-badge");
+    expect(existsSync("public/brand/wc-badge.svg")).toBe(false);
+  });
+});
+
+describe("Board Sizes for people new to the boards", () => {
+  it("explains the board terms on their own page", () => {
+    expect(app).toContain("var PAGES = { agents: 1, issues: 1, terms: 1 };");
+    for (const term of ["'FG / BG'", "'GIP'", "'Speaker scrim'", "'Pad'"]) expect(app).toContain(term);
+    for (const term of ["'Zone'", "'Aspect ratio'", "'Cropped'"]) expect(app).not.toContain(`[${term},`);
+    expect(app).toContain("['terms', 'Board terms', null]");
+  });
+
+  it("maps venue words to the boards' own names, without consumer words like jumbotron", () => {
+    expect(app).not.toContain("jumbotron");
+    expect(app).toContain("ribbon: ['fascia', 'ring']");
+  });
+
+  it("hides ids and canvas keys until Technical details is on, and remembers the choice", () => {
+    expect(app).toContain("var showTech = storageGet(TECH_KEY) === '1';");
+    expect(app).toContain("document.body.classList.toggle('hide-tech', !showTech);");
+    expect(html).toContain(".hide-tech .card-props");
+  });
+
+  it("starts the venue page with what you're making", () => {
+    expect(app).toContain("head.appendChild(node('h2', '', 'What are you making?'));");
+    expect(app).toMatch(/if \(!match && state\.venueFilter !== 'issues'\) \{ var start = renderStart\(v\);/);
   });
 });
 

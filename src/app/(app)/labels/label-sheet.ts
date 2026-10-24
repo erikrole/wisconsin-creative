@@ -1,14 +1,20 @@
 import {
   LABEL_KINDS,
   buildBrotherCsv,
+  fitsBrotherQr,
   parseAssetTag,
   unitTagRows,
   type LabelKind,
   type LabelRow,
 } from "@/lib/brother-label-csv";
+import type { PrintLabel } from "@/lib/label-print-job";
+import { MAX_BULK_UNIT_NUMBER } from "@/lib/request-limits";
 
 /** Most labels one sheet entry can ask for; a typo should not queue 10,000 prints. */
 export const MAX_COPIES = 500;
+
+/** Most copies one USB batch sends; matches the print job schema cap. */
+export const MAX_USB_LABELS = 500;
 
 /** How an item family prints. Serialized items never carry this. */
 export type FamilySource = {
@@ -154,11 +160,17 @@ export function parseUnitPick(text: string): { numbers: number[]; invalid: strin
     const from = Number(range[1]);
     const to = Number(range[2] ?? range[1]);
     const [low, high] = from <= to ? [from, to] : [to, from];
-    if (low < 1 || high - low >= MAX_PICK) {
+    if (!Number.isSafeInteger(low) || !Number.isSafeInteger(high) || low < 1 || high > MAX_BULK_UNIT_NUMBER || high - low >= MAX_PICK) {
       invalid.push(part);
       continue;
     }
-    for (let n = low; n <= high && numbers.size < MAX_PICK; n += 1) numbers.add(n);
+    const added = [];
+    for (let n = low; n <= high; n += 1) if (!numbers.has(n)) added.push(n);
+    if (numbers.size + added.length > MAX_PICK) {
+      invalid.push(part);
+      continue;
+    }
+    for (const n of added) numbers.add(n);
   }
   return { numbers: [...numbers].sort((a, b) => a - b), invalid };
 }
@@ -189,8 +201,25 @@ export function unitKindOf(entry: CartEntry): UnitKind {
   return entry.family?.unitKind ?? "battery";
 }
 
+/** A sheet must be corrected before export rather than silently dropping labels. */
+export function entryPrintIssue(entry: CartEntry, units: SheetUnit[] | undefined): string | null {
+  const qr = printsUnits(entry) ? entry.family?.binQrCodeValue : entry.qrCodeValue;
+  if (LABEL_KINDS[entryKind(entry)].needsQr && !qr?.trim()) return "This label needs an item QR code.";
+  const qrIssue = "This QR code needs wider tape and a matching P-touch layout.";
+  if (!printsUnits(entry)) return LABEL_KINDS[entry.kind].needsQr && !fitsBrotherQr(entry.qrCodeValue) ? qrIssue : null;
+  if (!units) return "Loading unit numbers…";
+  if (selectedUnitNumbers(entry, units).some((n) => !fitsBrotherQr(`${entry.family!.binQrCodeValue}-${n}`))) return qrIssue;
+  if (entry.family?.unitScope !== "pick") return null;
+  const picked = parseUnitPick(entry.family.unitPick ?? "");
+  if (picked.invalid.length > 0) return "Use whole unit numbers and ranges, up to 2,000 units at a time.";
+  if (picked.numbers.length === 0) return "Choose at least one unit number.";
+  if (unknownPickedNumbers(entry, units).length > 0) return "Remove numbers that are not active units of this family.";
+  return null;
+}
+
 /** The CSV rows one sheet entry turns into. */
 export function entryRows(entry: CartEntry, units: SheetUnit[] | undefined): LabelRow[] {
+  if (entryPrintIssue(entry, units)) return [];
   if (printsUnits(entry) && entry.family) {
     return unitTagRows(
       entry.family.binQrCodeValue,
@@ -206,7 +235,7 @@ export function entryRows(entry: CartEntry, units: SheetUnit[] | undefined): Lab
 export type UnitsBySku = Record<string, SheetUnit[] | undefined>;
 
 export function sheetRows(cart: CartEntry[], unitsBySku: UnitsBySku): LabelRow[] {
-  return cart.flatMap((entry) => entryRows(entry, entry.family ? unitsBySku[entry.family.skuId] : undefined));
+  return KIND_ORDER.flatMap((kind) => cart.filter((entry) => entryKind(entry) === kind).flatMap((entry) => entryRows(entry, entry.family ? unitsBySku[entry.family.skuId] : undefined)));
 }
 
 /** Labels a set of rows prints, counting copies and dropping rows the CSV would skip. */
@@ -244,4 +273,21 @@ export function templateFiles(rows: LabelRow[]): TemplateFile[] {
 /** Template an entry lands in, for grouping the sheet. */
 export function entryKind(entry: CartEntry): LabelKind {
   return printsUnits(entry) ? unitKindOf(entry) : entry.kind;
+}
+
+/** Canonical template order drives display, CSV and the frozen per-copy USB queue. */
+export function preparedSheet(cart: CartEntry[], unitsBySku: UnitsBySku) {
+  const groups = KIND_ORDER.map((kind) => ({ kind, entries: cart.filter((entry) => entryKind(entry) === kind) })).filter((group) => group.entries.length > 0);
+  const rows = sheetRows(cart, unitsBySku);
+  const labels: PrintLabel[] = [];
+  for (const group of groups) for (const entry of group.entries) {
+    for (const [rowIndex, row] of entryRows(entry, entry.family ? unitsBySku[entry.family.skuId] : undefined).entries()) {
+      for (let copy = 0; copy < clampCopies(row.copies) && labels.length < MAX_USB_LABELS; copy++) {
+        labels.push({ copyId: `${entry.id}:${rowIndex}:${copy}`, entryId: entry.id,
+          row: { kind: row.kind, dept: row.dept, model: row.model, number: row.number, qrCodeValue: row.qrCodeValue, copies: 1 },
+          ...(printsUnits(entry) ? { unit: { skuId: entry.family!.skuId, number: Number(row.number) } } : {}) });
+      }
+    }
+  }
+  return { groups, rows, labels, total: printableCount(rows) };
 }

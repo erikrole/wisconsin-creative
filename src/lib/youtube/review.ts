@@ -97,7 +97,7 @@ export function reviewVideo(item: CatalogVideo, draft: ReviewDraft | null, now: 
 }
 
 /** The tool's sport label for a schedule sport ("Women's Volleyball" reads as "Volleyball"). */
-export function displaySport(scheduleSport: string): string {
+function displaySport(scheduleSport: string): string {
   return SPORTS.find((sport) => canonicalSport(sport) === canonicalSport(scheduleSport)) ?? scheduleSport;
 }
 
@@ -293,9 +293,7 @@ export function reviewChecks(video: ReviewVideo, draft: ReviewDraft | null, live
 }
 
 export type ReviewStatus = "Needs source" | "Needs review" | "Published" | "Needs attention" | "Protected";
-export const REVIEW_STATUSES: ReviewStatus[] = ["Needs review", "Needs source", "Needs attention", "Published", "Protected"];
-
-export function holdReason(video: ReviewVideo, draft: ReviewDraft | null): string | null {
+function holdReason(video: ReviewVideo, draft: ReviewDraft | null): string | null {
   if (video.protectedReason) return video.protectedReason;
   if (draft?.hold) return draft.hold;
   if (!draft?.preparedAt) return "Refresh the library to match this video to its official source.";

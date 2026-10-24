@@ -1,0 +1,13 @@
+{
+  "beforeFontPx": 19,
+  "afterFontPx": 21,
+  "increasePercent": 10.526315789473696,
+  "qrCorePixelsIdentical": true,
+  "qrCoreDots": 63,
+  "qrCellDots": 3,
+  "inkMargins": {
+    "left": 42,
+    "right": 43
+  },
+  "printerCompletion": "type1,error1=0,error2=0"
+}

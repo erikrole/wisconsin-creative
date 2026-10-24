@@ -86,24 +86,6 @@ function bookingStatusDotColor(variant: BookingStatusBadgeVariant): string {
   return DOT_BY_VARIANT[variant];
 }
 
-export function bookingStatusDotClassName(variant: BookingStatusBadgeVariant): string {
-  switch (variant) {
-    case "blue":
-      return "bg-[var(--blue)]";
-    case "green":
-      return "bg-[var(--green)]";
-    case "purple":
-      return "bg-[var(--purple)]";
-    case "red":
-      return "bg-[var(--red)]";
-    case "orange":
-      return "bg-[var(--orange)]";
-    case "gray":
-    default:
-      return "bg-muted-foreground";
-  }
-}
-
 export function bookingStatusVisual(
   status: string,
   options: { overdue?: boolean; kind?: BookingDisplayKind } = {},

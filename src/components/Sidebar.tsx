@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import {
   applyThemeChoice,
@@ -36,6 +37,7 @@ import {
   LogOutIcon,
   KeyRoundIcon,
   WrenchIcon,
+  PackageXIcon,
   ShieldAlertIcon,
   MegaphoneIcon,
   SignatureIcon,
@@ -48,9 +50,12 @@ import {
   ChevronRightIcon,
   PinIcon,
   LayoutGridIcon,
+  LinkIcon,
 } from "lucide-react";
 import { SidebarToolsFlyout } from "@/components/SidebarToolsFlyout";
-import { toolsForRole } from "@/lib/web-tools";
+import { ALL_TOOLS_HREF, toolsForRole } from "@/lib/web-tools";
+import { SIDEBAR_APPS, linksForRole } from "@/lib/sidebar-links";
+import type { QuickLinkDto } from "@/lib/quick-links";
 import { SidebarCustomizeDialog } from "@/components/SidebarCustomizeDialog";
 import {
   DropdownMenu,
@@ -109,6 +114,8 @@ const COLLABORATOR_NAV_HREFS = [
 type NavGroup = {
   label?: string;
   staffOnly?: boolean;
+  /** Starts folded until the person opens it; their choice is remembered. */
+  defaultCollapsed?: boolean;
   items: NavItem[];
 };
 
@@ -126,15 +133,8 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Staff", href: "/staff", icon: UsersIcon },
       { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
+      { label: "Badges", href: "/badges", icon: MedalIcon },
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
-    ],
-  },
-  {
-    label: "Purchasing",
-    items: [
-      { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
-      { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
-      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
     ],
   },
   {
@@ -150,11 +150,23 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Operations", href: "/operations", icon: WrenchIcon },
       { label: "Kits", href: "/kits", icon: BackpackIcon },
-      { label: "Badges", href: "/badges", icon: MedalIcon },
-      { label: "Signatures", href: "/signatures", icon: SignatureIcon },
-      { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
-      { label: "YouTube Studio Lite", href: "/youtube", icon: SquarePlayIcon, requiredRole: "ADMIN" },
       { label: "Reports", href: "/reports", icon: ChartColumnIcon },
+      { label: "Damage and loss", href: "/damage", icon: PackageXIcon },
+      { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
+    ],
+  },
+  {
+    // Weekly-or-rarer pages stay one click away, like Linear's and Notion's "More",
+    // so the everyday list fits on screen without scrolling.
+    label: "More",
+    staffOnly: true,
+    defaultCollapsed: true,
+    items: [
+      { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
+      { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
+      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
+      { label: "Signatures", href: "/signatures", icon: SignatureIcon },
+      { label: "YouTube Studio Lite", href: "/youtube", icon: SquarePlayIcon, requiredRole: "ADMIN" },
       { label: "Issues", href: "/issues", icon: BugIcon, requiredRole: "ADMIN" },
     ],
   },
@@ -238,7 +250,84 @@ function useStoredList(key: string) {
   return [list, toggle, save] as const;
 }
 
+const SIDEBAR_PREFS_URL = "/api/me/sidebar-prefs";
+
+/**
+ * Pinned and hidden pages follow the account across devices. The browser copy stays the instant
+ * source (no flash on load); the account copy wins once it arrives. A browser that customized the
+ * sidebar before the account copy existed sends its pages up once. Saves are debounced so a
+ * drag or a hide-and-unpin lands as one request. Failures leave the browser copy in place.
+ */
+function useAccountSidebarPrefs(
+  userId: string | undefined,
+  pinned: string[],
+  hidden: string[],
+  setPinned: (next: string[]) => void,
+  setHidden: (next: string[]) => void,
+) {
+  const latest = useRef({ pinned, hidden });
+  useLayoutEffect(() => {
+    latest.current = { pinned, hidden };
+  });
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function scheduleSave() {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      void fetch(SIDEBAR_PREFS_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(latest.current),
+      }).catch(() => {});
+    }, 600);
+  }
+
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(SIDEBAR_PREFS_URL, { signal: controller.signal });
+        if (!res.ok) return;
+        const json = (await res.json()) as { data?: { pinned: string[]; hidden: string[] } | null };
+        if (controller.signal.aborted) return;
+        if (json.data) {
+          setPinned(json.data.pinned);
+          setHidden(json.data.hidden);
+        } else if (latest.current.pinned.length > 0 || latest.current.hidden.length > 0) {
+          scheduleSave();
+        }
+      } catch {
+        // offline or signed out: keep the browser copy
+      }
+    })();
+    return () => controller.abort();
+    // Load once per signed-in user; the setters are stable enough for that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  useEffect(() => () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+  }, []);
+
+  return {
+    setPinned: (next: string[]) => {
+      latest.current = { ...latest.current, pinned: next };
+      setPinned(next);
+      scheduleSave();
+    },
+    setHidden: (next: string[]) => {
+      latest.current = { ...latest.current, hidden: next };
+      setHidden(next);
+      scheduleSave();
+    },
+  };
+}
+
 const menuItemClass = "min-h-9 gap-2.5 rounded-md px-2 text-[13.5px] [&_svg]:size-4 [&_svg]:stroke-[1.75] [&_svg]:text-muted-foreground";
+
+const flyoutIconClass = "size-4 stroke-[1.75] text-[color:var(--sidebar-muted)] transition-colors duration-100 group-hover/menu-item:text-[color:var(--sidebar-text-active)]";
 
 // Collapsed-rail labels: portalled, so they carry the chrome typeface themselves.
 const railTooltipClass = cn(chromeFont.className, "rounded-md px-2 py-1 text-[12.5px] font-bold");
@@ -246,7 +335,7 @@ const railTooltipClass = cn(chromeFont.className, "rounded-md px-2 py-1 text-[12
 const navButtonClass = (isActive: boolean) =>
   cn(
     // 32px rows on desktop keep the full list on one laptop screen; phones keep the 40px touch floor.
-    "h-8 gap-2.5 rounded-md px-2 text-[13.5px] leading-none no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)] transition-[background-color,color] duration-100 max-md:h-10 max-md:text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-md",
+    "h-8 gap-2.5 rounded-md px-2 text-[13.5px] leading-5 no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sidebar-ring)] transition-[background-color,color] duration-100 max-md:h-10 max-md:text-[15px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-md",
     isActive
       ? "bg-[var(--sidebar-active)] font-bold text-[color:var(--sidebar-text-active)] hover:bg-[var(--sidebar-active)] hover:text-[color:var(--sidebar-text-active)] data-[active=true]:bg-[var(--sidebar-active)] data-[active=true]:font-bold data-[active=true]:text-[color:var(--sidebar-text-active)]"
       : "font-normal text-[color:var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)]",
@@ -307,6 +396,7 @@ export default function AppSidebar({
   const [collapsedGroups, toggleGroup] = useStoredList(COLLAPSED_GROUPS_KEY);
   const [pinnedHrefs, , setPinnedHrefs] = useStoredList(PINNED_KEY);
   const [hiddenHrefs, , setHiddenHrefs] = useStoredList(HIDDEN_KEY);
+  const accountPrefs = useAccountSidebarPrefs(user?.id, pinnedHrefs, hiddenHrefs, setPinnedHrefs, setHiddenHrefs);
   const activeHref = resolveActiveShellHref(
     pathname,
     visibleGroups.flatMap((group) => group.items.map((item) => item.href)),
@@ -329,6 +419,40 @@ export default function AppSidebar({
   ];
   const displayGroups = groupsWithPins;
   const webTools = user ? toolsForRole(user.role) : [];
+  const apps = user ? linksForRole(user.role, SIDEBAR_APPS) : [];
+  const appSections = [
+    ...(apps.length > 0 ? [{ title: "Our apps", items: apps }] : []),
+    ...(webTools.length > 0 ? [{ title: "Tools", items: webTools }] : []),
+  ];
+  // Quick links load the first time the menu opens, so an ordinary page load never asks the database for them.
+  const [quickLinksWanted, setQuickLinksWanted] = useState(false);
+  const wantQuickLinks = useCallback(() => setQuickLinksWanted(true), []);
+  const quickLinksQuery = useQuery<QuickLinkDto[]>({
+    queryKey: ["quick-links"],
+    queryFn: async () => {
+      const res = await fetch("/api/quick-links");
+      if (!res.ok) throw new Error(`Quick links failed (${res.status})`);
+      return ((await res.json()) as { data: QuickLinkDto[] }).data;
+    },
+    enabled: Boolean(user) && quickLinksWanted,
+    staleTime: 5 * 60_000,
+  });
+  const quickLinks = (quickLinksQuery.data ?? []).map((link) => ({
+    label: link.label,
+    href: link.url,
+    detail: link.detail ?? undefined,
+    icon: LinkIcon,
+  }));
+  const isAdmin = user?.role === "ADMIN";
+  const quickLinksStatus = quickLinksQuery.isPending ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground" aria-live="polite">Loading links…</p>
+  ) : quickLinksQuery.isError ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground" aria-live="polite">Couldn&rsquo;t load links. Try again in a moment.</p>
+  ) : quickLinks.length === 0 ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground">
+      {isAdmin ? "No links yet. Add the sites the team uses every day." : "No links yet."}
+    </p>
+  ) : undefined;
   const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const reportProblem = useReportProblem();
@@ -348,7 +472,13 @@ export default function AppSidebar({
           : "Student";
 
   function renderGroup(group: NavGroup, groupIdx: number) {
-    const isCollapsed = Boolean(group.label && collapsedGroups.includes(group.label));
+    // Default-folded groups store an "open:" marker instead, so both kinds share one list.
+    const isCollapsed = Boolean(group.label && (group.defaultCollapsed
+      ? !collapsedGroups.includes(`open:${group.label}`)
+      : collapsedGroups.includes(group.label)));
+    const toggleKey = group.defaultCollapsed ? `open:${group.label}` : group.label;
+    // A folded group still hints that something inside wants a look.
+    const hiddenAttention = isCollapsed && group.items.some((item) => (attentionCounts?.[item.href]?.count ?? 0) > 0);
     return (
       <SidebarGroup
         key={group.label ?? group.items.map((item) => item.href).join("-")}
@@ -357,12 +487,18 @@ export default function AppSidebar({
         {group.label && (
             <button
               type="button"
-              onClick={() => toggleGroup(group.label!)}
+              onClick={() => toggleGroup(toggleKey!)}
               aria-expanded={!isCollapsed}
               className="group/label flex h-6 w-full shrink-0 items-center justify-start gap-1 rounded-md px-2 font-bold tracking-[0.01em] text-[color:var(--sidebar-muted)] outline-none transition-colors hover:text-[color:var(--sidebar-text-active)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] max-md:h-8 group-data-[collapsible=icon]:hidden"
             >
               {/* Global `button { font-size: inherit }` is unlayered and beats utilities on the button itself. */}
               <span className="text-[11.5px] max-md:text-[13px]">{group.label}</span>
+              {hiddenAttention && (
+                <>
+                  <span aria-hidden="true" className="ml-0.5 size-1.5 shrink-0 rounded-full bg-[var(--sidebar-muted)]" />
+                  <span className="sr-only">, something inside needs a look</span>
+                </>
+              )}
               <ChevronRightIcon
                 aria-hidden="true"
                 className={cn(
@@ -463,10 +599,10 @@ export default function AppSidebar({
               />
             </span>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-[14px] font-black leading-[1.15] tracking-[-0.015em] text-[color:var(--sidebar-text-active)]">
+              <p className="truncate text-[14px] font-black leading-[1.3] tracking-[-0.015em] text-[color:var(--sidebar-text-active)]">
                 Wisconsin Creative
               </p>
-              <p className="mt-0.5 truncate text-[12px] font-normal leading-[1.15] text-[color:var(--sidebar-muted)]">
+              <p className="mt-0.5 truncate text-[12px] font-normal leading-[1.3] text-[color:var(--sidebar-muted)]">
                 UW Athletics
               </p>
             </div>
@@ -495,16 +631,33 @@ export default function AppSidebar({
         </nav>
       </SidebarContent>
 
-      {webTools.length > 0 && (
-        // Fixed above the account menu so it is on screen on any height; the page list above scrolls.
+      {user && (
+        // Fixed above the account menu so they are on screen on any height; the page list above scrolls.
         <div className="px-3 pb-2 pt-1 group-data-[collapsible=icon]:px-2">
           <SidebarMenu className="gap-px">
+            {appSections.length > 0 && (
+              <SidebarMenuItem>
+                <SidebarToolsFlyout
+                  label="Apps"
+                  sections={appSections}
+                  footer={{ label: "All apps and tools", href: ALL_TOOLS_HREF }}
+                  icon={LayoutGridIcon}
+                  buttonClassName={navButtonClass(false)}
+                  iconClassName={flyoutIconClass}
+                  tooltipClassName={railTooltipClass}
+                />
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarToolsFlyout
-                tools={webTools}
-                icon={LayoutGridIcon}
+                label="Quick links"
+                sections={[{ title: "Quick links", items: quickLinks }]}
+                status={quickLinksStatus}
+                onOpen={wantQuickLinks}
+                footer={isAdmin ? { label: "Edit Quick links", href: "/settings/quick-links" } : undefined}
+                icon={LinkIcon}
                 buttonClassName={navButtonClass(false)}
-                iconClassName="size-4 stroke-[1.75] text-[color:var(--sidebar-muted)] transition-colors duration-100 group-hover/menu-item:text-[color:var(--sidebar-text-active)]"
+                iconClassName={flyoutIconClass}
                 tooltipClassName={railTooltipClass}
               />
             </SidebarMenuItem>
@@ -534,10 +687,10 @@ export default function AppSidebar({
                       className="size-8 ring-1 ring-[var(--sidebar-border)]"
                     />
                     <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                      <p className="truncate text-[13.5px] font-bold leading-[1.15] text-[color:var(--sidebar-text-active)]">
+                      <p className="truncate text-[13.5px] font-bold leading-[1.3] text-[color:var(--sidebar-text-active)]">
                         {user.name}
                       </p>
-                      <p className="mt-0.5 truncate text-[12px] leading-[1.15] text-[color:var(--sidebar-muted)]">
+                      <p className="mt-0.5 truncate text-[12px] leading-[1.3] text-[color:var(--sidebar-muted)]">
                         {roleCaption}
                       </p>
                     </div>
@@ -553,8 +706,8 @@ export default function AppSidebar({
                   <DropdownMenuLabel className="flex items-center gap-2.5 px-2 py-2 font-normal">
                     <UserAvatar name={user.name} avatarUrl={user.avatarUrl} className="size-9" />
                     <div className="min-w-0">
-                      <p className="truncate text-[14px] font-bold leading-tight text-foreground">{user.name}</p>
-                      <p className="mt-0.5 truncate text-[12px] leading-tight text-muted-foreground">{user.email}</p>
+                      <p className="truncate text-[14px] font-bold leading-snug text-foreground">{user.name}</p>
+                      <p className="mt-0.5 truncate text-[12px] leading-snug text-muted-foreground">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="my-1.5" />
@@ -631,9 +784,9 @@ export default function AppSidebar({
             onOpenChange={setCustomizeOpen}
             groups={visibleGroups}
             pinnedHrefs={pinnedHrefs}
-            onPinnedChange={setPinnedHrefs}
+            onPinnedChange={accountPrefs.setPinned}
             hiddenHrefs={hiddenHrefs}
-            onHiddenChange={setHiddenHrefs}
+            onHiddenChange={accountPrefs.setHidden}
             className={chromeFont.className}
           />
         </SidebarFooter>

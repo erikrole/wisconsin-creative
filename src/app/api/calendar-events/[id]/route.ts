@@ -37,35 +37,35 @@ const patchSchema = z
   .superRefine((value, ctx) => {
     if (value.opponent !== undefined && value.eventType === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["eventType"],
         message: "Event type is required when changing the opponent",
       });
     }
     if (value.revertHomeAway && (value.eventType !== undefined || value.sportCode !== undefined || value.opponent !== undefined)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["revertHomeAway"],
         message: "Restore calendar value cannot be combined with event classification edits",
       });
     }
     if (value.revertTiming && (value.startsAt !== undefined || value.endsAt !== undefined || value.allDay !== undefined)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["revertTiming"],
         message: "Restore calendar time cannot be combined with a new window",
       });
     }
     if ((value.startsAt === undefined) !== (value.endsAt === undefined)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: value.startsAt === undefined ? ["startsAt"] : ["endsAt"],
         message: "Start and end are required together",
       });
     }
     if (value.allDay !== undefined && (value.startsAt === undefined || value.endsAt === undefined)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["allDay"],
         message: "Start and end are required when changing event timing mode",
       });

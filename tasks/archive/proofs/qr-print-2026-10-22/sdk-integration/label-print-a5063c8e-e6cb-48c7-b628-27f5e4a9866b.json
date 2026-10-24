@@ -1,0 +1,133 @@
+{
+  "version": 2,
+  "transport": "sdk-chain-v1",
+  "id": "a5063c8e-e6cb-48c7-b628-27f5e4a9866b",
+  "browserId": "8d29cb7c-8677-42d9-9cbc-1b6d6c03c865",
+  "actor": {
+    "id": "dev",
+    "name": "Dev Staff"
+  },
+  "createdAt": "2026-10-22T21:07:11.151Z",
+  "updatedAt": "2026-10-22T21:07:35.129Z",
+  "revision": 12,
+  "labels": [
+    {
+      "copyId": "device-check-0:0:0",
+      "row": {
+        "kind": "body",
+        "dept": "TEST",
+        "model": "FX3",
+        "number": "1",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-0"
+    },
+    {
+      "copyId": "device-check-1:0:0",
+      "row": {
+        "kind": "lens",
+        "dept": "TEST",
+        "model": "100-400",
+        "number": "1",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-1"
+    },
+    {
+      "copyId": "device-check-2:0:0",
+      "row": {
+        "kind": "sd",
+        "dept": "TEST",
+        "model": "FX3",
+        "number": "1A",
+        "qrCodeValue": "",
+        "copies": 1
+      },
+      "entryId": "device-check-2"
+    },
+    {
+      "copyId": "device-check-3:0:0",
+      "row": {
+        "kind": "text",
+        "dept": "",
+        "model": "USB TEST",
+        "number": "",
+        "qrCodeValue": "",
+        "copies": 1
+      },
+      "entryId": "device-check-3"
+    },
+    {
+      "copyId": "device-check-4:0:0",
+      "row": {
+        "kind": "numberTag",
+        "dept": "",
+        "model": "",
+        "number": "1",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-4"
+    },
+    {
+      "copyId": "device-check-5:0:0",
+      "row": {
+        "kind": "battery",
+        "dept": "",
+        "model": "",
+        "number": "1",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-5"
+    }
+  ],
+  "outcomes": [
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:07:11.162Z",
+      "recordedAt": "2026-10-22T21:07:35.129Z",
+      "evidence": "printer"
+    },
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:07:14.986Z",
+      "recordedAt": "2026-10-22T21:07:35.129Z",
+      "evidence": "printer"
+    },
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:07:18.473Z",
+      "recordedAt": "2026-10-22T21:07:35.129Z",
+      "evidence": "printer"
+    },
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:07:21.522Z",
+      "recordedAt": "2026-10-22T21:07:35.129Z",
+      "evidence": "printer"
+    },
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:07:25.432Z",
+      "recordedAt": "2026-10-22T21:07:35.129Z",
+      "evidence": "printer"
+    },
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:07:28.928Z",
+      "recordedAt": "2026-10-22T21:07:35.129Z",
+      "evidence": "printer"
+    }
+  ],
+  "activeIndex": null,
+  "state": "completed",
+  "finish": {
+    "kind": "last-page",
+    "state": "completed",
+    "attemptedAt": "2026-10-22T21:07:28.928Z",
+    "recordedAt": "2026-10-22T21:07:35.129Z"
+  }
+}

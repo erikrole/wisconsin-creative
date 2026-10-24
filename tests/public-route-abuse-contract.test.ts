@@ -4,6 +4,7 @@ import path from "node:path";
 
 const PUBLIC_HANDLER_ROUTES = [
   "src/app/api/auth/forgot-password/route.ts",
+  "src/app/api/auth/invite/resend/route.ts",
   "src/app/api/auth/login/route.ts",
   "src/app/api/auth/register/route.ts",
   "src/app/api/auth/reset-password/route.ts",
@@ -21,11 +22,19 @@ const ROUTE_CONTROLS: Record<(typeof PUBLIC_HANDLER_ROUTES)[number], RegExp[]> =
     /\bif\s*\(\s*!env\.resendApiKey\s*\)/,
     /\bcreateSystemAuditEntry\s*\(/,
   ],
+  "src/app/api/auth/invite/resend/route.ts": [
+    /\bcheckRateLimit\s*\(\s*`invite-resend:ip:\$\{ip\}`/,
+    /\bcheckRateLimit\s*\(\s*`invite-resend:email:\$\{email\}`/,
+    /\bgetClientIp\s*\(/,
+    /If that address has a pending invite, we sent the link/,
+    /\bif\s*\(\s*!env\.resendApiKey\s*\)/,
+    /\bcreateSystemAuditEntry\s*\(/,
+  ],
   "src/app/api/auth/login/route.ts": [
     /\bcheckRateLimit\s*\(\s*`login:ip:\$\{ip\}`/,
     /\bcheckRateLimit\s*\(\s*`login:email:\$\{email\}`/,
     /\bgetClientIp\s*\(/,
-    /Invalid credentials/,
+    /Wrong email or password\./,
     /\bcreateSession\s*\(/,
     /\bcreateAuditEntry\s*\(/,
   ],

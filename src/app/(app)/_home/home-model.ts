@@ -1,11 +1,12 @@
 /* Home: pure view-model builders. Everything the page shows is derived here so
    the dev preview and the live page render the same rows from the same rules. */
 
-import { formatCountdownCompact, formatDueLabel, formatOperationalDateTime, isDueToday } from "@/lib/format";
+import { formatCountdownCompact, formatDueLabel, formatOperationalDateTime, institutionDayOffset, isDueToday } from "@/lib/format";
 import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
 import type { ShiftTradeAction } from "@/lib/shift-trade-actions";
 import { AREA_LABELS } from "@/types/areas";
 import type { BookingSummary, DashboardData, DashboardStats, CreateBookingContext } from "../dashboard-types";
+import { VENUE_TONES, venueToneFromEvent, type VenueTone } from "@/lib/venue-tone";
 import { dashboardEventTitle } from "../dashboard/event-title";
 
 export type HomeRole = "STUDENT" | "STAFF" | "ADMIN" | "COLLABORATOR";
@@ -84,6 +85,8 @@ export type UpNextItem = {
   detail: string;
   badge: { label: string; tone: HomeTone } | null;
   target: AttentionTarget;
+  /** A gear pickup for this same event, folded into the shift row instead of listed twice. */
+  pickup?: { bookingId: string; label: string };
 };
 
 export type GearRow = {
@@ -93,12 +96,17 @@ export type GearRow = {
   due: string;
   tone: HomeTone;
   person: string | null;
+  personAvatarUrl: string | null;
 };
 
 export type CoverageRow = {
   id: string;
   title: string;
   when: string;
+  /** Home, Away, Neutral or Non-game, so the calendar reads at a glance. */
+  venue: VenueTone;
+  venueLabel: string;
+  where: string | null;
   filled: number;
   total: number;
 };
@@ -332,7 +340,7 @@ export function buildAttention(input: {
         tone: "info",
         icon: "lost",
         title: `${plural(l.count, `${l.skuName} unit`)} marked lost`,
-        detail: "Confirm the loss or restock",
+        detail: "Mark each one found or written off",
         action: "Review",
         target: { kind: "link", href: "/reports/bulk-losses" },
       });
@@ -410,7 +418,18 @@ export function buildUpNext(data: DashboardData, now: Date): UpNextItem[] {
       target: { kind: "link", href: `/events/${s.event.id}` },
     });
   }
+  const shiftRows = new Map(rows.filter((r) => r.kind === "shift").map((r, i) => [r, data.myShifts[i]] as const));
   for (const r of data.myReservations) {
+    // A pickup for an event the viewer is already working is part of that shift.
+    const linkedIds = new Set([r.eventId, r.linkedEventId, ...(r.eventIds ?? [])].filter(Boolean));
+    const host = [...shiftRows].find(([, shift]) => shift && linkedIds.has(shift.event.id))?.[0];
+    if (host) {
+      const late = new Date(r.startsAt).getTime() < now.getTime();
+      host.pickup = { bookingId: r.id, label: `${late ? "Pickup was due" : "Pickup"} ${formatClock(r.startsAt)}` };
+      host.detail = [host.detail, host.pickup.label].filter(Boolean).join(" · ");
+      if (late) host.badge = { label: "Pickup was due", tone: "warning" };
+      continue;
+    }
     rows.push({
       id: `pickup-${r.id}`,
       kind: "pickup",
@@ -433,9 +452,9 @@ export function formatClock(iso: string) {
 /** Group key and heading for an Up next row: Today, Tomorrow, or "Fri, Oct 24". */
 export function dayHeading(iso: string, now: Date, allDay = false) {
   const d = allDay ? utcCalendarDate(iso) : new Date(iso);
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const diffDays = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - start.getTime()) / 86_400_000);
+  const diffDays = allDay
+    ? Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000)
+    : institutionDayOffset(d, now);
   if (diffDays <= 0) return "Today";
   if (diffDays === 1) return "Tomorrow";
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
@@ -467,19 +486,26 @@ export function gearRows(bookings: BookingSummary[], now: Date, showPerson: bool
     due: shortDue(b.endsAt, now),
     tone: b.isOverdue ? "critical" : isDueToday(b.endsAt, now) ? "warning" : "neutral",
     person: showPerson ? b.requesterName : null,
+    personAvatarUrl: showPerson ? b.requesterAvatarUrl : null,
   }));
 }
 
 export function coverageRows(data: DashboardData, now: Date): CoverageRow[] {
-  return data.upcomingEvents.slice(0, 5).map((e) => ({
+  return data.upcomingEvents.slice(0, 6).map((e) => {
+    const venue = venueToneFromEvent({ isHome: e.isHome, site: e.site, opponent: e.opponent, summary: e.title });
+    return {
     id: e.id,
     title: dashboardEventTitle(e),
+    venue,
+    venueLabel: VENUE_TONES[venue].label,
+    where: e.location,
     when: e.allDay
       ? `${dayHeading(e.startsAt, now, true)} · All day`
       : `${dayHeading(e.startsAt, now)} · ${formatClock(e.startsAt)}`,
     filled: e.coverage?.filled ?? e.filledShiftSlots,
     total: e.coverage?.total ?? e.totalShiftSlots,
-  }));
+    };
+  });
 }
 
 export function tradeRows(trades: HomeTrade[], now: Date): TradeRow[] {
@@ -538,19 +564,33 @@ export function daySummary(role: HomeRole, data: DashboardData, now: Date): stri
   const next = buildUpNext(data, now)
     .find((r) => r.kind === "shift" && dayHeading(r.startsAt, now, r.allDay) === "Today");
   if (next) {
-    sentences.push(next.allDay ? `You\u2019re on ${next.title} today.` : `You\u2019re on ${next.title} at ${next.time}.`);
+    const title = conversationalTitle(next.title);
+    if (next.allDay) {
+      sentences.push(`You\u2019re working ${title} today.`);
+    } else {
+      const evening = chicagoHour(next.startsAt) >= 17;
+      sentences.push(`You\u2019re working ${title} ${evening ? "tonight" : "today"} at ${next.time}.`);
+    }
   }
-  const team = isTeamRole(role);
-  const overdue = team ? data.stats.overdue : data.myCheckouts.items.filter((b) => b.isOverdue).length;
-  const due = team
-    ? data.stats.dueToday
-    : data.myCheckouts.items.filter((b) => !b.isOverdue && isDueToday(b.endsAt, now)).length;
-  const gear = [overdue > 0 ? `${overdue} overdue` : null, due > 0 ? `${due} due back today` : null].filter(Boolean);
-  if (gear.length > 0) {
-    const noun = team ? "Team gear" : "Your gear";
-    sentences.push(`${noun}: ${gear.join(", ")}.`);
-  }
+  // Only the viewer's own gear belongs in their greeting; team gear lives in the cards below.
+  const mine = data.myCheckouts.items;
+  const overdue = mine.filter((b) => b.isOverdue).length;
+  const due = mine.filter((b) => !b.isOverdue && isDueToday(b.endsAt, now)).length;
+  if (overdue > 0) sentences.push(overdue === 1 ? "You have an overdue checkout." : `You have ${overdue} overdue checkouts.`);
+  else if (due > 0) sentences.push(due === 1 ? "Your gear is due back today." : `${due} of your checkouts are due back today.`);
   return sentences.length > 0 ? sentences.join(" ") : "Nothing due today. You\u2019re clear.";
+}
+
+/** "Football vs USC", not "Football Vs USC": the sport reads as a word in a sentence. */
+function conversationalTitle(title: string) {
+  const game = title.match(/^(.+?)\s+(vs|at)\s+(.+)$/i);
+  return game && game[1] !== game[1]!.toUpperCase() ? `${game[1]!.toLowerCase()} ${game[2]!.toLowerCase()} ${game[3]}` : title;
+}
+
+function chicagoHour(iso: string) {
+  const hour = new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: "America/Chicago" })
+    .formatToParts(new Date(iso)).find((p) => p.type === "hour")?.value;
+  return Number(hour ?? 0);
 }
 
 export type TodayCrewEvent = {
@@ -558,6 +598,7 @@ export type TodayCrewEvent = {
   summary: string;
   startsAt: string;
   endsAt: string;
+  allDay?: boolean;
   when: "now" | "later" | "tomorrow";
   people: Array<{ id: string; name: string; avatarUrl: string | null; area: string }>;
 };
@@ -577,7 +618,7 @@ export function crewRows(events: TodayCrewEvent[]): CrewRow[] {
     .map((e) => ({
       id: e.id,
       title: e.summary,
-      when: e.when === "now" ? `On now · until ${formatClock(e.endsAt)}` : `${formatClock(e.startsAt)} – ${formatClock(e.endsAt)}`,
+      when: e.allDay ? (e.when === "now" ? "On now · all day" : "All day") : e.when === "now" ? `On now · until ${formatClock(e.endsAt)}` : `${formatClock(e.startsAt)} – ${formatClock(e.endsAt)}`,
       live: e.when === "now",
       people: e.people,
     }));
@@ -586,7 +627,7 @@ export function crewRows(events: TodayCrewEvent[]): CrewRow[] {
 /** One custody move from /api/dashboard/activity. */
 export type HomeActivity = {
   id: string;
-  kind: "out" | "returned";
+  kind: "checkout" | "pickup" | "returned";
   bookingId: string;
   title: string;
   person: { id: string; name: string; avatarUrl: string | null } | null;
@@ -596,11 +637,13 @@ export type HomeActivity = {
 export type ActivityRow = {
   id: string;
   bookingId: string;
-  kind: "out" | "returned";
+  kind: HomeActivity["kind"];
   who: string;
   verb: string;
   title: string;
   ago: string;
+  /** Full date and time in Chicago, shown on hover over "13h ago". */
+  exactTime: string;
   person: HomeActivity["person"];
 };
 
@@ -612,15 +655,30 @@ export function agoLabel(iso: string, now: Date): string {
   return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
 }
 
+const ACTIVITY_VERBS: Record<HomeActivity["kind"], string> = {
+  checkout: "checked out",
+  pickup: "picked up",
+  returned: "returned",
+};
+
+/** "Fri, Oct 23, 8:14 PM CT": the moment of a custody move, always in Chicago time. */
+export function exactTimeLabel(iso: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    timeZone: "America/Chicago", timeZoneName: "short",
+  }).format(new Date(iso));
+}
+
 export function activityRows(rows: HomeActivity[], now: Date): ActivityRow[] {
   return rows.map((r) => ({
     id: r.id,
     bookingId: r.bookingId,
     kind: r.kind,
     who: r.person?.name ?? "Someone",
-    verb: r.kind === "out" ? "took out" : "returned",
+    verb: ACTIVITY_VERBS[r.kind],
     title: r.title,
     ago: agoLabel(r.at, now),
+    exactTime: exactTimeLabel(r.at),
     person: r.person,
   }));
 }

@@ -602,7 +602,7 @@ export async function excludeBookingFromAccountability(input: {
   );
   // Exclusions are the one mutation path that changes the report's inputs
   // through a single owned route pair, so bust the tag instead of waiting.
-  revalidateTag(ACCOUNTABILITY_REPORT_TAG);
+  revalidateTag(ACCOUNTABILITY_REPORT_TAG, { expire: 0 });
   return exclusion;
 }
 
@@ -648,6 +648,6 @@ export async function restoreBookingToAccountability(input: {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
-  revalidateTag(ACCOUNTABILITY_REPORT_TAG);
+  revalidateTag(ACCOUNTABILITY_REPORT_TAG, { expire: 0 });
   return restored;
 }

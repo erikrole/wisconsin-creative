@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "ecc399c3c222fa767b477f585ee391382d645ffe",
+  "sourcePatchSha256": "01c40dfed1745aa02c86dac67071675714424256a54175ba7ee4d41c8df67d19",
+  "settings": {
+    "device": "iPhone 18 Pro Max, iOS 27.0",
+    "viewport": [
+      440,
+      956
+    ],
+    "role": "synthetic student",
+    "appearance": "light",
+    "textSize": "large (default)",
+    "locale": "English",
+    "timezone": "America/Chicago",
+    "clock": "09:41 status bar; fixture dates fixed",
+    "scroll": [
+      0,
+      0
+    ],
+    "fixture": "empty pool + existing active claim; identical current DEBUG fixture harness",
+    "route": "resourcesLicenses"
+  },
+  "imageSha256": "5131ec90213f41084b3ceaf1af54a66776e5515836638633abe4d7f6cd510a89",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

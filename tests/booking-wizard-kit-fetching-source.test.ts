@@ -9,7 +9,7 @@ describe("booking wizard kit fetching recovery", () => {
 
     expect(hook).toContain("kitsLoadError");
     expect(hook).toContain('throw new Error(await parseErrorMessage(res, "Failed to load kits"))');
-    expect(hook).toContain('setKitsLoadError(err instanceof TypeError ? "network" : "server")');
+    expect(hook).toContain('query.error instanceof TypeError ? "network" : "server"');
     expect(hook).toContain("requester_user_id");
     expect(hook).toContain("suggestedKitId");
     expect(hook).toContain("filter((kit) => kit.contents > 0)");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useOnline } from "@/hooks/use-browser-state";
 import { WifiOffIcon } from "lucide-react";
 
 /**
@@ -8,21 +8,7 @@ import { WifiOffIcon } from "lucide-react";
  * Automatically hides when connection is restored.
  */
 export function OfflineBanner() {
-  const [offline, setOffline] = useState(false);
-
-  useEffect(() => {
-    function handleOffline() { setOffline(true); }
-    function handleOnline() { setOffline(false); }
-
-    if (!navigator.onLine) setOffline(true);
-
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
-    return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-    };
-  }, []);
+  const offline = !useOnline();
 
   if (!offline) return null;
 

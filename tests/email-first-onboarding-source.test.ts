@@ -6,9 +6,14 @@ describe("email-first onboarding source wiring", () => {
     const source = readFileSync("src/app/login/LoginForm.tsx", "utf8");
 
     expect(source).toContain('fetch("/api/auth/discover"');
-    expect(source).toContain('result?.flow === "onboarding" ? "onboarding" : "password"');
+    expect(source).toContain('result?.flow !== "onboarding"');
+    // A pending invite opens the sign-up form only through the emailed link;
+    // otherwise the page offers to send that link again.
+    expect(source).toContain('result.inviteLink === "valid"');
+    expect(source).toContain('fetch("/api/auth/invite/resend"');
+    expect(source).toContain("Email me my invite link");
     expect(source).toContain('url: "/api/auth/register"');
-    expect(source).toMatch(/onSuccess: \(\) => \{[\s\S]*?router\.replace\("\/welcome"\);/);
+    expect(source).toMatch(/onSuccess: \(\) => \{[\s\S]*?window\.location\.replace\("\/welcome"\);/);
     expect(source).toContain("You’re invited.");
     expect(source).not.toContain("Need an account?");
   });

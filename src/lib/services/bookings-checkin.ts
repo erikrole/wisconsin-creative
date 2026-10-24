@@ -3,7 +3,6 @@ import {
   BookingKind,
   BookingStatus,
   CheckinReportType,
-  BulkMovementKind,
   BulkUnitStatus,
   Prisma,
   ScanPhase,
@@ -27,7 +26,7 @@ export function wasReturnedOnTime(endsAt: Date, completedAt: Date) {
  * names both the returner (actor) and the owner they returned it for. Shared
  * custody has no owner to name.
  */
-export function returnedForOwnerId(
+function returnedForOwnerId(
   booking: { requesterUserId: string | null; custodyScope: BookingCustodyScope | string | null },
   actorUserId: string,
 ): string | null {
@@ -358,10 +357,15 @@ export async function forceCompleteCheckout(args: {
       });
     }
 
+    // Gear already reported missing at check-in is physically gone (a battery
+    // is marked LOST and its allocation closed then). Settling without that
+    // credit would restock it into the ledger and let reservations over-promise.
+    const lostBySku = await reportedLostBulkBySku(tx, booking.id);
     await settleBulkLedgerAtCompletion(tx, {
       bookingId: booking.id,
       locationId: booking.locationId,
       actorUserId: args.actorUserId,
+      lostBySku,
     });
 
     await tx.booking.update({

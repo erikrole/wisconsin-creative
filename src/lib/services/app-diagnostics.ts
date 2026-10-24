@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { metricKitDiagnosticToReport, parseMetricKitPayload } from "@/lib/error-reporting/metrickit";
+import { metricKitDiagnosticToReport, parseMetricKitPayload, type MetricKitSession } from "@/lib/error-reporting/metrickit";
 import type { ErrorPlatform } from "@/lib/error-reporting/grouping";
 import { recordErrorReports, type ReportActor } from "@/lib/services/error-reports";
 
@@ -19,8 +19,17 @@ const LEGACY_KIND_KEYS: Record<string, string> = {
   app_launch: "app_launch",
 };
 
-export async function storeMetricKitPayload(payload: unknown, platform: ErrorPlatform, actor: ReportActor): Promise<number> {
-  const results = await recordErrorReports(parseMetricKitPayload(payload, platform), actor);
+export async function storeMetricKitPayload(
+  payload: unknown,
+  platform: ErrorPlatform,
+  actor: ReportActor,
+  sessions: MetricKitSession[] = [],
+  context?: Record<string, unknown>,
+): Promise<number> {
+  const reports = parseMetricKitPayload(payload, platform, sessions).map((report) =>
+    context ? { ...report, context: { ...report.context, ...context } } : report,
+  );
+  const results = await recordErrorReports(reports, actor);
   return results.filter((result) => result.stored).length;
 }
 

@@ -56,11 +56,11 @@ enum NativeImageProcessor {
         format.scale = 1
         format.preferredRange = .standard
         let renderer = UIGraphicsImageRenderer(
-            size: CGSize(width: 1024, height: 1024),
+            size: CGSize(width: 512, height: 512),
             format: format
         )
         let output = renderer.image { _ in
-            UIImage(cgImage: cropped).draw(in: CGRect(x: 0, y: 0, width: 1024, height: 1024))
+            UIImage(cgImage: cropped).draw(in: CGRect(x: 0, y: 0, width: 512, height: 512))
         }
         return output.jpegData(compressionQuality: 0.9)
     }

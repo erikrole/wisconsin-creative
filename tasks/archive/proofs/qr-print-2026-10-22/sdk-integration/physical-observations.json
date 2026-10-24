@@ -1,0 +1,56 @@
+{
+  "previousRecovery": {
+    "id": "1c7f380b-debd-441b-9bca-206aa31ac726",
+    "physicalCount": "unverified",
+    "userObservation": "I\u2019ll be honest, I forgot",
+    "replayed": false
+  },
+  "freshPrototypeStop": {
+    "id": "94d390c3-a428-45a1-b402-ccfe8c94ec5c",
+    "userObservation": "A only, plus two blanks",
+    "onlyLetter": "A",
+    "blankCount": 2,
+    "remaining": [
+      "B",
+      "C"
+    ]
+  },
+  "freshPrototypeRecovery": {
+    "userObservation": "B and C once; one initial blank, none between",
+    "letters": [
+      "B",
+      "C"
+    ],
+    "eachOnce": true,
+    "duplicateA": false,
+    "blankCount": 1,
+    "betweenLabelBlanks": 0
+  },
+  "integratedMixedBatch": {
+    "userObservation": "All six good; four scan; one initial blank only",
+    "labels": 6,
+    "productionScans": 4,
+    "initialBlanks": 1,
+    "betweenLabelBlanks": 0
+  },
+  "integratedStop": {
+    "userObservation": "A and B only, plus two blanks",
+    "completedLetters": [
+      "A",
+      "B"
+    ],
+    "unsentLetters": [
+      "C"
+    ],
+    "blanks": 2
+  },
+  "integratedRecovery": {
+    "userObservation": "C only, plus one initial blank",
+    "letters": [
+      "C"
+    ],
+    "duplicateAorB": false,
+    "blanks": 1,
+    "reloadEmittedNothing": true
+  }
+}

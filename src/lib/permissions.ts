@@ -48,6 +48,11 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     edit: ["ADMIN", "STAFF"],
     manage_role: ["ADMIN", "STAFF"],
   },
+  label_print: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    print: ["ADMIN", "STAFF", "STUDENT"],
+    review_others: ["ADMIN", "STAFF"],
+  },
   asset: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     create: ["ADMIN", "STAFF"],
@@ -140,6 +145,13 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
   scoreboard: {
     // D-056: Scoreboard identity and metrics are shared authenticated team data.
     view: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],
+  },
+  wrapped: {
+    // Team members see their own recap. Collaborators stay default-denied
+    // (D-041). Previewing before unlock, reading someone else's, and
+    // regenerating are admin checks on the recap before it goes out.
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    preview: ["ADMIN"],
   },
   event_worker: {
     // Workers recorded outside the schedule. Staff can see who was added to an

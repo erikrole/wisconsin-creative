@@ -1,4 +1,11 @@
-import type { ErrorPlatform, ErrorReportInput } from "./grouping";
+import { boundBreadcrumbs, type Breadcrumb, type ErrorPlatform, type ErrorReportInput } from "./grouping";
+
+/** One recent run of the app, as the app remembers it. */
+export type MetricKitSession = {
+  pid: number;
+  screen?: string | null;
+  breadcrumbs: Breadcrumb[];
+};
 
 /**
  * Turns Apple MetricKit diagnostic payloads (crashes, hangs, CPU and disk
@@ -8,7 +15,7 @@ import type { ErrorPlatform, ErrorReportInput } from "./grouping";
  */
 
 const MAX_DIAGNOSTICS_PER_UPLOAD = 20;
-const MAX_CALL_STACK_BYTES = 200_000;
+const MAX_CALL_STACK_BYTES = 64_000;
 const MAX_FRAMES = 16;
 
 const DIAGNOSTIC_KINDS = {
@@ -71,12 +78,12 @@ function num(value: unknown): number | null {
 }
 
 /** App binaries are ours; everything else is a system framework. */
-export function isAppBinary(name: string | null): boolean {
+function isAppBinary(name: string | null): boolean {
   return !!name && /^(Wisconsin|GearOps)/.test(name);
 }
 
 /** Frames of the crashing (attributed) thread, top of stack first. */
-export function attributedFrames(callStackTree: unknown): StackFrame[] {
+function attributedFrames(callStackTree: unknown): StackFrame[] {
   const tree = record(callStackTree);
   const stacks = Array.isArray(tree.callStacks) ? (tree.callStacks as unknown[]).map(record) : [];
   const stack = stacks.find((entry) => entry.threadAttributed === true) ?? stacks[0];
@@ -94,6 +101,19 @@ export function attributedFrames(callStackTree: unknown): StackFrame[] {
     level = Array.isArray(frame.subFrames) ? (frame.subFrames as unknown[]) : [];
   }
   return frames;
+}
+
+/**
+ * The crashing thread's part of a call stack tree. The other threads are
+ * rarely needed and make up most of the size, and up to 50 occurrences are
+ * kept per issue.
+ */
+function attributedCallStackTree(callStackTree: unknown): unknown {
+  const tree = record(callStackTree);
+  const stacks = Array.isArray(tree.callStacks) ? (tree.callStacks as unknown[]).map(record) : [];
+  const stack = stacks.find((entry) => entry.threadAttributed === true) ?? stacks[0];
+  if (!stack) return callStackTree;
+  return { ...tree, callStacks: [stack] };
 }
 
 /** `com.erikrole.Wisconsin.LiveActivities` → `LiveActivities`; the main app → `App`. */
@@ -133,15 +153,28 @@ function channelFrom(meta: Record<string, unknown>): string | null {
 }
 
 /** Turns one MetricKit `MXDiagnosticPayload` JSON into bounded reports. */
-export function parseMetricKitPayload(payload: unknown, platform: ErrorPlatform = "ios"): ErrorReportInput[] {
+export function parseMetricKitPayload(
+  payload: unknown,
+  platform: ErrorPlatform = "ios",
+  sessions: MetricKitSession[] = [],
+): ErrorReportInput[] {
   const root = record(payload);
   const occurredAt = payloadTime(root);
+  const byPid = new Map(sessions.map((session) => [session.pid, session]));
   const reports: ErrorReportInput[] = [];
   for (const [key, kind] of Object.entries(DIAGNOSTIC_KINDS)) {
     const entries = Array.isArray(root[key]) ? (root[key] as unknown[]) : [];
     for (const entry of entries) {
       if (reports.length >= MAX_DIAGNOSTICS_PER_UPLOAD) return reports;
-      reports.push(metricKitDiagnosticToReport(record(entry), kind, platform, occurredAt));
+      const diagnostic = record(entry);
+      const report = metricKitDiagnosticToReport(diagnostic, kind, platform, occurredAt);
+      const pid = num(record(diagnostic.diagnosticMetaData).pid);
+      const session = pid !== null ? byPid.get(pid) : undefined;
+      if (session) {
+        report.breadcrumbs = boundBreadcrumbs(session.breadcrumbs);
+        if (session.screen) report.context = { ...report.context, lastScreen: session.screen };
+      }
+      reports.push(report);
     }
   }
   return reports;
@@ -154,9 +187,9 @@ export function metricKitDiagnosticToReport(
   occurredAt?: Date,
 ): ErrorReportInput {
   const meta = record(diagnostic.diagnosticMetaData);
-  const stack = diagnostic.callStackTree;
+  const frames = attributedFrames(diagnostic.callStackTree);
+  const stack = diagnostic.callStackTree === undefined ? undefined : attributedCallStackTree(diagnostic.callStackTree);
   const stackJson = stack === undefined ? "" : JSON.stringify(stack);
-  const frames = attributedFrames(stack);
   const topAppFrame = frames.find((frame) => isAppBinary(frame.binaryName));
   const bundleId = text(meta.bundleIdentifier, 120);
   const target = targetLabel(bundleId);

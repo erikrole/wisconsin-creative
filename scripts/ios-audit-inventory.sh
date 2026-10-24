@@ -53,6 +53,10 @@ done
 read -r -d '' REGISTRY <<'EOF' || true
 # View / sheet                         | audit slug                  | status
 HomeView.swift                         | dashboard                   | audit
+GettingStartedCard.swift               | dashboard                   | audit
+CantWorkCard.swift                     | dashboard                   | audit
+Home/HomeModel.swift                   |                             | exempt-shared
+Home/HomeSections.swift                | dashboard                   | audit
 BookingsView.swift                     | bookings                    | audit
 BookingDetailView.swift                | booking-detail              | audit
 Booking/BookingActivityView.swift      |                             | exempt-shared
@@ -62,6 +66,7 @@ CreateBookingSheet.swift               | create-booking              | audit
 ExtendBookingSheet.swift               | extend-booking              | audit
 BrowseView.swift                       | browse                      | audit
 BlastsView.swift                       | blasts                      | audit
+BlastComposeViews.swift                | blasts                      | audit
 Announcements/WhatsNewView.swift          | whats-new                   | audit
 ItemsView.swift                        | items                       | audit
 ItemDetailView.swift                   | item-detail                 | audit
@@ -76,6 +81,7 @@ EventTravelSection.swift               |                             | exempt-sh
 EventsView.swift                       | events                      | audit
 EventCatalogDetailView.swift           | events                      | audit
 AccountabilityView.swift               | accountability              | audit
+DamageCasesView.swift                  | damage-cases                | audit
 AccountabilityPersonView.swift         | accountability              | audit
 NotificationsSheet.swift               | notifications-sheet         | audit
 OverdueReportView.swift                | overdue-report              | audit
@@ -91,10 +97,12 @@ Reports/ReportChrome.swift             |                             | exempt-sh
 Reports/ReportSession.swift            |                             | exempt-infra
 LoginView.swift                        | login                       | audit
 NativeAuthViews.swift                  | login                       | audit
+InviteLinkResendButton.swift            |                             | exempt-shared
 PasswordSetupView.swift                | login                       | audit
 LaunchView.swift                       |                             | exempt-tiny
 Welcome/ProfileCompletionWelcomeView.swift | welcome                  | audit
 Welcome/ProfilePhotoCropView.swift     | welcome                     | audit
+Welcome/WelcomeFinishView.swift        | welcome                     | audit
 Welcome/ProfileCompletionDraft.swift   |                             | exempt-infra
 Welcome/ProfileCompletionWelcomeComponents.swift |                   | exempt-shared
 UsersView.swift                        | users                       | audit
@@ -105,9 +113,14 @@ ProfileView.swift                      | profile                     | audit
 ProfileNextUp.swift                    | profile                     | audit
 ScoreboardView.swift                   | profile                     | audit
 TeamScoreboardView.swift               | team-scoreboard              | audit
+WrappedView.swift                      | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
+ReportProblemSheet.swift               | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 SharedLoginsView.swift                 | shared-logins               | audit
+Signatures/SignaturesView.swift        | signatures                  | audit
+Signatures/SignatureCaptureView.swift  | signatures                  | audit
+Signatures/SignatureCanvasView.swift   | signatures                  | audit
 GuidesView.swift                       | resources                   | audit
 BrandAssetsView.swift                  | brand-assets                | audit
 GearPicksView.swift                    | gear-picks                  | audit
@@ -159,12 +172,14 @@ Kiosk/KioskIdleRoster.swift            |                             | exempt-sh
 Kiosk/KioskDateFormatting.swift        |                             | exempt-infra
 Components/BannerView.swift            |                             | exempt-shared
 Components/BlastBanner.swift           |                             | exempt-shared
+Components/InAppSafariView.swift       |                             | exempt-shared
 Components/CrewRow.swift               |                             | exempt-shared
 Components/ReservationDraftCard.swift  |                             | exempt-shared
 Components/Skeleton.swift              |                             | exempt-shared
 Components/StatusPill.swift            |                             | exempt-shared
 Components/Toast.swift                 |                             | exempt-shared
 Components/UserAvatarView.swift        |                             | exempt-shared
+Components/ProfileAvatarEditor.swift   | profile                     | audit
 Search/FloatingSearchButton.swift      |                             | exempt-tiny
 Search/ScanResultHeroCard.swift        |                             | exempt-shared
 Search/SearchResultRow.swift           |                             | exempt-shared

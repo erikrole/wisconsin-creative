@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Trash2Icon } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { GEAR_CATALOG } from "@/lib/gear-picks/catalog";
 import { buildOrderPlan } from "@/lib/gear-picks/order";
 import { orderPhase, receivingRows, type OrderPhase, type ReceivingRow } from "@/lib/gear-picks/receiving";
 import type { GearPickAdminParticipant, GearPickAdminStudent, GearPickOrderDto, GearPickReceiptDto } from "@/lib/gear-picks/types";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 type Change =
   | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
@@ -76,16 +77,10 @@ export function OrderTracking({ participants, students, order, receipts, pending
 }
 
 function OrderRecord({ order, pending, onApply }: Pick<Props, "order" | "pending" | "onApply">) {
-  const [poNumber, setPoNumber] = useState(order.poNumber ?? "");
-  const [orderNumber, setOrderNumber] = useState(order.orderNumber ?? "");
-  const [placed, setPlaced] = useState(isoToDay(order.placedAt));
-  const [expected, setExpected] = useState(isoToDay(order.expectedAt));
-  useEffect(() => {
-    setPoNumber(order.poNumber ?? "");
-    setOrderNumber(order.orderNumber ?? "");
-    setPlaced(isoToDay(order.placedAt));
-    setExpected(isoToDay(order.expectedAt));
-  }, [order]);
+  const [poNumber, setPoNumber] = useSyncedDraft(order, (o) => o.poNumber ?? "");
+  const [orderNumber, setOrderNumber] = useSyncedDraft(order, (o) => o.orderNumber ?? "");
+  const [placed, setPlaced] = useSyncedDraft(order, (o) => isoToDay(o.placedAt));
+  const [expected, setExpected] = useSyncedDraft(order, (o) => isoToDay(o.expectedAt));
   const changed =
     poNumber.trim() !== (order.poNumber ?? "") ||
     orderNumber.trim() !== (order.orderNumber ?? "") ||
@@ -216,7 +211,7 @@ function ReceivingTable({
                 <div key={key} className={ROW}>
                   <span>
                     <span className="font-bold">{row.itemName}</span>
-                    {row.colorLabel && <span className="ml-2 text-xs text-[#8B8D98]">{row.colorLabel}</span>}
+                    {row.colorLabel && <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{row.colorLabel}</span>}
                     {row.ordered === 0 && <span className="ml-2 text-xs font-bold text-[#AB6400]">Not on order</span>}
                   </span>
                   <span className="font-mono text-[13px]">{row.size ?? "—"}</span>
@@ -266,7 +261,7 @@ function ReceivingTable({
                 <span>
                   <span className="font-bold">{receipt.quantity} × {nameFor(receipt.sku)}</span>
                   <span className="ml-2 font-mono text-xs text-[#60646C] dark:text-muted-foreground">{receipt.size ?? ""}</span>
-                  <span className="ml-2 text-xs text-[#8B8D98]">{shortDate(receipt.receivedAt)}{receipt.receivedBy ? ` · ${receipt.receivedBy}` : ""}</span>
+                  <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{shortDate(receipt.receivedAt)}{receipt.receivedBy ? ` · ${receipt.receivedBy}` : ""}</span>
                 </span>
                 <Button
                   type="button"
@@ -290,7 +285,7 @@ function ReceivingTable({
               </li>
             ))}
           </ul>
-          {receipts.length > 10 && <p className="mt-1 text-xs text-[#8B8D98]">Showing the latest 10 of {receipts.length}.</p>}
+          {receipts.length > 10 && <p className="mt-1 text-xs text-[#6B6F7A] dark:text-muted-foreground">Showing the latest 10 of {receipts.length}.</p>}
         </div>
       )}
     </>

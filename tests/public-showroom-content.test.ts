@@ -11,7 +11,7 @@ import {
 } from "@/lib/public-showroom";
 
 const rootLayoutSource = readFileSync("src/app/layout.tsx", "utf8");
-const middlewareSource = readFileSync("src/middleware.ts", "utf8");
+const middlewareSource = readFileSync("src/proxy.ts", "utf8");
 const themeInitSource = readFileSync("public/theme-init.js", "utf8");
 const serviceWorkerInitSource = readFileSync("public/sw-init.js", "utf8");
 const aboutLayoutSource = readFileSync("src/app/(public)/about/layout.tsx", "utf8");
@@ -81,7 +81,7 @@ describe("public showroom content", () => {
     expect(rootLayoutSource).not.toContain("dangerouslySetInnerHTML");
     expect(rootLayoutSource).toContain('src="/theme-init.js"');
     expect(rootLayoutSource).toContain('src="/sw-init.js"');
-    expect(existsSync("src/middleware.ts")).toBe(true);
+    expect(existsSync("src/proxy.ts")).toBe(true);
     expect(middlewareSource).toContain("x-nonce");
     expect(middlewareSource).toContain("Content-Security-Policy");
   });

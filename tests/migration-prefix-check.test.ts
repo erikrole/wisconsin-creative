@@ -72,6 +72,13 @@ describe("inspectMigrationDirectories", () => {
     expect(result.errors).toContain("Missing migration.sql: 0082_add_assets_index");
   });
 
+  it("preserves the two applied 0200 names but rejects another collision", () => {
+    const applied = [migration("0200_account_onboarding_completion"), migration("0200_wrapped_recaps")];
+    expect(inspectMigrationDirectories(applied).ok).toBe(true);
+    expect(inspectMigrationDirectories([...applied, migration("0200_another_change")]).ok).toBe(false);
+    expect(inspectMigrationDirectories([applied[0], migration("0200_another_change")]).ok).toBe(false);
+  });
+
   it("fails malformed folder names", () => {
     const result = inspectMigrationDirectories([
       migration("0083_add_shift_index"),

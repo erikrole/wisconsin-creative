@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const browse = () => source("ios/Wisconsin/Views/BrowseView.swift");
 const list = () => source("ios/Wisconsin/Views/AccountabilityView.swift");
 const person = () => source("ios/Wisconsin/Views/AccountabilityPersonView.swift");
 const models = () => source("ios/Wisconsin/Models/AccountabilityModels.swift");
-const client = () => source("ios/Wisconsin/Core/APIClient.swift");
+const client = () => apiClientSource();
 
 describe("iOS Accountability browse", () => {
   it("adds a read-only row for internal roles and keeps collaborators off it", () => {
@@ -52,6 +53,25 @@ describe("iOS Accountability browse", () => {
     expect(catalog).not.toContain('name: "locationId"');
     expect(catalog).not.toContain('name: "state"');
     expect(catalog).not.toContain('name: "users"');
+  });
+
+  it("reads as a plain record, not a ranking", () => {
+    const screen = list();
+    const catalog = models();
+
+    expect(screen).toContain('Section("Your record")');
+    expect(screen).toContain('Section("Overdue now")');
+    expect(screen).toContain("NavigationLink(value: BookingRouteId(id: entry.incident.bookingId))");
+    expect(screen).toContain('"Repeat late returns"');
+    expect(screen).toContain(") late once");
+    expect(screen).toContain("Show only repeat late returns");
+    expect(screen).toContain("report.overdueNow()");
+    expect(screen).not.toMatch(/You are /);
+    expect(screen).not.toMatch(/rank|Rank|ordinal|Ordinal|"#\\\(/);
+    expect(catalog).not.toMatch(/accountabilityOrdinal|func rank\(/);
+    expect(catalog).toContain("limit: Int = 5");
+    expect(catalog).toContain("lateEventCount >= 2");
+    expect(catalog).toContain('case .events: "Times late"');
   });
 
   it("opens a checkout from a person's late returns", () => {

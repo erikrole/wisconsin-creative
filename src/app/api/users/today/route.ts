@@ -1,6 +1,8 @@
 import { Role, ShiftAssignmentStatus } from "@prisma/client";
 import { withAuth } from "@/lib/api";
+import { startOfDayInAppTz } from "@/lib/app-time";
 import { db } from "@/lib/db";
+import { isFullDayBoundaryWindow, studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { ok } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
 
@@ -12,10 +14,10 @@ export const GET = withAuth(async (_req, { user }) => {
   requireRole(user.role, [Role.ADMIN, Role.STAFF, Role.STUDENT]);
 
   const now = new Date();
-  const startOfTomorrow = new Date(now);
-  startOfTomorrow.setHours(24, 0, 0, 0);
-  const endOfTomorrow = new Date(startOfTomorrow);
-  endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
+  // Day boundaries are Central midnights; server runtimes run in UTC, where
+  // setHours would file tonight's events under "tomorrow".
+  const startOfTomorrow = startOfDayInAppTz(now, 1);
+  const endOfTomorrow = startOfDayInAppTz(now, 2);
 
   const rows = await db.shiftAssignment.findMany({
     where: {
@@ -28,13 +30,26 @@ export const GET = withAuth(async (_req, { user }) => {
       },
     },
     select: {
+      callStartsAt: true,
       user: { select: { id: true, name: true, avatarUrl: true } },
       shift: {
         select: {
           area: true,
+          workerType: true,
           startsAt: true,
           endsAt: true,
-          shiftGroup: { select: { id: true, event: { select: { summary: true } } } },
+          callStartsAt: true,
+          shiftGroup: {
+            select: {
+              id: true,
+              event: {
+                select: {
+                  summary: true, rawSummary: true, startsAt: true, endsAt: true,
+                  allDay: true, isHome: true, site: true, opponent: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -47,6 +62,7 @@ export const GET = withAuth(async (_req, { user }) => {
     summary: string;
     startsAt: string;
     endsAt: string;
+    allDay: boolean;
     when: "now" | "later" | "tomorrow";
     people: { id: string; name: string; avatarUrl: string | null; area: string }[];
   };
@@ -55,25 +71,38 @@ export const GET = withAuth(async (_req, { user }) => {
 
   for (const row of rows) {
     const { shift } = row;
-    const live = shift.startsAt <= now && shift.endsAt >= now;
+    const event = shift.shiftGroup.event;
+    // A shift row's own window is not the person's working window: a full-day
+    // default spans the whole day, and an early staff slot is not a call time.
+    // Staff work the event's own hours; a Student's call time moves their start.
+    // Without event times (older rows), the shift window stands in.
+    const defaultWindow = isFullDayBoundaryWindow({ startsAt: shift.startsAt.toISOString(), endsAt: shift.endsAt.toISOString() });
+    const usesCall = shift.workerType === "ST" && !event.allDay && studentCallTimeAppliesToEvent(event);
+    const callStart = usesCall ? (row.callStartsAt ?? shift.callStartsAt ?? (defaultWindow ? null : shift.startsAt)) : null;
+    const ownHours = defaultWindow || !usesCall;
+    const start = callStart ?? (ownHours ? (event.startsAt ?? shift.startsAt) : shift.startsAt);
+    const end = event.endsAt ?? shift.endsAt;
+    const live = start <= now && end >= now;
+    if (end < now) continue;
     if (live) onNowIds.add(row.user.id);
     const key = shift.shiftGroup.id;
     let card = events.get(key);
     if (!card) {
       card = {
         id: key,
-        summary: shift.shiftGroup.event.summary,
-        startsAt: shift.startsAt.toISOString(),
-        endsAt: shift.endsAt.toISOString(),
+        summary: event.summary,
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
+        allDay: Boolean(event.allDay),
         when: "later",
         people: [],
       };
       events.set(key, card);
     }
-    if (shift.startsAt.toISOString() < card.startsAt) card.startsAt = shift.startsAt.toISOString();
-    if (shift.endsAt.toISOString() > card.endsAt) card.endsAt = shift.endsAt.toISOString();
+    if (start.toISOString() < card.startsAt) card.startsAt = start.toISOString();
+    if (end.toISOString() > card.endsAt) card.endsAt = end.toISOString();
     if (live) card.when = "now";
-    else if (card.when !== "now" && shift.startsAt >= startOfTomorrow) card.when = "tomorrow";
+    else if (card.when !== "now" && start >= startOfTomorrow) card.when = "tomorrow";
     if (!card.people.some((p) => p.id === row.user.id)) {
       card.people.push({ id: row.user.id, name: row.user.name, avatarUrl: row.user.avatarUrl ?? null, area: shift.area });
     }

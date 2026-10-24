@@ -41,6 +41,6 @@ describe("Welcome web UI recovery contracts", () => {
     expect(page).toContain("isError && !data");
     expect(page).toContain("Could not load your welcome setup");
     expect(page).toContain("void refetch()");
-    expect(page).toContain('router.replace("/")');
+    expect(page).toContain('window.location.replace("/")');
   });
 });

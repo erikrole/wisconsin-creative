@@ -3,7 +3,6 @@ import { scheduleSurfaceSource, source } from "./_helpers/source";
 
 const CREW_ROW = "ios/Wisconsin/Views/Components/CrewRow.swift";
 const EVENT_DETAIL = "ios/Wisconsin/Views/EventDetailSheet.swift";
-const SCHEDULE = "ios/Wisconsin/Views/ScheduleView.swift";
 
 describe("iOS crew row standardization", () => {
   it("gives native crew surfaces the same vocabulary the web crew rows use", () => {

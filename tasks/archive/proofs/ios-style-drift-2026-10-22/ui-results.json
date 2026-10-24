@@ -1,0 +1,113 @@
+{
+  "inline": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 22678,
+      "counts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T12-55-39-298Z_pid46447_fea97061.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-55-39-298Z_pid46447_dedb8efa.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T12-55-39-298Z_pid46447_41404d7e.xctestproducts"
+    },
+    "diagnostics": {
+      "warnings": [],
+      "errors": [],
+      "testFailures": []
+    }
+  },
+  "extension": {
+    "summary": {
+      "status": "FAILED",
+      "durationMs": 57250,
+      "counts": {
+        "passed": 1,
+        "failed": 1,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T12-53-58-597Z_pid46447_8c483151.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-53-58-597Z_pid46447_f1451f32.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T12-53-58-597Z_pid46447_43796a6e.xctestproducts"
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:460"
+        }
+      ],
+      "errors": [],
+      "testFailures": [
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testTradeDetailsAndInlineDecisionStaySeparate",
+          "message": "XCTAssertTrue failed",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/WisconsinUITests/RecentIOSRegressionUITests.swift:94"
+        },
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testTradeDetailsAndInlineDecisionStaySeparate()",
+          "message": "XCTAssertTrue failed"
+        }
+      ]
+    }
+  },
+  "otherScenarios": {
+    "summary": {
+      "status": "FAILED",
+      "durationMs": 88627,
+      "counts": {
+        "passed": 4,
+        "failed": 2,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T12-49-21-823Z_pid46447_4bffc12e.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T12-49-21-824Z_pid46447_5052640a.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T12-49-21-824Z_pid46447_bed337ff.xctestproducts"
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:460"
+        }
+      ],
+      "errors": [],
+      "testFailures": [
+        {
+          "suite": "ActionErrorRecoveryUITests",
+          "test": "testExtensionFailureStaysVisibleAndKeepsChanges",
+          "message": "XCTAssertTrue failed",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/WisconsinUITests/ReportsScreenshotUITests.swift:1076"
+        },
+        {
+          "suite": "ActionErrorRecoveryUITests",
+          "test": "testExtensionFailureStaysVisibleAndKeepsChanges()",
+          "message": "XCTAssertTrue failed"
+        },
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testTradeDetailsAndInlineDecisionStaySeparate",
+          "message": "XCTAssertTrue failed",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/WisconsinUITests/RecentIOSRegressionUITests.swift:87"
+        },
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testTradeDetailsAndInlineDecisionStaySeparate()",
+          "message": "XCTAssertTrue failed"
+        }
+      ]
+    }
+  }
+}

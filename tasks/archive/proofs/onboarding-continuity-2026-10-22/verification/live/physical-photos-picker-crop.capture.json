@@ -1,0 +1,29 @@
+{
+  "sourceRevision": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "resultBundle": "/private/tmp/wc-live-photo-1792696685085.xcresult",
+  "test": "OnboardingLiveUITests/testWebFinishResumesOnNativeAndPhotosPickerUploadsSample()",
+  "attachment": {
+    "configurationName": "Test Scheme Action",
+    "deviceId": "00008160-000A7C610C100036",
+    "deviceName": "Erik\u2019s iPhone",
+    "exportedFileName": "1334B93E-1C20-448E-A633-8BFED2F545DA.png",
+    "isAssociatedWithFailure": false,
+    "suggestedHumanReadableName": "physical-photos-picker-crop_0_2CB9523D-B5EB-42AE-AB05-5578A0F1A6B5.png",
+    "timestamp": 1792696703.153
+  },
+  "imageSHA256": "e819f3c7b2fcd8229373796402fe9196ffb250fc6abacc65232147e029c9c244",
+  "baseline": "After-only authenticated physical iPhone 18 Pro Max; synthetic student",
+  "capture": {
+    "capture": "physical-photos-picker-crop",
+    "capturedAt": "2026-10-22T19:18:23Z",
+    "fixtureScenario": "none",
+    "locale": "en_US",
+    "screenPoints": [
+      440,
+      956
+    ],
+    "screenScale": 3,
+    "systemVersion": "27.2",
+    "timezone": "America/Chicago"
+  }
+}

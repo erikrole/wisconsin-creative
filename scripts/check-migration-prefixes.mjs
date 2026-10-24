@@ -24,6 +24,12 @@ const ALLOWED_COLLISIONS = new Set([
   '0139',
 ]);
 
+// Both full names already have applied receipts on their respective lines.
+// Preserve those receipts without permitting a third migration at this prefix.
+const APPLIED_COLLISION_GROUPS = new Map([
+  ['0200', new Set(['0200_account_onboarding_completion', '0200_wrapped_recaps'])],
+]);
+
 export function inspectMigrationDirectories(entries, options = {}) {
   const allowedCollisions = options.allowedCollisions ?? ALLOWED_COLLISIONS;
   const errors = [];
@@ -45,7 +51,9 @@ export function inspectMigrationDirectories(entries, options = {}) {
   }
 
   for (const [prefix, names] of byPrefix.entries()) {
-    if (names.length > 1 && !allowedCollisions.has(prefix)) {
+    const appliedGroup = APPLIED_COLLISION_GROUPS.get(prefix);
+    const exactAppliedGroup = appliedGroup?.size === names.length && names.every((name) => appliedGroup.has(name));
+    if (names.length > 1 && !allowedCollisions.has(prefix) && !exactAppliedGroup) {
       errors.push(`Migration prefix collision ${prefix}: ${names.join(', ')}`);
     }
   }

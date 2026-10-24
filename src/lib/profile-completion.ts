@@ -37,6 +37,8 @@ type ProfileCompletionProfile = {
   avatarUrl: string | null;
   profilePromptSnoozedUntil: Date | string | null;
   hiddenFromRoster?: boolean;
+  onboardingRequired?: boolean;
+  onboardingCompletedAt?: Date | string | null;
 };
 
 const FIELD_STEP: Record<ProfileCompletionField, ProfileCompletionStep> = {
@@ -91,7 +93,7 @@ export const PROFILE_STEP_COPY: Record<ProfileCompletionStep, { title: string; d
   },
   WISCARD: {
     title: "Link your Wiscard",
-    description: "Type the card number and issue code printed for your card. This is used for kiosk identification.",
+    description: "Type the card number and issue code printed for your card. This is used for kiosk identification. No Wiscard? You can skip this.",
   },
   STUDENT: {
     title: "Add your student details",
@@ -99,7 +101,7 @@ export const PROFILE_STEP_COPY: Record<ProfileCompletionStep, { title: string; d
   },
   APPAREL: {
     title: "Add your apparel sizes",
-    description: "Choose the sizing systems that make clothing and shoe orders unambiguous.",
+    description: "For team apparel orders. Choose the sizes you normally buy.",
   },
   PHOTO: {
     title: "Add a profile photo",
@@ -116,13 +118,16 @@ export const PROFILE_STEP_SHORT_LABELS: Record<ProfileCompletionStep, string> = 
   PHOTO: "Photo",
 };
 
+// Wiscard is optional: not everyone on the team is a UW student with a card
+// (it only powers kiosk scan identification), so it never blocks setup.
 const INTERNAL_OPERATIONAL_FIELDS: ProfileCompletionField[] = [
   "campusEmail",
   "athleticsEmail",
   "personalPhone",
   "workPhone",
-  "wiscard",
 ];
+
+const OPTIONAL_FIELDS: ProfileCompletionField[] = ["photo", "wiscard"];
 
 function applicableProfileFields(role: ProfileCompletionProfile["role"]): ProfileCompletionField[] {
   if (role === "COLLABORATOR") return ["photo"];
@@ -142,7 +147,6 @@ function applicableProfileFields(role: ProfileCompletionProfile["role"]): Profil
       "personalPhone",
       "wiscard",
       "studentYear",
-      "anticipatedGraduation",
       "clothingSize",
       "shoeSize",
       "photo",
@@ -169,6 +173,10 @@ export function isCampusLoginEmail(email: string): boolean {
   return email.trim().toLowerCase().endsWith("@wisc.edu");
 }
 
+export function requiresOnboarding(profile: { onboardingRequired?: boolean; onboardingCompletedAt?: Date | string | null }): boolean {
+  return profile.onboardingRequired === true && !profile.onboardingCompletedAt;
+}
+
 function isAthleticsEmail(email: string | null | undefined): boolean {
   return Boolean(email?.trim().toLowerCase().endsWith("@athletics.wisc.edu"));
 }
@@ -190,7 +198,7 @@ export function getProfileCompletion(profile: ProfileCompletionProfile, now = ne
   const operationalFields = profile.role === "COLLABORATOR"
     ? [] as ProfileCompletionField[]
     : profile.role === "STUDENT"
-      ? INTERNAL_OPERATIONAL_FIELDS.filter((field) => field !== "workPhone" && field !== "athleticsEmail").concat("studentYear", "anticipatedGraduation")
+      ? INTERNAL_OPERATIONAL_FIELDS.filter((field) => field !== "workPhone" && field !== "athleticsEmail").concat("studentYear")
       : INTERNAL_OPERATIONAL_FIELDS;
   const missingFields = applicableFields
     .filter((field) => !completeByField[field]);
@@ -205,18 +213,27 @@ export function getProfileCompletion(profile: ProfileCompletionProfile, now = ne
   const operationalReady = operationalFields.every((field) => completeByField[field]);
   const profileComplete = missingFields.length === 0;
   const hiddenSmokeIdentity = profile.hiddenFromRoster === true;
+  const requiredComplete = hiddenSmokeIdentity || applicableFields
+    .filter((field) => !OPTIONAL_FIELDS.includes(field))
+    .every((field) => completeByField[field]);
+  const requiresSetup = requiresOnboarding(profile);
+  const onboardingComplete = Boolean(profile.onboardingCompletedAt) || (!requiresSetup && profileComplete);
 
   return {
     operationalReady: hiddenSmokeIdentity || operationalReady,
+    requiredComplete,
+    requiresSetup,
+    onboardingComplete,
     profileComplete: hiddenSmokeIdentity || profileComplete,
     isComplete: hiddenSmokeIdentity || profileComplete,
     isSnoozed,
-    shouldPrompt: !hiddenSmokeIdentity && missingFields.length > 0 && !isSnoozed,
+    // A photo skipped during setup stays a gentle, snoozable prompt afterwards.
+    shouldPrompt: requiresSetup || (!hiddenSmokeIdentity && (!onboardingComplete || !completeByField.photo) && missingFields.length > 0 && !isSnoozed),
     snoozedUntil: snoozedUntil?.toISOString() ?? null,
     completedCount: hiddenSmokeIdentity ? applicableFields.length : completedCount,
     totalCount: applicableFields.length,
     missingFields: hiddenSmokeIdentity ? [] : missingFields,
-    firstIncompleteStep: hiddenSmokeIdentity ? null : firstIncompleteStep,
+    firstIncompleteStep: hiddenSmokeIdentity ? null : requiresSetup && requiredComplete ? "PHOTO" as const : firstIncompleteStep,
     completeByField,
   };
 }

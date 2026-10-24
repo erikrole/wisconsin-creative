@@ -1,9 +1,12 @@
 import AppIntents
+import CoreSpotlight
 import Foundation
 
 /// Shortcuts-facing projection of a `Booking` so users can parameterize
 /// automations ("Open <booking>") over their reservations and checkouts.
-struct BookingEntity: AppEntity, Identifiable, Sendable {
+/// `IndexedEntity` so the Spotlight row for a booking (`SpotlightIndexer`)
+/// and the Shortcuts/Siri entity are the same object.
+struct BookingEntity: IndexedEntity, Identifiable, Sendable {
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Booking")
     static let defaultQuery = BookingEntityQuery()
 
@@ -26,6 +29,38 @@ struct BookingEntity: AppEntity, Identifiable, Sendable {
         kindLabel = booking.kind == .checkout ? "Checkout" : "Reservation"
         statusLabel = booking.status.label
         endsAt = booking.endsAt
+    }
+
+    init(summary: BookingSummary) {
+        id = summary.id
+        title = summary.title
+        kindLabel = summary.kind == .checkout ? "Checkout" : "Reservation"
+        statusLabel = summary.status.label
+        endsAt = summary.endsAt
+    }
+}
+
+/// Handoff for an open booking: the same booking on another iPhone or iPad,
+/// or the web page on a Mac. The web URL is also what the receiving app
+/// parses, so Handoff reuses the universal-link route.
+enum BookingHandoff {
+    static let activityType = "com.erikrole.Wisconsin.booking"
+
+    static func webURL(for booking: Booking) -> URL? {
+        let section = booking.kind == .checkout ? "checkouts" : "reservations"
+        return URL(string: "https://wisconsincreative.com/\(section)/\(booking.id)")
+    }
+
+    static func configure(_ activity: NSUserActivity, for booking: Booking) {
+        activity.title = booking.title
+        activity.webpageURL = webURL(for: booking)
+        activity.isEligibleForHandoff = true
+        // Search and prediction stay with `SpotlightIndexer`, which clears at
+        // sign-out; a donated activity would outlive the session.
+        activity.isEligibleForSearch = false
+        activity.isEligibleForPrediction = false
+        // Lets Siri and Apple Intelligence resolve "this booking" on screen.
+        activity.appEntityIdentifier = EntityIdentifier(for: BookingEntity(booking: booking))
     }
 }
 

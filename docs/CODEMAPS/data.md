@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 139 | 5 |
+| `User` | 145 | 5 |
 | `Session` | 7 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -37,6 +37,7 @@
 | `ScanSession` | 9 | 2 |
 | `OverrideEvent` | 8 | 4 |
 | `AuditLog` | 9 | 4 |
+| `LabelPrintJob` | 11 | 4 |
 | `ProductEvent` | 12 | 6 |
 | `UserAppInstallation` | 15 | 4 |
 | `SignatureCollection` | 21 | 4 |
@@ -49,7 +50,10 @@
 | `KitMembership` | 6 | 2 |
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
-| `CalendarEvent` | 42 | 7 |
+| `CalendarEvent` | 43 | 7 |
+| `GameResultObservation` | 9 | 3 |
+| `GameSnapshot` | 21 | 2 |
+| `WrappedRecap` | 6 | 2 |
 | `EventWorker` | 10 | 4 |
 | `ScheduleEventFollow` | 9 | 3 |
 | `BookingEvent` | 7 | 4 |
@@ -71,14 +75,14 @@
 | `BlastRecipient` | 12 | 4 |
 | `FavoriteItem` | 6 | 3 |
 | `FavoriteItemFamily` | 6 | 4 |
-| `AllowedEmail` | 18 | 4 |
+| `AllowedEmail` | 20 | 4 |
 | `CollaboratorAffiliation` | 8 | 2 |
 | `CollaboratorPolicy` | 11 | 2 |
 | `CollaboratorPolicyGrant` | 5 | 3 |
 | `CollaboratorPolicyRevision` | 9 | 3 |
 | `SystemConfig` | 3 | 1 |
 | `BadgeDefinition` | 14 | 3 |
-| `StudentBadge` | 10 | 5 |
+| `StudentBadge` | 11 | 5 |
 | `BadgeStreak` | 8 | 3 |
 | `BadgeEventReceipt` | 6 | 3 |
 | `LicenseCode` | 17 | 4 |
@@ -97,7 +101,7 @@
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
-| `CheckinItemReport` | 20 | 7 |
+| `CheckinItemReport` | 25 | 8 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |
@@ -137,6 +141,7 @@
 | `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |
 | `AnnouncementDismissal` | 6 | 3 |
+| `QuickLink` | 8 | 2 |
 
 ## Enums
 
@@ -264,6 +269,14 @@
 - `DAMAGED`
 - `LOST`
 
+### `ReportResolution`
+
+- `REPAIRED`
+- `REPLACED`
+- `WRITTEN_OFF`
+- `FOUND`
+- `NO_ISSUE`
+
 ### `BadgeCategory`
 
 - `CHECKOUT`
@@ -366,6 +379,11 @@
 - `HOME`
 - `AWAY`
 - `NEUTRAL`
+
+### `GameResultProvider`
+
+- `UW`
+- `ESPN`
 
 ### `ScheduleFollowSource`
 

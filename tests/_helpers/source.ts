@@ -31,3 +31,46 @@ export function scheduleSurfaceSource(): string {
     .map((name) => `ios/Wisconsin/Views/Schedule/${name}`);
   return ["ios/Wisconsin/Views/ScheduleView.swift", ...files].map((file) => source(file)).join("\n");
 }
+
+/** The files each split service module was divided into. */
+const SPLIT_SERVICE_MODULES: Record<string, string[]> = {
+  "bookings-lifecycle": [
+    "bookings-lifecycle-shared",
+    "booking-create",
+    "reservation-lifecycle",
+    "booking-event-links",
+    "checkout-lifecycle",
+  ],
+  notifications: [
+    "notification-delivery",
+    "checkout-escalation-notifications",
+    "shift-notifications",
+    "booking-notifications",
+  ],
+  reports: [
+    "report-shared",
+    "utilization-report",
+    "checkout-reports",
+    "scan-audit-reports",
+    "inventory-loss-reports",
+    "badge-report",
+  ],
+  signatures: [
+    "signatures-shared",
+    "signature-collections",
+    "signature-roster",
+    "signature-captures",
+    "signature-artifacts",
+  ],
+};
+
+/**
+ * A service module that was split into several files, as one text, so a
+ * contract about the service does not depend on which file a function lives
+ * in. `name` is the original module, e.g. "notifications".
+ */
+export function serviceModuleSource(name: keyof typeof SPLIT_SERVICE_MODULES): string {
+  return [name, ...SPLIT_SERVICE_MODULES[name]!]
+    .map((file) => source(`src/lib/services/${file}.ts`))
+    .join("\n");
+}

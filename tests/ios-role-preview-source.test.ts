@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("native iOS role preview contract", () => {
   it("decodes the server-owned preview metadata without changing identity", () => {
@@ -12,7 +13,7 @@ describe("native iOS role preview contract", () => {
   });
 
   it("reuses the signed web control route and refreshes /api/me", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const session = source("ios/Wisconsin/Core/SessionStore.swift");
 
     expect(api).toContain('request(path: "/api/admin/role-preview", method: "POST")');

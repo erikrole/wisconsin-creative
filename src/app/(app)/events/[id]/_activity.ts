@@ -47,14 +47,14 @@ const FIELD_LABELS: Record<string, string> = {
   callNote: "Call note",
 };
 
-export function activityFilterFor(kind: ScheduleChangeKind): Exclude<ActivityFilter, "all"> {
+function activityFilterFor(kind: ScheduleChangeKind): Exclude<ActivityFilter, "all"> {
   if (GEAR_KINDS.has(kind)) return "gear";
   if (CALENDAR_KINDS.has(kind)) return "calendar";
   if (CREW_KINDS.has(kind)) return "crew";
   return "crew";
 }
 
-export function prettySlotLabel(value: string): string {
+function prettySlotLabel(value: string): string {
   return value
     .replace(/\b(VIDEO|PHOTO|GRAPHICS|COMMS|SOCIAL|LIVE_PRODUCTION)\b/g, (code) => AREA_LABELS[code] ?? code)
     .replace(/\s+slot$/i, "");
@@ -68,7 +68,7 @@ export function prettyChangeTarget(detail: string | null): string | null {
   return cleaned;
 }
 
-export function prettyFieldDetail(detail: string | null): string | null {
+function prettyFieldDetail(detail: string | null): string | null {
   if (!detail || detail === "Working copy") return null;
   if (
     detail.includes(" · ")
@@ -250,7 +250,7 @@ export function coalesceScheduleChanges(
   return out;
 }
 
-export function activityDateGroup(iso: string, now = new Date()): string {
+function activityDateGroup(iso: string, now = new Date()): string {
   const date = new Date(iso);
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);

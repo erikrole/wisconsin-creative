@@ -1,0 +1,13 @@
+
+> creative-ops@2026.04.08.1 preview:doctor
+> node scripts/preview.mjs doctor
+
+{
+  "gitBranch": "codex/qr-print-usb-history",
+  "projectId": "floral-fog-52897668",
+  "branchId": "br-jolly-recipe-au0clpjv",
+  "endpointId": "ep-spring-bread-aueyjyg6",
+  "status": "ready",
+  "pending": [],
+  "templateVerified": true
+}

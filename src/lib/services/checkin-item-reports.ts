@@ -17,7 +17,16 @@ import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type Kiosk
  * moves the report's recency so the dashboard and item page surface it.
  */
 function reopenedReport() {
-  return { dismissedAt: null, dismissedById: null, lastReportedAt: new Date() };
+  return {
+    dismissedAt: null,
+    dismissedById: null,
+    // New evidence reopens a case staff already closed.
+    resolution: null,
+    resolvedAt: null,
+    resolvedById: null,
+    resolutionNote: null,
+    lastReportedAt: new Date(),
+  };
 }
 
 const REPORT_DEDUP_WINDOW_MS = 5_000;
@@ -120,7 +129,7 @@ type KioskReportContext = {
  *   2026-09-25).
  *
  * The report commits in one SERIALIZABLE transaction with its
- * consequences: a DAMAGED item is held for staff (asset → MAINTENANCE, audited)
+ * consequences: a DAMAGED or LOST item is held for staff (asset → MAINTENANCE, audited)
  * and, at the kiosk, a LOST report on the last outstanding item completes the return.
  */
 export async function submitCheckinItemReport(args: {
@@ -251,6 +260,24 @@ export async function submitCheckinItemReport(args: {
           }
         }
         held = Boolean(asset) && asset?.status !== AssetStatus.RETIRED;
+      } else {
+        // A missing item is held too, so it cannot be booked again until staff
+        // find it or write it off on the Damage and loss page.
+        const asset = await tx.asset.findUnique({ where: { id: assetId }, select: { status: true } });
+        if (asset && asset.status !== AssetStatus.RETIRED) {
+          await tx.asset.update({ where: { id: assetId }, data: { status: AssetStatus.MAINTENANCE } });
+          if (asset.status === AssetStatus.AVAILABLE) {
+            await createAuditEntryTx(tx, {
+              actorId: args.reporter.id,
+              actorRole: args.reporter.role,
+              entityType: "asset",
+              entityId: assetId,
+              action: "marked_missing",
+              before: { status: asset.status },
+              after: { status: AssetStatus.MAINTENANCE, bookingId: id, reportId: saved.id, ...source },
+            });
+          }
+        }
       }
       await createAuditEntryTx(tx, {
         actorId: args.reporter.id,
@@ -316,7 +343,7 @@ export async function submitCheckinItemReport(args: {
 }
 
 /** Battery Ops keeps its own notes on a unit; a report adds a line, never replaces them. */
-export function appendUnitNote(existing: string | null, marker: string) {
+function appendUnitNote(existing: string | null, marker: string) {
   const prior = existing?.trim();
   return prior ? `${prior}\n${marker}` : marker;
 }

@@ -8,8 +8,8 @@ const SKEW_MS = 15 * 60 * 1000;
  * only catches a mistyped year ("2062" for "2026") that would otherwise hold
  * gear for decades.
  */
-export const MAX_BOOKING_DURATION_MS = 366 * 24 * 60 * 60 * 1000;
-export const MAX_BOOKING_DURATION_MESSAGE = "A booking can't run longer than a year. Check the end date.";
+const MAX_BOOKING_DURATION_MS = 366 * 24 * 60 * 60 * 1000;
+const MAX_BOOKING_DURATION_MESSAGE = "A booking can't run longer than a year. Check the end date.";
 
 export function assertBookingDuration(start: Date, end: Date) {
   if (end.getTime() - start.getTime() > MAX_BOOKING_DURATION_MS) {

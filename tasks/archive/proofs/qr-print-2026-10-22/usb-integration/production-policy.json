@@ -1,0 +1,11 @@
+{
+  "labels": {
+    "key": "Permissions-Policy",
+    "value": "camera=(self), microphone=(), geolocation=(), payment=(), usb=(self), serial=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(self), encrypted-media=(), fullscreen=(self), picture-in-picture=(), display-capture=(), midi=(), screen-wake-lock=(), web-share=(self), tools=(self)"
+  },
+  "developmentExceptionInProduction": false,
+  "default": {
+    "key": "Permissions-Policy",
+    "value": "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(self), encrypted-media=(), fullscreen=(self), picture-in-picture=(), display-capture=(), midi=(), screen-wake-lock=(), web-share=(self), tools=(self)"
+  }
+}

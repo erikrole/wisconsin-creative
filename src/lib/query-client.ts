@@ -2,7 +2,7 @@ import { QueryClient, type Query } from "@tanstack/react-query";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 
 const PERSISTED_QUERY_ROOTS = new Set(["dashboard", "booking"]);
-export const QUERY_CACHE_MAX_AGE = 24 * 60 * 60_000;
+const QUERY_CACHE_MAX_AGE = 24 * 60 * 60_000;
 export const TRANSIENT_QUERY_GC_TIME = 5 * 60_000;
 
 export function shouldPersistQueryKey(queryKey: readonly unknown[]) {

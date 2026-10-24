@@ -1,0 +1,26 @@
+name: Bug
+description: Something is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      options: [Web, iOS app, Kiosk, Email, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the page or screen, your role, and the time (Central) if it matters.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or errors

@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -24,12 +25,11 @@ export function InlineTitle({
   saveMode?: "blur" | "explicit";
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useSyncedDraft(value);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  useEffect(() => { setDraft(value); }, [value]);
   useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 

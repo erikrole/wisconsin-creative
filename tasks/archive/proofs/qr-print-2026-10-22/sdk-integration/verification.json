@@ -1,0 +1,28 @@
+{
+  "focusedTests": 109,
+  "disposablePostgresTests": 11,
+  "postgresTarget": "127.0.0.1:55499/wc_integrity_test",
+  "appBuild": "passed; build:app has no migration hook",
+  "typecheck": "passed",
+  "touchedFileEslint": "passed",
+  "independentSafetyReview": "no remaining P1/P2",
+  "preview": "database-free fixture; authenticated branch-owned preview unavailable",
+  "hardware": "user accepted six layouts/four QR scans, Stop A/B and remaining-only C",
+  "securityChanges": false,
+  "applicationMigrationApplied": false,
+  "deployed": false,
+  "committed": false,
+  "browserChecks": [
+    "failed final local save + passive refresh retains completion/outbox",
+    "save pending log emits no bytes",
+    "Stop persists feed intent and cancels further label content",
+    "reload emits no bytes; Continue sends only two unsent simulated copies",
+    "disconnect leaves held and in-flight copies for separate physical review",
+    "individual physical resolutions keep failed copy in remainder",
+    "390 CSS px content and viewport widths match",
+    "1024 CSS px dialog/Escape/focus-return",
+    "fresh IAB after page has no console errors"
+  ],
+  "nativeCaptureEncoding": "Native JPEG retained; PNG is a lossless decode/re-encode for receipt tooling",
+  "review": "Matched images inspected; report built and static-validated. Codex file panel queued; CUA local-file rendering blocked by URL policy."
+}

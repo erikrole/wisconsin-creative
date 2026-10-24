@@ -106,11 +106,11 @@ describe("EventWorkersCard load failure", () => {
   it("does not render a failed read as an empty roster", () => {
     // "No one has been added" is a claim about the event. Making it when the
     // request failed hides a broken deploy behind a reassuring empty state.
-    expect(source).toContain("const [loadFailed, setLoadFailed] = useState(false);");
+    // The failure comes from the query's error state, which a successful
+    // refetch clears, so one blip cannot leave the card stuck in error.
+    expect(source).toContain("const loadFailed = !loading && workersQuery.isError && !workersQuery.data;");
     expect(source).toContain("Could not load who has been added to this event.");
-    expect(source).toContain("setLoadFailed(true);");
-    // Success has to clear it, or one blip would leave the card stuck in error.
-    expect(source).toContain("setLoadFailed(false);");
+    expect(source).toContain("onClick={() => void workersQuery.refetch()}");
   });
 
   it("keeps notification policy out of the worker-surface copy", () => {

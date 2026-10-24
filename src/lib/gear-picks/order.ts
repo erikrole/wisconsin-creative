@@ -27,7 +27,7 @@ export type OrderPlan = {
 };
 
 /** Student kit: CW Momentum 1/4 Zip ($52.50) and Drive Polo ($40.00), both in Red (834). */
-export const STUDENT_KIT_SKUS = {
+const STUDENT_KIT_SKUS = {
   MEN: ["6021673-834", "6021712-834"],
   WOMEN: ["6021680-834", "6021715-834"],
 } as const;

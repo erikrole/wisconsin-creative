@@ -1,0 +1,22 @@
+container Description: Print sheet, ID: print-sheet
+			77 container
+				78 heading Print sheet, Value: 2
+					79 text Print sheet
+				80 text Ready when you are
+			1021 button Add older browser sheet to my sheet
+			81 text Your labels appear here
+			82 text Add items or families from the list, set how many, then print straight to the Brother over USB.
+			83 container
+				84 text Brother PT-D610BT 12 mm white-on-black tape
+				85 button Connect USB
+				1022 text Gotham XNarrow Bold · Medium Small QR Labels share one tape feed to reduce waste. One initial blank is normal; stopping early adds a small blank to release the last label. Printing as  Erik Role
+				87 button (disabled) Print 0 labels
+				88 button (expanded) Print history, Secondary Actions: Collapse
+					89 text Print history
+				1023 text Operator, exact labels and completion times. Physical application is confirmed separately.
+				1024 text No print batches yet.
+				90 button (collapsed) Export CSV for P-touch Editor, Secondary Actions: Expand
+					91 text Export CSV for P-touch Editor
+	92 container Notifications alt+T
+
+The focused UI element is 88 button (expanded) Print history, Secondary Actions: Collapse

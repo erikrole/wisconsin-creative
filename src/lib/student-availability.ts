@@ -82,7 +82,7 @@ function toLocalParts(dt: Date): { dayOfWeek: number; date: string; hhmm: string
   };
 }
 
-export function dateOnly(value: Date | string | null | undefined): string | null {
+function dateOnly(value: Date | string | null | undefined): string | null {
   if (!value) return null;
   if (value instanceof Date) {
     return value.toISOString().slice(0, 10);

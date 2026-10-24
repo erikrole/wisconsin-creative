@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { List, Network } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -245,42 +246,23 @@ function OrgChartTree({ forest }: { forest: Tree[] }) {
 }
 
 export default function OrgChartPage() {
-  const [users, setUsers] = useState<OrgUser[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"chart" | "list">("chart");
-
-  const loadOrgChart = useCallback((signal?: AbortSignal) => {
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/users/org-chart", { signal });
-        if (handleAuthRedirect(res)) return;
-        if (!res.ok) {
-          setError(await parseErrorMessage(res, "Failed to load org chart"));
-          return;
-        }
-        const json = await parseJsonSafely<OrgChartResponse>(res);
-        if (!json || !Array.isArray(json.data)) {
-          setError("The org chart response was incomplete. Try again.");
-          return;
-        }
-        setUsers(json.data);
-      } catch (e) {
-        if ((e as { name?: string }).name === "AbortError") return;
-        setError("Network error");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    const ctrl = new AbortController();
-    loadOrgChart(ctrl.signal);
-    return () => ctrl.abort();
-  }, [loadOrgChart]);
+  const orgChart = useQuery({
+    queryKey: ["users", "org-chart"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/users/org-chart", { signal });
+      if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load org chart"));
+      const json = await parseJsonSafely<OrgChartResponse>(res);
+      if (!json || !Array.isArray(json.data)) throw new Error("The org chart response was incomplete. Try again.");
+      return json.data;
+    },
+  });
+  const users = orgChart.data ?? null;
+  const loading = orgChart.isPending && orgChart.isFetching;
+  const error = orgChart.isError && !users
+    ? orgChart.error instanceof TypeError ? "Network error" : orgChart.error.message
+    : null;
 
   const forest = useMemo(() => (users ? buildForest(users) : []), [users]);
   const nameOnlyManagers = useMemo(() => (users ?? []).filter((u) => u.directReportName && !u.directReportId).length, [users]);
@@ -332,7 +314,7 @@ export default function OrgChartPage() {
               title="Couldn't load org chart"
               description={error}
               actionLabel="Retry"
-              onAction={() => loadOrgChart()}
+              onAction={() => void orgChart.refetch()}
             />
           )}
           {!loading && !error && forest.length === 0 && (

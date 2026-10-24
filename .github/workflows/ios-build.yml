@@ -1,0 +1,54 @@
+name: iOS build
+
+# Opt-in only. macOS runners bill at ten times the Linux rate, so this never
+# runs on its own: add the `ios-build` label to a pull request (or start it by
+# hand from the Actions tab) when a change touches ios/. The source-contract
+# tests in `validate` already cover Swift text on every pull request; this adds
+# a real compile of the app and the kiosk.
+#
+# The runner must provide an Xcode that supports the iOS 26 deployment target.
+# If the hosted image lags, the job fails at the build step and the Mac session
+# (`npm run ios:xcode:verify`) stays the source of truth.
+
+on:
+  pull_request:
+    types: [labeled, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'ios-build')
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/tasks/**
+            !/goldie/**
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Project matches project.yml
+        run: node scripts/check-ios-project.mjs
+      - name: Build Wisconsin (simulator)
+        run: >-
+          xcodebuild -project ios/Wisconsin.xcodeproj -scheme Wisconsin
+          -destination 'generic/platform=iOS Simulator' -configuration Debug
+          CODE_SIGNING_ALLOWED=NO build
+      - name: Build WisconsinKiosk (simulator)
+        run: >-
+          xcodebuild -project ios/Wisconsin.xcodeproj -scheme WisconsinKiosk
+          -destination 'generic/platform=iOS Simulator' -configuration Debug
+          CODE_SIGNING_ALLOWED=NO build

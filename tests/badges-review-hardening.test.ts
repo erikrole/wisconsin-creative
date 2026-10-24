@@ -153,14 +153,17 @@ describe("badge catalog listing keeps surprises hidden", () => {
 describe("rarity counts one population", () => {
   it("measures holders against the same roster it divides by", () => {
     const queries = source("src/lib/badges/queries.ts");
-    // `eligible` is `user.active === true`. Counting every award row against
+    // `eligible` is the badge population. Counting every award row against
     // that denominator let a badge held mostly by departed students report a
     // share above 1.0 and read as Common.
     const holderBlocks = [...queries.matchAll(/groupBy\(\{\s*by: \["definitionId"\],([\s\S]*?)\}\)/g)];
     expect(holderBlocks.length).toBe(2);
     for (const block of holderBlocks) {
-      expect(block[1]).toContain("user: { active: true }");
+      expect(block[1]).toContain("user: badgeEligibleUserWhere");
     }
+    // Collaborators cannot open a badge surface, so they are not in either side.
+    expect(queries).toContain("role: { not: Role.COLLABORATOR }");
+    expect(queries).not.toContain("db.user.count({ where: { active: true } })");
   });
 });
 

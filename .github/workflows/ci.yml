@@ -17,9 +17,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Least privilege. The release-note check reads PR labels with gh pr view.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   postgres-integrity:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17
@@ -39,7 +45,7 @@ jobs:
     steps:
       # Depth 1 and a blobless sparse checkout skip tasks/ and goldie/
       # (~400 MB of review screenshots). This job never reads them.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -78,10 +84,10 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci-heavy-scope.mjs
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.scope.outputs.heavy == 'true'
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm install --global npm@11.17.0
         if: steps.scope.outputs.heavy == 'true'
@@ -89,12 +95,17 @@ jobs:
         if: steps.scope.outputs.heavy == 'true'
       - run: node scripts/check-postgres-integrity.mjs
         if: steps.scope.outputs.heavy == 'true'
+      # Route and service tests against a disposable cluster the script owns
+      # (Unix socket only, current schema). Separate from the service above.
+      - run: npm run test:postgres
+        if: steps.scope.outputs.heavy == 'true'
       - name: Docs-only database check
         if: steps.scope.outputs.heavy == 'false'
         run: echo "Docs-only pull request. postgres-integrity reports success without a database run."
 
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
       DIRECT_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
@@ -103,7 +114,7 @@ jobs:
       # Same sparse checkout as postgres-integrity, plus top-level tasks/*.md.
       # npm test reads those notes (audit docs and submission copy). Screenshot
       # trees under tasks/ and goldie/ stay on the server.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -145,10 +156,10 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci-heavy-scope.mjs
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.scope.outputs.heavy == 'true'
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm install --global npm@11.17.0
@@ -156,6 +167,16 @@ jobs:
 
       - run: npm ci
         if: steps.scope.outputs.heavy == 'true'
+
+      - name: Repo hygiene (no root media, no large new files)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PR_LABELS="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json labels --jq '[.labels[].name]')" \
+            node scripts/check-repo-hygiene.mjs
 
       - name: Require a /releases entry
         if: github.event_name == 'pull_request'
@@ -175,8 +196,29 @@ jobs:
       - run: node scripts/audit-gate.mjs
         if: steps.scope.outputs.heavy == 'true'
 
-      - run: npm test
+      # Warning budget only goes down. Next 16's React Compiler rules left 248 (230 after the first cut)
+      # (mostly set-state-in-effect); lower the number in lint:ci as they go.
+      - run: npm run lint:ci
         if: steps.scope.outputs.heavy == 'true'
+
+      # Retries once only for the known Prisma adapter teardown panic (exit 134,
+      # no failed test). Any real test failure fails the job on the first run.
+      - run: node scripts/retry-prisma-teardown-panic.mjs npm run test:coverage
+        if: steps.scope.outputs.heavy == 'true'
+
+      - run: node scripts/coverage-summary.mjs
+        if: steps.scope.outputs.heavy == 'true' && always()
+
+      # Next's compile cache. Keyed per commit so every run saves; restores the
+      # newest cache for the same lockfile, falling back to any older one.
+      - uses: actions/cache@v6
+        if: steps.scope.outputs.heavy == 'true'
+        with:
+          path: .next/build/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
 
       - run: npm run build:app
         if: steps.scope.outputs.heavy == 'true'

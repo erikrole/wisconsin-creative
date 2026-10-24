@@ -91,7 +91,7 @@ describe("iOS native control cleanup", () => {
     expect(actions).not.toContain(".buttonStyle(.bordered)");
     expect(extendBar).not.toContain(".buttonStyle(.glass)");
     // The one primary action: prominent capsule in the Claim green.
-    expect(extendBar).toMatch(/Text\("Extend Return"\)[\s\S]*?\.buttonStyle\(\.borderedProminent\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)[\s\S]*?\.tint\(\.green\)/);
+    expect(extendBar).toMatch(/Text\("Extend Return"\)[\s\S]*?\.buttonStyle\(\.borderedProminent\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.large\)[\s\S]*?\.tint\(Color\.statusText\(\.green\)\)/);
     expect(extendBar).toContain(".background(.bar)");
     expect(extendBar).not.toContain("Divider()");
   });

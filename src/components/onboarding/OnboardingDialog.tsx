@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle2, FileUp, ShieldCheck, UserPlus } from "lucide
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -46,6 +47,10 @@ type ServerPreviewStatus = "ready" | "duplicate" | "existing_user" | "pending_in
 
 type InviteResponse = {
   skipped?: boolean | number;
+  /** Single adds only: what happened to the invite email, when one was asked for. */
+  emailStatus?: "sent" | "failed" | "not_configured";
+  /** Roster adds only: invite emails sent for the new rows, when asked for. */
+  emailed?: InviteEmailTally;
   created?: number;
   failed?: number;
   failedRows?: FailedInviteRow[];
@@ -57,7 +62,11 @@ type FailedInviteRow = {
   reason: string;
 };
 
+type InviteEmailTally = { sent: number; failed: number; notConfigured: number };
+
 type CompletionResult = {
+  /** Present when invite emails were requested. */
+  emailed?: InviteEmailTally;
   created: number;
   skipped: number;
   requested: number;
@@ -311,6 +320,7 @@ export default function OnboardingDialog({
   const [singleEmail, setSingleEmail] = useState("");
   const [singleName, setSingleName] = useState("");
   const [singleArea, setSingleArea] = useState<(typeof AREAS)[number] | "">("");
+  const [emailInviteNow, setEmailInviteNow] = useState(true);
   const [bulkEmails, setBulkEmails] = useState("");
   const [bulkFileName, setBulkFileName] = useState("");
   const [inviteError, setInviteError] = useState("");
@@ -392,6 +402,7 @@ export default function OnboardingDialog({
     setSingleEmail("");
     setSingleName("");
     setSingleArea("");
+    setEmailInviteNow(true);
     setBulkEmails("");
     setBulkFileName("");
     setInviteError("");
@@ -609,6 +620,7 @@ export default function OnboardingDialog({
             // Only student invitations can carry a preloaded name and area.
             ...(inviteRole === "STUDENT" && singleName.trim() ? { preloadedName: singleName.trim() } : {}),
             ...(inviteRole === "STUDENT" && singleArea ? { preloadedPrimaryArea: singleArea } : {}),
+            ...(inviteRole !== "COLLABORATOR" && emailInviteNow ? { sendInvite: true } : {}),
           }
         : {
             emails: finalReadyPreviewRows.map((row) => ({
@@ -616,6 +628,7 @@ export default function OnboardingDialog({
               role: row.role,
               ...inviteProfileFields(row.role, selectedPolicyId),
             })),
+            ...(emailInviteNow ? { sendInvite: true } : {}),
           };
       const response = await fetch("/api/allowed-emails", {
         method: "POST",
@@ -648,13 +661,24 @@ export default function OnboardingDialog({
       if (inviteMode === "single") {
         if (result?.skipped === true) {
           toast.message("No new invitation was created. This address is already allowlisted or registered.");
+        } else if (result.emailStatus === "sent") {
+          toast.success("Invitation added and emailed");
+        } else if (result.emailStatus === "failed") {
+          toast.warning("Invitation added, but the email didn’t send. Use Resend in Allowed Emails.");
+        } else if (result.emailStatus === "not_configured") {
+          toast.warning("Invitation added. Email isn’t set up, so share the sign-in link instead.");
         } else {
           toast.success("Invitation added");
         }
       } else {
         const created = result?.created ?? 0;
         const skipped = typeof result?.skipped === "number" ? result.skipped : 0;
-        if (created > 0 && skipped === 0) {
+        const unsent = result.emailed ? result.emailed.failed + result.emailed.notConfigured : 0;
+        if (unsent > 0) {
+          toast.warning(`Added ${created}, but ${unsent} invite email${unsent === 1 ? "" : "s"} didn’t send. Use Resend in Allowed Emails.`);
+        } else if (created > 0 && result.emailed) {
+          toast.success(`Added and emailed ${created} invitation${created === 1 ? "" : "s"}`);
+        } else if (created > 0 && skipped === 0) {
           toast.success(`Added ${created} invitation${created === 1 ? "" : "s"}`);
         } else if (created > 0) {
           toast.success(`Added ${created}; skipped ${skipped} already allowlisted or registered`);
@@ -669,6 +693,11 @@ export default function OnboardingDialog({
       setBulkFileName("");
       setInviteError("");
       setCompletion({
+        emailed: inviteMode === "single"
+          ? result.emailStatus
+            ? { sent: result.emailStatus === "sent" ? 1 : 0, failed: result.emailStatus === "failed" ? 1 : 0, notConfigured: result.emailStatus === "not_configured" ? 1 : 0 }
+            : undefined
+          : result.emailed,
         created: result?.created ?? (result?.skipped === true ? 0 : 1),
         skipped: typeof result?.skipped === "number" ? result.skipped : result?.skipped === true ? 1 : 0,
         requested: emails.length,
@@ -708,18 +737,31 @@ export default function OnboardingDialog({
             <DialogBody className="min-h-0 overflow-y-auto flex flex-col gap-4 py-5">
               <Alert className={completion.failed > 0 ? "border-[var(--orange)]/50 bg-[var(--orange-bg)]" : "border-[var(--green)]/40 bg-[var(--green-bg)]"}>
                 {completion.failed > 0 ? <AlertCircle className="size-4 text-[var(--orange-text)]" /> : <CheckCircle2 className="size-4 text-[var(--green-text)]" />}
-                <AlertTitle>{completion.failed > 0 ? "Some invitations need attention" : "Invitations saved"}</AlertTitle>
+                <AlertTitle>
+                  {completion.failed > 0
+                    ? "Some invitations need attention"
+                    : completion.created === 0
+                      ? "Nothing new to add"
+                      : "Invitations saved"}
+                </AlertTitle>
                 <AlertDescription className="col-start-2 text-muted-foreground">
                   {completion.failed > 0
                     ? "These rows were not confirmed by the server. Retry them below; existing rows are safe to retry because the server skips duplicates."
-                    : "Send users to the app login page. They enter their invited email and are routed to password setup automatically. No shared first-login password is created."}
+                    : completion.created === 0
+                      ? "Every address is already invited or already has an account. To send a fresh setup link to someone who hasn't signed up, use Resend in Allowed Emails."
+                      : !completion.emailed
+                        ? "These invitations were not emailed. Use Resend in Allowed Emails to send each person their setup link."
+                        : completion.emailed.failed + completion.emailed.notConfigured > 0
+                          ? "Some invite emails didn't send. Use Resend in Allowed Emails for anyone who didn't get one."
+                          : "Each new person was emailed their setup link. If someone didn't get it, use Resend in Allowed Emails."}
                 </AlertDescription>
               </Alert>
 
-              <div className={`grid grid-cols-2 gap-2 ${completion.failed > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+              <div className={`grid grid-cols-2 gap-2 ${(completion.failed > 0 ? 1 : 0) + (completion.emailed ? 1 : 0) > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
                 <OnboardingMetricCard label="Requested" value={completion.requested} />
                 <OnboardingMetricCard label="Added" value={completion.created} />
                 <OnboardingMetricCard label="Skipped" value={completion.skipped} />
+                {completion.emailed && <OnboardingMetricCard label="Emailed" value={completion.emailed.sent} />}
                 {completion.failed > 0 && <OnboardingMetricCard label="Failed" value={completion.failed} />}
               </div>
 
@@ -972,6 +1014,21 @@ export default function OnboardingDialog({
                   )}
                 </TabsContent>
               </Tabs>
+              {inviteRole !== "COLLABORATOR" && (
+                <div className="flex items-start gap-2.5">
+                  <Checkbox
+                    id="onboard-email-now"
+                    checked={emailInviteNow}
+                    onCheckedChange={(checked) => setEmailInviteNow(checked === true)}
+                    disabled={inviting}
+                    className="mt-0.5"
+                  />
+                  <div className="grid gap-0.5">
+                    <Label htmlFor="onboard-email-now" className="font-normal">Email the invite now</Label>
+                    <p className="text-xs text-muted-foreground">Sends each new person their setup link. You can resend it later from Allowed Emails.</p>
+                  </div>
+                </div>
+              )}
 
               {needsCollaboratorPolicy && (
                 <div className="grid gap-2 rounded-lg border p-3">

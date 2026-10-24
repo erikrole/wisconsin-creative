@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { parseJsonSafely } from "@/lib/errors";
 
@@ -37,6 +37,19 @@ function isLastAuditMap(value: unknown): value is LastAuditMap {
   );
 }
 
+const EMPTY_AUDIT_MAP: LastAuditMap = {};
+
+async function fetchLastAudit(entityType: string, entityIds: string[], signal: AbortSignal): Promise<LastAuditMap> {
+  const res = await fetch("/api/audit/last", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entityType, entityIds }),
+    signal,
+  });
+  const json = res.ok ? await parseJsonSafely<LastAuditResponse>(res) : null;
+  return isLastAuditMap(json?.data) ? json.data : EMPTY_AUDIT_MAP;
+}
+
 /**
  * Fetch the most-recent audit entry for each entityId in one round trip.
  * Returns an empty map until resolved. Re-runs when `entityIds` membership
@@ -44,33 +57,12 @@ function isLastAuditMap(value: unknown): value is LastAuditMap {
  */
 export function useLastAudit(entityType: string, entityIds: string[]): LastAuditMap {
   const entityIdsKey = entityIds.slice().sort().join(",");
-  const requestEntityIds = useMemo(
-    () => (entityIdsKey ? entityIdsKey.split(",") : []),
-    [entityIdsKey],
-  );
-  const [map, setMap] = useState<LastAuditMap>({});
-
-  useEffect(() => {
-    if (requestEntityIds.length === 0) {
-      setMap({});
-      return;
-    }
-    const controller = new AbortController();
-    fetch("/api/audit/last", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entityType, entityIds: requestEntityIds }),
-      signal: controller.signal,
-    })
-      .then(async (res) => (res.ok ? parseJsonSafely<LastAuditResponse>(res) : null))
-      .then((json) => {
-        if (isLastAuditMap(json?.data)) setMap(json.data);
-      })
-      .catch(() => {
-        // Silent — last-edited is decoration, not load-bearing.
-      });
-    return () => controller.abort();
-  }, [entityType, requestEntityIds]);
-
-  return map;
+  const { data } = useQuery({
+    queryKey: ["audit-last", entityType, entityIdsKey],
+    queryFn: ({ signal }) => fetchLastAudit(entityType, entityIdsKey.split(","), signal),
+    enabled: entityIdsKey.length > 0,
+    // Last-edited is decoration, not load-bearing: never retry or surface errors.
+    retry: false,
+  });
+  return entityIdsKey ? data ?? EMPTY_AUDIT_MAP : EMPTY_AUDIT_MAP;
 }

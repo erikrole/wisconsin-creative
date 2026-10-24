@@ -1,0 +1,40 @@
+{
+  "data": [
+    {
+      "id": "cm0000000000000000notice01",
+      "userId": "cm0000000000000000student1",
+      "type": "shift_assigned",
+      "title": "You're on Volleyball vs. Nebraska",
+      "body": "Fri 7:00 PM at the Field House",
+      "payload": {
+        "assignmentId": "cm00000000000000000assign1",
+        "eventId": "cm000000000000000000event1"
+      },
+      "channel": "IN_APP",
+      "sentAt": "2026-10-26T14:55:00.123Z",
+      "readAt": null,
+      "dedupeKey": "shift_assigned:cm00000000000000000assign1",
+      "bookingId": null,
+      "createdAt": "2026-10-26T14:55:00.123Z"
+    },
+    {
+      "id": "cm0000000000000000notice02",
+      "userId": "cm0000000000000000student1",
+      "type": "checkout_due",
+      "title": "Gear due back today",
+      "body": null,
+      "payload": null,
+      "channel": "IN_APP",
+      "sentAt": null,
+      "readAt": "2026-10-25T18:00:00.000Z",
+      "dedupeKey": null,
+      "bookingId": "cm0000000000000000booking1",
+      "createdAt": "2026-10-25T17:00:00.000Z"
+    }
+  ],
+  "total": 2,
+  "inboxTotal": 2,
+  "limit": 20,
+  "offset": 0,
+  "unreadCount": 1
+}

@@ -7,7 +7,7 @@ describe("schedule automation source contract", () => {
     const cronRoutes = readdirSync("src/app/api/cron").sort();
     const morningRefresh = source("src/app/api/cron/morning-refresh/route.ts");
 
-    expect(cronRoutes).toEqual(["audit-archive", "live-activities", "morning-refresh", "notifications", "rehost-images", "youtube-sweep"]);
+    expect(cronRoutes).toEqual(["audit-archive", "football-results", "live-activities", "morning-refresh", "notifications", "rehost-images", "youtube-sweep"]);
     expect(morningRefresh).toContain("getScheduleAutomationDigest");
     expect(morningRefresh).toContain("scheduleAutomation");
   });

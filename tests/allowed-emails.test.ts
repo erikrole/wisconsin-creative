@@ -32,9 +32,14 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
+vi.mock("@/lib/services/invite-email", () => ({
+  sendInviteEmail: vi.fn(),
+}));
+
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
+import { sendInviteEmail } from "@/lib/services/invite-email";
 import { GET, POST } from "@/app/api/allowed-emails/route";
 import { DELETE } from "@/app/api/allowed-emails/[id]/route";
 
@@ -268,6 +273,36 @@ describe("POST /api/allowed-emails (single)", () => {
     );
   });
 
+  it("emails the invite once when asked, and records how the send ended", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    vi.mocked(db.user.findUnique).mockResolvedValue(null);
+    vi.mocked(db.allowedEmail.create).mockResolvedValue(allowedEmailResult({ id: "e-2", email: "jo@wisc.edu", role: Role.STUDENT }));
+    vi.mocked(sendInviteEmail).mockResolvedValue("sent");
+
+    const res = await POST(makePostRequest({ email: "jo@wisc.edu", role: "STUDENT", preloadedName: "Jo Park", sendInvite: true }), noParams);
+
+    expect(res.status).toBe(201);
+    expect((await res.json()).emailStatus).toBe("sent");
+    expect(sendInviteEmail).toHaveBeenCalledTimes(1);
+    expect(sendInviteEmail).toHaveBeenCalledWith({ email: "jo@wisc.edu", name: "Jo Park", allowedEmailId: "e-2" });
+    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      entityId: "e-2",
+      action: "invite_sent",
+      after: { emailStatus: "sent" },
+    }));
+  });
+
+  it("sends nothing unless the invite email is asked for", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    vi.mocked(db.user.findUnique).mockResolvedValue(null);
+    vi.mocked(db.allowedEmail.create).mockResolvedValue(allowedEmailResult({ id: "e-3", email: "al@wisc.edu", role: Role.STUDENT }));
+
+    const res = await POST(makePostRequest({ email: "al@wisc.edu", role: "STUDENT" }), noParams);
+
+    expect(res.status).toBe(201);
+    expect(sendInviteEmail).not.toHaveBeenCalled();
+  });
+
   it("creates a claimed allowlist row when the email already belongs to a registered user", async () => {
     vi.mocked(requireAuth).mockResolvedValue(adminUser);
     vi.mocked(db.user.findUnique).mockResolvedValue(registeredUserResult({ id: "existing-user", role: Role.STAFF }));
@@ -421,6 +456,47 @@ describe("POST /api/allowed-emails (bulk)", () => {
     const body = await res.json();
     expect(body.created).toBe(1);
     expect(body.skipped).toBe(1);
+  });
+
+  it("emails each new roster invite when asked and reports the tally", async () => {
+    vi.useFakeTimers();
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    vi.mocked(db.user.findMany).mockResolvedValue([]);
+    vi.mocked(db.allowedEmail.createMany).mockResolvedValue(allowedEmailCreateManyResult({ count: 2 }));
+    vi.mocked(db.allowedEmail.findMany).mockResolvedValueOnce(allowedEmailFindManyResult([]))
+      .mockResolvedValueOnce(allowedEmailFindManyResult([
+        { id: "e-1", email: "a@wisc.edu", role: Role.STUDENT },
+        { id: "e-2", email: "b@wisc.edu", role: Role.STUDENT },
+      ]));
+    vi.mocked(sendInviteEmail).mockResolvedValueOnce("sent").mockResolvedValueOnce("failed");
+
+    const pending = POST(
+      makePostRequest({ emails: [{ email: "a@wisc.edu", role: "STUDENT" }, { email: "b@wisc.edu", role: "STUDENT" }], sendInvite: true }),
+      noParams
+    );
+    await vi.runAllTimersAsync();
+    const res = await pending;
+    vi.useRealTimers();
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toMatchObject({ created: 2, skipped: 0, emailed: { sent: 1, failed: 1, notConfigured: 0 } });
+    expect(body.createdEntries).toBeUndefined();
+    expect(sendInviteEmail).toHaveBeenCalledWith(expect.objectContaining({ email: "a@wisc.edu", allowedEmailId: "e-1" }));
+    expect(sendInviteEmail).toHaveBeenCalledWith(expect.objectContaining({ email: "b@wisc.edu", allowedEmailId: "e-2" }));
+  });
+
+  it("does not email roster invites unless asked", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    vi.mocked(db.user.findMany).mockResolvedValue([]);
+    vi.mocked(db.allowedEmail.createMany).mockResolvedValue(allowedEmailCreateManyResult({ count: 1 }));
+    vi.mocked(db.allowedEmail.findMany).mockResolvedValueOnce(allowedEmailFindManyResult([]))
+      .mockResolvedValueOnce(allowedEmailFindManyResult([{ id: "e-1", email: "a@wisc.edu", role: Role.STUDENT }]));
+
+    const res = await POST(makePostRequest({ emails: [{ email: "a@wisc.edu", role: "STUDENT" }] }), noParams);
+    expect(res.status).toBe(201);
+    expect((await res.json()).emailed).toBeUndefined();
+    expect(sendInviteEmail).not.toHaveBeenCalled();
   });
 
   it("STAFF cannot bulk-add STAFF-role entries", async () => {

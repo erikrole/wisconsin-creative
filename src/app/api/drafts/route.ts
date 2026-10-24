@@ -46,7 +46,7 @@ const saveDraftSchema = z.object({
 }).superRefine((body, ctx) => {
   if (new Set(body.serializedAssetIds).size !== body.serializedAssetIds.length) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["serializedAssetIds"],
       message: "serializedAssetIds must be unique",
     });
@@ -54,7 +54,7 @@ const saveDraftSchema = z.object({
   const bulkSkuIds = body.bulkItems.map((item) => item.bulkSkuId);
   if (new Set(bulkSkuIds).size !== bulkSkuIds.length) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["bulkItems"],
       message: "bulkItems must contain unique bulkSkuId values",
     });

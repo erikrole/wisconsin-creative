@@ -29,6 +29,9 @@ enum AppRuntimeMode {
         /// rows, headers, and control strip can be rendered and screenshotted
         /// without a signed-in session.
         case schedule
+        /// The same Schedule with every read past the first window failing,
+        /// so the later-weeks retry row can be seen rather than reasoned about.
+        case scheduleLaterFailure = "schedule-later-failure"
         /// The Trade Board as staff see it: claims owed a decision. Exercises
         /// the review queue, which only has rows to show once claims stop
         /// resolving themselves.
@@ -36,18 +39,31 @@ enum AppRuntimeMode {
         /// The Trade Board as a student sees it: what they can claim, and what
         /// they have already claimed and are waiting on.
         case tradeBoardStudent
-        /// The Home dashboard, served a canned payload so the action queue,
-        /// its truncation, and the staff follow-up section can be rendered
-        /// without a signed-in session.
+        /// The Home dashboard as an admin sees it, served canned payloads so
+        /// every lane (needs attention, up next, gear, the collapsed team
+        /// sections) can be rendered without a signed-in session.
         case home
-        /// Home with nothing personal outstanding but a staff draft waiting --
-        /// the shape where "You're all set" used to render directly above a
-        /// populated Drafts card.
+        /// Home with nothing overdue, due, or waiting: the all-clear state,
+        /// which has to say what is next.
         case homeAllClear
+        /// Home as a student in their first weeks, so the Getting started
+        /// checklist can be rendered and screenshotted without a session.
+        case homeGettingStarted = "home-getting-started"
+        /// Home as a student sees it: their own gear, a shift today with a
+        /// call time, a pickup, and an open trade they can claim.
+        case homeStudent
         /// The native profile Scoreboard against a canned season payload, so
         /// its summary, filters, breakdowns, and event history can be reviewed
         /// without a signed-in session or live network.
         case scoreboard
+        /// The shared team Scoreboard against a canned season: fact cards,
+        /// leaderboard, head to head and the explorer, with the signed-in
+        /// fixture user on the board so the "You" row shows.
+        case teamScoreboard = "team-scoreboard"
+        /// Creative Wrapped against a canned recap. `GT_WRAPPED_CARD` picks the
+        /// card to open on, and auto-advance is off, so every card can be
+        /// captured without tapping the simulator.
+        case wrapped
         /// The current user's Profile against canned identity, badge, and shift
         /// payloads. The Scoreboard entry lives between Next Up and the badge
         /// shelf, and a row's treatment can only be judged beside its neighbours.
@@ -59,6 +75,9 @@ enum AppRuntimeMode {
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
         case login
+        /// Isolated first-session views; their API traffic stays in the fixture protocol.
+        case onboarding
+        case registration
         /// The branded launch still itself, so the system frame, SwiftUI
         /// handoff, and inactive snapshot can be captured without a session.
         case launchView = "launch-view"
@@ -70,6 +89,12 @@ enum AppRuntimeMode {
         /// delivery truth and recovery controls can be reviewed without a
         /// signed-in session or live APNs state.
         case notifications
+        /// Staff blast surfaces against canned `/api/blasts` responses. The
+        /// screen is chosen by `GT_BLAST_VIEW`: blasts, sent, detail,
+        /// compose-crew, compose-groups, safari.
+        case blastStaff = "blast-staff"
+        /// Launched gear cycle and the person’s handout status.
+        case gearKit = "gear-kit"
         /// Starts a real checkout-return Live Activity in the simulator, in the
         /// state named by `GT_LIVE_ACTIVITY` (normal, warning, critical,
         /// overdue, returned), so the lock screen and Dynamic Island can be
@@ -83,7 +108,16 @@ enum AppRuntimeMode {
         /// per-day sections and the read/unread swipe actions can be reviewed
         /// without a signed-in session.
         case notificationsInbox = "notifications-inbox"
+        /// iPad signature capture against canned collections, a roster, and a
+        /// capture surface seeded with a synthetic signature (the simulator has
+        /// no Apple Pencil, and no real person's signature is committed).
+        case signatureCollections = "signature-collections"
+        case signatureRoster = "signature-roster"
+        case signatureCapture = "signature-capture"
         case passwordSetup = "password-setup"
+        /// Settings > Report a Problem with a few recent actions seeded, so
+        /// the attachment list can be reviewed without a real session.
+        case reportProblem = "report-problem"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request
         /// drops its requester filter.
@@ -97,6 +131,23 @@ enum AppRuntimeMode {
         case bookingCancel = "booking-cancel"
         /// Item detail with its edit sheet open, against a canned asset.
         case itemEdit = "item-edit"
+        /// Item detail for the Damage and loss states: staff with an open missing
+        /// case, an open damage case, a closed case, the Record outcome sheet
+        /// open, a student with the Report a problem sheet open, and the Items
+        /// list with a missing row. All served from canned payloads.
+        case damageMissing = "damage-missing"
+        case damageDamaged = "damage-damaged"
+        case damageClosed = "damage-closed"
+        case damageRecordOutcome = "damage-record-outcome"
+        case damageReportProblem = "damage-report-problem"
+        case damageItemsMissing = "damage-items-missing"
+        /// The staff Damage and loss queue: open list, closed list, empty, one
+        /// case's detail, and the Record outcome sheet over the queue.
+        case damageQueueOpen = "damage-queue-open"
+        case damageQueueClosed = "damage-queue-closed"
+        case damageQueueEmpty = "damage-queue-empty"
+        case damageQueueDetail = "damage-queue-detail"
+        case damageQueueRecord = "damage-queue-record"
         /// The reservation composer with its QR cover open. A simulator has no
         /// camera, so this captures the permission priming a first-time user
         /// actually meets, not a live viewfinder.
@@ -122,6 +173,14 @@ enum AppRuntimeMode {
         /// announcements: a banner image with another waiting behind it,
         /// a swipeable set of images, and a text-only notice.
         case announcement
+        /// Full-screen detail captures for the whole-app UI review: the
+        /// real view pushed in a stack against canned payloads.
+        case eventDetail = "event-detail"
+        case itemDetail = "item-detail"
+        case userDetail = "user-detail"
+        case availability
+        case gearPicks = "gear-picks"
+        case sharedLogins = "shared-logins"
         case announcementImages = "announcement-images"
         case announcementPlain = "announcement-plain"
         /// Worst-case content: a long title, four images, many bullets, a block
@@ -174,6 +233,11 @@ enum AppRuntimeMode {
         static var bookingEdit: Bool { matches(.bookingEdit) }
         static var bookingCancel: Bool { matches(.bookingCancel) }
         static var itemEdit: Bool { matches(.itemEdit) }
+        static var damageRecordOutcome: Bool { matches(.damageRecordOutcome) }
+        static var damageReportProblem: Bool { matches(.damageReportProblem) }
+        static var damageQueueClosed: Bool { matches(.damageQueueClosed) }
+        static var damageQueueDetail: Bool { matches(.damageQueueDetail) }
+        static var damageQueueRecord: Bool { matches(.damageQueueRecord) }
         static var createBookingScanner: Bool { matches(.createBookingScanner) }
         static var search: Bool { matches(.search) || matches(.searchPartial) }
 
@@ -203,15 +267,17 @@ enum AppRuntimeMode {
 #if DEBUG
         switch performanceScenario {
         case .resourcesGuides, .previewChrome, .latestBrowse, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
-             .schedule, .tradeBoardStaff, .tradeBoardStudent,
-             .home, .homeAllClear, .scoreboard, .profile, .staffProfile,
-             .studentBookings,
-             .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial, .searchIdle,
-             .itemsList, .reports, .accountSecurity, .notifications, .notificationsInbox, .login,
+             .schedule, .scheduleLaterFailure, .tradeBoardStaff, .tradeBoardStudent, .home, .homeAllClear,
+             .homeGettingStarted, .scoreboard, .teamScoreboard, .wrapped, .profile, .staffProfile,
+             .studentBookings, .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel, .itemEdit,
+             .damageMissing, .damageDamaged, .damageClosed, .damageRecordOutcome, .damageReportProblem, .damageItemsMissing,
+             .damageQueueOpen, .damageQueueClosed, .damageQueueEmpty, .damageQueueDetail, .damageQueueRecord, .createBookingScanner,
+             .createBookingEvents, .search, .searchPartial, .searchIdle, .itemsList, .reports,
+             .accountSecurity, .notifications, .notificationsInbox, .login, .homeStudent, .blastStaff, .gearKit,
+             .eventDetail, .itemDetail, .userDetail, .availability, .gearPicks, .sharedLogins,
              .announcement, .announcementImages, .announcementPlain,
              .announcementStress, .announcementNone, .announcementError,
-             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
+             .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute, .onboarding, .registration:
             return true
         default:
             return false

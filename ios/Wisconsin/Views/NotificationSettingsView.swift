@@ -76,8 +76,8 @@ struct NotificationSettingsView: View {
                             Task { await sendTestPush() }
                         } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: "paperplane.fill")
-                                    .foregroundStyle(Color.statusText(.blue))
+                                Image(systemName: "paperplane")
+                                    .foregroundStyle(.secondary)
                                     .frame(width: 22)
                                 Text("Send Test Notification")
                                     .foregroundStyle(.primary)
@@ -167,6 +167,9 @@ struct NotificationSettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        // Rows here are choices, not alarms: keep them in the label color so
+        // red stays reserved for what is actually wrong.
+        .tint(Color.primary)
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -201,7 +204,7 @@ struct NotificationSettingsView: View {
             if let pauseDate = prefsVM.pausedUntilDate {
                 HStack(spacing: 12) {
                     Image(systemName: "moon.zzz.fill")
-                        .foregroundStyle(Color.statusText(.orange))
+                        .foregroundStyle(.secondary)
                         .frame(width: 22)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Alerts paused")
@@ -216,28 +219,43 @@ struct NotificationSettingsView: View {
                     Task { await prefsVM.resume() }
                 } label: {
                     Label("Resume now", systemImage: "bell.fill")
+                        .foregroundStyle(Color.statusText(.green))
                 }
                 .disabled(prefsVM.saving)
             } else {
-                pauseButton(title: "Pause 1 hour", seconds: 60 * 60)
-                Button {
-                    Task { await prefsVM.pause(until: NotificationPrefsViewModel.tomorrowMorning()) }
+                // One row that opens the choices; five text rows made a
+                // rarely used control the longest thing on the screen.
+                Menu {
+                    pauseButton(title: "Pause 1 hour", seconds: 60 * 60)
+                    Button {
+                        Task { await prefsVM.pause(until: NotificationPrefsViewModel.tomorrowMorning()) }
+                    } label: {
+                        Text("Pause until tomorrow morning")
+                    }
+                    .disabled(prefsVM.saving)
+                    pauseButton(title: "Pause 1 day", seconds: 24 * 60 * 60)
+                    pauseButton(title: "Pause 1 week", seconds: 7 * 24 * 60 * 60)
+                    Button {
+                        customPauseUntil = Date().addingTimeInterval(3 * 60 * 60)
+                        showingCustomPause = true
+                    } label: {
+                        Text("Pause until…")
+                    }
+                    .disabled(prefsVM.saving)
                 } label: {
-                    Text("Pause until tomorrow morning")
+                    HStack {
+                        Text("Pause alerts")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text("Off")
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
                 }
-                .disabled(prefsVM.saving)
-                pauseButton(title: "Pause 1 day", seconds: 24 * 60 * 60)
-                pauseButton(title: "Pause 1 week", seconds: 7 * 24 * 60 * 60)
-                Button {
-                    customPauseUntil = Date().addingTimeInterval(3 * 60 * 60)
-                    showingCustomPause = true
-                } label: {
-                    Text("Pause until…")
-                }
-                .disabled(prefsVM.saving)
             }
-        } header: {
-            Text("Pause alerts")
         } footer: {
             Text("Pausing mutes push and email alerts until the selected time. In-app notifications remain available.")
         }
@@ -254,12 +272,12 @@ struct NotificationSettingsView: View {
                         .font(.title2.weight(.heavy))
                     Text(chipDayTime(customPauseUntil))
                         .font(.headline)
-                        .foregroundStyle(Color.statusText(.purple))
+                        .foregroundStyle(Color.primary)
                     DayTimeChipPicker(
                         selection: $customPauseUntil,
                         minimum: Date().addingTimeInterval(5 * 60),
                         latest: Date().addingTimeInterval(30 * 24 * 60 * 60),
-                        tint: Color.statusText(.purple)
+                        tint: Color.primary
                     )
                 }
                 .padding(16)
@@ -306,7 +324,7 @@ struct NotificationSettingsView: View {
                                 title: preset.title,
                                 detail: preset.detail,
                                 isSelected: quiet.start == preset.start && quiet.end == preset.end,
-                                tint: Color.statusText(.purple)
+                                tint: Color.primary
                             ) {
                                 prefsVM.updateQuietHours { $0.start = preset.start; $0.end = preset.end }
                                 Haptics.selection()
@@ -388,10 +406,10 @@ struct NotificationSettingsView: View {
                 } label: {
                     Text(day.short)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(selected ? Color.statusText(.blue) : Color.secondary)
+                        .foregroundStyle(selected ? Color(.systemBackground) : Color.secondary)
                         .frame(width: 40, height: 40)
                         .background {
-                            Circle().fill(selected ? Color.statusBackground(.blue) : Color(.tertiarySystemFill))
+                            Circle().fill(selected ? Color.primary : Color(.tertiarySystemFill))
                         }
                 }
                 .buttonStyle(.plain)
@@ -507,9 +525,8 @@ struct NotificationSettingsView: View {
             }
         case .registered:
             if deviceRegistrationReady {
-                Label("This device is registered for push", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(Color.statusText(.green))
+                // The Delivery status row above already says "Registered".
+                EmptyView()
             } else {
             registrationRecoveryRow(
                 title: "This device's push registration is unavailable",
@@ -581,7 +598,7 @@ struct NotificationSettingsView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "bell.badge")
-                        .foregroundStyle(Color.statusText(.blue))
+                        .foregroundStyle(.secondary)
                         .frame(width: 22)
                     Text("Turn on notifications")
                         .font(.subheadline.weight(.medium))
@@ -590,7 +607,14 @@ struct NotificationSettingsView: View {
             }
         case .authorized, .provisional, .ephemeral:
             Link(destination: iosSettingsURL) {
-                Label("Alert styles and sounds", systemImage: "arrow.up.right.square")
+                HStack {
+                    Text("Alert styles and sounds")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
             }
         @unknown default:
             EmptyView()
@@ -684,7 +708,7 @@ struct NotificationSettingsView: View {
 
     private var notificationSummaryTint: Color {
         if prefsVM.error != nil { return Color.statusText(.orange) }
-        return Color.statusText(.blue)
+        return Color.secondary
     }
 
     private var pushStatusText: String {
@@ -801,6 +825,10 @@ struct NotificationSettingsView: View {
     }
 
     private func refreshPushAuth() async {
+#if DEBUG
+        // The capture harness seeds the iOS permission it wants to show.
+        if AppRuntimeMode.performanceScenario == .notifications { return }
+#endif
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         pushAuth = settings.authorizationStatus
     }

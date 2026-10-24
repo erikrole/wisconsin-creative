@@ -1,0 +1,8 @@
+# Raw capture and unified-diff bytes are evidence, not executable source.
+*.patch -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+*.log -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+*.txt -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+# Generated report templates intentionally retain blank indented lines.
+*.html whitespace=-blank-at-eol,-blank-at-eof
+# Offline SQL comparison output is retained as captured, not executed.
+schema-diff.sql -text whitespace=-blank-at-eof

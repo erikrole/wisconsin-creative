@@ -130,7 +130,8 @@ describe("POST /api/kiosk/checkin/[id]/report", () => {
     expect(mocks.maybeAutoComplete).toHaveBeenCalledWith(tx, "co-1", "loc-1", "returner-1", expect.objectContaining({
       auditAction: "auto_completed_by_kiosk_checkin",
     }));
-    expect(mocks.assetUpdate).not.toHaveBeenCalled();
+    // A missing serialized item is held until its case is closed.
+    expect(mocks.assetUpdate).toHaveBeenCalledWith({ where: { id: "asset-1" }, data: { status: "MAINTENANCE" } });
     expect(mocks.notifyItemReport).toHaveBeenCalledWith(expect.objectContaining({ reportType: "LOST" }));
     // Same follow-through as any completed return.
     expect(mocks.onCheckoutReturned).toHaveBeenCalledWith(expect.objectContaining({ userId: "owner-1", bookingId: "co-1", wasOnTime: true }));

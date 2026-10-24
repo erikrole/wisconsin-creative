@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS announcement splash", () => {
   it("reads the active announcement for iOS and dismisses through the idempotent route", () => {
-    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const client = apiClientSource();
     expect(client).toContain('path: "/api/announcements/active"');
     expect(client).toContain('URLQueryItem(name: "platform", value: "ios")');
     expect(client).toContain('"/api/announcements/\\(id)/dismiss", method: "POST"');

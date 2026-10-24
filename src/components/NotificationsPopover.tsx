@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BellIcon, CheckCheckIcon, Settings2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -59,7 +59,9 @@ export function NotificationsPopover({
   const [items, setItems] = useState<PopoverNotification[] | null>(null);
   const [failed, setFailed] = useState(false);
   const unreadRef = useRef(unreadCount);
-  unreadRef.current = unreadCount;
+  useLayoutEffect(() => {
+    unreadRef.current = unreadCount;
+  });
 
   const label = unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications";
 

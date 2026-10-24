@@ -14,7 +14,7 @@ The V1 implementation is deployed through the web, API, schema, artifact, storag
 - External roster members are separate from Wisconsin Creative users and may have a nullable user link. Creative staff use linked full-time Video/Photo/Graphics accounts as separate signature members with no external snapshot and never live in the MBB collection.
 - UWBadgers import is fixed to an allowlisted adapter with structural parsing, profile-identity deduplication, preview persistence, and versioned reconciliation. MBB, Football, Volleyball, Men’s Hockey, Women’s Hockey, Women’s Basketball, and Wrestling use sport-specific source URLs and parser labels; Creative staff sync is explicit, version-checked, audited, and preserves imported roster state.
 - Required members are active players from the seven supported team rosters; coaching and support staff are imported as optional secondary work. Standalone Creative staff retain their existing default-required behavior; wrestling weight classes are metadata and jersey numbers remain nullable.
-- Private app-managed storage is required. Box signature-file integration, native PencilKit, scheduled roster sync, additional sport adapters beyond the 2026-27 target set, and pressure width are deferred.
+- Private app-managed storage is required. Box signature-file integration, scheduled roster sync, additional sport adapters beyond the 2026-27 target set, and pressure width are deferred. Native iPad capture in the Wisconsin iOS app moved into scope on 2026-10-06 (`tasks/signature-native-ipad-capture-plan-2026-10-06.md`); its squeeze and double-tap gestures only undo.
 
 ## Source Checks
 
@@ -217,7 +217,7 @@ Local verification on 2026-08-15: focused signature tests 11/11 plus six signatu
 
 - Shipped: Stable logical canvas mapping, animation-frame Pencil rendering, terminal/interruption finalization, ordered draft recovery and persistence, undoable Clear, ambiguity-safe request retries, and iPad-aligned copy/controls/status.
 - Verified: Focused signature tests 25/25, TypeScript, lint, app build, migration-prefix check (119 migrations), codemap/docs, and diff checks pass. Sol's final P1-only review found no remaining source P0/P1.
-- Deferred: Pressure, tilt, hover, squeeze, barrel roll, variable-width ink, native PencilKit, and exact Apple Pencil hardware identification remain out of V1 scope.
+- Deferred: Pressure, tilt, hover, barrel roll, variable-width ink, and exact Apple Pencil hardware identification remain out of V1 scope.
 - Blocked: A physical Pencil save, authenticated artifact delivery, and full physical iPad proof remain external acceptance gates; private-store provisioning and hardened production deployment are complete.
 - Proof artifacts: `src/lib/signatures/capture.ts`, the hardened capture page and signature service, and focused capture/service/storage tests.
 - Next slice or stop: Sign and save on hardened production with the target iPad and Apple Pencil, then verify authenticated delivery.

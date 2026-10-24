@@ -1,3 +1,4 @@
+import { appTzDateKey } from "@/lib/app-time";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
 import { HttpError } from "@/lib/http";
@@ -119,7 +120,7 @@ export const GET = withAuth(async (req, { user }) => {
   });
 
   const body = [header, ...rows].join("\n");
-  const filename = `users-${now.toISOString().slice(0, 10)}.csv`;
+  const filename = `users-${appTzDateKey(now)}.csv`;
 
   return new NextResponse(body, {
     status: 200,

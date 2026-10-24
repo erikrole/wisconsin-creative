@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "transport": "sdk-chain-v1",
+  "id": "15e3016c-db91-4a68-aeb9-a15f5d8c451d",
+  "browserId": "8d29cb7c-8677-42d9-9cbc-1b6d6c03c865",
+  "actor": {
+    "id": "dev",
+    "name": "Dev Staff"
+  },
+  "createdAt": "2026-10-22T21:10:27.484Z",
+  "updatedAt": "2026-10-22T21:10:34.025Z",
+  "revision": 2,
+  "parentId": "b58a3f82-7c4a-41de-b3f1-b8c761649cae",
+  "labels": [
+    {
+      "copyId": "device-check-2:0:0",
+      "row": {
+        "kind": "body",
+        "dept": "TEST",
+        "model": "CHAIN",
+        "number": "C",
+        "qrCodeValue": "c62a82d7",
+        "copies": 1
+      },
+      "entryId": "device-check-2"
+    }
+  ],
+  "outcomes": [
+    {
+      "status": "printed",
+      "attemptedAt": "2026-10-22T21:10:27.494Z",
+      "recordedAt": "2026-10-22T21:10:34.025Z",
+      "evidence": "printer"
+    }
+  ],
+  "activeIndex": null,
+  "state": "completed",
+  "finish": {
+    "kind": "last-page",
+    "state": "completed",
+    "attemptedAt": "2026-10-22T21:10:27.494Z",
+    "recordedAt": "2026-10-22T21:10:34.025Z"
+  }
+}

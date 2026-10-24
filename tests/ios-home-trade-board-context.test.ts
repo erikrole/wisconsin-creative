@@ -30,6 +30,6 @@ describe("iOS Home trade board context", () => {
 
     // Browse and claim must keep working when the list fails to load, which is
     // what makes a quiet failure the right call in `loadTradeMyShifts`.
-    expect(trade).toContain("PostTradeSheet(myShifts: myShifts, wrapsInNavigationStack: false)");
+    expect(trade).toMatch(/PostTradeSheet\(\s*myShifts: myShifts,[\s\S]*?wrapsInNavigationStack: false\s*\)/);
   });
 });

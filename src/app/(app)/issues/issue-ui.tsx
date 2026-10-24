@@ -13,7 +13,6 @@ import {
   TerminalIcon,
   type LucideIcon,
 } from "lucide-react";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import type { Breadcrumb } from "@/lib/error-reporting/grouping";
 import { cn } from "@/lib/utils";
 
@@ -150,14 +149,6 @@ export function ActionTimeline({ crumbs, endAt }: { crumbs: Breadcrumb[]; endAt:
       })}
     </ol>
   );
-}
-
-export async function readJson<T>(response: Response, fallback: string, returnTo = "/issues"): Promise<T> {
-  if (handleAuthRedirect(response, returnTo)) throw new Error("Signing in again");
-  if (!response.ok) throw new Error(await parseErrorMessage(response, fallback));
-  const json = await parseJsonSafely<{ data?: T }>(response);
-  if (!json?.data) throw new Error(fallback);
-  return json.data;
 }
 
 export function versionText(version: string | null, channel?: string | null): string {

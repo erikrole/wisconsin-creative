@@ -12,6 +12,7 @@ import { hasCollaboratorCapability } from "@/lib/collaborator-access";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { gearStatusForBooking, gearStatusPriority } from "@/lib/booking-status-display";
 import { unique } from "@/lib/utils";
+import { settledReader } from "@/lib/settled";
 
 const DASHBOARD_LIMIT = { max: 30, windowMs: 60_000 };
 
@@ -21,17 +22,7 @@ const sortOverdueFirst = (a: { isOverdue: boolean; endsAt: string }, b: { isOver
   return new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime();
 };
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[dashboard] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("dashboard");
 
 // Prioritize bodies and lenses in gear avatar display
 function sortItemsByCategory(
@@ -363,13 +354,14 @@ export const GET = withAuth(async (req, { user }) => {
         },
       },
     }),
-    // Recent damage/lost reports (last 30 days, staff/admin only)
+    // Open damage/lost cases (staff/admin only)
     user.role === "ADMIN" || user.role === "STAFF"
       ? db.checkinItemReport.findMany({
           // Serialized reports only; lost batteries surface via lostBulkUnits.
           where: {
             assetId: { not: null },
-            lastReportedAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+            // Open cases stay until staff close them on the Damage and loss page.
+            resolution: null,
             dismissedAt: null,
           },
           orderBy: { lastReportedAt: "desc" },
@@ -481,7 +473,7 @@ export const GET = withAuth(async (req, { user }) => {
     createdAt: Date;
     lastReportedAt: Date;
     asset: { id: string; assetTag: string; name: string | null; status: string } | null;
-    booking: { title: string };
+    booking: { title: string } | null;
     reportedBy: { name: string };
   }>, "recentReports", partialFailures);
   const maintenanceAssets = settledValue(maintenanceAssetsResult, [] as Array<{
@@ -839,7 +831,7 @@ export const GET = withAuth(async (req, { user }) => {
           assetTag: r.asset.assetTag,
           assetName: r.asset.name,
           type: r.type as "DAMAGED" | "LOST",
-          bookingTitle: displayBookingTitle(r.booking.title),
+          bookingTitle: r.booking ? displayBookingTitle(r.booking.title) : null,
           reportedBy: r.reportedBy.name,
           description: r.description ?? null,
           imageUrl: r.imageUrl ?? null,

@@ -26,6 +26,7 @@ const PAGES = {
   "kiosk-devices": dynamic(() => import("@/app/(app)/settings/kiosk-devices/page")),
   "collaborator-access": dynamic(() => import("@/app/(app)/settings/collaborator-access/page")),
   announcements: dynamic(() => import("@/app/(app)/settings/announcements/page")),
+  "quick-links": dynamic(() => import("@/app/(app)/settings/quick-links/page")),
   departments: dynamic(() => import("@/app/(app)/settings/departments/page")),
   escalation: dynamic(() => import("@/app/(app)/settings/escalation/page")),
   locations: dynamic(() => import("@/app/(app)/settings/locations/page")),
@@ -39,6 +40,13 @@ const PAGES = {
 } as const;
 
 type PageKey = keyof typeof PAGES | "overview";
+
+const SAMPLE_QUICK_LINKS = [
+  { id: "a", label: "APM Music", url: "https://www.apmmusic.com", detail: "Production music", roles: ["ADMIN", "STAFF", "STUDENT"] },
+  { id: "b", label: "Greenfly", url: "https://app.greenfly.com", detail: "Send content to athletes", roles: ["ADMIN", "STAFF"] },
+  { id: "c", label: "Slate", url: "https://example.com/slate", detail: null, roles: ["ADMIN", "STAFF", "STUDENT"] },
+  { id: "d", label: "Budget sheet", url: "https://docs.google.com/spreadsheets/d/sample", detail: "FY27 purchasing", roles: ["ADMIN"] },
+];
 
 function Lab({ fontClass }: { fontClass: string }) {
   const params = useSearchParams();
@@ -81,7 +89,19 @@ function Lab({ fontClass }: { fontClass: string }) {
 }
 
 export default function SettingsLab({ fontClass }: { fontClass: string }) {
-  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  const [queryClient] = useState(() => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Sample Quick links so the page and the sidebar menu render without a database.
+    client.setQueryDefaults(["quick-links"], { staleTime: Infinity });
+    client.setQueryData(["quick-links", "manage"], SAMPLE_QUICK_LINKS);
+    client.setQueryData(["quick-links"], SAMPLE_QUICK_LINKS);
+    // `?page=quick-links` also seeds a signed-in admin so the Settings shell renders DB-free.
+    if (new URLSearchParams(window.location.search).get("page") === "quick-links") {
+      client.setQueryDefaults(["me"], { staleTime: Infinity });
+      client.setQueryData(["me"], { id: "dev", name: "Erik Role", email: "dev@example.com", role: "ADMIN" });
+    }
+    return client;
+  });
   return (
     <QueryClientProvider client={queryClient}>
       <Suspense>

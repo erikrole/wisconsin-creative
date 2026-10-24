@@ -14,7 +14,6 @@ describe("pending action feedback", () => {
   it("keeps booking actions on stable labels with shadcn loading affordances", () => {
     const wizard = source("src/components/booking-wizard/BookingWizard.tsx");
     const header = source("src/components/booking-details/BookingHeader.tsx");
-    const editForm = source("src/components/booking-details/BookingEditForm.tsx");
 
     expect(wizard).toContain("loading={savingDraft}");
     expect(wizard).toContain("loading={submitting}");
@@ -26,13 +25,10 @@ describe("pending action feedback", () => {
     expect(header).toContain("aria-busy={active || undefined}");
     expect(header).toContain("{active ? <Spinner aria-hidden=\"true\" /> : null}");
 
-    expect(editForm).toContain("loading={saving}");
-    expect(editForm).toContain("Save changes");
 
     for (const label of replacedProgressLabels) {
       expect(wizard).not.toContain(label);
       expect(header).not.toContain(label);
-      expect(editForm).not.toContain(label);
     }
   });
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   browserSupportsWebAuthn,
@@ -29,6 +28,7 @@ import { safeReturnTo } from "@/lib/return-to";
 type LoginResponse = {
   user?: {
     forcePasswordChange?: boolean;
+    onboardingRequired?: boolean;
   };
 };
 
@@ -38,9 +38,18 @@ type PasskeyLoginResponse = LoginResponse & {
 
 type DiscoveryResponse = {
   flow?: "onboarding" | "password";
+  /** For a pending invite: whether this visit carries the emailed sign-up link. */
+  inviteLink?: "valid" | "required";
 };
 
-type AuthStep = "identity" | "password" | "onboarding";
+type InviteResendResponse = {
+  message?: string;
+  inviteEmailConfigured?: boolean;
+};
+
+// "invite": the address is invited but this visit did not come through the
+// emailed link, so the only action is to send that link again.
+type AuthStep = "identity" | "password" | "onboarding" | "invite";
 
 function validateName(name: string): string {
   if (!name.trim()) return "Name is required";
@@ -54,7 +63,6 @@ function validateEmail(email: string): string {
 }
 
 export default function LoginForm() {
-  const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -67,6 +75,12 @@ export default function LoginForm() {
   // unremembered session ends with the browser. Untick on a shared computer.
   const [rememberMe, setRememberMe] = useState(true);
   const [returnTo, setReturnTo] = useState<string | null>(null);
+  // The one-time sign-up token from the invite email's link, if this page was
+  // opened from it. Sent with discovery and registration; never shown.
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteResendLoading, setInviteResendLoading] = useState(false);
+  const [inviteResendMessage, setInviteResendMessage] = useState("");
+  const [inviteEmailUnavailable, setInviteEmailUnavailable] = useState(false);
   const [step, setStep] = useState<AuthStep>("identity");
   const [identityLoading, setIdentityLoading] = useState(false);
   const [identityError, setIdentityError] = useState("");
@@ -88,6 +102,8 @@ export default function LoginForm() {
     const params = new URLSearchParams(window.location.search);
     const invitedEmail = params.get("email")?.trim() ?? "";
     if (invitedEmail) setEmail(invitedEmail);
+    const invite = params.get("invite")?.trim() ?? "";
+    if (invite) setInviteToken(invite);
     setReturnTo(safeReturnTo(params.get("returnTo")));
   }, []);
 
@@ -109,7 +125,8 @@ export default function LoginForm() {
       // A password the manager just filled can become a passkey with no prompt.
       // Not during a forced change: that password is about to be replaced.
       if (!data.user?.forcePasswordChange) void upgradeToPasskeyAfterSignIn(passwordRef.current?.value ?? "");
-      router.replace(data.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
+      // A new session must read a fresh server layout and discard pre-login routing state.
+      window.location.replace(data.user?.forcePasswordChange ? "/change-password" : data.user?.onboardingRequired ? "/welcome" : returnTo ?? "/");
     },
     onError: (kind) => setIsNetworkError(kind === "network"),
   });
@@ -124,7 +141,7 @@ export default function LoginForm() {
     skipAuthRedirect: true,
     onSuccess: () => {
       void upgradeToPasskeyAfterSignIn(passwordRef.current?.value ?? "");
-      router.replace("/welcome");
+      window.location.replace("/welcome");
     },
     onError: (kind) => setIsNetworkError(kind === "network"),
   });
@@ -134,7 +151,8 @@ export default function LoginForm() {
   const isIdentity = step === "identity";
   const isPassword = step === "password";
   const isOnboarding = step === "onboarding";
-  const formError = isIdentity
+  const isInvite = step === "invite";
+  const formError = isIdentity || isInvite
     ? identityError
     : isOnboarding
       ? registrationFormError
@@ -168,6 +186,8 @@ export default function LoginForm() {
     setShowPassword(false);
     setName("");
     setIdentityError("");
+    setInviteResendMessage("");
+    setInviteEmailUnavailable(false);
     setFieldErrors({});
     clearLoginErrors();
     clearRegistrationErrors();
@@ -190,7 +210,7 @@ export default function LoginForm() {
       const response = await fetch("/api/auth/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
+        body: JSON.stringify({ email: normalizedEmail, ...(inviteToken ? { invite: inviteToken } : {}) }),
       });
       if (!response.ok) {
         throw new Error(await parseErrorMessage(response, "Could not check this email. Please try again."));
@@ -202,7 +222,15 @@ export default function LoginForm() {
       setConfirmPassword("");
       setShowPassword(false);
       setFieldErrors({});
-      setStep(result?.flow === "onboarding" ? "onboarding" : "password");
+      setInviteResendMessage("");
+      setInviteEmailUnavailable(false);
+      setStep(
+        result?.flow !== "onboarding"
+          ? "password"
+          : result.inviteLink === "valid"
+            ? "onboarding"
+            : "invite",
+      );
     } catch (error) {
       setIdentityError(error instanceof Error ? error.message : "Could not check this email. Please try again.");
       setIsNetworkError(classifyError(error) === "network");
@@ -242,15 +270,49 @@ export default function LoginForm() {
     await submitRegistration({
       name: name.trim(),
       email: email.trim().toLowerCase(),
+      ...(inviteToken ? { inviteToken } : {}),
       password,
       rememberMe,
     });
+  }
+
+  async function handleInviteResend() {
+    if (inviteResendLoading || inviteResendMessage) return;
+    setInviteResendLoading(true);
+    setIdentityError("");
+    setIsNetworkError(false);
+    try {
+      const response = await fetch("/api/auth/invite/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (!response.ok) {
+        throw new Error(await parseErrorMessage(response, "Could not send the link. Please try again."));
+      }
+      const result = await parseJsonSafely<InviteResendResponse>(response);
+      if (!result || typeof result.inviteEmailConfigured !== "boolean") {
+        throw new Error("Could not confirm the link was sent. Please try again.");
+      }
+      setInviteEmailUnavailable(!result.inviteEmailConfigured);
+      setInviteResendMessage(
+        result?.inviteEmailConfigured === false
+          ? result.message ?? "Invite email is not configured yet. Contact Erik Role for your sign-up link."
+          : `Sent. Check ${email.trim().toLowerCase()} for a link that works for 30 days.`,
+      );
+    } catch (error) {
+      setIdentityError(error instanceof Error ? error.message : "Could not send the link. Please try again.");
+      setIsNetworkError(classifyError(error) === "network");
+    } finally {
+      setInviteResendLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isIdentity) return handleIdentitySubmit();
     if (isOnboarding) return handleOnboardingSubmit();
+    if (isInvite) return handleInviteResend();
     return handlePasswordSubmit();
   }
 
@@ -303,7 +365,7 @@ export default function LoginForm() {
       const result = await parseJsonSafely<LoginResponse>(verifyResponse);
       if (!isCurrent()) return assertionReceived;
       passkeyNavigatedRef.current = true;
-      router.replace(result?.user?.forcePasswordChange ? "/change-password" : returnTo ?? "/");
+      window.location.replace(result?.user?.forcePasswordChange ? "/change-password" : result?.user?.onboardingRequired ? "/welcome" : returnTo ?? "/");
     } catch (error) {
       if (!isCurrent()) return assertionReceived;
       if (isPasskeyCancellation(error)) return assertionReceived;
@@ -365,6 +427,12 @@ export default function LoginForm() {
     ? identityLoading
       ? "Checking…"
       : "Continue"
+    : isInvite
+      ? inviteResendLoading
+        ? "Sending…"
+        : inviteResendMessage
+          ? inviteEmailUnavailable ? "Email unavailable" : "Link sent"
+          : "Email me my invite link"
     : isOnboarding
       ? registrationSubmitting
         ? "Creating account…"
@@ -377,10 +445,12 @@ export default function LoginForm() {
     <AuthScreen
       subtitle={
         isOnboarding
-          ? "Create your password to join Wisconsin Creative"
-          : isPassword
-            ? "Enter your password"
-            : "Sign in to your account"
+          ? "Create your password"
+          : isInvite
+            ? "Check your email"
+            : isPassword
+              ? "Enter your password"
+              : "Sign in to your account"
       }
       footer={
         <p className="login-rise text-center text-sm text-white/55 mt-6" style={{ "--rise-index": 6 } as React.CSSProperties}>
@@ -433,14 +503,18 @@ export default function LoginForm() {
                 </div>
               )}
 
+              {isInvite && (
+                <p role="status" aria-live="polite" className="text-sm text-[#a6a6ae]">
+                  {inviteResendMessage
+                    || "You’re invited. To create your account, open the link in your invite email on this device. Can’t find it, or is it more than 30 days old? We can send a fresh one."}
+                </p>
+              )}
+
               {isOnboarding && (
                 <>
-                  <Alert role="status" aria-live="polite" className="bg-muted/40">
-                    <AlertCircle className="size-4" />
-                    <AlertDescription>
-                      You’re invited. Choose a password to create your account, then a short welcome setup collects the details the team needs for work.
-                    </AlertDescription>
-                  </Alert>
+                  <p role="status" aria-live="polite" className="text-sm text-[#a6a6ae]">
+                    You’re invited. Choose a password to create your account. A short setup (about three minutes) follows, and you can pause it any time.
+                  </p>
 
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="name">Name</Label>
@@ -465,7 +539,7 @@ export default function LoginForm() {
                 </>
               )}
 
-              {!isIdentity && (
+              {!isIdentity && !isInvite && (
                 <div className="login-rise flex flex-col gap-1.5" style={{ "--rise-index": 3 } as React.CSSProperties}>
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">{isOnboarding ? "Create password" : "Password"}</Label>
@@ -533,6 +607,7 @@ export default function LoginForm() {
                 </div>
               )}
 
+              {!isInvite && (
               <div className="login-rise flex items-center gap-2" style={{ "--rise-index": 4 } as React.CSSProperties}>
                 <Checkbox
                   id="rememberMe"
@@ -543,6 +618,7 @@ export default function LoginForm() {
                 />
                 <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer font-normal leading-none">Keep me signed in</Label>
               </div>
+              )}
 
               <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 data-[visible=true]:grid-rows-[1fr]" data-visible={!!formError}>
                 <div className="overflow-hidden">
@@ -552,11 +628,16 @@ export default function LoginForm() {
                       <AlertDescription>{formError}</AlertDescription>
                     </Alert>
                   )}
+                  {formError && isPassword && !isNetworkError && (
+                    <p className="pt-2 text-sm text-[#a6a6ae]">
+                      Double-check the address above. New here? Open the link in your invite email to set up your account.
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <Button type="submit" className="login-cta login-rise login-press w-full h-11 text-base font-semibold" style={{ "--rise-index": 5 } as React.CSSProperties} disabled={authBusy}>
-                {authBusy && !passkeyLoading ? <Spinner data-icon="inline-start" /> : null}
+              <Button type="submit" className="login-cta login-rise login-press w-full h-[52px] text-base font-semibold" style={{ "--rise-index": 5 } as React.CSSProperties} disabled={authBusy || inviteResendLoading || (isInvite && !!inviteResendMessage)}>
+                {(authBusy && !passkeyLoading) || inviteResendLoading ? <Spinner data-icon="inline-start" /> : null}
                 {primaryButtonLabel}
               </Button>
 

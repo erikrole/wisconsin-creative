@@ -43,7 +43,9 @@ function resolveBaseSha(args) {
 }
 
 function generatePrismaDiff(baseSha) {
-  const baseSchema = git(["show", `${baseSha}:${SCHEMA_PATH}`]);
+  // Bases from before Prisma 7 still declare `url` in the datasource, which
+  // Prisma 7 rejects; the URL never affects the diff, so drop it.
+  const baseSchema = git(["show", `${baseSha}:${SCHEMA_PATH}`]).replace(/^[ \t]*url[ \t]*=.*\n?/gm, "");
   const tempDir = mkdtempSync(join(tmpdir(), "schema-migration-guard-"));
   const baseSchemaPath = join(tempDir, "schema.prisma");
 
@@ -55,9 +57,9 @@ function generatePrismaDiff(baseSha) {
         "prisma",
         "migrate",
         "diff",
-        "--from-schema-datamodel",
+        "--from-schema",
         baseSchemaPath,
-        "--to-schema-datamodel",
+        "--to-schema",
         SCHEMA_PATH,
         "--script",
       ],

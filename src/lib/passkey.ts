@@ -4,13 +4,14 @@ import {
   generateRegistrationOptions,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
-  type AuthenticatorTransportFuture,
+  type AuthenticatorTransport,
   type AuthenticationResponseJSON,
   type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
 import { PasskeyCeremonyType, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { requiresOnboarding } from "@/lib/profile-completion";
 import { HttpError } from "@/lib/http";
 import { createSession, randomHex, tokenHash, verifyPassword } from "@/lib/auth";
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile, requireActiveCollaboratorPolicy } from "@/lib/collaborator-access";
@@ -22,8 +23,14 @@ const PASSKEY_CEREMONY_TTL_MS = 5 * 60 * 1000;
 type PasskeyRegistrationResponse = RegistrationResponseJSON;
 type PasskeyAuthenticationResponse = AuthenticationResponseJSON;
 
-function transportValues(values: string[] | undefined): AuthenticatorTransportFuture[] {
-  return (values ?? []).filter((value): value is AuthenticatorTransportFuture =>
+// EdDSA, ES256, RS256. SimpleWebAuthn 14 also offers ML-DSA-44 first when the
+// runtime supports it (Node 24 does); keep the algorithm set explicit so
+// registration options and verification stay identical to what browsers and
+// stored credentials already use.
+const PASSKEY_ALGORITHM_IDS = [-8, -7, -257];
+
+function transportValues(values: string[] | undefined): AuthenticatorTransport[] {
+  return (values ?? []).filter((value): value is AuthenticatorTransport =>
     ["ble", "hybrid", "internal", "nfc", "usb"].includes(value),
   );
 }
@@ -188,6 +195,7 @@ export async function createPasskeyRegistrationOptions(
     userDisplayName: user.name,
     userID: new TextEncoder().encode(user.id),
     attestationType: "none",
+    supportedAlgorithmIDs: PASSKEY_ALGORITHM_IDS,
     excludeCredentials: credentials.map((credential) => ({
       id: credential.credentialId,
       transports: transportValues(credential.transports),
@@ -223,6 +231,7 @@ export async function verifyPasskeyRegistration(
       expectedChallenge: ceremony.challenge,
       expectedOrigin: env.passkeyOrigins,
       expectedRPID: env.passkeyRpId,
+      supportedAlgorithmIDs: PASSKEY_ALGORITHM_IDS,
       requireUserVerification: !ceremony.automatic,
     });
   } catch {
@@ -360,6 +369,7 @@ export async function verifyPasskeyAuthentication(
       capabilities: capabilitiesForActor(user),
       staffingType: user.staffingType,
       forcePasswordChange: user.forcePasswordChange,
+      onboardingRequired: requiresOnboarding(user),
     },
     credentialId: stored.id,
     ip,

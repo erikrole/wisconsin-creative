@@ -33,39 +33,98 @@ final class ProfileCompletionDraft {
         shoeSizeChoice == "OTHER" ? shoeSizeOther.trimmingCharacters(in: .whitespacesAndNewlines) : shoeSizeChoice
     }
 
+    var apparelSummary: String? {
+        guard let clothing = ProfileSizingOptions.apparelFits.first(where: { $0.0 == topSizeFit })?.1,
+              let shoeSystem = ProfileSizingOptions.shoeSystems.first(where: { $0.0 == shoeSizeSystem })?.1,
+              !selectedTopSize.isEmpty, !selectedShoeSize.isEmpty else { return nil }
+        return "\(clothing) \(selectedTopSize) · US \(shoeSystem) \(selectedShoeSize)"
+    }
+
     var graduationYears: [Int] {
         let current = Calendar.current.component(.year, from: Date())
         return Array(current...(current + 8))
     }
 
     func hydrate(from profile: ProfileCompletionProfile) {
-        athleticsEmail = profile.athleticsEmail ?? ""
-        personalPhone = profile.personalPhone ?? (profile.role == "STUDENT" ? profile.phone : nil) ?? ""
-        workPhone = profile.workPhone ?? ""
-        noWorkPhone = profile.workPhoneNotApplicable
+        for group in OnboardingGroup.allCases { apply(group, from: profile) }
         if let legacy = profile.phone {
             if legacy == profile.personalPhone { legacyPhoneType = "PERSONAL" }
             if legacy == profile.workPhone { legacyPhoneType = "WORK" }
         }
-        wiscardCardNumber = profile.wiscardCardNumber ?? ""
-        wiscardIssueCode = profile.wiscardIssueCode ?? ""
-        studentYear = profile.studentYearOverride ?? ""
-        graduationTerm = profile.graduationTerm ?? ""
-        graduationYear = profile.gradYear ?? graduationYear
-        topSizeFit = profile.topSizeFit ?? ""
-        if let size = profile.topSize, ProfileSizingOptions.topSizes.contains(size) {
-            topSizeChoice = size
-        } else if let size = profile.topSize, !size.isEmpty {
-            topSizeChoice = "OTHER"
-            topSizeOther = size
+    }
+
+    func apply(_ group: OnboardingGroup, from profile: ProfileCompletionProfile) {
+        switch group {
+        case .email: athleticsEmail = profile.athleticsEmail ?? ""
+        case .personalPhone: personalPhone = profile.personalPhone ?? (profile.role == "STUDENT" ? profile.phone : nil) ?? ""
+        case .workPhone:
+            workPhone = profile.workPhone ?? ""
+            noWorkPhone = profile.workPhoneNotApplicable
+        case .wiscard:
+            wiscardCardNumber = profile.wiscardCardNumber ?? ""
+            wiscardIssueCode = profile.wiscardIssueCode ?? ""
+        case .student: studentYear = profile.studentYearOverride ?? ""
+        case .graduation:
+            graduationTerm = profile.graduationTerm ?? ""
+            graduationYear = profile.gradYear ?? Calendar.current.component(.year, from: Date())
+        case .clothing:
+            topSizeFit = profile.topSizeFit ?? ""
+            let size = profile.topSize ?? ""
+            topSizeChoice = size.isEmpty || ProfileSizingOptions.topSizes.contains(size) ? size : "OTHER"
+            topSizeOther = topSizeChoice == "OTHER" ? size : ""
+        case .shoes:
+            shoeSizeSystem = profile.shoeSizeSystem ?? ""
+            let size = profile.shoeSize ?? ""
+            shoeSizeChoice = size.isEmpty || ProfileSizingOptions.shoeSizes(system: shoeSizeSystem).contains(size) ? size : "OTHER"
+            shoeSizeOther = shoeSizeChoice == "OTHER" ? size : ""
         }
-        shoeSizeSystem = profile.shoeSizeSystem ?? ""
-        if let size = profile.shoeSize, ProfileSizingOptions.shoeSizes(system: shoeSizeSystem).contains(size) {
-            shoeSizeChoice = size
-        } else if let size = profile.shoeSize, !size.isEmpty {
-            shoeSizeChoice = "OTHER"
-            shoeSizeOther = size
+    }
+
+    /// Observed as a whole, so coupled selections are saved together. These
+    /// private values remain in memory until the account acknowledges them.
+    var autosaveValues: [String: OnboardingValue] {
+        func text(_ value: String) -> OnboardingValue {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? .null : .string(trimmed)
         }
+        return [
+            "athleticsEmail": text(athleticsEmail.lowercased()),
+            "personalPhone": text(Self.formatPhone(personalPhone)),
+            "workPhone": noWorkPhone ? .null : text(Self.formatPhone(workPhone)),
+            "workPhoneNotApplicable": .bool(noWorkPhone),
+            "wiscardCardNumber": text(Self.digits(wiscardCardNumber)),
+            "wiscardIssueCode": text(Self.digits(wiscardIssueCode)),
+            "studentYearOverride": text(studentYear),
+            "graduationTerm": text(graduationTerm),
+            "gradYear": graduationTerm.isEmpty ? .null : .number(graduationYear),
+            "topSizeFit": text(topSizeFit), "topSize": text(selectedTopSize),
+            "shoeSizeSystem": text(shoeSizeSystem), "shoeSize": text(selectedShoeSize),
+        ]
+    }
+
+    func values(for group: OnboardingGroup) -> [String: OnboardingValue] {
+        autosaveValues.filter { group.fields.contains($0.key) }
+    }
+
+    func validValues(for group: OnboardingGroup) -> [String: OnboardingValue]? {
+        switch group {
+        case .email:
+            if !athleticsEmail.isEmpty && !Self.isEmail(athleticsEmail, inDomain: "athletics.wisc.edu") { return nil }
+        case .personalPhone:
+            if !personalPhone.isEmpty && Self.digits(personalPhone).count != 10 { return nil }
+        case .workPhone:
+            if !noWorkPhone && !workPhone.isEmpty && Self.digits(workPhone).count != 10 { return nil }
+        case .wiscard:
+            if !wiscardCardNumber.isEmpty && Self.digits(wiscardCardNumber).count != 10 { return nil }
+            if !wiscardIssueCode.isEmpty && Self.digits(wiscardIssueCode).count != 1 { return nil }
+        case .clothing:
+            if selectedTopSize.count > 40 || (topSizeChoice == "OTHER" && selectedTopSize.isEmpty) { return nil }
+        case .shoes:
+            if selectedShoeSize.count > 40 || (shoeSizeChoice == "OTHER" && selectedShoeSize.isEmpty) { return nil }
+            if !selectedShoeSize.isEmpty && shoeSizeSystem.isEmpty { return nil }
+        case .student, .graduation: break
+        }
+        return values(for: group)
     }
 
     /// Students and collaborators get a single personal-phone field — no work
@@ -96,7 +155,7 @@ final class ProfileCompletionDraft {
             return Self.digits(wiscardCardNumber).count == 10
                 && Self.digits(wiscardIssueCode).count == 1
         case .student:
-            return !studentYear.isEmpty && !graduationTerm.isEmpty
+            return !studentYear.isEmpty
         case .apparel:
             return !topSizeFit.isEmpty
                 && !selectedTopSize.isEmpty
@@ -116,8 +175,8 @@ final class ProfileCompletionDraft {
         case .phones:
             let hasSimplePhoneStep = Self.hasSimplePhoneStep(for: profile.role)
             return .phones(
-                personalPhone: personalPhone,
-                workPhone: hasSimplePhoneStep || noWorkPhone ? nil : workPhone,
+                personalPhone: Self.formatPhone(personalPhone),
+                workPhone: hasSimplePhoneStep || noWorkPhone ? nil : Self.formatPhone(workPhone),
                 workPhoneNotApplicable: hasSimplePhoneStep ? nil : noWorkPhone
             )
         case .wiscard:
@@ -126,7 +185,12 @@ final class ProfileCompletionDraft {
                 issueCode: Self.digits(wiscardIssueCode)
             )
         case .student:
-            return .student(year: studentYear, graduationTerm: graduationTerm, gradYear: graduationYear)
+            let hasTerm = !graduationTerm.isEmpty
+            return .student(
+                year: studentYear,
+                graduationTerm: hasTerm ? graduationTerm : nil,
+                gradYear: hasTerm ? graduationYear : nil
+            )
         case .apparel:
             return .apparel(
                 topSizeFit: topSizeFit,
@@ -159,7 +223,7 @@ final class ProfileCompletionDraft {
     }
 
     static func formatPhone(_ value: String) -> String {
-        let digits = String(value.filter(\.isNumber).prefix(10))
+        let digits = String(Self.digits(value).prefix(10))
         if digits.count <= 3 { return digits }
         if digits.count <= 6 {
             return "(\(digits.prefix(3))) \(digits.dropFirst(3))"
@@ -168,7 +232,8 @@ final class ProfileCompletionDraft {
     }
 
     static func digits(_ value: String) -> String {
-        String(value.filter(\.isNumber))
+        let digits = String(value.filter(\.isNumber))
+        return digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
     }
 
     private func legacyPhone(for profile: ProfileCompletionProfile) -> String {
