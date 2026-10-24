@@ -12,6 +12,15 @@ describe("iOS app time zone", () => {
     );
   });
 
+  it("pins .formatted(...) to Central, which ignores the process default zone", () => {
+    expect(read("ios/Wisconsin/Core/DateFormats.swift")).toContain(
+      "pinned.timeZone = NotificationPrefsViewModel.appTimeZone",
+    );
+    expect(
+      read("ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift"),
+    ).toContain('pinned.timeZone = TimeZone(identifier: "America/Chicago")');
+  });
+
   it("installs the same default zone in the widget and Live Activity extension", () => {
     expect(read("ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift")).toContain(
       'NSTimeZone.default = TimeZone(identifier: "America/Chicago")',

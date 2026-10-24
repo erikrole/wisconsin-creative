@@ -38,3 +38,15 @@ struct CurrentDayTests {
         #expect(Calendar.current.component(.day, from: now) == 23)
     }
 }
+
+extension CurrentDayTests {
+    /// `.formatted` ignores NSTimeZone.default, so the app pins Central itself:
+    /// 2027-02-01T18:00Z is 12:00 PM in Chicago whatever zone the system is in.
+    @Test func formattedTimesAreCentralNotSystem() {
+        let date = Date(timeIntervalSince1970: 1_801_504_800) // 2027-02-01T18:00:00Z
+        let text = date.formatted(date: .omitted, time: .shortened)
+        let styled = date.formatted(.dateTime.hour().minute())
+        #expect(text.contains("12:00"))
+        #expect(styled.contains("12:00"))
+    }
+}

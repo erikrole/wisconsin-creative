@@ -547,3 +547,20 @@ extension CheckoutReturnActivityAttributes {
         previewAttributes()
     }
 }
+
+/// `Date.formatted(...)` reads the system zone, not `NSTimeZone.default`; these
+/// overloads (chosen over Foundation's inside this extension) pin Central, like
+/// the same pair in the app's DateFormats.swift.
+extension Date {
+    func formatted(date: Date.FormatStyle.DateStyle, time: Date.FormatStyle.TimeStyle) -> String {
+        formatted(Date.FormatStyle(date: date, time: time))
+    }
+
+    func formatted(_ style: Date.FormatStyle) -> String {
+        var pinned = style
+        if pinned.timeZone == TimeZone.current {
+            pinned.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
+        }
+        return pinned.format(self)
+    }
+}
