@@ -42,6 +42,7 @@ import { SaveableField, useSaveField, FieldGroup } from "@/components/SaveableFi
 import { CategoryCombobox } from "@/components/FormCombobox";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { externalUrlHost, normalizeExternalUrl } from "@/lib/external-url";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 /* ── Text Input Field ──────────────────────────────────── */
 
@@ -66,14 +67,10 @@ function TextInputField({
   warnDuplicate?: { field: "assetTag" | "serialNumber"; assetId: string };
 }) {
   const normalizedValue = value ?? "";
-  const [draft, setDraft] = useState(normalizedValue);
+  const [draft, setDraft] = useSyncedDraft(normalizedValue);
   const [dupWarning, setDupWarning] = useState("");
   const saveField = useSaveField(onSave);
   const fieldId = useId();
-
-  useEffect(() => {
-    setDraft(normalizedValue);
-  }, [normalizedValue]);
 
   async function checkDuplicate(val: string) {
     if (!warnDuplicate || !val || val === normalizedValue) { setDupWarning(""); return; }
@@ -190,15 +187,11 @@ function CurrencyInputField({
   canEdit: boolean;
   onSave: (v: string) => Promise<void>;
 }) {
-  const [draft, setDraft] = useState(formatUsdDraft(value));
+  const [draft, setDraft] = useSyncedDraft(value, formatUsdDraft);
   const saveField = useSaveField(onSave);
   const fieldId = useId();
   const formattedValue = formatUsdDraft(value);
   const isDirty = normalizeUsdForDirty(draft) !== normalizeUsdForDirty(formattedValue);
-
-  useEffect(() => {
-    setDraft(formatUsdDraft(value));
-  }, [value]);
 
   async function commit() {
     if (saveField.isSaving) return;
@@ -278,15 +271,11 @@ function LinkField({
   canEdit: boolean;
   onSave: (v: string) => Promise<void>;
 }) {
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useSyncedDraft(value);
   const { copiedKey, copy: copyWithFeedback } = useCopyFeedback(2000);
   const copied = copiedKey === "link";
   const saveField = useSaveField(onSave);
   const fieldId = useId();
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
 
   const isDirty = draft.trim() !== value;
   const sourceHost = externalUrlHost(value);
@@ -1523,13 +1512,9 @@ function NotesField({
   canEdit: boolean;
   onSave: (v: string) => Promise<void>;
 }) {
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useSyncedDraft(value);
   const saveField = useSaveField(onSave);
   const fieldId = useId();
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
 
   const isDirty = draft.trim() !== (value || "");
 

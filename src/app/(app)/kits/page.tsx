@@ -246,15 +246,8 @@ export default function KitsPage() {
     }
   }
 
-  function SortButton({
-    column,
-    children,
-    className,
-  }: {
-    column: KitSortColumn;
-    children: ReactNode;
-    className?: string;
-  }) {
+  // A render helper, not a component: a component declared here would remount every render.
+  function sortButton(column: KitSortColumn, children: ReactNode, className?: string) {
     const active = sortBy === column;
     const Icon = !active ? ArrowUpDown : sortOrder === "asc" ? ArrowUp : ArrowDown;
 
@@ -496,19 +489,17 @@ export default function KitsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>
-                    <SortButton column="name">Name</SortButton>
+                    {sortButton("name", "Name")}
                   </TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Sport</TableHead>
                   <TableHead>Job</TableHead>
                   <TableHead className="text-center">
-                    <SortButton column="memberCount" className="mx-auto">
-                      Contents
-                    </SortButton>
+                    {sortButton("memberCount", "Contents", "mx-auto")}
                   </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>
-                    <SortButton column="updatedAt">Updated</SortButton>
+                    {sortButton("updatedAt", "Updated")}
                   </TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>

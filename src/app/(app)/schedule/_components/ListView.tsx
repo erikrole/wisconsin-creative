@@ -804,10 +804,12 @@ export function ListView({
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(() =>
     expandedRowId ? new Set([expandedRowId]) : new Set(),
   );
-  useEffect(() => {
-    if (!expandedRowId) return;
-    setExpandedRowIds((current) => new Set(current).add(expandedRowId));
-  }, [expandedRowId]);
+  // A newly requested row opens alongside whatever is already expanded.
+  const [seenExpandedRowId, setSeenExpandedRowId] = useState(expandedRowId);
+  if (seenExpandedRowId !== expandedRowId) {
+    setSeenExpandedRowId(expandedRowId);
+    if (expandedRowId) setExpandedRowIds((current) => new Set(current).add(expandedRowId));
+  }
 
   const toggleExpandedRow = useCallback((entryId: string) => {
     setExpandedRowIds((current) => {

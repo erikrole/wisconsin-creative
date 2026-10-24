@@ -43,18 +43,18 @@ export default function ReservationRulesPage() {
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const formElement = useRef<HTMLFormElement>(null);
-  const lastData = useRef<typeof data>(undefined);
+  const [lastData, setLastData] = useState<typeof data>(null);
   const dirty = form && base ? isDirty(form, base) : false;
 
-  useEffect(() => {
-    if (!data || data === lastData.current) return;
-    lastData.current = data;
+  if (data && data !== lastData) {
+    setLastData(data);
     // Background reads may update a clean form, but must never replace a draft.
-    if (dirty || saving) return;
-    const next = toForm(data);
-    setForm(next);
-    setBase(next);
-  }, [data, dirty, saving]);
+    if (!dirty && !saving) {
+      const next = toForm(data);
+      setForm(next);
+      setBase(next);
+    }
+  }
 
   useEffect(() => {
     if (!dirty && !saving) return;

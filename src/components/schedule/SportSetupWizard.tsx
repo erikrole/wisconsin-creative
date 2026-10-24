@@ -138,7 +138,13 @@ export function SportSetupWizard({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
   const [matchRoster, setMatchRoster] = useState(true);
+  // Each opening starts with nothing touched.
   const [touchedCodes, setTouchedCodes] = useState<Set<string>>(() => new Set());
+  const [touchedOpen, setTouchedOpen] = useState(open);
+  if (touchedOpen !== open) {
+    setTouchedOpen(open);
+    if (open) setTouchedCodes(new Set());
+  }
 
   const queryClient = useQueryClient();
   const setupQuery = useQuery({
@@ -168,11 +174,6 @@ export function SportSetupWizard({
   }, [refetch]);
   const setSetup = (update: (current: SportSetupResponse | null) => SportSetupResponse | null) =>
     queryClient.setQueryData<SportSetupResponse>(SPORT_SETUP_KEY, (current) => update(current ?? null) ?? undefined);
-
-  useEffect(() => {
-    if (!open) return;
-    setTouchedCodes(new Set());
-  }, [open]);
 
   // Seek to the requested sport once the list has arrived.
   useEffect(() => {

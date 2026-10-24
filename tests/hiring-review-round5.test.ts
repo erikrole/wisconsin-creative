@@ -96,8 +96,7 @@ describe("hiring UI", () => {
   });
 
   it("clears the close date whenever the dialog opens, closes, or targets another cycle", () => {
-    expect(dialogs).toContain('setClosedOn("");');
-    expect(dialogs).toContain("}, [open, label]);");
+    expect(dialogs).toContain('useSyncedDraft(`${open}\\u0000${label}`, () => "")');
   });
 
   it("does not invent a graduation term for a year-only record", () => {
