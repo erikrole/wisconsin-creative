@@ -73,7 +73,7 @@ export type KioskHomePickup = {
   items: KioskGearThumb[];
 };
 
-export type KioskTodayReason = "overdue" | "pickup" | "return_due" | "shift_soon";
+type KioskTodayReason = "overdue" | "pickup" | "return_due" | "shift_soon";
 
 export type KioskTodayTile = {
   userId: string;

@@ -35,7 +35,7 @@ export interface YouTubeTransport {
   changeVisibility(video: VideoSnapshot, ifMatch: string): Promise<void>;
 }
 
-export type PublishPhase = "pending" | "verified" | "uncertain" | "conflict" | "notApplied";
+type PublishPhase = "pending" | "verified" | "uncertain" | "conflict" | "notApplied";
 export type PublishOperation = "send" | "launch" | "visibility" | "metadata" | "undo";
 
 export interface PublishPreview {
@@ -279,7 +279,7 @@ export async function loadPlaylistVideoIds(transport: Pick<PlaylistTransport, "p
 
 // ---------------------------------------------------------------- playlist additions
 
-export type PlaylistAdditionPhase = "pending" | "verified" | "uncertain" | "notApplied";
+type PlaylistAdditionPhase = "pending" | "verified" | "uncertain" | "notApplied";
 
 export interface PlaylistAddition {
   id: string;

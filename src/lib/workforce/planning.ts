@@ -2,7 +2,7 @@ import { ApplicationStage, GraduationTerm, ShiftArea } from "@prisma/client";
 import { compareTerms } from "@/lib/workforce/contract";
 
 const NO_AREA = "NONE" as const;
-export type PlanningAreaKey = ShiftArea | typeof NO_AREA;
+type PlanningAreaKey = ShiftArea | typeof NO_AREA;
 
 export type PlanningStudent = {
   id: string;
@@ -27,7 +27,7 @@ export type PlanningApplicant = {
   stage: Extract<ApplicationStage, "APPLIED" | "ROUND_1" | "HIRE">;
 };
 
-export type PlanningCell = {
+type PlanningCell = {
   academicYearStart: number;
   /** Current students still here at the start of this academic year. */
   continuing: number;

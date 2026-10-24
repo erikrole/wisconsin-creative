@@ -17,7 +17,7 @@ import { unique } from "@/lib/utils";
 
 
 /** Cache tag for every filter variant of the accountability report. */
-export const ACCOUNTABILITY_REPORT_TAG = "accountability-report";
+const ACCOUNTABILITY_REPORT_TAG = "accountability-report";
 /** Short enough that a checkout or return shows up on the next look. */
 const ACCOUNTABILITY_REPORT_TTL_SECONDS = 60;
 
@@ -43,7 +43,7 @@ export type AccountabilityFilters = {
   sort?: AccountabilitySort;
 };
 
-export const ACCOUNTABILITY_RANKING_DESCRIPTIONS: Record<AccountabilitySort, string> = {
+const ACCOUNTABILITY_RANKING_DESCRIPTIONS: Record<AccountabilitySort, string> = {
   events: "Late events, then total late time, then most recent incident",
   time: "Total late time, then late events, then most recent incident",
   recent: "Most recent incident, then late events, then total late time",

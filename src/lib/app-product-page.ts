@@ -2,7 +2,7 @@
 // like /apps. Every claim comes from the app's own README or release notes.
 import type { LiveVersion } from "@/lib/apps-live-versions";
 
-export type ProductShot = { file: string; alt: string; caption: string; width: number; height: number };
+type ProductShot = { file: string; alt: string; caption: string; width: number; height: number };
 
 export type ProductPage = {
   slug: "fetch" | "offload" | "wisconsin-creative" | "radio-clip" | "media-lab";
