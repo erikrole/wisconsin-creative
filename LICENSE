@@ -1,0 +1,11 @@
+Copyright (c) 2026 the owner of the Wisconsin Creative project (github.com/erikrole).
+All rights reserved.
+
+This repository is public so its code can be reviewed. No license is granted
+to use, copy, modify, merge, publish, distribute, sublicense, or sell any part
+of it, in source or compiled form, without prior written permission from the
+copyright holder.
+
+Third-party components keep their own licenses, as listed in package.json,
+ios/ and their own notices. Wisconsin Athletics names, marks and logos belong
+to the University of Wisconsin and are not licensed here.

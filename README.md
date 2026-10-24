@@ -2,7 +2,7 @@
 
 > Event-driven gear operations for Wisconsin Athletics Creative.
 
-[Production site](https://wisconsincreative.com) · [Public product overview](https://wisconsincreative.com/about) · [Releases](https://github.com/erikrole/wisconsin-creative/releases) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Production site](https://wisconsincreative.com) · [Public product overview](https://wisconsincreative.com/about) · [Releases](https://github.com/erikrole/wisconsin-creative/releases) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [License](LICENSE)
 
 [![CI](https://github.com/erikrole/wisconsin-creative/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/erikrole/wisconsin-creative/actions/workflows/ci.yml)
 
@@ -11,8 +11,8 @@ game-day schedules, and physical handoffs. It replaces spreadsheets and manual
 sign-out sheets with a scan-enforced, conflict-aware workflow from reservation
 through return.
 
-The repository is public for review, but the production application is
-invite-only. The public `/about` route set is a static stakeholder overview;
+The repository is public for review (all rights reserved; see [LICENSE](LICENSE)),
+but the production application is invite-only. The public `/about` route set is a static stakeholder overview;
 operational routes require an authenticated account. The public [apps directory](https://wisconsincreative.com/apps) links to screenshot and feature overviews for Wisconsin Creative, Offload, Fetch, Radio Clip and Media Lab; unreleased apps are labeled as development previews.
 
 ## The product
