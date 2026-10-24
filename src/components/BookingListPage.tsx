@@ -758,7 +758,9 @@ export default function BookingListPage({
               ? "Try a different search term or clear filters to see all results."
               : config.pastOnly
                 ? `Completed and cancelled ${config.labelPlural.toLowerCase()} will appear here.`
-                : `${config.label.charAt(0).toUpperCase() + config.label.slice(1)}s you create will appear here.`}
+                : config.kind === "CHECKOUT"
+                  ? "Gear you check out at the kiosk or in the iPhone app shows up here, with its return time."
+                  : `${config.label.charAt(0).toUpperCase() + config.label.slice(1)}s you create will appear here.`}
             actionLabel={hasUserFilters ? "Clear filters" : undefined}
             onAction={hasUserFilters ? clearAllFilters : undefined}
           />

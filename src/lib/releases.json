@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-24",
+    "title": "Clearer first-week guidance",
+    "type": "improvement",
+    "summary": "New students are told how to sign in to the app and where checkouts start.",
+    "details": [
+      "The setup finish screen now says to sign in to the iPhone app with the same email and password.",
+      "An empty Checkouts list explains that gear is checked out at the kiosk or in the iPhone app, and shows up here with its return time."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-24",
     "title": "Wiscard is now optional during setup",
     "type": "improvement",
     "summary": "New teammates without a Wiscard can finish setting up their account.",
