@@ -66,6 +66,19 @@ export function normalizeTeamAbbreviations(value: string): string {
   });
 }
 
+/**
+ * Camera and gear labels are stored in caps: "ROAM2", "SLOW1", and "ROME 2" when the
+ * number is a separate word. An all-caps letters-plus-digit token, or an all-caps word
+ * directly followed by a plain number, keeps its casing. Ordinals such as "1ST" do not count.
+ */
+function isAssetLabelToken(title: string, word: string, offset: number, next: RegExpMatchArray | undefined) {
+  if (/^\d+(?:ST|ND|RD|TH)$/u.test(word)) return false;
+  if (/^(?=.*\p{Lu})(?=.*\d)[\p{Lu}\d]{2,}$/u.test(word)) return true;
+  if (!/^\p{Lu}{2,}$/u.test(word) || !next || next.index === undefined) return false;
+  const gap = title.slice(offset + word.length, next.index);
+  return /^\s+$/u.test(gap) && /^\d{1,2}$/u.test(next[0]);
+}
+
 /** Standardize an operational title while preserving UW sport codes and camel-cased product names. */
 function normalizeOperationalTitle(value: string): string {
   const title = value.trim().replace(/\s+/g, " ");
@@ -87,6 +100,7 @@ function normalizeOperationalTitle(value: string): string {
     }
 
     const wordIndex = words.findIndex((match) => match.index === offset);
+    if (isAssetLabelToken(title, word, offset, words[wordIndex + 1])) return word;
     const lower = word.toLocaleLowerCase("en-US");
     const isEdgeWord = wordIndex === 0 || wordIndex === words.length - 1;
     if (!isEdgeWord && LOWERCASE_TITLE_WORDS.has(lower)) return lower;

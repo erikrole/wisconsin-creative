@@ -50,7 +50,7 @@ export function OrderPlan({ participants, students }: { participants: GearPickAd
               <div key={`${line.source}-${line.sku}`} className={ROW}>
                 <span>
                   <span className="font-bold">{line.itemName}</span>
-                  {line.colorLabel && <span className="ml-2 text-xs text-[#8B8D98]">{line.colorLabel}</span>}
+                  {line.colorLabel && <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{line.colorLabel}</span>}
                 </span>
                 <span className={`w-fit rounded-md px-2 py-0.5 text-xs font-bold ${SOURCE[line.source].className}`}>{SOURCE[line.source].label}</span>
                 <span className="flex flex-wrap gap-1">
@@ -70,7 +70,7 @@ export function OrderPlan({ participants, students }: { participants: GearPickAd
           </div>
         </div>
       )}
-      <p className="mt-2 text-xs text-[#8B8D98]">{plan.studentShoes > 0 ? `${plan.studentShoes} student shoes are not listed because the style is not chosen yet. ` : ""}Students are fitted from their profile, men’s cut if none is set. Kit prices are what the department pays, not the budget.</p>
+      <p className="mt-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{plan.studentShoes > 0 ? `${plan.studentShoes} student shoes are not listed because the style is not chosen yet. ` : ""}Students are fitted from their profile, men’s cut if none is set. Kit prices are what the department pays, not the budget.</p>
     </section>
   );
 }

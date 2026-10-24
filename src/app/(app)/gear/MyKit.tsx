@@ -84,8 +84,8 @@ function KitCard({ kit }: { kit: GearMyKitDto }) {
             <li key={`${piece.source}|${piece.sku}|${piece.size}`} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F0F1F3] px-5 py-3 text-sm last:border-b-0 dark:border-white/10">
               <span className="min-w-0">
                 <span className="font-bold">{piece.itemName}</span>
-                {piece.colorLabel && <span className="ml-2 text-xs text-[#8B8D98]">{piece.colorLabel}</span>}
-                <span className="block text-xs text-[#8B8D98]">
+                {piece.colorLabel && <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{piece.colorLabel}</span>}
+                <span className="block text-xs text-[#6B6F7A] dark:text-muted-foreground">
                   {SOURCE_LABEL[piece.source]} · {piece.size === SIZE_NEEDED ? "No size yet" : `Size ${piece.size}`}{piece.quantity > 1 ? ` · ×${piece.quantity}` : ""}
                 </span>
               </span>
