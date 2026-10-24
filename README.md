@@ -57,7 +57,7 @@ closes physical custody. The signed-in web scan surface is lookup-only.
 
 ## Run it locally
 
-Use Node 22 and a named feature branch. The branch's managed environment is
+Use Node 24 and a named feature branch. The branch's managed environment is
 shared across Claude, Cursor, and Codex:
 
 ```bash

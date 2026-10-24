@@ -81,7 +81,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.scope.outputs.heavy == 'true'
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm install --global npm@11.17.0
         if: steps.scope.outputs.heavy == 'true'
@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.scope.outputs.heavy == 'true'
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm install --global npm@11.17.0
