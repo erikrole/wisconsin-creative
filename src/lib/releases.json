@@ -7,7 +7,12 @@
     "details": [
       "The Wiscard step can be skipped, so people who are not UW students are no longer stuck.",
       "A Wiscard can still be added any time from your profile."
-    ]
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 666
   },
   {
     "date": "2026-10-24",
