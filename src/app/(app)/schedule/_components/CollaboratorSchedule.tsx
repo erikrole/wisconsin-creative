@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { BellIcon, BellOffIcon, CalendarDaysIcon, MapPinIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +41,8 @@ type PublishedEvent = {
   isFollowing: boolean;
 };
 
+const PUBLISHED_SCHEDULE_KEY = ["schedule", "published"] as const;
+
 function formatWindow(startsAt: string, endsAt: string) {
   const start = new Date(startsAt);
   const end = new Date(endsAt);
@@ -54,35 +57,22 @@ function crewRole(role: string) {
 }
 
 export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
-  const [events, setEvents] = useState<PublishedEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [pendingFollowId, setPendingFollowId] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const response = await fetch("/api/schedule/published?limit=100");
-      if (handleAuthRedirect(response) || !response.ok) {
-        setError(true);
-        return;
-      }
+  const queryClient = useQueryClient();
+  const schedule = useQuery({
+    queryKey: PUBLISHED_SCHEDULE_KEY,
+    queryFn: async ({ signal }) => {
+      const response = await fetch("/api/schedule/published?limit=100", { signal });
+      if (handleAuthRedirect(response) || !response.ok) throw new Error("Could not load the schedule");
       const json = await parseJsonSafely<{ data?: PublishedEvent[] }>(response);
       const parsed = publishedEventsFromPayload(json);
-      if (!parsed.ok) {
-        setError(true);
-        return;
-      }
-      setEvents(parsed.events as PublishedEvent[]);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void load(); }, [load]);
+      if (!parsed.ok) throw new Error("Could not load the schedule");
+      return parsed.events as PublishedEvent[];
+    },
+  });
+  const events = schedule.data ?? [];
+  const loading = schedule.isPending && schedule.isFetching;
+  const error = schedule.isError && !schedule.data;
+  const [pendingFollowId, setPendingFollowId] = useState<string | null>(null);
 
   async function setFollowing(event: PublishedEvent, following: boolean) {
     if (!canFollow) return;
@@ -98,7 +88,8 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
         toast.error(await parseErrorMessage(response, "Could not update event notifications"));
         return;
       }
-      setEvents((current) => current.map((item) => item.id === event.id ? { ...item, isFollowing: following } : item));
+      queryClient.setQueryData<PublishedEvent[]>(PUBLISHED_SCHEDULE_KEY, (current) =>
+        current?.map((item) => item.id === event.id ? { ...item, isFollowing: following } : item));
       toast.success(following ? "Event updates enabled" : "Event updates muted");
     } catch {
       toast.error("Could not reach the server. Your event notification setting was not changed.");
@@ -117,7 +108,7 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
       {loading ? (
         <OperationalLoadingState variant="page" title="Loading schedule" rows={4} />
       ) : error ? (
-        <EmptyState icon="wifi-off" title="Could not load the schedule" description="Try again before relying on this event list." actionLabel="Try again" onAction={() => void load()} />
+        <EmptyState icon="wifi-off" title="Could not load the schedule" description="Try again before relying on this event list." actionLabel="Try again" onAction={() => void schedule.refetch()} />
       ) : events.length === 0 ? (
         <EmptyState icon="calendar" title="No scheduled events" description="Events will appear here when crew assignments are ready." />
       ) : (

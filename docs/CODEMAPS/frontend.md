@@ -219,7 +219,7 @@
 | `src/hooks/use-getting-started.ts` | 108 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
 | `src/hooks/use-item-change-sync.ts` | 90 |
-| `src/hooks/use-last-audit.ts` | 77 |
+| `src/hooks/use-last-audit.ts` | 69 |
 | `src/hooks/use-mobile.ts` | 19 |
 | `src/hooks/use-onboarding-save.ts` | 249 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |

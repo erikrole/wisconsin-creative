@@ -9,6 +9,7 @@ import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { sendShiftTradeAction } from "@/lib/shift-trade-actions";
 import { formatOperationalDateTime, formatRelativeTime } from "@/lib/format";
@@ -235,7 +236,8 @@ function useRecentActivity(enabled: boolean) {
     },
     enabled: enabled && Boolean(userId),
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    // A Home tab left open overnight must not keep Neon awake; focus resumes it.
+    refetchInterval: () => (isBackgroundPollingPaused() ? false : 60_000),
     refetchOnWindowFocus: true,
   });
 }

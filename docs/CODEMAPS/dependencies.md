@@ -116,7 +116,7 @@
 - `ios:xcode:verify`: `bash scripts/ios-xcode-verify.sh`
 - `ios:xcode:verify:kiosk`: `IOS_SCHEME=WisconsinKiosk bash scripts/ios-xcode-verify.sh`
 - `lint`: `eslint .`
-- `lint:ci`: `eslint . --max-warnings=203`
+- `lint:ci`: `eslint . --max-warnings=194`
 - `lint:summary`: `node scripts/lint-summary.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
