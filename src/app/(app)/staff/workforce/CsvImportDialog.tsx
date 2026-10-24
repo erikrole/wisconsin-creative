@@ -72,11 +72,14 @@ export default function CsvImportDialog({
   // admin picked a different file is discarded instead of re-arming Apply for the wrong data.
   const revision = useRef(0);
   const previewedCsv = useRef<string | null>(null);
+  // Mirrors previewedCsv for rendering; the ref stays the source Apply sends.
+  const [hasPreviewedCsv, setHasPreviewedCsv] = useState(false);
   useEffect(() => {
     if (previewedWith.current !== null && previewedWith.current !== optionsKey) {
       setReport(null);
       previewedWith.current = null;
       previewedCsv.current = null;
+      setHasPreviewedCsv(false);
       revision.current += 1;
     }
   }, [optionsKey]);
@@ -105,7 +108,10 @@ export default function CsvImportDialog({
       }
       setReport(json.data);
       previewedWith.current = optionsKey;
-      if (!apply) previewedCsv.current = csvToSend;
+      if (!apply) {
+        previewedCsv.current = csvToSend;
+        setHasPreviewedCsv(true);
+      }
       if (apply) {
         toast.success("Import applied");
         onApplied();
@@ -120,6 +126,7 @@ export default function CsvImportDialog({
   function reset() {
     revision.current += 1;
     previewedCsv.current = null;
+    setHasPreviewedCsv(false);
     setCsv(null);
     setFileName("");
     setReport(null);
@@ -156,6 +163,7 @@ export default function CsvImportDialog({
                 revision.current += 1;
                 const mine = revision.current;
                 previewedCsv.current = null;
+                setHasPreviewedCsv(false);
                 setReport(null);
                 setError(null);
                 if (!file) return setCsv(null);
@@ -232,7 +240,7 @@ export default function CsvImportDialog({
               <Button type="button" variant="outline" disabled={busy || !csv} onClick={() => void run(false)}>
                 Preview
               </Button>
-              <Button type="button" disabled={busy || !report || !writable || previewedCsv.current === null} onClick={() => void run(true)}>
+              <Button type="button" disabled={busy || !report || !writable || !hasPreviewedCsv} onClick={() => void run(true)}>
                 Apply import
               </Button>
             </>

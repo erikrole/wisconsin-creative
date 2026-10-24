@@ -179,8 +179,8 @@
 | `src/components/TradeBoard.tsx` | 974 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
+| `src/components/Sidebar.tsx` | 798 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
-| `src/components/Sidebar.tsx` | 796 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 710 |
@@ -189,7 +189,7 @@
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
-| `src/components/AppShell.tsx` | 439 |
+| `src/components/AppShell.tsx` | 441 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 378 |
@@ -199,7 +199,7 @@
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
-| `src/components/NotificationsPopover.tsx` | 304 |
+| `src/components/NotificationsPopover.tsx` | 306 |
 
 ## Hooks
 
@@ -211,19 +211,19 @@
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 58 |
 | `src/hooks/use-dashboard-data.ts` | 244 |
-| `src/hooks/use-fetch.ts` | 113 |
+| `src/hooks/use-fetch.ts` | 112 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
 | `src/hooks/use-gear-picks.ts` | 47 |
-| `src/hooks/use-getting-started.ts` | 104 |
+| `src/hooks/use-getting-started.ts` | 108 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
 | `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 77 |
 | `src/hooks/use-mobile.ts` | 20 |
-| `src/hooks/use-onboarding-save.ts` | 245 |
+| `src/hooks/use-onboarding-save.ts` | 249 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 83 |
-| `src/hooks/use-schedule-data.ts` | 1270 |
+| `src/hooks/use-schedule-data.ts` | 1272 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-url-state.ts` | 129 |
 | `src/hooks/useBookingActions.ts` | 297 |

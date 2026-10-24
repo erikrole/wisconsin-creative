@@ -34,7 +34,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/budget/BudgetView.tsx` | 1350 |
 | `src/app/api/assets/route.ts` | 1318 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
-| `src/hooks/use-schedule-data.ts` | 1270 |
+| `src/hooks/use-schedule-data.ts` | 1272 |
 | `src/app/(app)/settings/app-activity/page.tsx` | 1234 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
 | `src/lib/services/schedule-working-copy.ts` | 1208 |

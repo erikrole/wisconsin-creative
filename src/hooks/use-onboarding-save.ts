@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchProfileCompletion, PROFILE_COMPLETION_QUERY_KEY, type ProfileCompletionResponse } from "@/hooks/use-profile-completion";
 import { groupValues, ONBOARDING_GROUP_FIELDS, onboardingGroupSchemas, sameGroup, type OnboardingGroup, type OnboardingValues } from "@/lib/onboarding-save";
@@ -20,7 +20,9 @@ const groups = Object.keys(ONBOARDING_GROUP_FIELDS) as OnboardingGroup[];
 export function useOnboardingSave(options: Options) {
   const query = useQueryClient();
   const latest = useRef(options);
-  latest.current = options;
+  useLayoutEffect(() => {
+    latest.current = options;
+  });
   const owner = useRef<string | null>(null);
   const mutationEpoch = useRef(0);
   const alive = useRef(true);
@@ -173,7 +175,9 @@ export function useOnboardingSave(options: Options) {
     pending.current = task;
     return task;
   }, [query, refresh]);
-  flushRef.current = flush;
+  useLayoutEffect(() => {
+    flushRef.current = flush;
+  });
 
   const markDirty = useCallback((group: OnboardingGroup, immediate = false) => {
     dirty.current.add(group);

@@ -22,8 +22,7 @@ export function useLabelCatalog<T>(
     transform: (catalog: { assets: unknown[]; families: unknown[] }) => T;
   },
 ) {
-  const transformRef = useRef(options.transform);
-  transformRef.current = options.transform;
+  const { transform } = options;
   const keepPreviousData = options.keepPreviousData ?? false;
 
   const {
@@ -35,7 +34,7 @@ export function useLabelCatalog<T>(
   } = useQuery({
     queryKey: ["label-catalog", search],
     queryFn: ({ signal }) => collectLabelCatalog(search, (path) => readLabelCatalogPage(path, signal)),
-    select: (catalog) => transformRef.current(catalog),
+    select: (catalog) => transform(catalog),
     placeholderData: keepPreviousData ? (previousData) => previousData : undefined,
     refetchOnWindowFocus: true,
   });
