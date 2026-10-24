@@ -210,8 +210,8 @@ function MissingUnitActions({ skuId, unitNumber, label, onDone }: { skuId: strin
   }
   return (
     <div className="flex justify-end gap-2">
-      <Button size="sm" variant="outline" disabled={busy} onClick={() => settle("AVAILABLE")}>Found it</Button>
-      <Button size="sm" variant="ghost" disabled={busy} onClick={() => settle("RETIRED")}>Write off</Button>
+      <Button className="h-10" variant="outline" disabled={busy} onClick={() => settle("AVAILABLE")}>Found it</Button>
+      <Button className="h-10" variant="ghost" disabled={busy} onClick={() => settle("RETIRED")}>Write off</Button>
     </div>
   );
 }
