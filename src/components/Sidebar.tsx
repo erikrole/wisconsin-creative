@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import {
   applyThemeChoice,
@@ -49,9 +50,12 @@ import {
   ChevronRightIcon,
   PinIcon,
   LayoutGridIcon,
+  LinkIcon,
 } from "lucide-react";
 import { SidebarToolsFlyout } from "@/components/SidebarToolsFlyout";
-import { toolsForRole } from "@/lib/web-tools";
+import { ALL_TOOLS_HREF, toolsForRole } from "@/lib/web-tools";
+import { SIDEBAR_APPS, linksForRole } from "@/lib/sidebar-links";
+import type { QuickLinkDto } from "@/lib/quick-links";
 import { SidebarCustomizeDialog } from "@/components/SidebarCustomizeDialog";
 import {
   DropdownMenu,
@@ -110,6 +114,8 @@ const COLLABORATOR_NAV_HREFS = [
 type NavGroup = {
   label?: string;
   staffOnly?: boolean;
+  /** Starts folded until the person opens it; their choice is remembered. */
+  defaultCollapsed?: boolean;
   items: NavItem[];
 };
 
@@ -131,14 +137,6 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Purchasing",
-    items: [
-      { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
-      { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
-      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
-    ],
-  },
-  {
     label: "Library",
     items: [
       { label: "Resources", href: "/resources", icon: BookMarkedIcon },
@@ -151,12 +149,24 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Operations", href: "/operations", icon: WrenchIcon },
       { label: "Kits", href: "/kits", icon: BackpackIcon },
+      { label: "Reports", href: "/reports", icon: ChartColumnIcon },
+      { label: "Damage and loss", href: "/damage", icon: PackageXIcon },
+      { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
+    ],
+  },
+  {
+    // Weekly-or-rarer pages stay one click away, like Linear's and Notion's "More",
+    // so the everyday list fits on screen without scrolling.
+    label: "More",
+    staffOnly: true,
+    defaultCollapsed: true,
+    items: [
+      { label: "Budget", href: "/budget", icon: WalletIcon, requiredRole: "ADMIN" },
+      { label: "Wish list", href: "/wishlist", icon: GiftIcon, staffOrAdmin: true },
+      { label: "UA Gear Picks", href: "/gear/admin", icon: ShirtIcon, requiredRole: "ADMIN" },
       { label: "Badges", href: "/badges", icon: MedalIcon },
       { label: "Signatures", href: "/signatures", icon: SignatureIcon },
-      { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
       { label: "YouTube Studio Lite", href: "/youtube", icon: SquarePlayIcon, requiredRole: "ADMIN" },
-      { label: "Damage and loss", href: "/damage", icon: PackageXIcon },
-      { label: "Reports", href: "/reports", icon: ChartColumnIcon },
       { label: "Issues", href: "/issues", icon: BugIcon, requiredRole: "ADMIN" },
     ],
   },
@@ -315,6 +325,8 @@ function useAccountSidebarPrefs(
 
 const menuItemClass = "min-h-9 gap-2.5 rounded-md px-2 text-[13.5px] [&_svg]:size-4 [&_svg]:stroke-[1.75] [&_svg]:text-muted-foreground";
 
+const flyoutIconClass = "size-4 stroke-[1.75] text-[color:var(--sidebar-muted)] transition-colors duration-100 group-hover/menu-item:text-[color:var(--sidebar-text-active)]";
+
 // Collapsed-rail labels: portalled, so they carry the chrome typeface themselves.
 const railTooltipClass = cn(chromeFont.className, "rounded-md px-2 py-1 text-[12.5px] font-bold");
 
@@ -405,6 +417,40 @@ export default function AppSidebar({
   ];
   const displayGroups = groupsWithPins;
   const webTools = user ? toolsForRole(user.role) : [];
+  const apps = user ? linksForRole(user.role, SIDEBAR_APPS) : [];
+  const appSections = [
+    ...(apps.length > 0 ? [{ title: "Our apps", items: apps }] : []),
+    ...(webTools.length > 0 ? [{ title: "Tools", items: webTools }] : []),
+  ];
+  // Quick links load the first time the menu opens, so an ordinary page load never asks the database for them.
+  const [quickLinksWanted, setQuickLinksWanted] = useState(false);
+  const wantQuickLinks = useCallback(() => setQuickLinksWanted(true), []);
+  const quickLinksQuery = useQuery<QuickLinkDto[]>({
+    queryKey: ["quick-links"],
+    queryFn: async () => {
+      const res = await fetch("/api/quick-links");
+      if (!res.ok) throw new Error(`Quick links failed (${res.status})`);
+      return ((await res.json()) as { data: QuickLinkDto[] }).data;
+    },
+    enabled: Boolean(user) && quickLinksWanted,
+    staleTime: 5 * 60_000,
+  });
+  const quickLinks = (quickLinksQuery.data ?? []).map((link) => ({
+    label: link.label,
+    href: link.url,
+    detail: link.detail ?? undefined,
+    icon: LinkIcon,
+  }));
+  const isAdmin = user?.role === "ADMIN";
+  const quickLinksStatus = quickLinksQuery.isPending ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground" aria-live="polite">Loading links…</p>
+  ) : quickLinksQuery.isError ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground" aria-live="polite">Couldn&rsquo;t load links. Try again in a moment.</p>
+  ) : quickLinks.length === 0 ? (
+    <p className="px-2 py-3 text-[13px] text-muted-foreground">
+      {isAdmin ? "No links yet. Add the sites the team uses every day." : "No links yet."}
+    </p>
+  ) : undefined;
   const isOnAccountPage = pathname === SETTINGS_HREF || pathname.startsWith(`${SETTINGS_HREF}/`) || pathname === `/staff/${user?.id}`;
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const reportProblem = useReportProblem();
@@ -424,7 +470,13 @@ export default function AppSidebar({
           : "Student";
 
   function renderGroup(group: NavGroup, groupIdx: number) {
-    const isCollapsed = Boolean(group.label && collapsedGroups.includes(group.label));
+    // Default-folded groups store an "open:" marker instead, so both kinds share one list.
+    const isCollapsed = Boolean(group.label && (group.defaultCollapsed
+      ? !collapsedGroups.includes(`open:${group.label}`)
+      : collapsedGroups.includes(group.label)));
+    const toggleKey = group.defaultCollapsed ? `open:${group.label}` : group.label;
+    // A folded group still hints that something inside wants a look.
+    const hiddenAttention = isCollapsed && group.items.some((item) => (attentionCounts?.[item.href]?.count ?? 0) > 0);
     return (
       <SidebarGroup
         key={group.label ?? group.items.map((item) => item.href).join("-")}
@@ -433,12 +485,18 @@ export default function AppSidebar({
         {group.label && (
             <button
               type="button"
-              onClick={() => toggleGroup(group.label!)}
+              onClick={() => toggleGroup(toggleKey!)}
               aria-expanded={!isCollapsed}
               className="group/label flex h-6 w-full shrink-0 items-center justify-start gap-1 rounded-md px-2 font-bold tracking-[0.01em] text-[color:var(--sidebar-muted)] outline-none transition-colors hover:text-[color:var(--sidebar-text-active)] focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] max-md:h-8 group-data-[collapsible=icon]:hidden"
             >
               {/* Global `button { font-size: inherit }` is unlayered and beats utilities on the button itself. */}
               <span className="text-[11.5px] max-md:text-[13px]">{group.label}</span>
+              {hiddenAttention && (
+                <>
+                  <span aria-hidden="true" className="ml-0.5 size-1.5 shrink-0 rounded-full bg-[var(--sidebar-muted)]" />
+                  <span className="sr-only">, something inside needs a look</span>
+                </>
+              )}
               <ChevronRightIcon
                 aria-hidden="true"
                 className={cn(
@@ -571,16 +629,33 @@ export default function AppSidebar({
         </nav>
       </SidebarContent>
 
-      {webTools.length > 0 && (
-        // Fixed above the account menu so it is on screen on any height; the page list above scrolls.
+      {user && (
+        // Fixed above the account menu so they are on screen on any height; the page list above scrolls.
         <div className="px-3 pb-2 pt-1 group-data-[collapsible=icon]:px-2">
           <SidebarMenu className="gap-px">
+            {appSections.length > 0 && (
+              <SidebarMenuItem>
+                <SidebarToolsFlyout
+                  label="Apps"
+                  sections={appSections}
+                  footer={{ label: "All apps and tools", href: ALL_TOOLS_HREF }}
+                  icon={LayoutGridIcon}
+                  buttonClassName={navButtonClass(false)}
+                  iconClassName={flyoutIconClass}
+                  tooltipClassName={railTooltipClass}
+                />
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarToolsFlyout
-                tools={webTools}
-                icon={LayoutGridIcon}
+                label="Quick links"
+                sections={[{ title: "Quick links", items: quickLinks }]}
+                status={quickLinksStatus}
+                onOpen={wantQuickLinks}
+                footer={isAdmin ? { label: "Edit Quick links", href: "/settings/quick-links" } : undefined}
+                icon={LinkIcon}
                 buttonClassName={navButtonClass(false)}
-                iconClassName="size-4 stroke-[1.75] text-[color:var(--sidebar-muted)] transition-colors duration-100 group-hover/menu-item:text-[color:var(--sidebar-text-active)]"
+                iconClassName={flyoutIconClass}
                 tooltipClassName={railTooltipClass}
               />
             </SidebarMenuItem>

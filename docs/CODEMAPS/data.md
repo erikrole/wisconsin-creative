@@ -140,6 +140,7 @@
 | `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |
 | `AnnouncementDismissal` | 6 | 3 |
+| `QuickLink` | 8 | 2 |
 
 ## Enums
 

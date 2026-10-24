@@ -77,6 +77,7 @@
 | `/settings/notifications` | `src/app/(app)/settings/notifications/page.tsx` |
 | `/settings` | `src/app/(app)/settings/page.tsx` |
 | `/settings/profile` | `src/app/(app)/settings/profile/page.tsx` |
+| `/settings/quick-links` | `src/app/(app)/settings/quick-links/page.tsx` |
 | `/settings/reservation-rules` | `src/app/(app)/settings/reservation-rules/page.tsx` |
 | `/settings/security` | `src/app/(app)/settings/security/page.tsx` |
 | `/settings/sports` | `src/app/(app)/settings/sports/page.tsx` |
@@ -108,6 +109,7 @@
 | `/dev-assign-picker` | `src/app/dev-assign-picker/page.tsx` |
 | `/dev-auto-assign` | `src/app/dev-auto-assign/page.tsx` |
 | `/dev-crew-size` | `src/app/dev-crew-size/page.tsx` |
+| `/dev-gear` | `src/app/dev-gear/page.tsx` |
 | `/dev-home` | `src/app/dev-home/page.tsx` |
 | `/dev-labels` | `src/app/dev-labels/page.tsx` |
 | `/dev-settings` | `src/app/dev-settings/page.tsx` |
@@ -175,9 +177,9 @@
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
+| `src/components/Sidebar.tsx` | 796 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
-| `src/components/Sidebar.tsx` | 721 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |

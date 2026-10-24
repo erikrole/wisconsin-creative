@@ -3510,3 +3510,20 @@ model AnnouncementDismissal {
   @@index([userId])
   @@map("announcement_dismissals")
 }
+
+/// Sidebar Quick links: everyday sites (music library, content tools, shared sheets) that admins
+/// add and edit in Settings. An empty roles list shows the link to everyone signed in.
+model QuickLink {
+  id        String   @id @default(cuid())
+  label     String
+  /// An https URL, or an app path such as "/resources".
+  url       String
+  detail    String?
+  roles     Role[]   @default([])
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@map("quick_links")
+}
