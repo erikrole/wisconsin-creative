@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-21
+- Last Updated: 2026-10-23
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -34,7 +34,8 @@ The current Home rework supersedes the older lane layout described in the V1 sec
 2. The original grouped role-scoped count strip.
 3. The original wider primary column keeps Needs attention and Up next together. Recent activity sits below Up next for Staff/Admin, filling the space that previously remained empty. Personal gear, today's crew, Coming up and Team gear remain in the right column. Cards use natural content heights.
 4. Students keep their existing personal work and trade cards; Team gear uses the space below Up next because they do not receive Recent activity. Collaborators receive only their permitted personal modules. A single permitted column takes the full width. Two columns start at the `xl` breakpoint (1280px); below that, including tablets with the sidebar open, Home is one column so the 380px rail never squeezes the main cards. At narrow widths, personal gear and crew remain ahead of secondary activity/team cards in the reading order. No new collapsible group or card visibility control is introduced.
-5. Quiet attention, gear, trade, crew and team cards use compact inline empty states while retaining their existing actions. A row that carries its own Remind, Approve or Claim button drops its duplicate text label, and the featured Up next card wraps its actions below the title when space is tight. Initial loading and section failures retain their individual skeletons and Retry controls.
+5. Banners (Getting started, profile, gear picks, Creative Wrapped) render once, inside Home's banner slot. The admin-only Wrapped preview is a quiet single-row card; the December launch keeps the Badger red slab. New reservation is the page's single Badger red action; section links ("View all", "Schedule") are neutral text, and the featured Up next block sits on a neutral tint with a pickup/shift colour dot.
+6. Quiet attention, gear, trade, crew and team cards use compact inline empty states while retaining their existing actions. A row that carries its own Remind, Approve or Claim button drops its duplicate text label, and the featured Up next card wraps its actions below the title when space is tight. Initial loading and section failures retain their individual skeletons and Retry controls.
 
 The layout polish is local. Authenticated branch-preview and production acceptance remain pending; sample-data captures do not establish server behavior.
 

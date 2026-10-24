@@ -30,7 +30,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 ## bulk-inventory
 
 - Doc: `docs/AREA_BULK_INVENTORY.md`
-- Pages: `/bulk-inventory/[id]`, `/bulk-inventory/batteries`, `/bulk-inventory`
+- Pages: `/bulk-inventory/[id]`, `/bulk-inventory/batteries`, `/bulk-inventory`, `/dev-batteries`
 - APIs: `/api/bulk-skus/[id]/activity`, `/api/bulk-skus/[id]/adjust`, `/api/bulk-skus/[id]/convert-to-numbered`, `/api/bulk-skus/[id]/favorite`, `/api/bulk-skus/[id]/image`, `/api/bulk-skus/[id]/products/[productId]`, `/api/bulk-skus/[id]/products`, `/api/bulk-skus/[id]/qr-code`, `/api/bulk-skus/[id]`, `/api/bulk-skus/[id]/units/[unitNumber]/product`
 - Services: _none matched_
 - Tests: `tests/admin-fix-today-batteries.test.ts`

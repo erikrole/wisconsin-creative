@@ -53,7 +53,7 @@
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/damage-cases.ts` | 364 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
-| `src/lib/services/error-reports.ts` | 554 |
+| `src/lib/services/error-reports.ts` | 555 |
 | `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
@@ -186,7 +186,7 @@
 | `src/lib/booking-display-title.ts` | 58 |
 | `src/lib/booking-status-display.ts` | 170 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 229 |
+| `src/lib/breadcrumbs.ts` | 230 |
 | `src/lib/brother-chain.ts` | 71 |
 | `src/lib/brother-label-csv.ts` | 185 |
 | `src/lib/brother-label-render.ts` | 134 |
@@ -232,7 +232,7 @@
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
 | `src/lib/football-results.ts` | 233 |
-| `src/lib/format.ts` | 320 |
+| `src/lib/format.ts` | 328 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
@@ -259,7 +259,7 @@
 | `src/lib/live-activity-workflow.ts` | 34 |
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
-| `src/lib/nav-sections.ts` | 299 |
+| `src/lib/nav-sections.ts` | 308 |
 | `src/lib/notification-catalog.ts` | 325 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
@@ -283,6 +283,7 @@
 | `src/lib/public-showroom.ts` | 454 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 66 |
+| `src/lib/quick-links.ts` | 66 |
 | `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/releases.ts` | 104 |
@@ -338,6 +339,7 @@
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-reminder-workflow.ts` | 26 |
 | `src/lib/shift-trade-actions.ts` | 60 |
+| `src/lib/sidebar-links.ts` | 30 |
 | `src/lib/software-vault-access.ts` | 20 |
 | `src/lib/software-vault-crypto.ts` | 11 |
 | `src/lib/software-vault-validation.ts` | 39 |
@@ -810,6 +812,11 @@
 
 - `/api/push/web`
 - `/api/push/web/test`
+
+### `/api/quick-links`
+
+- `/api/quick-links/[id]`
+- `/api/quick-links`
 
 ### `/api/reports`
 
