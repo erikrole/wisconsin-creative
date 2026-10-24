@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BellRingIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,7 +23,9 @@ export function ScheduleReleaseNotice({
 }: ScheduleReleaseNoticeProps) {
   const [clock, setClock] = useState(() => Date.now());
   const refreshRef = useRef(onRefresh);
-  refreshRef.current = onRefresh;
+  useLayoutEffect(() => {
+    refreshRef.current = onRefresh;
+  });
   const eventHasEnded = eventEndsAt ? new Date(eventEndsAt).getTime() <= clock : false;
 
   useEffect(() => {

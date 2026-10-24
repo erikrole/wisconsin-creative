@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon } from "lucide-react";
 import AppSidebar from "./Sidebar";
@@ -115,7 +115,9 @@ export default function AppShell({
   // tore the poll down and re-bootstrapped it on every client-side navigation,
   // which re-POSTed the app-open easter-egg event and reset the 15s interval.
   const rewardPathRef = useRef(pathname);
-  rewardPathRef.current = pathname;
+  useLayoutEffect(() => {
+    rewardPathRef.current = pathname;
+  });
 
   useEffect(() => {
     if (!isLoading && !user) router.replace("/login");

@@ -72,7 +72,9 @@ describe("CSV import dialog", () => {
     // A preview that arrives after the file changed is discarded.
     expect(csvDialog).toContain("revision.current !== startedAt");
     expect(csvDialog).toContain("revision.current === mine");
-    expect(csvDialog).toContain("previewedCsv.current === null");
+    // Apply stays disabled until a preview is on screen; state, not the ref, drives the render.
+    expect(csvDialog).toContain("!hasPreviewedCsv");
+    expect(csvDialog).toContain("setHasPreviewedCsv(true)");
   });
 
   it("invalidates the reviewed preview when an import option changes", () => {

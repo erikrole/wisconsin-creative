@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
@@ -30,7 +30,9 @@ export function useGettingStartedState(enabled: boolean) {
   const userId = useAuthenticatedQueryUserId();
   const query = useQueryClient();
   const actor = useRef(userId);
-  actor.current = userId;
+  useLayoutEffect(() => {
+    actor.current = userId;
+  });
   const [local, setLocal] = useState<{ userId: string; state: GettingStartedState } | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -69,7 +71,9 @@ export function useGettingStartedState(enabled: boolean) {
   const state = userId && local?.userId === userId ? mergeGettingStarted(server.data ?? { done: [], dismissed: false }, local.state) : null;
   const stateKey = JSON.stringify(state);
   const latest = useRef(state);
-  latest.current = state;
+  useLayoutEffect(() => {
+    latest.current = state;
+  });
   useEffect(() => {
     const candidate = latest.current;
     if (!enabled || !userId || !candidate || !server.data || sameGettingStarted(candidate, server.data)) return;
