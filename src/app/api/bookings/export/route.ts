@@ -16,7 +16,7 @@ const bookingExportQuerySchema = z.object({
 }).superRefine((query, ctx) => {
   if (query.from && query.to && new Date(query.from) > new Date(query.to)) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["to"],
       message: "to must be on or after from",
     });

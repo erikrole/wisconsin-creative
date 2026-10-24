@@ -1,5 +1,19 @@
 [
   {
+    "date": "2026-10-24",
+    "title": "Clearer validation messages",
+    "type": "improvement",
+    "summary": "Form and request validation moved to a newer checker, so a few default messages read differently, such as \"Too big: expected array to have <=5 items\" where a limit is exceeded.",
+    "details": [
+      "Fields with their own wording are unchanged; only the generic limit and type messages changed.",
+      "Error responses keep the same shape, so the iPhone app and web pages behave as before."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 634
+  },
+  {
     "date": "2026-10-23",
     "title": "Roster invites are emailed",
     "type": "fixes",
