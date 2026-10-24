@@ -135,7 +135,7 @@
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`
 - `test:watch`: `vitest`
-- `verify:docs`: `npm run codemap:check`
+- `verify:docs`: `node scripts/check-repo-hygiene.mjs && npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`
 
 ## Environment Variables From `.env.example`

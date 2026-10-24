@@ -3,10 +3,10 @@
 - Source visual truth: `/Users/role/.codex/generated_images/01a00787-0134-78c2-98b4-b99071bcb09b/exec-c593a80f-6171-4314-8711-7a008e41dfdc.png`
 - Source pixels: 1487 x 1058
 - Implementation route: `http://127.0.0.1:3000/signatures/cmsuuo6v2000bp5uym0kx3c24`
-- Dark implementation: `/Users/role/Code/wisconsin-creative/design-qa-signature-roster-dark-final.png`
-- Light implementation: `/Users/role/Code/wisconsin-creative/design-qa-signature-roster-light-final.png`
-- Responsive implementation: `/Users/role/Code/wisconsin-creative/design-qa-signature-roster-1024.png`
-- Side-by-side comparison: `/Users/role/Code/wisconsin-creative/design-qa-signature-roster-comparison.png`
+- Dark implementation: `design-qa/signature-roster/design-qa-signature-roster-dark-final.png`
+- Light implementation: `design-qa/signature-roster/design-qa-signature-roster-light-final.png`
+- Responsive implementation: `design-qa/signature-roster/design-qa-signature-roster-1024.png`
+- Side-by-side comparison: `design-qa/signature-roster/design-qa-signature-roster-comparison.png`
 - Intended viewport: desktop, 1487 x 1058 CSS pixels, device scale factor 1
 - State: Creative staff roster, one committed signature
 

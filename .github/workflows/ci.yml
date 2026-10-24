@@ -164,6 +164,9 @@ jobs:
       - run: npm ci
         if: steps.scope.outputs.heavy == 'true'
 
+      - name: Repo hygiene (no root-level media)
+        run: node scripts/check-repo-hygiene.mjs
+
       - name: Require a /releases entry
         if: github.event_name == 'pull_request'
         env:
