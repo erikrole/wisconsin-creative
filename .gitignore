@@ -32,3 +32,4 @@ playwright-report/
 .vercel
 .env*
 /.swc
+coverage/
