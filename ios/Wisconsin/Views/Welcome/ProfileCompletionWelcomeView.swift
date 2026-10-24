@@ -319,7 +319,7 @@ struct ProfileCompletionWelcomeView: View {
         case .email: "Your campus email is your site login. Add your required Athletics email."
         case .phones where hasSimplePhoneStep: "Add the personal phone number we should use to reach you."
         case .phones: "Identify any number already on your account, then add the other contact number."
-        case .wiscard: "Type the card number and issue code printed on your card. This is used for kiosk identification."
+        case .wiscard: "Type the card number and issue code printed on your card. This is used for kiosk identification. No Wiscard? You can skip this."
         case .student: "Tell us your current year and when you expect to graduate."
         case .apparel: "For team apparel orders. Choose the sizes you normally buy."
         case .photo: "A clear photo helps teammates recognize you. This step is optional — Finish saves setup with or without a photo."
@@ -336,7 +336,7 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private var requiresSetup: Bool { data?.completion.requiresSetup == true || (user?.onboardingRequired == true && data?.completion.onboardingComplete != true) }
-    private var isOptionalStep: Bool { currentStep == .photo || (currentStep == .apparel && !requiresSetup) }
+    private var isOptionalStep: Bool { currentStep == .photo || currentStep == .wiscard || (currentStep == .apparel && !requiresSetup) }
 
     private var canContinue: Bool {
         guard let profile else { return false }
