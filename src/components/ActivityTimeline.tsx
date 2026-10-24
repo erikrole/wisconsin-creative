@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, createElement, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -1113,7 +1113,7 @@ function TimelineEntry({
   const actorName = entry.actor?.name
     ?? (SYSTEM_ACTIONS.has(entry.action) ? "System" : "Unknown user");
   const colorKey = ACTION_COLORS[entry.action] ?? "muted";
-  const Icon = actionIcon(entry.action, isSystem);
+  const icon = createElement(actionIcon(entry.action, isSystem), { className: "size-3.5" });
 
   const description = describeAction(entry, actorName, context, entityName);
   const chained = getChainedChange(entry);
@@ -1155,7 +1155,7 @@ function TimelineEntry({
             NODE_CLASSES[colorKey],
           )}
         >
-          <Icon className="size-3.5" />
+          {icon}
         </div>
         <div className="mt-1 w-px flex-1 bg-border/50" />
       </div>

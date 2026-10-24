@@ -183,7 +183,7 @@
 | `src/lib/booking-actions.ts` | 11 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
-| `src/lib/booking-display-title.ts` | 61 |
+| `src/lib/booking-display-title.ts` | 77 |
 | `src/lib/booking-status-display.ts` | 152 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 230 |
@@ -355,7 +355,7 @@
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 43 |
-| `src/lib/title-normalization.ts` | 115 |
+| `src/lib/title-normalization.ts` | 117 |
 | `src/lib/unavailable-times.ts` | 185 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |
