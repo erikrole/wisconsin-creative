@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -24,7 +23,6 @@ import { DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuS
 import EmptyState from "@/components/EmptyState";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
-import { isCurrentDeviceIpad } from "@/lib/signatures/capture";
 import { invalidateSignatureCollectionCaches } from "@/lib/signatures/client-cache";
 import {
   DEFAULT_SIGNATURE_SEASON,
@@ -65,7 +63,6 @@ type Preview = {
 
 type SignatureZipFormat = "png" | "svg";
 
-const CAPTURE_ON_IPAD_TOOLTIP = "Capture can only be done on an iPad with an Apple Pencil.";
 
 const SIGNATURE_SEASON_OPTIONS = Array.from({ length: 9 }, (_, index) => {
   const startYear = 2024 + index;
@@ -112,17 +109,12 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
   const [adHocSeason, setAdHocSeason] = useState(DEFAULT_SIGNATURE_SEASON);
   const [addingAdHoc, setAddingAdHoc] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
-  const [isIpad, setIsIpad] = useState(false);
   const automaticSyncAttempt = useRef<string | null>(null);
   const { data, loading, refreshing, error, reload } = useFetch<Collection[]>({
     url: "/api/signatures/collections" + (showArchived ? "?includeArchived=true" : ""),
     transform: (json) => (json.collections as Collection[]) ?? [],
   });
   const collections = useMemo(() => data ?? [], [data]);
-
-  useEffect(() => {
-    setIsIpad(isCurrentDeviceIpad());
-  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -147,11 +139,8 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
   }, [collections, loading, queryClient, reload]);
 
   async function addAdHocSigner() {
-    if (!isIpad) {
-      toast.error(CAPTURE_ON_IPAD_TOOLTIP);
-      return;
-    }
     setAddingAdHoc(true);
+    const addedName = adHocName.trim();
     try {
       const result = await postJson("/api/signatures/collections", {
         season: adHocSeason,
@@ -163,7 +152,10 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
       setAdHocCategory("");
       const collectionId = String(result.collectionId);
       await invalidateSignatureCollectionCaches(queryClient, collectionId);
-      router.push(`/signatures/${collectionId}/capture/${String(result.memberId)}`);
+      // Web capture is retired: the signer is added here and signs in the
+      // Wisconsin app on iPad, where they appear on the Ad-hoc roster.
+      toast.success(`${addedName} was added. Capture their signature in the Wisconsin app on iPad.`);
+      router.push(`/signatures/${collectionId}`);
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "Ad-hoc signer was not added");
     } finally {
@@ -296,24 +288,13 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
     <FadeUp>
       <PageHeader title="Signatures">
         <Dialog open={adHocOpen} onOpenChange={(open) => { if (!addingAdHoc) setAdHocOpen(open); }}>
-          {isIpad ? (
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-10"><Plus data-icon="inline-start" />Add Signature</Button>
-            </DialogTrigger>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span tabIndex={0} aria-label="Add signature on iPad" className="inline-flex">
-                  <Button type="button" size="sm" className="h-10" disabled><Plus data-icon="inline-start" />Add on iPad</Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{CAPTURE_ON_IPAD_TOOLTIP}</TooltipContent>
-            </Tooltip>
-          )}
+          <DialogTrigger asChild>
+            <Button size="sm" className="h-10"><Plus data-icon="inline-start" />Add Signer</Button>
+          </DialogTrigger>
           <DialogContent>
             <DialogHeader className="flex-col items-start gap-1 pr-14">
-              <DialogTitle>Add ad-hoc signature</DialogTitle>
-              <DialogDescription>Create a one-off signer and go straight to the capture surface.</DialogDescription>
+              <DialogTitle>Add ad-hoc signer</DialogTitle>
+              <DialogDescription>Create a one-off signer. Capture their signature in the Wisconsin app on iPad.</DialogDescription>
             </DialogHeader>
             <DialogBody className="space-y-4 py-5">
               <div className="space-y-2">
@@ -335,7 +316,7 @@ export default function SignatureCollectionsPage({ isAdmin }: { isAdmin: boolean
             <DialogFooter>
               <Button variant="outline" onClick={() => setAdHocOpen(false)} disabled={addingAdHoc}>Cancel</Button>
               <Button onClick={addAdHocSigner} disabled={addingAdHoc || !adHocName.trim() || !adHocCategory.trim()}>
-                <FilePenLine data-icon="inline-start" />{addingAdHoc ? "Adding…" : "Add and capture"}
+                <FilePenLine data-icon="inline-start" />{addingAdHoc ? "Adding…" : "Add signer"}
               </Button>
             </DialogFooter>
           </DialogContent>

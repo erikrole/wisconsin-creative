@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import type { GearPicksMeResponse } from "@/lib/gear-picks/types";
+import { seriousAxeViolations } from "./axe";
 
 // Real picker and query hook; only Next's framework adapters are replaced.
 // Network fixtures prove browser behavior, not authenticated database persistence.
@@ -31,15 +32,17 @@ const fixture = (): GearPicksMeResponse => ({
 
 test.beforeAll(async () => {
   const adapters: Record<string, string> = {
-    "next/navigation": 'export const useRouter = () => ({ push: () => {} });',
+    "next/navigation": 'export const useRouter = () => ({ push: () => {}, replace: () => {}, refresh: () => {}, prefetch: () => {} }); export const usePathname = () => "/gear"; export const useSearchParams = () => new URLSearchParams(); export const redirect = () => {}; export const notFound = () => {};',
     "next/link": 'import React from "react"; export default function Link(p) { return <a {...p}/>; }',
+    // next/font only works inside the Next compiler (same stub as tests/_setup.ts).
+    "next/font/google": 'export const Lato = () => ({ className: "", variable: "", style: {} });',
     "next/image": 'import React from "react"; export default function Image({fill,sizes,priority,...p}) { return <img {...p} style={fill ? {position:"absolute",height:"100%",width:"100%",inset:0}:undefined}/>; }',
   };
   const bundle = await build({
     entryPoints: ["tests/fixtures/gear-picker-browser.tsx"], bundle: true, write: false,
     jsx: "automatic", define: { "process.env.NODE_ENV": '"test"' },
     plugins: [{ name: "framework-adapters", setup(b) {
-      b.onResolve({ filter: /^next\/(navigation|link|image)$/ }, (args) => ({ path: args.path, namespace: "adapter" }));
+      b.onResolve({ filter: /^next\/(navigation|link|image|font\/google)$/ }, (args) => ({ path: args.path, namespace: "adapter" }));
       b.onLoad({ filter: /.*/, namespace: "adapter" }, (args) => ({ contents: adapters[args.path], loader: "tsx", resolveDir: process.cwd() }));
       if (baselineDirectory) b.onLoad({ filter: /\/(gear\/(Gear\w+\.tsx|gear-pick-state\.ts)|gear-picks\/catalog\.(ts|json)|gear-picks\/catalog-2027-28\.json)$/ }, async (args) => ({
         contents: await readFile(path.join(baselineDirectory, `${path.basename(args.path)}.txt`), "utf8"),
@@ -58,7 +61,7 @@ test.beforeAll(async () => {
     else if (req.url?.startsWith("/gear/") || req.url?.startsWith("/fonts/")) {
       if (req.url.endsWith(".svg")) res.setHeader("Content-Type", "image/svg+xml");
       try { res.end(await readFile(path.join(process.cwd(), "public", req.url))); } catch { res.statusCode = 404; res.end(); }
-    } else { res.setHeader("Content-Type", "text/html"); res.end('<html lang="en" data-theme="light"><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><main id="root" style="padding:32px"></main><script src="/bundle.js"></script></body></html>'); }
+    } else { res.setHeader("Content-Type", "text/html"); res.end('<html lang="en" data-theme="light"><head><title>UA staff gear</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><main id="root" style="padding:32px"></main><script src="/bundle.js"></script></body></html>'); }
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
@@ -365,4 +368,17 @@ test("intro explains the current sizing and selection workflow", async () => {
     await intro.getByRole("button", {name: "Start picking"}).click();
     await browserExpect(intro).not.toBeVisible();
   } finally {await page.close();}
+});
+
+test("catalog and review have no serious accessibility violations on desktop and phone", async () => {
+  for (const width of [1280, 390]) {
+    const { page } = await open(width);
+    try {
+      expect(await seriousAxeViolations(page)).toEqual([]);
+      await page.getByRole("searchbox").fill("6021649");
+      await page.getByRole("button", { name: width < 640 ? "Review" : "Review & submit", exact: true }).click();
+      await browserExpect(page.getByRole("dialog")).toBeVisible();
+      expect(await seriousAxeViolations(page)).toEqual([]);
+    } finally { await page.close(); }
+  }
 });

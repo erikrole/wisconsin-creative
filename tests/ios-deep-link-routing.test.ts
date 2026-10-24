@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { GET as associatedDomains } from "@/app/.well-known/apple-app-site-association/route";
 
 describe("iOS entry-point routing", () => {
   const router = source("ios/Wisconsin/Core/GearTrackerRoute.swift");
@@ -28,6 +29,24 @@ describe("iOS entry-point routing", () => {
     expect(app).toContain("appState.apply(route)");
     expect(appDelegate).toContain("GearTrackerRouteParser.parseNotification(userInfo:");
     expect(appState).toContain("func apply(_ route: GearTrackerRoute)");
+  });
+
+  it("claims nonempty emailed invite links and keeps their proof on the native auth path", async () => {
+    const result = await associatedDomains().json();
+    const components = result.applinks.details[0].components as Array<Record<string, unknown>>;
+    expect(components.filter((component) => component["/"] === "/login")).toEqual([
+      { "/": "/login", "?": { web: "1" }, exclude: true },
+      { "/": "/login", "?": { invite: "?*" } },
+    ]);
+    expect(app).toContain("session.receiveInviteURL(url)");
+    expect(app).toContain(".onContinueUserActivity(NSUserActivityTypeBrowsingWeb)");
+    const client = source("ios/Wisconsin/Core/APIClient+Auth.swift");
+    expect(client).toContain("let invite: String?");
+    expect(client).toContain("let inviteToken: String?");
+    expect(client).toContain('request(path: "/api/auth/invite/resend", method: "POST")');
+    const registration = source("ios/Wisconsin/Views/NativeAuthViews.swift");
+    expect(registration).toContain("inviteToken: submittedInvite?.email == submittedEmail");
+    expect(registration).toContain("InviteLinkResendButton(email: normalizedEmail)");
   });
 
   it("routes inbox taps through the same destination map as APNs", () => {

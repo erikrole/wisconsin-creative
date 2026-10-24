@@ -8,20 +8,20 @@
 | `@fontsource/barlow` | `^5.3.0` |
 | `@mdxeditor/editor` | `^4.3.3` |
 | `@neondatabase/serverless` | `1.2.0` |
-| `@prisma/adapter-neon` | `^6.19.3` |
-| `@prisma/client` | `^6.19.3` |
-| `@sentry/nextjs` | `^10.76.2` |
-| `@simplewebauthn/browser` | `^13.3.0` |
-| `@simplewebauthn/server` | `^13.3.3` |
+| `@prisma/adapter-neon` | `^7.10.1` |
+| `@prisma/client` | `^7.10.1` |
+| `@sentry/nextjs` | `^11.8.0` |
+| `@simplewebauthn/browser` | `^14.0.0` |
+| `@simplewebauthn/server` | `^14.0.3` |
 | `@tailwindcss/postcss` | `^4.3.3` |
-| `@tanstack/query-sync-storage-persister` | `^5.104.0` |
-| `@tanstack/react-query` | `^5.104.0` |
-| `@tanstack/react-query-persist-client` | `^5.104.0` |
+| `@tanstack/query-sync-storage-persister` | `^5.104.3` |
+| `@tanstack/react-query` | `^5.104.3` |
+| `@tanstack/react-query-persist-client` | `^5.104.3` |
 | `@tanstack/react-table` | `^8.21.3` |
 | `@upstash/ratelimit` | `^2.2.0` |
 | `@upstash/redis` | `^1.38.0` |
-| `@vercel/analytics` | `1.6.1` |
-| `@vercel/blob` | `^2.8.1` |
+| `@vercel/analytics` | `2.0.1` |
+| `@vercel/blob` | `^2.8.2` |
 | `@vercel/functions` | `3.10.1` |
 | `@vercel/speed-insights` | `2.0.0` |
 | `bcryptjs` | `^3.0.3` |
@@ -30,20 +30,21 @@
 | `cmdk` | `^1.1.1` |
 | `date-fns` | `^4.4.0` |
 | `exceljs` | `4.4.0` |
-| `geist` | `^1.7.2` |
-| `lucide-react` | `^0.577.0` |
-| `motion` | `^12.43.0` |
-| `next` | `^15.5.26` |
+| `geist` | `^1.8.1` |
+| `lucide-react` | `^1.59.0` |
+| `motion` | `^14.3.0` |
+| `next` | `^16.4.2` |
 | `postcss` | `^8.5.30` |
 | `qrcode` | `^1.5.4` |
 | `radix-ui` | `^1.8.1` |
-| `react` | `^19.3.0` |
-| `react-day-picker` | `^9.14.0` |
-| `react-dom` | `^19.3.0` |
+| `react` | `^19.3.1` |
+| `react-day-picker` | `^10.0.2` |
+| `react-dom` | `^19.3.1` |
 | `react-markdown` | `^10.1.0` |
 | `recharts` | `^3.10.1` |
 | `remark-gfm` | `^4.0.1` |
-| `resend` | `^6.32.1` |
+| `resend` | `^6.34.1` |
+| `sharp` | `0.35.5` |
 | `sonner` | `^2.0.8` |
 | `tailwind-merge` | `^3.7.0` |
 | `tailwindcss` | `^4.2.1` |
@@ -51,27 +52,31 @@
 | `vaul` | `^1.1.2` |
 | `web-push` | `^3.6.7` |
 | `workflow` | `4.8.13` |
-| `zod` | `^3.24.2` |
+| `zod` | `^4.6.7` |
 
 ## Dev Dependencies
 
 | Package | Version |
 |---|---|
-| `@next/bundle-analyzer` | `^16.3.7` |
-| `@playwright/test` | `^1.63.0` |
-| `@types/bcryptjs` | `^2.4.6` |
-| `@types/node` | `^22.20.4` |
+| `@eslint/eslintrc` | `^3.3.7` |
+| `@next/bundle-analyzer` | `^16.4.2` |
+| `@playwright/test` | `^1.64.1` |
+| `@prisma/adapter-pg` | `^7.10.1` |
+| `@types/node` | `^24.19.2` |
 | `@types/qrcode` | `^1.5.6` |
 | `@types/react` | `^19.3.0` |
 | `@types/react-dom` | `^19.3.0` |
 | `@types/web-push` | `^3.6.4` |
-| `@vitest/coverage-v8` | `^3.2.6` |
+| `@vitest/coverage-v8` | `^5.0.5` |
+| `axe-core` | `^4.14.0` |
+| `dotenv` | `^16.6.1` |
+| `esbuild` | `0.28.2` |
 | `eslint` | `^9.39.4` |
-| `eslint-config-next` | `^15.5.26` |
+| `eslint-config-next` | `^16.4.2` |
 | `plist` | `^5.0.0` |
-| `prisma` | `^6.19.3` |
-| `typescript` | `5.9.3` |
-| `vitest` | `^3.0.6` |
+| `prisma` | `^7.10.1` |
+| `typescript` | `6.0.3` |
+| `vitest` | `^5.0.5` |
 
 ## Scripts
 
@@ -111,6 +116,7 @@
 - `ios:xcode:verify`: `bash scripts/ios-xcode-verify.sh`
 - `ios:xcode:verify:kiosk`: `IOS_SCHEME=WisconsinKiosk bash scripts/ios-xcode-verify.sh`
 - `lint`: `eslint .`
+- `lint:ci`: `eslint . --max-warnings=194`
 - `lint:summary`: `node scripts/lint-summary.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
@@ -131,11 +137,13 @@
 - `smoke:deploy`: `node scripts/deploy-smoke.mjs`
 - `start`: `node scripts/run-next.mjs start`
 - `test`: `vitest run`
+- `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`
+- `test:postgres`: `node scripts/test-onboarding-postgres.mjs`
 - `test:watch`: `vitest`
-- `verify:docs`: `npm run codemap:check`
+- `verify:docs`: `node scripts/check-repo-hygiene.mjs && npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`
 
 ## Environment Variables From `.env.example`

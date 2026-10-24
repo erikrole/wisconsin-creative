@@ -1,3 +1,4 @@
+import { removeRepeatedSignatureSamples } from "./capture";
 import {
   penSettingsSchema,
   SIGNATURE_MAX_COORDINATE,
@@ -117,7 +118,7 @@ function normalizeSignatureStrokes(
         return { x: Number(point.x.toFixed(3)), y: Number(point.y.toFixed(3)) };
       }),
     };
-  });
+  }).map((stroke) => ({ points: removeRepeatedSignatureSamples(stroke.points) }));
 }
 
 function signatureStrokeLength(stroke: SignatureStroke): number {
@@ -175,11 +176,14 @@ function computeSignatureCropBounds(
   const points = strokes.flatMap((stroke) => stroke.points);
   if (points.length === 0) throw new Error("Signature has no points");
 
+  // A loop, not Math.min(...points): a full 1 MB payload holds enough points
+  // to exceed the engine's spread-argument limit and turn a 400 into a 500.
+  const bounds = strokes.map(signatureStrokeBounds).reduce(combineSignatureBounds, null)!;
   const radius = settings.strokeWidth / 2;
-  const minX = Math.floor(Math.min(...points.map((point) => point.x)) - radius - settings.cropPadding);
-  const minY = Math.floor(Math.min(...points.map((point) => point.y)) - radius - settings.cropPadding);
-  const maxX = Math.ceil(Math.max(...points.map((point) => point.x)) + radius + settings.cropPadding);
-  const maxY = Math.ceil(Math.max(...points.map((point) => point.y)) + radius + settings.cropPadding);
+  const minX = Math.floor(bounds.minX - radius - settings.cropPadding);
+  const minY = Math.floor(bounds.minY - radius - settings.cropPadding);
+  const maxX = Math.ceil(bounds.maxX + radius + settings.cropPadding);
+  const maxY = Math.ceil(bounds.maxY + radius + settings.cropPadding);
   const width = Math.max(1, maxX - minX);
   const height = Math.max(1, maxY - minY);
 

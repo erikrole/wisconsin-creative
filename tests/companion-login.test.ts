@@ -201,7 +201,7 @@ describe("companion login", () => {
     );
 
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({ error: "Invalid credentials" });
+    await expect(response.json()).resolves.toEqual({ error: "Wrong email or password." });
     expect(mocks.verifyPassword).toHaveBeenCalledWith("hash", "wrong-password");
     expect(mocks.refreshProjection).not.toHaveBeenCalled();
     expect(mocks.issueCompanionSession).not.toHaveBeenCalled();

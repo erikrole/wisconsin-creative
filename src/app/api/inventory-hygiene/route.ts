@@ -8,6 +8,7 @@ import {
   getCleanupWizardCounts,
   listCleanupWizardQueue,
 } from "@/lib/services/item-cleanup-wizard";
+import { settledReader } from "@/lib/settled";
 
 const SAMPLE_LIMIT = 6;
 const DEFAULT_BULK_THRESHOLD = 1;
@@ -58,17 +59,7 @@ function issue(key: string, title: string, description: string, count: number, s
   return { key, title, description, count, samples };
 }
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[inventory-hygiene] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("inventory-hygiene");
 
 export const GET = withAuth(async (_req, { user }) => {
   requirePermission(user.role, "asset", "edit");

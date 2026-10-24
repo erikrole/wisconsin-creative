@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, serviceModuleSource } from "./_helpers/source";
 
 /**
  * An all-day event is a date, not a window. Its generated shifts inherit the
@@ -89,7 +89,7 @@ describe("server-rendered dates state their timezone", () => {
   });
 
   it("buckets report days on the app timezone, not UTC", () => {
-    const reports = source("src/lib/services/reports.ts");
+    const reports = serviceModuleSource("reports");
     expect(reports).not.toContain("date_trunc('day', \"created_at\" AT TIME ZONE 'UTC')");
     expect(
       reports.match(/AT TIME ZONE 'UTC' AT TIME ZONE \$\{env\.appTimezone\}::text/g)?.length,

@@ -25,6 +25,7 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string; parentHre
   "app-activity": { label: "App activity" },
   "data-export": { label: "Data exports" },
   announcements: { label: "Announcements" },
+  "quick-links": { label: "Quick links" },
   audit: { label: "Audit log" },
   gear: { label: "UA gear" },
 };

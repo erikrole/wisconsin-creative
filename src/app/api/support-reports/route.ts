@@ -3,6 +3,7 @@ import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { stripQuery, summarizeUserAgent } from "@/lib/error-reporting/grouping";
+import { readBoundedJson } from "@/lib/error-reporting/request-body";
 import { supportReportBodySchema } from "@/lib/schemas/error-reports";
 import { createSupportReport, listSupportReports } from "@/lib/services/error-reports";
 
@@ -16,7 +17,7 @@ export const GET = withAuth(async (req, { user }) => {
 /** POST /api/support-reports — anyone signed in reports a problem with app context attached. */
 export const POST = withAuth(async (req, { user }) => {
   await enforceRateLimit(`support-reports:${user.id}`, { max: 10, windowMs: 60 * 60_000 });
-  const body = supportReportBodySchema.parse(await req.json());
+  const body = supportReportBodySchema.parse(await readBoundedJson(req, 100_000, "Problem report"));
   const agent = body.client.platform === "web" ? summarizeUserAgent(req.headers.get("user-agent")) : null;
   const report = await createSupportReport(
     {

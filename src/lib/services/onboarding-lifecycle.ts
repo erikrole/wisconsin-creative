@@ -429,10 +429,14 @@ export async function createAllowedEmailInvitesBulk(input: {
       })),
     );
 
-    return { created: createResult.count, skipped: normalized.length - createResult.count };
+    return {
+      created: createResult.count,
+      skipped: normalized.length - createResult.count,
+      createdEntries: created.map((entry) => ({ id: entry.id, email: entry.email, role: entry.role, preloadedName: entry.preloadedName })),
+    };
   }
 
-  return { created: 0, skipped: normalized.length };
+  return { created: 0, skipped: normalized.length, createdEntries: [] };
 }
 
 export async function previewAllowedEmailInvitesBulk(input: {

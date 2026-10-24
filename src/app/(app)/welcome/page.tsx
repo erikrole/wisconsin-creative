@@ -1,18 +1,34 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
 import EmptyState from "@/components/EmptyState";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProfileCompletion } from "@/hooks/use-profile-completion";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { clearLocalTraces } from "@/lib/local-traces";
+import { WelcomeDone } from "./WelcomeDone";
 
 export default function WelcomePage() {
-  const router = useRouter();
+  const query = useQueryClient();
+  const { data: user } = useCurrentUser();
   const { data, isLoading, isError, isFetching, refetch } = useProfileCompletion();
+  const [outcome, setOutcome] = useState<"complete" | "later" | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
+  const signOut = async () => {
+    setSigningOut(true); setSignOutError("");
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      if (!res.ok) throw new Error("Couldn’t sign out. Check your connection and retry.");
+      clearLocalTraces(); query.clear(); window.location.replace("/login");
+    } catch (reason) { setSignOutError(reason instanceof Error ? reason.message : "Couldn’t sign out."); setSigningOut(false); }
+  };
+  const exitAction = user?.onboardingRequired
+    ? <Button variant="outline" disabled={signingOut} onClick={() => { void signOut(); }}>Sign out</Button>
+    : <Button variant="outline" onClick={() => window.location.replace("/")}>Go to dashboard</Button>;
 
   if (isLoading && !data) {
     return (
@@ -30,16 +46,15 @@ export default function WelcomePage() {
         <EmptyState
           icon="wifi-off"
           title="Could not load your welcome setup"
-          description="Check your connection and try again. You can also continue to the dashboard and finish your profile later."
+          description="Check your connection and try again. Your saved answers will be here when you return."
           actionLabel="Try again"
           onAction={() => {
             void refetch();
           }}
         />
         <div className="mt-4 flex justify-center">
-          <Button variant="outline" className="h-10" onClick={() => router.replace("/")}>
-            Go to dashboard
-          </Button>
+          {exitAction}
+          {signOutError && <p role="alert">{signOutError}</p>}
         </div>
       </div>
     );
@@ -51,36 +66,28 @@ export default function WelcomePage() {
         <EmptyState
           icon="users"
           title="Welcome setup unavailable"
-          description="Sign in again if this keeps happening, or continue to the dashboard."
-          actionLabel="Go to dashboard"
-          onAction={() => router.replace("/")}
+          description="Sign in again if this keeps happening. Saved answers stay with your account."
+          actionLabel="Try again"
+          onAction={() => { void refetch(); }}
         />
+        <div className="mt-4 flex justify-center">{exitAction}</div>
       </div>
     );
   }
 
   const firstName = data.profile.name.split(" ")[0] || data.profile.name;
-  const percent =
-    data.completion.totalCount > 0
-      ? Math.round((data.completion.completedCount / data.completion.totalCount) * 100)
-      : 100;
   const collaborator = data.profile.role === "COLLABORATOR";
   const student = data.profile.role === "STUDENT";
+  const goHome = () => window.location.replace("/");
 
-  if (data.completion.profileComplete) {
+  if (outcome || data.completion.onboardingComplete) {
     return (
-      <div className="mx-auto flex max-w-2xl flex-col gap-5 py-8">
-        <Alert>
-          <CheckCircle2 />
-          <AlertTitle>You’re all set, {firstName}</AlertTitle>
-          <AlertDescription className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <span>Your account and profile are ready for Wisconsin Creative work.</span>
-            <Button className="h-10 shrink-0" onClick={() => router.replace("/")}>
-              Go to dashboard
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
+      <WelcomeDone
+        firstName={firstName}
+        role={data.profile.role}
+        outcome={outcome === "later" ? "later" : "complete"}
+        onContinue={goHome}
+      />
     );
   }
 
@@ -88,42 +95,27 @@ export default function WelcomePage() {
     <div
       className={
         isFetching
-          ? "mx-auto flex max-w-4xl flex-col gap-6 py-4 opacity-80"
-          : "mx-auto flex max-w-4xl flex-col gap-6 py-4"
+          ? "mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10 opacity-80 sm:py-16"
+          : "mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10 sm:py-16"
       }
     >
-      <header className="space-y-3">
-        <p className="text-sm font-medium text-muted-foreground">Welcome to Wisconsin Creative</p>
-        <h1 className="text-balance">Let’s get you ready, {firstName}</h1>
-        <p className="max-w-2xl text-pretty text-sm text-muted-foreground">
+      <header className="space-y-2">
+        <p className="text-sm font-bold text-[var(--accent)]">Welcome to Wisconsin Creative</p>
+        <h1 className="text-balance text-3xl">Let’s get you set up, {firstName}</h1>
+        <p className="max-w-xl text-pretty text-[var(--text-secondary)]">
           {collaborator
-            ? "Add a profile photo so the Wisconsin Creative team can recognize you."
+            ? "Add a profile photo so the team can recognize you. That’s the only step."
             : student
-              ? "Add the contact, Wiscard, and student details the team needs for daily work. Apparel and a photo can wait."
-              : "Add the contact and identification details the team needs for daily work. Apparel and a photo can be finished now or later."}
+              ? "A few details so the team can reach you and schedule you. Answers save to your account as you go, so you can continue here or in the iPhone app. Your photo and Wiscard are optional."
+              : "A few details so the team can reach you and identify you at the kiosk. Answers save to your account as you go, so you can continue here or in the iPhone app. Your photo and Wiscard are optional."}
         </p>
-        <div className="grid max-w-md gap-2 pt-1">
-          <div className="flex items-center justify-between text-sm">
-            <span>
-              {data.completion.operationalReady
-                ? "Working details ready — finish the rest when you can"
-                : "Essentials first, then optional details"}
-            </span>
-            <span className="tabular-nums text-muted-foreground">{percent}%</span>
-          </div>
-          <Progress value={percent} aria-label={`${percent}% profile complete`} />
-        </div>
       </header>
 
       <ProfileCompletionWizard
         presentation="page"
-        onComplete={() => router.replace("/")}
-        onSnooze={() => router.replace("/")}
+        onComplete={() => window.location.replace("/welcome")}
+        onSnooze={() => setOutcome("later")}
       />
-
-      <p className="text-center text-sm text-muted-foreground">
-        You can continue later from Home. We’ll remind you again tomorrow.
-      </p>
     </div>
   );
 }

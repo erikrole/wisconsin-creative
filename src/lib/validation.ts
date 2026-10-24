@@ -71,7 +71,7 @@ export const nullableHttpUrlSchema = z.preprocess(
         return normalizeHttpUrl(value);
       } catch (error) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: error instanceof Error ? error.message : "Enter a valid http or https URL",
         });
         return z.NEVER;
@@ -92,15 +92,14 @@ const bulkItemSchema = z.object({
   quantity: z.number().int().positive().max(MAX_BULK_QUANTITY_PER_LINE),
 });
 
-const bulkItemsSchema = z.array(bulkItemSchema)
+const bulkItemsListSchema = z.array(bulkItemSchema)
   .max(MAX_BULK_SKU_LINES_PER_REQUEST)
-  .default([])
   .superRefine((items, ctx) => {
   const seen = new Set<string>();
   items.forEach((item, index) => {
     if (seen.has(item.bulkSkuId)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Duplicate bulk item",
         path: [index, "bulkSkuId"],
       });
@@ -110,12 +109,14 @@ const bulkItemsSchema = z.array(bulkItemSchema)
   });
 });
 
+const bulkItemsSchema = bulkItemsListSchema.default([]);
+
 const eventIdsListSchema = z.array(z.string().cuid()).max(MAX_LINKED_EVENTS_PER_BOOKING).superRefine((ids, ctx) => {
   const seen = new Set<string>();
   ids.forEach((id, index) => {
     if (seen.has(id)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "eventIds must be unique",
         path: [index],
       });
@@ -228,7 +229,7 @@ export const scanSchema = z.object({
       unitNumbers.forEach((unitNumber, index) => {
         if (seen.has(unitNumber)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "unitNumbers must be unique",
             path: [index],
           });
@@ -255,15 +256,15 @@ export const checkinReportSchema = z.object({
 }).superRefine((value, ctx) => {
   const targets = [value.assetId, value.bulkSkuUnitId, value.bulkSkuId].filter(Boolean).length;
   if (targets !== 1) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose one item to report" });
+    ctx.addIssue({ code: "custom", message: "Choose one item to report" });
   } else if (value.bulkSkuId ? value.quantity === undefined : value.quantity !== undefined) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A quantity goes with counted stock only" });
+    ctx.addIssue({ code: "custom", message: "A quantity goes with counted stock only" });
   }
 });
 
 export const overrideSchema = z.object({
   reason: z.string().min(5).max(1000),
-  details: z.record(z.unknown()).optional()
+  details: z.record(z.string(), z.unknown()).optional()
 });
 
 export const createBulkSkuSchema = z.object({
@@ -280,10 +281,10 @@ export const createBulkSkuSchema = z.object({
 }).superRefine((value, ctx) => {
   if (value.trackByNumber && value.initialQuantity > MAX_NUMBERED_UNITS_PER_CREATE) {
     ctx.addIssue({
-      code: z.ZodIssueCode.too_big,
+      code: "too_big",
       maximum: MAX_NUMBERED_UNITS_PER_CREATE,
       inclusive: true,
-      type: "number",
+      origin: "number",
       path: ["initialQuantity"],
       message: `Create at most ${MAX_NUMBERED_UNITS_PER_CREATE} numbered units at once`,
     });
@@ -356,7 +357,15 @@ export const loginSchema = z.object({
   companion: z.boolean().optional(),
 });
 
+export const inviteTokenSchema = z.string().trim().min(1).max(128);
+
 export const authDiscoverySchema = z.object({
+  email: z.string().trim().max(254).email(),
+  // Present when the sign-in page was opened from an invite email link.
+  invite: inviteTokenSchema.optional(),
+});
+
+export const inviteResendSchema = z.object({
   email: z.string().trim().max(254).email(),
 });
 
@@ -372,7 +381,7 @@ const passkeyResponseSchema = z.object({
     transports: z.array(z.string()).max(8).optional(),
   }).passthrough(),
   type: z.literal("public-key"),
-  clientExtensionResults: z.record(z.unknown()).optional(),
+  clientExtensionResults: z.record(z.string(), z.unknown()).optional(),
   authenticatorAttachment: z.string().optional(),
 }).passthrough();
 
@@ -407,6 +416,9 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(128),
   // Omitted by the native app, which always keeps people signed in.
   rememberMe: z.boolean().optional(),
+  // The one-time token from the invite email's link. Optional at the schema
+  // boundary so a missing token gets the invite-link message, not a 400.
+  inviteToken: inviteTokenSchema.optional(),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -497,14 +509,14 @@ export function validateBirthdayParts(value: { birthdayMonth?: number | null; bi
   const month = value.birthdayMonth;
   const day = value.birthdayDay;
   if ((month == null) !== (day == null)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Birthday month and day must be saved together", path: [month == null ? "birthdayMonth" : "birthdayDay"] });
+    ctx.addIssue({ code: "custom", message: "Birthday month and day must be saved together", path: [month == null ? "birthdayMonth" : "birthdayDay"] });
     return;
   }
   if (month != null && day != null) {
     const year = value.birthYear ?? 2000;
     const date = new Date(Date.UTC(year, month - 1, day));
     if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid birthday", path: ["birthdayDay"] });
+      ctx.addIssue({ code: "custom", message: "Enter a valid birthday", path: ["birthdayDay"] });
     }
   }
 }
@@ -555,7 +567,7 @@ export const updateBookingSchema = z.object({
   startsAt: z.string().datetime({ offset: true }).optional(),
   endsAt: z.string().datetime({ offset: true }).optional(),
   serializedAssetIds: z.array(z.string().cuid()).max(MAX_EQUIPMENT_SELECTIONS_PER_REQUEST).optional(),
-  bulkItems: bulkItemsSchema.optional(),
+  bulkItems: bulkItemsListSchema.optional(),
   notes: z.string().max(10000).optional()
 });
 
@@ -598,7 +610,7 @@ const sportShiftConfigsSchema = z.array(sportShiftConfigSchema)
     shiftConfigs.forEach((shiftConfig, index) => {
       if (seenAreas.has(shiftConfig.area)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Shift config areas must be unique",
           path: [index, "area"],
         });
@@ -633,7 +645,7 @@ export const updateSportConfigGroupSchema = z
         codes.forEach((code, index) => {
           if (seenCodes.has(code)) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: "custom",
               message: "Sport codes must be unique",
               path: [index],
             });
@@ -819,7 +831,7 @@ export const resourceImportManifestSchema = z.object({
   manifest.images.forEach((image, index) => {
     if (seen.has(image.key)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["images", index, "key"],
         message: "Image keys must be unique",
       });
@@ -849,7 +861,7 @@ const blastTargetSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("DYNAMIC"),
-    areas: z.array(z.nativeEnum(ShiftArea)).max(5).optional(),
+    areas: z.array(z.nativeEnum(ShiftArea)).max(Object.values(ShiftArea).length).optional(),
     workerTypes: z.array(z.nativeEnum(ShiftWorkerType)).max(2).optional(),
     sportCodes: z.array(sportCodeSchema).max(30).optional(),
   }),
@@ -861,7 +873,7 @@ const blastTargetSchema = z.discriminatedUnion("kind", [
   if (selected === 0) {
     // An empty dynamic spec would silently resolve to everyone.
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: "Pick at least one area, worker type, or sport",
       path: ["areas"],
     });

@@ -6,6 +6,7 @@ import { createAuditEntry } from "@/lib/audit";
 import { tokenHash, KIOSK_ACTIVATION_CODE_TTL_MS } from "@/lib/auth";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { generateActivationCode } from "@/lib/kiosk-activation";
+import { clearKioskBeat, forgetKioskHeartbeat } from "@/lib/kiosk-heartbeat-cache";
 
 /**
  * Regenerate the one-shot activation code for a kiosk device.
@@ -34,6 +35,7 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
       lastSeenAt: null,
     },
   });
+  await Promise.all([forgetKioskHeartbeat(device.sessionToken), clearKioskBeat(device.id)]);
 
   await createAuditEntry({
     actorId: user.id,

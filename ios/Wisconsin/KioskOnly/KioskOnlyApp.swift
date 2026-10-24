@@ -8,6 +8,7 @@ struct WisconsinKioskApp: App {
     @State private var kioskStore: KioskStore
 
     init() {
+        KioskMetricMonitor.shared.start()
         // Fixture device info must land in UserDefaults before `KioskStore()`
         // reads it in its own initializer, so this cannot move into `onAppear`.
         #if DEBUG

@@ -1,0 +1,96 @@
+{
+  "title": "Chained USB printing, with safe Stop",
+  "eyebrow": "QR Print \u00b7 Local integration \u00b7 October 22, 2026",
+  "lede": "The helper prints batches with one initial blank and no blank strips between labels. Stop and remaining-only recovery preserve exact copy history.",
+  "stats": [
+    {
+      "k": "Six-label batch",
+      "v": "6 \u2192 1",
+      "n": "Blank strips: accepted independent output versus accepted chained output",
+      "tone": "good"
+    },
+    {
+      "k": "Between-label blanks",
+      "v": "0",
+      "n": "All six layouts and four production QR scans accepted",
+      "tone": "good"
+    },
+    {
+      "k": "Verification",
+      "v": "120 tests",
+      "n": "109 focused + 11 real disposable PostgreSQL cases",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Same approved layout, clearer printer behavior",
+      "note": "Matched 1440 \u00d7 1100 browser fixture, same single label, empty history, role and scroll. The approved preview bytes are identical. Native JPEG originals are retained beside lossless PNG conversions.",
+      "pairs": [
+        {
+          "title": "Print helper",
+          "before": "before.png",
+          "beforeEvidence": "before-evidence.json",
+          "beforeCap": "Earlier accepted journal and independent-label path.",
+          "after": "after.png",
+          "afterEvidence": "after-evidence.json",
+          "afterCap": "SDK chaining, expected tape costs and retained print history."
+        }
+      ]
+    },
+    {
+      "heading": "Actual Stop and remaining-only recovery",
+      "note": "After-only hardware evidence: active job metadata and USB pixels were physically checked by the user. This fixture proves integration with real USB; its Dev Staff name is not a production-authenticated identity.",
+      "shots": [
+        {
+          "image": "qr-chain-integrated-stop.png",
+          "cap": "Stop landed during B. A/B completed, C remained unsent. User confirmed A/B only plus two blanks."
+        },
+        {
+          "image": "qr-chain-integrated-recovery.png",
+          "cap": "After reload and an explicit Continue, the linked child contained only C. User confirmed C once, no duplicate A/B."
+        }
+      ]
+    },
+    {
+      "heading": "Failure recovery",
+      "note": "After-only, simulated USB through the real helper. No physical output in this failure scenario.",
+      "shots": [
+        {
+          "image": "qr-chain-pending-refresh.png",
+          "cap": "A failed local completion save stays visible after passive refresh. Saving that exact pending log emitted no print/feed commands."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Intermediate receipt stays provisional",
+      "was": "An independent label could be settled after its own completion. Chaining can leave the last label held inside the printer.",
+      "now": "Every intermediate page stays provisional until the final feed succeeds. Failures retain all affected copy identities for separate physical review."
+    },
+    {
+      "h": "Stop has an explicit finish intent",
+      "was": "An interrupted chain could leave a held label and no confirmed release.",
+      "now": "Stop sends no further label content. It first saves a finish intent, then sends only the verified zero-ink release. Close, error and reload never feed or retry."
+    },
+    {
+      "h": "Recovery preserves exact lineage",
+      "was": "A generic repeated sample made duplicate counts hard to verify.",
+      "now": "Fresh A/B/C tests and linked child receipts proved remaining-only output. A/B were excluded when C was continued. Downloadable receipts retain operator, text/QR, timestamps and copy identity."
+    }
+  ],
+  "verification": [
+    "All five production-encoder packets matched the offline SDK reference bytes; the Stop feed is exactly 59 bytes with the pinned accepted hash.",
+    "109 focused tests and 11 real disposable PostgreSQL service/audit/lineage cases passed.",
+    "TypeScript, touched-file ESLint, migration-free app build, codemaps/docs and whitespace checks passed.",
+    "Independent safety review: no remaining P1/P2 after fixing passive refresh discarding an in-memory pending completion.",
+    "Fresh browser page has no console errors; phone-width smoke and tablet dialog/Escape/focus return passed."
+  ],
+  "notes": [
+    "One initial blank per normal batch remains. Stopping early adds a small blank to release the held tail; the A/B Stop test produced two blanks in total.",
+    "The earlier unlettered recovery count stays unverified because the user forgot it. Its raw receipt was retained; those copies were not replayed.",
+    "The Brother app was closed. No macOS security settings changed and live debugger capture was abandoned after macOS denied attachment.",
+    "No application migration, commit, push or deployment. Authenticated managed-preview proof, application of prepared migration 0198, physical mid-transfer cable pull and tape-out remain separate gates."
+  ]
+}

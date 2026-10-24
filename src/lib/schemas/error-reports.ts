@@ -3,7 +3,7 @@ import { BREADCRUMB_TYPES, ERROR_PLATFORMS } from "@/lib/error-reporting/groupin
 
 const token = (max: number) => z.string().trim().min(1).max(max).regex(/^[A-Za-z0-9._,+() -]+$/);
 
-export const breadcrumbSchema = z.object({
+const breadcrumbSchema = z.object({
   at: z.string().max(40),
   type: z.enum(BREADCRUMB_TYPES),
   message: z.string().max(400),
@@ -11,7 +11,7 @@ export const breadcrumbSchema = z.object({
 });
 
 /** What every client says about itself; the server fills browser details from the user agent. */
-export const clientInfoSchema = z.object({
+const clientInfoSchema = z.object({
   platform: z.enum(ERROR_PLATFORMS).exclude(["server"]),
   appVersion: token(32).nullish(),
   appBuild: token(40).nullish(),
@@ -20,7 +20,7 @@ export const clientInfoSchema = z.object({
   deviceModel: token(40).nullish(),
 });
 
-export const clientErrorReportSchema = z.object({
+const clientErrorReportSchema = z.object({
   kind: z.enum(["error", "unhandled_rejection", "render_error", "crash", "hang", "api_error"]),
   name: z.string().max(120).optional(),
   message: z.string().max(2_000),
@@ -44,6 +44,27 @@ export const supportReportBodySchema = z.object({
   screen: z.string().max(300).nullish(),
   breadcrumbs: z.array(breadcrumbSchema).max(40).optional(),
 });
+
+/**
+ * What an Apple app remembers about one of its recent runs. MetricKit reports
+ * a crash a day later from a new run, so the app keeps the last few runs'
+ * actions by process id and the server pairs them with the crash's `pid`.
+ */
+const appSessionSchema = z.object({
+  pid: z.number().int().nonnegative(),
+  screen: z.string().max(300).nullish(),
+  breadcrumbs: z.array(breadcrumbSchema).max(40),
+});
+
+export const diagnosticUploadSchema = z
+  .object({
+    platform: z.enum(["ios", "kiosk", "macos"]),
+    payload: z.record(z.string(), z.unknown()),
+    sessions: z.array(appSessionSchema).max(5).optional(),
+  })
+  .strict();
+
+export type AppSession = z.infer<typeof appSessionSchema>;
 
 export const issueUpdateSchema = z
   .object({

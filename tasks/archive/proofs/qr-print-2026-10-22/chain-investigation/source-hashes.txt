@@ -1,0 +1,2 @@
+qr-libptouch.c 93d169716d710a9dce98b199b4b1bab9fb9da7cd5bfa75d457bf6b9e255a9007
+qr-ptouch-print.c cfe0a0f47e767066a39850eadbd6a8046d76ecc0a6e015c9fa34c254c5c61295

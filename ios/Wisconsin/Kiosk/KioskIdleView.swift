@@ -1,4 +1,7 @@
+import OSLog
 import SwiftUI
+
+private let idleLog = Logger(subsystem: "com.erikrole.WisconsinKiosk", category: "IdleView")
 
 struct KioskIdleView: View {
     @Environment(\.today) private var today
@@ -792,7 +795,7 @@ struct KioskIdleView: View {
         case .failure(let error) where isCancellation(error):
             sawCancellation = true
         case .failure(let error):
-            print("[KioskIdleView] dashboard load failed: \(error.localizedDescription)")
+            idleLog.error("Dashboard load failed: \(error.localizedDescription, privacy: .public)")
             hitFailure = true
         }
 
@@ -807,7 +810,7 @@ struct KioskIdleView: View {
         case .failure(let error) where isCancellation(error):
             sawCancellation = true
         case .failure(let error):
-            print("[KioskIdleView] users load failed: \(error.localizedDescription)")
+            idleLog.error("Users load failed: \(error.localizedDescription, privacy: .public)")
             hitFailure = true
         }
 

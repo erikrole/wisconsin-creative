@@ -1,3 +1,4 @@
+import { appTzDateKey } from "@/lib/app-time";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
 import { csvField } from "@/lib/csv";
@@ -47,7 +48,7 @@ export const GET = withAuth(async (req, { user }) => {
   if (searchParams.get("format") === "csv") {
     await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
     const exportData = await getScanHistoryReportExport(startDate, endDate, phase);
-    const date = new Date().toISOString().slice(0, 10);
+    const date = appTzDateKey(new Date());
     return new NextResponse(`${buildScanReportCsv(exportData.data)}\n`, {
       headers: {
         "Cache-Control": "private, no-store",

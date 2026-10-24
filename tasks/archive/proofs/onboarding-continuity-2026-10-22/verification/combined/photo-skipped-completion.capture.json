@@ -1,0 +1,16 @@
+{
+  "sourceRevision": "ede6f8adf2b51eda7300f66533a7ee6608831459",
+  "imageSHA256": "14e2bc227d6b0b4240c05d010390faf78c003cf37c5de7580e7d14f2ec8506aa",
+  "resultBundle": "/private/tmp/wc-combined-onboarding-home-built-20261022.xcresult",
+  "settings": "Fixture UI; light; required steps and Finish with no photo",
+  "baseline": "After-only; no trustworthy baseline",
+  "attachment": {
+    "configurationName": "Test Scheme Action",
+    "deviceId": "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+    "deviceName": "iPhone 18 Pro Max",
+    "exportedFileName": "88BFCBD6-1846-4A67-A669-ED55DCBE4148.png",
+    "isAssociatedWithFailure": false,
+    "suggestedHumanReadableName": "photo-skipped-setup-complete_0_EEF8ED77-2BCE-4188-9A4A-04FACD8AD73D.png",
+    "timestamp": 1792694906.455
+  }
+}

@@ -78,9 +78,9 @@ describe("semantic tone sources of truth", () => {
     // auto-cancels 48 hours past startsAt and releases the gear. Green is the
     // system's "nothing needed here" colour, so it is the wrong end of the
     // scale no matter how ready the gear itself is.
-    const home = source("ios/Wisconsin/Views/HomeView.swift");
-    const pickupTile = home.slice(home.indexOf('StatItem(id: "pickups"'));
-    expect(pickupTile.slice(0, pickupTile.indexOf("\n"))).toContain("tone: .orange");
+    const sections = source("ios/Wisconsin/Views/Home/HomeSections.swift");
+    const tone = sections.slice(sections.indexOf("private func homeGearTone"));
+    expect(tone.slice(0, tone.indexOf("private struct GearRow"))).toContain("case .pendingPickup: return .orange");
 
     const bookingsView = source("ios/Wisconsin/Views/BookingsView.swift");
     expect(bookingsView).toContain("case .pendingPickup: return .orange");

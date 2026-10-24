@@ -38,6 +38,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/change-password");
   }
   const cookieStore = await cookies();
+  if (user.onboardingRequired) {
+    const pathname = (await headers()).get("x-pathname")?.split("?")[0];
+    if (pathname !== "/welcome") redirect("/welcome");
+    return (
+      <MotionConfig reducedMotion="user">
+        <QueryProvider userId={user.id}>
+          <TooltipProvider>
+            <OfflineBanner />
+            <main className="min-h-dvh px-5 py-6 sm:px-8">{children}</main>
+            <Toaster position="top-right" duration={4000} />
+          </TooltipProvider>
+        </QueryProvider>
+      </MotionConfig>
+    );
+  }
   const defaultSidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   return (

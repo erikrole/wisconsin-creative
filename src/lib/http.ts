@@ -57,7 +57,7 @@ export function fail(error: unknown) {
 
   // Zod validation errors — return 400 with field-level details
   if (error instanceof ZodError) {
-    const messages = error.errors.map(
+    const messages = error.issues.map(
       (e) => `${e.path.join(".")}: ${e.message}`
     );
     return NextResponse.json(

@@ -40,7 +40,7 @@ describe("sport code validation", () => {
     expect(() => updateSportConfigGroupSchema.parse({
       codes: ["mrow", "wrow", "lrow", "fb"],
       active: true,
-    })).toThrow(`Array must contain at most ${MAX_SPORT_CONFIG_GROUP_CODES_PER_REQUEST} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_SPORT_CONFIG_GROUP_CODES_PER_REQUEST} items`);
   });
 
   it("rejects duplicate grouped sport codes after case normalization", () => {

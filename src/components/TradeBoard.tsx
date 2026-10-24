@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { FilterChip } from "@/components/FilterChip";
@@ -17,7 +18,7 @@ import { scheduleEventTitleParts } from "@/app/(app)/schedule/_components/types"
 import { AREA_LABELS } from "@/types/areas";
 import { formatCalendarEventAllDayLabel } from "@/lib/calendar-event-dates";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 type TradeEvent = {
@@ -295,20 +296,15 @@ function reviewDeadlineCopy(
     : `Auto-approval check by ${when}. You are not on the schedule until a decision lands.`;
 }
 
+const NO_TRADES: Trade[] = [];
+const NO_OPEN_WORK: OpenWorkResponse = { openShifts: [], pickupRequests: [] };
+
 export default function TradeBoard({ currentUserId, currentUserRole, initialStatusFilter = "", onChanged }: Props) {
   const confirm = useConfirm();
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [openWork, setOpenWork] = useState<OpenWorkResponse>({ openShifts: [], pickupRequests: [] });
-  const [loading, setLoading] = useState(true);
-  const [openWorkLoading, setOpenWorkLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [openWorkError, setOpenWorkError] = useState(false);
   const [needsReview, setNeedsReview] = useState(false);
   const uncertainRef = useRef(false);
   const [acting, setActing] = useState<string | null>(null);
   const actingRef = useRef<string | null>(null);
-  const loadSeqRef = useRef(0);
-  const openWorkSeqRef = useRef(0);
 
   const [areaFilter, setAreaFilter] = useState("");
   const [tab, setTab] = useState<BoardTab | null>(null);
@@ -316,81 +312,51 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   const isStaff = currentUserRole === "ADMIN" || currentUserRole === "STAFF";
   const canReview = currentUserRole === "ADMIN";
 
-  const loadTrades = useCallback(async () => {
-    const requestId = loadSeqRef.current + 1;
-    loadSeqRef.current = requestId;
-    setLoading(true);
-
-    try {
+  // Both reads are made fresh on every visit (cache: "no-store", staleTime 0);
+  // a changed area keeps the last board on screen while the new one loads.
+  const tradesQuery = useQuery({
+    queryKey: ["shift-trades", "board", areaFilter],
+    queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ limit: "100" });
       if (areaFilter) params.set("area", areaFilter);
-
-      const res = await fetch(`/api/shift-trades?${params}`, { cache: "no-store" });
-      if (handleAuthRedirect(res)) return false;
-      if (requestId !== loadSeqRef.current) return false;
-
-      if (res.ok) {
-        const json = await parseJsonSafely<{ data?: Trade[] }>(res);
-        if (!Array.isArray(json?.data)) {
-          setLoadError(true);
-          return false;
-        }
-        setTrades(json.data ?? []);
-        setLoadError(false);
-        return true;
-      } else {
-        setLoadError(true);
-      }
-    } catch {
-      if (requestId === loadSeqRef.current) setLoadError(true);
-      return false;
-    } finally {
-      if (requestId === loadSeqRef.current) setLoading(false);
-    }
-    return false;
-  }, [areaFilter]);
-
-  const loadOpenWork = useCallback(async () => {
-    const requestId = openWorkSeqRef.current + 1;
-    openWorkSeqRef.current = requestId;
-    setOpenWorkLoading(true);
-
-    try {
+      const res = await fetch(`/api/shift-trades?${params}`, { cache: "no-store", signal });
+      if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+      const json = res.ok ? await parseJsonSafely<{ data?: Trade[] }>(res) : null;
+      if (!Array.isArray(json?.data)) throw new Error("Trade posts did not load");
+      return json.data;
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    retry: false,
+  });
+  const openWorkQuery = useQuery({
+    queryKey: ["schedule", "open-work", areaFilter],
+    queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       if (areaFilter) params.set("area", areaFilter);
-
-      const res = await fetch(`/api/schedule/open-work?${params}`, { cache: "no-store" });
-      if (handleAuthRedirect(res)) return false;
-      if (requestId !== openWorkSeqRef.current) return false;
-
-      if (res.ok) {
-        const json = await parseJsonSafely<{ data?: OpenWorkResponse }>(res);
-        if (!Array.isArray(json?.data?.openShifts) || !Array.isArray(json?.data?.pickupRequests)) {
-          setOpenWorkError(true);
-          return false;
-        }
-        setOpenWork(json.data);
-        setOpenWorkError(false);
-        return true;
-      } else {
-        setOpenWorkError(true);
+      const res = await fetch(`/api/schedule/open-work?${params}`, { cache: "no-store", signal });
+      if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+      const json = res.ok ? await parseJsonSafely<{ data?: OpenWorkResponse }>(res) : null;
+      if (!json?.data || !Array.isArray(json.data.openShifts) || !Array.isArray(json.data.pickupRequests)) {
+        throw new Error("Open slots did not load");
       }
-    } catch {
-      if (requestId === openWorkSeqRef.current) setOpenWorkError(true);
-      return false;
-    } finally {
-      if (requestId === openWorkSeqRef.current) setOpenWorkLoading(false);
-    }
-    return false;
-  }, [areaFilter]);
+      return json.data;
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    retry: false,
+  });
+  const trades = tradesQuery.data ?? NO_TRADES;
+  const openWork = openWorkQuery.data ?? NO_OPEN_WORK;
+  const loading = tradesQuery.isFetching;
+  const openWorkLoading = openWorkQuery.isFetching;
+  const loadError = tradesQuery.isError && !isAbortError(tradesQuery.error);
+  const openWorkError = openWorkQuery.isError && !isAbortError(openWorkQuery.error);
 
-  useEffect(() => {
-    void loadTrades();
-  }, [loadTrades]);
-
-  useEffect(() => {
-    void loadOpenWork();
-  }, [loadOpenWork]);
+  const { refetch: refetchTrades } = tradesQuery;
+  const { refetch: refetchOpenWork } = openWorkQuery;
+  const loadTrades = useCallback(async () => (await refetchTrades()).status === "success", [refetchTrades]);
+  const loadOpenWork = useCallback(async () => (await refetchOpenWork()).status === "success", [refetchOpenWork]);
 
   // A trade the viewer claimed has to survive the student filter: it is neither
   // OPEN nor theirs to post, and dropping it took Withdraw off the board.

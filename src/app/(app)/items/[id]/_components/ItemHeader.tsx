@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { InlineTitle } from "@/components/InlineTitle";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,9 @@ function StatusLine({ asset }: { asset: AssetDetail }) {
       </Badge>
     );
   }
-  if (s === "MAINTENANCE") return <Badge variant="orange" className="px-2.5 py-1 text-xs">Maintenance</Badge>;
+  if (s === "MAINTENANCE") return asset.missing
+    ? <Badge variant="red" className="px-2.5 py-1 text-xs">Missing</Badge>
+    : <Badge variant="orange" className="px-2.5 py-1 text-xs">Maintenance</Badge>;
   if (s === "RETIRED") return <Badge variant="gray" className="px-2.5 py-1 text-xs">Retired</Badge>;
   return <Badge variant="gray" className="px-2.5 py-1 text-xs">{s}</Badge>;
 }
@@ -121,6 +123,7 @@ type ItemHeaderProps = {
   onSaveHeaderField: (field: string, value: string) => Promise<void>;
   onAction: (action: string) => void;
   onImageModalOpen: () => void;
+  onReportProblem: () => void;
 };
 
 export function ItemHeader({
@@ -134,12 +137,14 @@ export function ItemHeader({
   onSaveHeaderField,
   onAction,
   onImageModalOpen,
+  onReportProblem,
 }: ItemHeaderProps) {
   const attachmentKind = asset.parentAsset ? getAttachmentKind(asset) : null;
   const slotLabel = asset.parentAsset ? getSdCardSlotLabel(asset, asset.parentAsset.assetTag) : null;
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const { data: currentUser } = useCurrentUser();
   const imageSrc = normalizeAssetImageSrc(asset.imageUrl);
+  const imageFailed = imageSrc !== null && failedImageSrc === imageSrc;
   const isRetired = asset.computedStatus === "RETIRED";
   const isMaintenance = asset.computedStatus === "MAINTENANCE";
   // A new reservation can only start when the item's derived status is AVAILABLE.
@@ -194,10 +199,6 @@ export function ItemHeader({
       })}`
     : null;
 
-  useEffect(() => {
-    setImageFailed(false);
-  }, [imageSrc]);
-
   return (
     <>
       <DetailPageHeader
@@ -219,7 +220,7 @@ export function ItemHeader({
                   priority
                   className="aspect-square object-cover"
                   unoptimized={!isOptimizableAssetImageSrc(imageSrc)}
-                  onError={() => setImageFailed(true)}
+                  onError={() => setFailedImageSrc(imageSrc)}
                 />
                 {canEdit && (
                   <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity text-white">
@@ -308,6 +309,9 @@ export function ItemHeader({
                 <Button variant="outline" className="h-10" disabled title={reserveDisabledTitle}>
                   Reserve
                 </Button>
+              )}
+              {currentUser != null && currentUser.role !== "COLLABORATOR" && asset.computedStatus !== "RETIRED" && (
+                <Button variant="outline" className="h-10" onClick={onReportProblem}>Report a problem</Button>
               )}
               {canEdit && <ActionsMenu asset={asset} disabled={actionBusy} onAction={onAction} />}
             </div>

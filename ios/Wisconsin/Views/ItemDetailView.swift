@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ItemDetailView: View {
@@ -11,12 +12,20 @@ struct ItemDetailView: View {
     @State private var favoriteToggleCount = 0  // user-action ticks; isolates haptic from initial load
     @State private var toast: Toast?
     @State private var isTogglingMaintenance = false
+    @State private var showReport = AppRuntimeMode.CaptureSeed.damageReportProblem
     @Environment(SessionStore.self) private var session
     @Environment(ReservationDraftStore.self) private var drafts
 
     private var canEditAsset: Bool {
         let role = session.currentUser?.role ?? ""
         return role == "STAFF" || role == "ADMIN"
+    }
+
+    /// Students and staff report from the item page. Collaborators can't, and a
+    /// retired item has nothing left to hold.
+    private func canReportProblem(for asset: AssetDetail) -> Bool {
+        let role = session.currentUser?.role ?? ""
+        return (role == "STUDENT" || role == "STAFF" || role == "ADMIN") && asset.computedStatus != .retired
     }
 
     private func hasMoreActions(for asset: AssetDetail) -> Bool {
@@ -57,24 +66,41 @@ struct ItemDetailView: View {
                         if let parent = asset.parentAsset {
                             ParentLinkCard(parent: parent)
                         }
-                        ItemHeroCard(asset: asset, onCopyQR: copyQR)
+                        let nextReservation = asset.upcomingReservations.min(by: { $0.startsAt < $1.startsAt })
+                        // A plain "Available" is a fact about the item, not a
+                        // card of its own: it rides in the hero. Every other
+                        // state keeps its card because it has more to say.
+                        let availableInHero = asset.activeBooking == nil
+                            && asset.computedStatus == .available
+                            && nextReservation == nil
+                        ItemHeroCard(asset: asset, showsAvailable: availableInHero, onCopyQR: copyQR)
                         if let booking = asset.activeBooking {
                             ActiveBookingCard(booking: booking)
-                        } else {
+                        } else if !availableInHero {
                             ItemAvailabilityCard(
                                 status: asset.computedStatus,
+                                missing: asset.missing,
                                 nextReservation: asset.upcomingReservations.min(by: { $0.startsAt < $1.startsAt })
                             )
                         }
-                        if asset.computedStatus != .retired {
+                        // Held (maintenance, retired, missing): the status card above
+                        // says why, and the server would reject a booking.
+                        if !asset.isHeld {
                             ReserveButton(title: asset.computedStatus == .available ? "Reserve Equipment" : "Reserve for Later") {
                                 startReservation(for: asset.asAsset)
                             }
                         }
+                        if canReportProblem(for: asset) {
+                            ReportProblemButton { showReport = true }
+                        }
                         if canEditAsset, !asset.checkinReports.isEmpty {
                             ItemConditionReportsCard(
                                 reports: asset.checkinReports,
-                                heldForStaff: asset.computedStatus == .maintenance
+                                heldForStaff: asset.computedStatus == .maintenance,
+                                onResolved: { message in
+                                    toast = Toast(message: message, icon: "checkmark.circle.fill", role: .success)
+                                    Task { await loadAsset() }
+                                }
                             )
                         }
                         UpcomingReservationsCard(reservations: asset.upcomingReservations)
@@ -129,6 +155,9 @@ struct ItemDetailView: View {
                                 // Retire, and Delete stay web-only — they are
                                 // catalog administration, not field work
                                 // (`docs/AREA_MOBILE.md`).
+                                // While a case is open, outcomes go through "Record
+                                // outcome" so the case closes with the release.
+                                if !(asset.computedStatus == .maintenance && asset.hasOpenCase) {
                                 Button {
                                     Task { await toggleMaintenance(for: asset) }
                                 } label: {
@@ -140,6 +169,7 @@ struct ItemDetailView: View {
                                     )
                                 }
                                 .disabled(isTogglingMaintenance)
+                                }
                             }
                             if let qr = asset.qrCodeValue, !qr.isEmpty {
                                 Button { copyQR(qr) } label: {
@@ -163,6 +193,14 @@ struct ItemDetailView: View {
         .toast($toast)
         .task { await loadAsset() }
         .refreshable { await loadAsset() }
+        .sheet(isPresented: $showReport) {
+            if let asset {
+                ItemProblemReportSheet(assetId: asset.id) { message in
+                    toast = Toast(message: message, icon: "checkmark.circle.fill", role: .success)
+                    Task { await loadAsset() }
+                }
+            }
+        }
         .sheet(isPresented: $showEdit) {
             if let asset {
                 EditAssetSheet(asset: asset) { updated in
@@ -240,8 +278,7 @@ private struct ReserveButton: View {
     let action: () -> Void
 
     var body: some View {
-        // Matches the scan hero sheet's primary action: solid black
-        // prominent button, so "reserve" reads the same everywhere.
+        // The screen's one primary action, so it takes the one green.
         Button(action: action) {
             Label(title, systemImage: "calendar.badge.plus")
                 .font(.subheadline.weight(.semibold))
@@ -250,7 +287,7 @@ private struct ReserveButton: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .tint(Color.statusText(.purple))
+        .tint(Color.statusText(.green))
         .accessibilityLabel(title)
     }
 }
@@ -403,6 +440,7 @@ struct EditAssetSheet: View {
 
 private struct ItemHeroCard: View {
     let asset: AssetDetail
+    var showsAvailable = false
     let onCopyQR: (String) -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -510,7 +548,19 @@ private struct ItemHeroCard: View {
 
     private var infoBlock: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(heroTitle)
+            Group {
+                if let qr = asset.qrCodeValue, !qr.isEmpty, qr == heroTitle {
+                    Button { onCopyQR(qr) } label: {
+                        Text(heroTitle)
+                            .frame(minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("QR code \(qr), tap to copy")
+                    .accessibilityIdentifier("item-hero-qr-copy")
+                } else {
+                    Text(heroTitle)
+                }
+            }
                 .font(.gothamBlack(size: 26, relativeTo: .title2))
                 .tracking(-0.2)
                 .lineLimit(2)
@@ -518,8 +568,8 @@ private struct ItemHeroCard: View {
 
             if let sub = subtitle {
                 Text(sub)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
 
@@ -528,8 +578,21 @@ private struct ItemHeroCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
+            if showsAvailable {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.statusText(.green))
+                        .frame(width: 8, height: 8)
+                    Text("Available")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .padding(.top, 2)
+                .accessibilityElement(children: .combine)
+            }
+
             // QR sticker code — tap copies the value for the kiosk / relink form.
-            if let qr = asset.qrCodeValue, !qr.isEmpty {
+            // When the code is the title, that title owns the same copy action.
+            if let qr = asset.qrCodeValue, !qr.isEmpty, qr != heroTitle {
                 Button {
                     onCopyQR(qr)
                 } label: {
@@ -782,9 +845,11 @@ private struct ActiveBookingCard: View {
 
 private struct ItemAvailabilityCard: View {
     let status: AssetComputedStatus
+    var missing = false
     let nextReservation: UpcomingReservation?
 
     private var tone: StatusTone {
+        if missing, status == .maintenance { return .red }
         switch status {
         case .available: return .green
         case .checkedOut: return .blue
@@ -795,6 +860,7 @@ private struct ItemAvailabilityCard: View {
     }
 
     private var title: String {
+        if missing, status == .maintenance { return "Missing" }
         guard status == .available else { return status.label }
         guard let nextReservation else { return "Available" }
         return "Available until \(nextReservation.startsAt.formatted(date: .abbreviated, time: .shortened))"
@@ -832,7 +898,9 @@ private struct ConditionReportPhoto: Identifiable {
 private struct ItemConditionReportsCard: View {
     let reports: [AssetConditionReport]
     let heldForStaff: Bool
+    var onResolved: (String) -> Void = { _ in }
     @State private var photo: ConditionReportPhoto?
+    @State private var resolving: AssetConditionReport?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -851,14 +919,27 @@ private struct ItemConditionReportsCard: View {
             olderNote()
         }
         .brandCard()
+        .onAppear {
+            if AppRuntimeMode.CaptureSeed.damageRecordOutcome, resolving == nil {
+                resolving = reports.first(where: \.isOpen)
+            }
+        }
         .fullScreenCover(item: $photo) { photo in
             ZoomableImageViewer(url: photo.url, photoLabel: photo.label)
+        }
+        .sheet(item: $resolving) { report in
+            RecordOutcomeSheet(reportId: report.id, isMissing: report.isMissing, onResolved: onResolved)
         }
     }
 
     @ViewBuilder
     private func summary() -> some View {
-        if heldForStaff {
+        if heldForStaff, reports.contains(where: \.isOpen) {
+            Text("Held for staff. Inspect the item, then record the outcome to close the case.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if heldForStaff {
             Text("Held for staff. Inspect the item and review the evidence before clearing maintenance.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -899,7 +980,37 @@ private struct ItemConditionReportsCard: View {
                 .foregroundStyle(.secondary)
             descriptionText(report.note)
             evidence(for: report)
+            outcome(for: report)
             checkoutLink(for: report)
+        }
+    }
+
+    @ViewBuilder
+    private func outcome(for report: AssetConditionReport) -> some View {
+        if report.isOpen {
+            Button {
+                resolving = report
+            } label: {
+                Label("Record outcome", systemImage: "checkmark.seal")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.statusText(.purple))
+            .accessibilityHint("Closes this case and releases or retires the item")
+        } else if let label = report.outcomeLabel {
+            VStack(alignment: .leading, spacing: 2) {
+                Label(label, systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.statusText(.green))
+                if let note = report.resolutionNote?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
+                    Text(note)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -956,8 +1067,19 @@ private struct ItemConditionReportsCard: View {
         }
     }
 
+    @ViewBuilder
     private func checkoutLink(for report: AssetConditionReport) -> some View {
-        NavigationLink(destination: BookingDetailView(bookingId: report.bookingId)) {
+        if let bookingId = report.bookingId {
+            checkoutRow(report, bookingId: bookingId)
+        } else {
+            Text("Reported from the item page")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func checkoutRow(_ report: AssetConditionReport, bookingId: String) -> some View {
+        NavigationLink(destination: BookingDetailView(bookingId: bookingId)) {
             HStack(spacing: 8) {
                 Text(checkoutTitle(report.bookingTitle))
                     .font(.subheadline)
@@ -989,6 +1111,248 @@ private struct ItemConditionReportsCard: View {
                 timeZone: NotificationPrefsViewModel.appTimeZone
             )
         )
+    }
+}
+
+private struct ReportProblemButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label("Report a problem", systemImage: "exclamationmark.bubble")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color(.secondarySystemFill), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Report this item as damaged or missing")
+    }
+}
+
+/// Staff closing a case: pick the outcome, optionally add a note, then close.
+struct RecordOutcomeSheet: View {
+    let reportId: String
+    let isMissing: Bool
+    let onResolved: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var choice: DamageResolution?
+    @State private var note = ""
+    @State private var isSaving = false
+    @State private var error: String?
+
+    private var options: [DamageResolution] { DamageResolution.options(forMissing: isMissing) }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("What happened to it?") {
+                    ForEach(options) { option in
+                        Button {
+                            choice = option
+                        } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(option.label).foregroundStyle(.primary)
+                                    Text(option.detail)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 8)
+                                if choice == option {
+                                    Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                            .frame(minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(choice == option ? .isSelected : [])
+                    }
+                }
+                Section("Note (optional)") {
+                    TextField("What was done", text: $note, axis: .vertical)
+                        .lineLimit(2...5)
+                }
+                if let error {
+                    Section { Text(error).foregroundStyle(Color.statusText(.red)) }
+                }
+            }
+            .navigationTitle("Outcome")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Close case") { Task { await save() } }
+                        .disabled(choice == nil || isSaving)
+                }
+            }
+            .interactiveDismissDisabled(isSaving)
+        }
+        .presentationDetents([.large])
+    }
+
+    private func save() async {
+        guard let choice, !isSaving else { return }
+        isSaving = true
+        error = nil
+        defer { isSaving = false }
+        do {
+            try await APIClient.shared.resolveDamageCase(reportId: reportId, resolution: choice, note: note)
+            Haptics.success()
+            dismiss()
+            onResolved("Case closed · \(choice.label)")
+        } catch {
+            Haptics.error()
+            self.error = (error as? APIError)?.errorDescription ?? "Couldn't close the case"
+        }
+    }
+}
+
+/// Anyone but a collaborator can report a problem from the item page.
+private struct ItemProblemReportSheet: View {
+    let assetId: String
+    let onSent: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var isMissing = false
+    @State private var note = ""
+    @State private var pickerItem: PhotosPickerItem?
+    @State private var photoData: Data?
+    @State private var showCamera = false
+    @State private var isSending = false
+    @State private var error: String?
+
+    private var trimmedNote: String { note.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// Damage needs a note or a photo; a missing report can go without.
+    private var canSend: Bool { !isSending && (isMissing || !trimmedNote.isEmpty || photoData != nil) }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("What happened", selection: $isMissing) {
+                        Text("It's damaged").tag(false)
+                        Text("I can't find it").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                }
+                Section(isMissing ? "Where did you last see it? (optional)" : "What's wrong?") {
+                    TextField("Note", text: $note, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+                Section("Photo (optional)") {
+                    if let attached = photoData, let image = UIImage(data: attached) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 180)
+                            .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+                            .accessibilityLabel("Attached photo")
+                        Button("Remove photo", role: .destructive) {
+                            photoData = nil
+                            pickerItem = nil
+                        }
+                        .frame(minHeight: 44)
+                    }
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button { showCamera = true } label: {
+                            Label("Take photo", systemImage: "camera").frame(minHeight: 44)
+                        }
+                    }
+                    PhotosPicker(selection: $pickerItem, matching: .images) {
+                        Label("Choose from library", systemImage: "photo.on.rectangle").frame(minHeight: 44)
+                    }
+                }
+                if !isMissing, trimmedNote.isEmpty, photoData == nil {
+                    Section { Text("Add a note or a photo so staff know what to look for.").font(.footnote).foregroundStyle(.secondary) }
+                }
+                if let error {
+                    Section { Text(error).foregroundStyle(Color.statusText(.red)) }
+                }
+            }
+            .navigationTitle("Report a problem")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(isSending)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Send") { Task { await send() } }.disabled(!canSend)
+                }
+            }
+            .interactiveDismissDisabled(isSending)
+            .onChange(of: pickerItem) { _, item in
+                guard let item else { return }
+                Task { photoData = Self.jpeg(from: try? await item.loadTransferable(type: Data.self)) }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPicker { image in photoData = image.jpegData(compressionQuality: 0.8) }
+                    .ignoresSafeArea()
+            }
+        }
+        .presentationDetents([.large])
+    }
+
+    /// Re-encode as JPEG, capped in size, so HEIC and large originals upload.
+    private static func jpeg(from data: Data?) -> Data? {
+        guard let data, let image = UIImage(data: data) else { return nil }
+        let longest = max(image.size.width, image.size.height)
+        let scale = min(1, 2048 / max(longest, 1))
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let resized = UIGraphicsImageRenderer(size: size).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+        return resized.jpegData(compressionQuality: 0.8)
+    }
+
+    private func send() async {
+        guard canSend else { return }
+        isSending = true
+        error = nil
+        defer { isSending = false }
+        do {
+            try await APIClient.shared.reportAssetProblem(
+                assetId: assetId,
+                isMissing: isMissing,
+                description: trimmedNote,
+                jpegData: photoData
+            )
+            Haptics.success()
+            dismiss()
+            onSent("Report sent. Staff will take a look.")
+        } catch {
+            Haptics.error()
+            self.error = (error as? APIError)?.errorDescription ?? "Couldn't send the report"
+        }
+    }
+}
+
+private struct CameraPicker: UIViewControllerRepresentable {
+    let onCapture: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraPicker
+        init(_ parent: CameraPicker) { self.parent = parent }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage { parent.onCapture(image) }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.dismiss() }
     }
 }
 

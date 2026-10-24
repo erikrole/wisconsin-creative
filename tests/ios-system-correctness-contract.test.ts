@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS system correctness request ownership", () => {
   it("lets only the current student-hub scan route mutate kiosk flow state", () => {
@@ -144,7 +145,7 @@ describe("iOS system correctness request ownership", () => {
   });
 
   it("ignores a late 401 that belongs to an older authenticated account", () => {
-    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const api = apiClientSource();
     const session = source("ios/Wisconsin/Core/SessionStore.swift");
     const ownership = source("ios/Wisconsin/Shared/LatestRequestGeneration.swift");
 

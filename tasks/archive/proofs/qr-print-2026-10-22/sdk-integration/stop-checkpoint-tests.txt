@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 /Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative
+
+ ✓ tests/label-print-recovery.test.ts (25 tests) 32ms
+
+ Test Files  1 passed (1)
+      Tests  25 passed (25)
+   Start at  16:13:47
+   Duration  296ms (transform 53ms, setup 13ms, collect 53ms, tests 32ms, environment 0ms, prepare 46ms)
+

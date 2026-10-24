@@ -1,0 +1,11 @@
+{
+  "nativeSource": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "serverSource": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "deploymentId": "dpl_4CajpSPWg7DoouQgzcxbtL1X68py",
+  "webToIOS": "passed",
+  "iosToWeb": "passed",
+  "skippedPhotoFinishes": "passed",
+  "physicalDevice": "iPhone 18 Pro Max",
+  "physicalPhoto": "PhotosPicker, crop gesture, Save and persisted 512px WebP verified",
+  "checkedAt": "2026-10-22T19:19:31.567Z"
+}

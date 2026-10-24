@@ -46,8 +46,13 @@ struct EventRow: View {
 
     /// Read so the midnight rollover re-renders "Now" and the past dimming.
     @Environment(\.today) private var today
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var isPast: Bool { timeState == .past }
+
+    /// At accessibility sizes a trailing time column takes half the row and
+    /// leaves the title a few letters per line, so the time moves under it.
+    private var stacksTime: Bool { dynamicTypeSize.isAccessibilitySize }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -58,6 +63,10 @@ struct EventRow: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(isPast ? Color.secondary : Color.primary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if stacksTime {
+                    stackedTimeLine
+                }
 
                 metaLine
 
@@ -70,7 +79,9 @@ struct EventRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            timeColumn
+            if !stacksTime {
+                timeColumn
+            }
         }
         .padding(.vertical, 2)
         .contentShape(Rectangle())
@@ -95,6 +106,16 @@ struct EventRow: View {
         return (start, callTimeText ?? end)
     }
 
+    /// Under "Now": when it ends. A multi-day event that runs past today ends
+    /// on another day, so its clock time alone would read as tonight.
+    private var liveEndText: String {
+        if event.displayAllDay { return "All day" }
+        if let seg = segment, seg.index < seg.total {
+            return "Until " + event.endsAt.formatted(.dateTime.weekday(.abbreviated))
+        }
+        return event.endsAt.formatted(.dateTime.hour().minute())
+    }
+
     private var timeColumn: some View {
         let lines = timeLines
         return VStack(alignment: .trailing, spacing: 2) {
@@ -102,7 +123,7 @@ struct EventRow: View {
                 Text("Now")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.primary)
-                Text(event.displayAllDay ? "All day" : event.endsAt.formatted(.dateTime.hour().minute()))
+                Text(liveEndText)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             } else {
@@ -124,13 +145,31 @@ struct EventRow: View {
         .accessibilityHidden(true)
     }
 
+    /// The time column as one line under the title, for accessibility sizes.
+    private var stackedTimeLine: some View {
+        let lines = timeLines
+        let parts = timeState == .live
+            ? ["Now", liveEndText]
+            : [lines.primary, lines.secondary].compactMap { $0 }
+        return Text(parts.joined(separator: " · "))
+            .font(.subheadline.weight(.semibold).monospacedDigit())
+            .foregroundStyle(isPast ? Color.secondary : Color.primary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityHidden(true)
+    }
+
     // MARK: Meta
 
+    /// At accessibility sizes the coverage chip drops under the venue, which
+    /// otherwise shares a line with it and truncates to a few letters.
     private var metaLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        let layout = stacksTime
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
+        return layout {
             if let metaText {
                 Text(metaText)
-                    .lineLimit(2)
+                    .lineLimit(stacksTime ? 3 : 2)
             }
             if let cov = event.coverage, cov.total > 0 {
                 coverageChip(cov)
@@ -386,6 +425,7 @@ struct ScheduleDateHeader: View {
     /// Read from the environment so the midnight rollover re-renders the
     /// header; a wall-clock check here left "Tomorrow" on today's events.
     @Environment(\.today) private var today
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var cal: Calendar { .current }
     private var isToday: Bool { cal.dayOffset(of: date, from: today) == 0 }
@@ -414,8 +454,16 @@ struct ScheduleDateHeader: View {
         eventCount == 1 ? "1 event" : "\(eventCount) events"
     }
 
+    /// "Wednesday Oct 22" on one line truncates at accessibility sizes, so
+    /// the date drops under the day name there.
+    private var layout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
+    }
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        layout {
             Text(primaryLabel)
                 .font(.title3)
                 .fontWeight(.heavy)
@@ -423,9 +471,9 @@ struct ScheduleDateHeader: View {
             Text(dateLabel)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Spacer(minLength: 8)
         }
-        .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
         .textCase(nil)
         .padding(.horizontal, 32)
         .padding(.top, 14)
@@ -437,16 +485,19 @@ struct ScheduleDateHeader: View {
         .accessibilityLabel(headerAccessibilityLabel)
     }
 
+    /// "Today, Wednesday, October 22, 3 events". The old order read
+    /// "October 2026, Wednesday 22", which VoiceOver speaks as a puzzle.
     private var headerAccessibilityLabel: String {
         var parts: [String] = []
         if isToday {
             parts.append("Today")
         } else if isTomorrow {
             parts.append("Tomorrow")
-        } else {
-            parts.append(date.formatted(.dateTime.month(.wide).year()))
         }
-        parts.append(date.formatted(.dateTime.weekday(.wide).day()))
+        let sameYear = cal.component(.year, from: date) == cal.component(.year, from: today)
+        parts.append(sameYear
+            ? date.formatted(.dateTime.weekday(.wide).month(.wide).day())
+            : date.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
         parts.append(countText)
         return parts.joined(separator: ", ")
     }
@@ -489,6 +540,14 @@ struct ScheduleWeekHeader: View {
         .background(Color(.systemGroupedBackground))
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isHeader)
-        .accessibilityLabel("Week of " + weekStart.formatted(.dateTime.month(.wide).day()))
+        .accessibilityLabel(accessibilityRangeLabel)
+    }
+
+    /// A run of empty weeks reads as its whole range, not just its first week.
+    private var accessibilityRangeLabel: String {
+        let start = weekStart.formatted(.dateTime.month(.wide).day())
+        guard weekCount > 1 else { return "Week of " + start }
+        let end = Calendar.current.date(byAdding: .day, value: 7 * weekCount - 1, to: weekStart) ?? weekStart
+        return start + " to " + end.formatted(.dateTime.month(.wide).day())
     }
 }

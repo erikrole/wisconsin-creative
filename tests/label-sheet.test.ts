@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  preparedSheet,
   clampCopies,
+  entryRows,
   entryKind,
   familyEntry,
   parseUnitPick,
@@ -42,6 +44,14 @@ describe("parseUnitPick", () => {
   });
   it("reports what it can't read", () => {
     expect(parseUnitPick("4, abc, 0").invalid).toEqual(["abc", "0"]);
+  });
+  it("rejects numbers outside the unit API's integer range", () => {
+    expect(parseUnitPick("3, 2147483648")).toEqual({ numbers: [3], invalid: ["2147483648"] });
+  });
+  it("reports a selection past the cap instead of silently truncating it", () => {
+    const picked = parseUnitPick("1-2000, 2001");
+    expect(picked.numbers).toHaveLength(2000);
+    expect(picked.invalid).toEqual(["2001"]);
   });
 });
 
@@ -111,11 +121,34 @@ describe("print sheet rows", () => {
     expect(printableCount(sheetRows([asUnits(numbered, "unprinted")], {}))).toBe(0);
   });
 
+  it("checks the complete derived QR before exporting any units", () => {
+    const entry = asUnits(familyEntry({ id: "batt", name: "NP-FZ100", binQrCodeValue: "abcdefghijklmn", trackByNumber: true, onHandQuantity: 4 }), "all");
+    expect(entryRows(entry, units)).toEqual([]);
+  });
+
+  it.each(["2, abc", "2, 9", "2, 4", ""])("does not export a partial picked batch for %j", (unitPick) => {
+    const entry: CartEntry = { ...asUnits(numbered, "all"), family: { ...numbered.family!, mode: "units", unitScope: "pick", unitPick } };
+    expect(entryRows(entry, units)).toEqual([]);
+  });
+
   it("splits a mixed sheet into one CSV per template", () => {
     const files = templateFiles(sheetRows([camera, asUnits(numbered, "unprinted"), counted], { batt: units }));
     expect(files.map((file) => file.file)).toEqual(["Camera Bodies.csv", "Batteries.csv"]);
   });
 
+  it("prints in displayed template order even when a battery was added before a camera", () => {
+    const sheet = preparedSheet([asUnits(numbered, "unprinted"), { ...camera, copies: 2 }], { batt: units });
+    expect(sheet.groups.map((group) => group.kind)).toEqual(["body", "battery"]);
+    expect(sheet.labels.map((label) => label.row.kind)).toEqual(["body", "body", "battery", "battery"]);
+    expect(sheet.labels.map((label) => label.unit?.number ?? null)).toEqual([null, null, 2, 3]);
+    expect(new Set(sheet.labels.map((label) => label.copyId)).size).toBe(4);
+    expect(sheet.labels.every((label) => label.row.copies === 1)).toBe(true);
+  });
+  it("queues at most 500 USB copies, matching the print job cap", () => {
+    const sheet = preparedSheet([{ ...camera, copies: 500 }, { ...camera, id: "a2", copies: 1 }], {});
+    expect(sheet.total).toBe(501);
+    expect(sheet.labels).toHaveLength(500);
+  });
   it("keeps copies between 1 and 500", () => {
     expect(clampCopies(0)).toBe(1);
     expect(clampCopies(Number.NaN)).toBe(1);

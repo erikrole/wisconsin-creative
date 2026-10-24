@@ -1,0 +1,1233 @@
+{
+  "pr605-before-unit-result": {
+    "summary": {
+      "status": "FAILED",
+      "durationMs": 29944,
+      "counts": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T14-52-42-936Z_pid3490_42483654.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T14-52-42-936Z_pid3490_ebf05120.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T14-52-42-936Z_pid3490_22804dd7.xctestproducts"
+    },
+    "tests": {
+      "selected": [
+        "WisconsinTests/APIClientRetryTests/testCancellingAnInFlightAudiencePreviewRemainsCancellation",
+        "WisconsinTests/RecentIOSRegressionTests/failedLegacyCacheEnumerationRetriesAndPreservesUnrelatedFiles"
+      ],
+      "discovered": {
+        "total": 2,
+        "items": [
+          "WisconsinTests/APIClientRetryTests/testCancellingAnInFlightAudiencePreviewRemainsCancellation",
+          "WisconsinTests/RecentIOSRegressionTests/failedLegacyCacheEnumerationRetriesAndPreservesUnrelatedFiles"
+        ]
+      }
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/tmp/pr605-native-followup-20261022/baseline/ios/Wisconsin/Views/WrappedView.swift:460"
+        }
+      ],
+      "errors": [],
+      "testFailures": [
+        {
+          "suite": "APIClientRetryTests",
+          "test": "testCancellingAnInFlightAudiencePreviewRemainsCancellation",
+          "message": "Expected task cancellation, got networkError(Error Domain=NSURLErrorDomain Code=-999 \"cancelled\" UserInfo={NSErrorFailingURLStringKey=https://wisconsincreative.com/api/blasts/preview, NSErrorFailingURLKey=https://wisconsincreative.com/api/blasts/preview, _NSURLErrorRelatedURLSessionTaskErrorKey=(",
+          "location": "/tmp/pr605-native-followup-20261022/baseline/ios/WisconsinTests/APIClientRetryTests.swift:162"
+        },
+        {
+          "suite": "APIClientRetryTests",
+          "test": "testCancellingAnInFlightAudiencePreviewRemainsCancellation()",
+          "message": "failed - Expected task cancellation, got networkError(Error Domain=NSURLErrorDomain Code=-999 \"cancelled\" UserInfo={NSErrorFailingURLStringKey=https://wisconsincreative.com/api/blasts/preview, NSErrorFailingURLKey=https://wisconsincreative.com/api/blasts/preview, _NSURLErrorRelatedURLSessionTaskErrorKey=(\n    \"LocalDataTask <9D69C72F-E7A8-4894-9B71-A880F8B3DC47>.<1>\"\n), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <9D69C72F-E7A8-4894-9B71-A880F8B3DC47>.<1>, NSLocalizedDescription=cancelled})"
+        }
+      ]
+    },
+    "testCases": [
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testCancellingAnInFlightAudiencePreviewRemainsCancellation",
+        "status": "failed",
+        "durationMs": 301
+      }
+    ]
+  },
+  "pr605-before-cache-result": {
+    "summary": {
+      "status": "FAILED",
+      "durationMs": 10550,
+      "counts": {
+        "passed": 3,
+        "failed": 1,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T14-53-30-861Z_pid3490_5d41c49d.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T14-53-30-862Z_pid3490_193ab36b.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T14-53-30-862Z_pid3490_032d1f24.xctestproducts"
+    },
+    "tests": {
+      "selected": [
+        "WisconsinTests/RecentIOSRegressionTests/failedLegacyCacheEnumerationRetriesAndPreservesUnrelatedFiles",
+        "WisconsinTests/RecentIOSRegressionTests/gearSearchIncludesAvailableAndUnavailableFamilies",
+        "WisconsinTests/RecentIOSRegressionTests/searchGearRequiresLocalAuthentication",
+        "WisconsinTests/RecentIOSRegressionTests/staffHomeDescribesThePersonalProjectionAndKeepsOwnOverdueItems"
+      ],
+      "discovered": {
+        "total": 4,
+        "items": [
+          "WisconsinTests/RecentIOSRegressionTests/failedLegacyCacheEnumerationRetriesAndPreservesUnrelatedFiles",
+          "WisconsinTests/RecentIOSRegressionTests/gearSearchIncludesAvailableAndUnavailableFamilies",
+          "WisconsinTests/RecentIOSRegressionTests/searchGearRequiresLocalAuthentication",
+          "WisconsinTests/RecentIOSRegressionTests/staffHomeDescribesThePersonalProjectionAndKeepsOwnOverdueItems"
+        ]
+      }
+    },
+    "diagnostics": {
+      "warnings": [],
+      "errors": [],
+      "testFailures": [
+        {
+          "suite": "RecentIOSRegressionTests",
+          "test": "failedLegacyCacheEnumerationRetriesAndPreservesUnrelatedFiles()",
+          "message": "Expectation failed: !manager.fileExists(atPath: legacy.path)\nmanager.fileExists(atPath: legacy.path) → false"
+        }
+      ]
+    }
+  },
+  "pr605-before-ui-result": {
+    "summary": {
+      "status": "FAILED",
+      "durationMs": 70628,
+      "counts": {
+        "passed": 0,
+        "failed": 2,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T14-53-50-677Z_pid3490_490b4ef5.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T14-53-50-677Z_pid3490_6d948b2c.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T14-53-50-677Z_pid3490_e9e7448c.xctestproducts"
+    },
+    "tests": {
+      "selected": [
+        "WisconsinUITests/RecentIOSRegressionUITests/testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+        "WisconsinUITests/RecentIOSRegressionUITests/testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount"
+      ],
+      "discovered": {
+        "total": 2,
+        "items": [
+          "WisconsinUITests/RecentIOSRegressionUITests/testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+          "WisconsinUITests/RecentIOSRegressionUITests/testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount"
+        ]
+      }
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/tmp/pr605-native-followup-20261022/baseline/ios/Wisconsin/Views/WrappedView.swift:460"
+        }
+      ],
+      "errors": [],
+      "testFailures": [
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+          "message": "XCTAssertTrue failed",
+          "location": "/tmp/pr605-native-followup-20261022/baseline/ios/WisconsinUITests/RecentIOSRegressionUITests.swift:26"
+        },
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testStudentCanCopyTheQRWhenItIsTheHeroTitle()",
+          "message": "XCTAssertTrue failed"
+        },
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount",
+          "message": "XCTAssertTrue failed",
+          "location": "/tmp/pr605-native-followup-20261022/baseline/ios/WisconsinUITests/RecentIOSRegressionUITests.swift:39"
+        },
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount()",
+          "message": "XCTAssertTrue failed"
+        }
+      ]
+    },
+    "testCases": [
+      {
+        "suite": "RecentIOSRegressionUITests",
+        "test": "testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+        "status": "failed",
+        "durationMs": 18488
+      },
+      {
+        "suite": "RecentIOSRegressionUITests",
+        "test": "testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount",
+        "status": "failed",
+        "durationMs": 16894
+      }
+    ]
+  },
+  "pr605-after-unit-result": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 30667,
+      "counts": {
+        "passed": 253,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T14-56-05-246Z_pid3490_77e34491.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T14-56-05-247Z_pid3490_59e3a87d.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T14-56-05-247Z_pid3490_5319e7b3.xctestproducts"
+    },
+    "tests": {
+      "discovered": {
+        "total": 253,
+        "items": [
+          "WisconsinTests/APIClientRetryTests/testCancellingAnInFlightAudiencePreviewRemainsCancellation",
+          "WisconsinTests/APIClientRetryTests/testGetHonoursRetryAfterOn429",
+          "WisconsinTests/APIClientRetryTests/testGetRetriesDroppedConnection",
+          "WisconsinTests/APIClientRetryTests/testGetRetriesTransientServerErrorThenSucceeds",
+          "WisconsinTests/APIClientRetryTests/testGetStopsAfterMaxAttemptsAndReportsServerError",
+          "WisconsinTests/APIClientRetryTests/testNotFoundMapsWithoutRetry"
+        ]
+      }
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:466"
+        }
+      ],
+      "errors": [],
+      "testFailures": []
+    },
+    "testCases": [
+      {
+        "suite": "ReportsViewModelTests",
+        "test": "testPartialResponseStaysVisibleButDoesNotBecomeFresh",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "ReportsViewModelTests",
+        "test": "testNewestPeriodOwnsPublishedResultsAndLoadingState",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReportsViewModelTests",
+        "test": "testOneEndpointFailureKeepsTheSuccessfulReport",
+        "status": "passed",
+        "durationMs": 8
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testNoteOnlySaveAndClosePersistsBeforeClearingComposer",
+        "status": "passed",
+        "durationMs": 10
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testCurrentComposerSubmitStillFinishesNormally",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testClearForSignOutPreventsLateResumeFromAdoptingOldComposer",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testConcurrentDraftSavesJoinOneRequest",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testFailedSaveAndCloseKeepsComposerOpen",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testClearForSignOutPreventsLateSaveFromAdoptingPendingComposer",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testSlowAutosaveBaselinesOnlyTheSnapshotItSent",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testFailedDiscardKeepsServerBoundComposerRecoverable",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testLostResponseReplayWithoutLaterEditsFinishesNormally",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testFailedSaveAndStartNewKeepsCurrentAndPendingComposers",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testSaveAndCloseKeepsNewerEditsOpenWhileSlowSaveFinishes",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testPristineSaveAndCloseDoesNotClearComposerWithoutPersistence",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testSuccessfulDiscardClearsComposerAfterServerDelete",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testNewSessionListWinsOverLatePreviousSessionList",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testHTTP500ReplayResendsOriginalPayloadAndPreservesLaterEditsAsNewDraft",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testNeverSavedBulkOnlySubmitCreatesSourceDraftBeforeReservation",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testDefiniteServerRejectionAllowsCorrectedPayloadOnNextSubmit",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testEveryServerBackedDetailEditIsMeaningfulDraftInput",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testLatePreviousSessionSubmitCannotFinishReplacementComposer",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReservationDraftStoreTests",
+        "test": "testEditsMadeDuringSuccessfulCreateRemainOpenAsNewDraft",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testRecentWindowIsTheThirtyDaysBeforeToday",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testSourceLabelPrefersThePublicCalendarHost",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testGearLinesNameSerializedAndBulkItems",
+        "status": "passed",
+        "durationMs": 12
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testGearPlanAndBookingStatusesStayInTheSharedVocabulary",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testOpenBookingPastItsEndIsOverdue",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testAllDayLabelUsesTheCalendarDayRatherThanTheRawInstant",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testFallbackIncludesEveryBookingAndDeduplicatesSharedReferences",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testVenueUsesTheCalendarTextNotThePickupLocation",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "EventCatalogModelsTests",
+        "test": "testDetailDecodesTheCommandCenterAndIgnoresCrewFields",
+        "status": "passed",
+        "durationMs": 14
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testNearestTrendPointResolvesChartSelection",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testUtilizationReportDecodesCustodyMetrics",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testTrendPointsParseServerDaysAsUTC",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testCheckoutActivityReportDecodesTrendAndPriorWindow",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testStatusSlicesDropEmptyBucketsAndKeepWebOrdering",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testTrendPointsSkipMalformedDaysInsteadOfCrashing",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testStatusSlicesSurfaceUnknownServerStatuses",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testCheckoutReportToleratesMissingPriorWindow",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testNearestReturnsNilForAnEmptySeries",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportModelsTests",
+        "test": "testUtilizationReportDecodesAPreCustodyServerPayload",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testTeamScoreboardFunFactsFindStoriesAndLeadWithYourSpot",
+        "status": "passed",
+        "durationMs": 9
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testNonNumericCursorEndsPagination",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testWrappedResponseDecodesLockedAndReady",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testScoreboardToleratesOptionalCollectionsAndNumericCursor",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testHighlightsStayEmptyWithoutResolvedGames",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testScoreboardDecodesServerShapeAndPreservesSeparateTotals",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testTieResultsDecodeWithNeutralPresentation",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testMonthsGroupGamesInRouteOrder",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testFormTakesTheMostRecentGamesOnly",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testTeamScoreboardToleratesRollingOptionalCollections",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testWrappedPromoOpensDecemberFirstAndSkipsCollaborators",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testStreakNeedsTwoGamesAndStopsAtTheFirstDisagreement",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testRecordAndRateFormattingIsShared",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testWorkedEventDecodesWithoutResultAndStaysOutOfRecordDigest",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testHighlightsPreferSustainedSuccessAndSkipUnknownBuckets",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testFilteredEventsFallBackToReadableCopyAndSpokenResults",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ScoreboardModelsTests",
+        "test": "testTeamScoreboardDecodesUniqueTotalsAndMinimalLeaderboardIdentity",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testRepeatedSnoozeHasOneStableIdentifier",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testFailedRefreshRetainsRowsAndReportsFailure",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testBlastPayloadDecodesWithoutLosingItsDestination",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testLargeInboxUndoRespectsAPIRequestLimit",
+        "status": "passed",
+        "durationMs": 11
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testDuplicateMutationAndRefreshCannotOvertakePendingWrite",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testLostMutationResponseRereadsCommittedState",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testReadingClearsTheMatchingNotificationCenterAlert",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testOverlappingPagesKeepUniqueRowsAndAdvanceServerOffset",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationInboxTests",
+        "test": "testInboxRecoveryCapture",
+        "status": "passed",
+        "durationMs": 622
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testAFreshValueIsNotFetchedAgain",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testReplaceKeepsTheLoadedKeyAndRejectsADifferentOne",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testDiscardDropsTheValueAndInvalidatesTheToken",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testIncompleteResultsDoNotCountAsFresh",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testLatePageCannotReplaceARefreshedReportWithTheSameKey",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testANewKeyClearsThePreviousValueAndRejectsTheOldToken",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testAccessDenialDiscardsCachedDataOnlyForTheOwningRequest",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ReportSessionTests",
+        "test": "testAFailedRefreshKeepsThePreviousValue",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "RequestRetryPolicyTests",
+        "test": "testRetryAfterRaisesWaitButNeverBeyondCap",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "RequestRetryPolicyTests",
+        "test": "testBackoffDoublesAndCaps",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "RequestRetryPolicyTests",
+        "test": "testRetryAfterParsesSecondsAndHTTPDates",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "RequestRetryPolicyTests",
+        "test": "testOnlyReadsAreRetryable",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testReservationWindowStillBlocksMaintenanceAndKnownOverlaps",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testBookingDecodesCanonicalActionsAndEveryLinkedEvent",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testInstallingBookingPreservesExplicitTitleOrder",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testInstallingBookingKeepsOperationalOrderingByDefault",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testResponseDecodingLeavesMainThreadAndPreservesWireFormat",
+        "status": "passed",
+        "durationMs": 29
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testCheckedOutGearCanBeReservedAfterTheTurnaroundBuffer",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testCurrentHoldCopyUsesTheReturnWhenTheListOmitsAStart",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testCancelledResponseDoesNotDecodeOrPublish",
+        "status": "passed",
+        "durationMs": 7
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testReturnInsightsOnlyLoadWithinTheLongestDisplayWindow",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BookingModelsTests",
+        "test": "testBookingFallsBackToLegacyPrimaryEventAndUnknownActions",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BlastHistoryTests",
+        "test": "testLimitDropsTheOldestDismissedBlastFirst",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "BlastHistoryTests",
+        "test": "testActiveBlastClearsAStaleAcknowledgedFlag",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BlastHistoryTests",
+        "test": "testDismissedBlastStaysWhenTheServerOmitsIt",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BlastHistoryTests",
+        "test": "testRoundTripKeepsADismissedBlastForTheSamePerson",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "BlastHistoryTests",
+        "test": "testMarkAcknowledgedKeepsTheMessageAndSortsItAfterOpenBlasts",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "LatestRequestGenerationTests",
+        "test": "testAuthSessionBoundaryRejectsAnOlderAccountsLateResponse",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "LatestRequestGenerationTests",
+        "test": "testCredentialQueueFinishesRegistrationBeforeLogoutRevocation",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "LatestRequestGenerationTests",
+        "test": "testAuthMutationQueuePreventsLogoutFromClearingANewerLoginCookie",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "LatestRequestGenerationTests",
+        "test": "testNewestRequestOwnsStateWhenResponsesFinishOutOfOrder",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "LatestRequestGenerationTests",
+        "test": "testInvalidationRevokesInFlightRequestOwnership",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ProfileCompletionModelsTests",
+        "test": "testRoleAwareVisibleSteps",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ProfileCompletionModelsTests",
+        "test": "testAthleticsEmailRequiresLocalPartAndExactDomain",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ProfileCompletionModelsTests",
+        "test": "testStudentPhoneUpdateOmitsWorkPhoneFields",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "ProfileCompletionModelsTests",
+        "test": "testCompletionPayloadToleratesMissingAdditiveFields",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "ProfileCompletionModelsTests",
+        "test": "testPhoneAutofillPreservesTheNumberWithUSCountryCode",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ProfileCompletionModelsTests",
+        "test": "testWiscardDraftRequiresTenCardDigitsAndOneIssueDigit",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "ProfileCompletionModelsTests",
+        "test": "testRequiredSetupCannotBeBypassedBeforeItsStatusLoads",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationQuickActionTests",
+        "test": "testReviewDecisionPrefersTheTradeOverItsAssignment",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationQuickActionTests",
+        "test": "testEveryCategoryButBlastsOffersMarkAsReadOrADecision",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testNotFoundMapsWithoutRetry",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testPostIsNeverRetried",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testOfflineFailsFastWithoutRetry",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testCancellingAnInFlightAudiencePreviewRemainsCancellation",
+        "status": "passed",
+        "durationMs": 12
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testSuccessfulAnnouncementDismissalAcceptsTheTopLevelResponse",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testGetStopsAfterMaxAttemptsAndReportsServerError",
+        "status": "passed",
+        "durationMs": 6
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testGetHonoursRetryAfterOn429",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testGetRetriesDroppedConnection",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testRateLimitWithLongRetryAfterSurfacesFriendlyMessageWithoutRetry",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "APIClientRetryTests",
+        "test": "testGetRetriesTransientServerErrorThenSucceeds",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "ReportLibraryModelTests",
+        "test": "testMissingUnitsAndBadgesDecodeTheSectionsThePhoneShows",
+        "status": "passed",
+        "durationMs": 14
+      },
+      {
+        "suite": "ReportLibraryModelTests",
+        "test": "testCheckoutDetailDecodesRowsAndIgnoresTheHeatmap",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "ReportLibraryModelTests",
+        "test": "testScanReportAppendsTheNextPageWithoutDuplicatingRows",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "ReportLibraryModelTests",
+        "test": "testUsageReportDecodesCountsWithoutNames",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "ReportLibraryModelTests",
+        "test": "testUtilizationDetailToleratesALegacyBreakdown",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "AccountabilityModelTests",
+        "test": "testReportDecodesLeaderboardAndIgnoresAdminFields",
+        "status": "passed",
+        "durationMs": 6
+      },
+      {
+        "suite": "AccountabilityModelTests",
+        "test": "testQuerySendsSortAndOnlyAllTimeYear",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "AccountabilityModelTests",
+        "test": "testDurationAndOrdinalStayInProductLanguage",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "AccountabilityModelTests",
+        "test": "testFractionalGracePeriodsDecodeAndKeepTheirPrecisionInCopy",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "AccountabilityModelTests",
+        "test": "testAllTimeReportToleratesAMissingYearAndMissingJeers",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "AccountabilityModelTests",
+        "test": "testUnknownIncidentStateDoesNotShowTheRawToken",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testConcurrentPreviewKeepsSVGSafetyAndRejectsOversizedFiles",
+        "status": "passed",
+        "durationMs": 9
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testPreviewChecksActualBytesBeforeReadingIncludingSVGAndSharedPDF",
+        "status": "passed",
+        "durationMs": 2
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testSVGDocumentStripsActiveContentAndRefusesANonSVG",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testLibraryPageDecodesTheListEnvelopeAndUnknownKinds",
+        "status": "passed",
+        "durationMs": 4
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testPreviewKindAndInlineLimitFollowTheFile",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testDownloadNamesPreferTheEncodedHeaderAndDropPathSeparators",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testTemporaryDownloadIsRemovedWhenItsOwnerIsReleased",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testByteAndFolderLabelsStayQuiet",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "BrandAssetModelTests",
+        "test": "testDatesAcceptFractionalAndPlainInternetTime",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "GearTrackerRouteTests",
+        "test": "testParsesCustomSchemeDestinations",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "GearTrackerRouteTests",
+        "test": "testNotificationSettingsRoutesEverywhere",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "GearTrackerRouteTests",
+        "test": "testParsesUniversalLinksFromCalendarAndMail",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "GearTrackerRouteTests",
+        "test": "testNotificationPayloadsCoverEveryFamily",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "GearTrackerRouteTests",
+        "test": "testRecipientUserIdIsNotADestination",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "GearTrackerRouteTests",
+        "test": "testIgnoresMutationQueryParametersOnBookingLinks",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationPreferenceLevelTests",
+        "test": "testQuietHoursTimesRoundTripInCentralTime",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "NotificationPreferenceLevelTests",
+        "test": "testResumeSendsAnExplicitNullPause",
+        "status": "passed",
+        "durationMs": 1
+      },
+      {
+        "suite": "NotificationPreferenceLevelTests",
+        "test": "testTomorrowMorningIsSevenAmTheNextDay",
+        "status": "passed",
+        "durationMs": 0
+      },
+      {
+        "suite": "NotificationPreferenceLevelTests",
+        "test": "testDecodesLevelsAndToleratesUnknownOnes",
+        "status": "passed",
+        "durationMs": 3
+      },
+      {
+        "suite": "NotificationPreferenceLevelTests",
+        "test": "testPatchSendsOnlyTheChangedField",
+        "status": "passed",
+        "durationMs": 1
+      }
+    ]
+  },
+  "pr605-after-ui-result": {
+    "summary": {
+      "status": "FAILED",
+      "durationMs": 52423,
+      "counts": {
+        "passed": 1,
+        "failed": 1,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T14-57-43-792Z_pid3490_8760d436.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T14-57-43-792Z_pid3490_555b4fa5.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T14-57-43-792Z_pid3490_98b35d8d.xctestproducts"
+    },
+    "tests": {
+      "selected": [
+        "WisconsinUITests/RecentIOSRegressionUITests/testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+        "WisconsinUITests/RecentIOSRegressionUITests/testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount"
+      ],
+      "discovered": {
+        "total": 2,
+        "items": [
+          "WisconsinUITests/RecentIOSRegressionUITests/testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+          "WisconsinUITests/RecentIOSRegressionUITests/testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount"
+        ]
+      }
+    },
+    "diagnostics": {
+      "warnings": [
+        {
+          "message": "'main' was deprecated in iOS 26.0: Use a UIScreen instance found through context instead (i.e, view.window.windowScene.screen), or for properties like UIScreen.scale with trait equivalents, use a traitCollection found through context. [#DeprecatedDeclaration]",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/Wisconsin/Views/WrappedView.swift:466"
+        }
+      ],
+      "errors": [],
+      "testFailures": [
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+          "message": "XCTAssertFalse failed",
+          "location": "/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-review-fixes/ios/WisconsinUITests/RecentIOSRegressionUITests.swift:32"
+        },
+        {
+          "suite": "RecentIOSRegressionUITests",
+          "test": "testStudentCanCopyTheQRWhenItIsTheHeroTitle()",
+          "message": "XCTAssertFalse failed"
+        }
+      ]
+    },
+    "testCases": [
+      {
+        "suite": "RecentIOSRegressionUITests",
+        "test": "testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+        "status": "failed",
+        "durationMs": 6372
+      },
+      {
+        "suite": "RecentIOSRegressionUITests",
+        "test": "testWrappedVoiceOverCardIncludesEveryCrewMemberAndCount",
+        "status": "passed",
+        "durationMs": 6425
+      }
+    ]
+  },
+  "pr605-after-qr-ui-result": {
+    "summary": {
+      "status": "SUCCEEDED",
+      "durationMs": 34687,
+      "counts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "target": "simulator"
+    },
+    "artifacts": {
+      "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/logs/test_sim_2026-10-22T15-01-29-045Z_pid3490_d990d725.log",
+      "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/result-bundles/test_sim_2026-10-22T15-01-29-045Z_pid3490_af9a375e.xcresult",
+      "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/wisconsin-creative-a51b26cd1910/test-products/test_sim_2026-10-22T15-01-29-045Z_pid3490_a0850b5f.xctestproducts"
+    },
+    "tests": {
+      "selected": [
+        "WisconsinUITests/RecentIOSRegressionUITests/testStudentCanCopyTheQRWhenItIsTheHeroTitle"
+      ],
+      "discovered": {
+        "total": 1,
+        "items": [
+          "WisconsinUITests/RecentIOSRegressionUITests/testStudentCanCopyTheQRWhenItIsTheHeroTitle"
+        ]
+      }
+    },
+    "diagnostics": {
+      "warnings": [],
+      "errors": [],
+      "testFailures": []
+    },
+    "testCases": [
+      {
+        "suite": "RecentIOSRegressionUITests",
+        "test": "testStudentCanCopyTheQRWhenItIsTheHeroTitle",
+        "status": "passed",
+        "durationMs": 7628
+      }
+    ]
+  }
+}

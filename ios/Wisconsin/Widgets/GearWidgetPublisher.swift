@@ -1,3 +1,4 @@
+import BackgroundTasks
 import Foundation
 import WidgetKit
 
@@ -75,5 +76,31 @@ enum GearWidgetPublisher {
             dueTodayCount: dueToday.count,
             upcomingShifts: Array(upcomingShifts)
         )
+    }
+}
+
+/// Keeps the widgets, their Smart Stack relevance and the Spotlight index
+/// current between launches. Without it they only change when the app opens or
+/// a Live Activity push lands, so a widget could still say "due at 5" at 7.
+///
+/// It is a read: one `/api/dashboard` request, published through the same two
+/// paths Home uses. A signed-out phone gets a 401 and publishes nothing; the
+/// session boundary in `WisconsinApp` already cleared the old account's rows.
+enum GearBackgroundRefresh {
+    static let identifier = "com.erikrole.Wisconsin.refresh"
+
+    /// iOS treats `earliestBeginDate` as a floor and decides the real time from
+    /// usage, so this asks for roughly hourly and lets the system throttle.
+    static func schedule(after interval: TimeInterval = 60 * 60) {
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: interval)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    static func run() async {
+        schedule()
+        guard let dashboard = try? await APIClient.shared.dashboard() else { return }
+        GearWidgetPublisher.publish(from: dashboard)
+        SpotlightIndexer.index(from: dashboard)
     }
 }

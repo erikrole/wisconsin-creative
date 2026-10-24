@@ -1,4 +1,3 @@
-import { Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -75,27 +74,6 @@ export function BucketBar({ row, maxGames }: { row: VolumeParts; maxGames: numbe
         {row.ties > 0 ? <div className="h-full min-w-0 flex-1" style={{ flexGrow: row.ties, background: TIE_FILL }} /> : null}
       </div>
     </div>
-  );
-}
-
-function rankTone(rank: number): string {
-  if (rank === 1) return "border-foreground/20 bg-foreground text-background";
-  if (rank === 2) return "border-border bg-muted text-foreground";
-  if (rank === 3) return "border-border bg-background text-foreground";
-  return "border-transparent bg-transparent text-muted-foreground";
-}
-
-export function RankMark({ rank }: { rank: number }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex size-8 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
-        rankTone(rank),
-      )}
-      aria-label={`Rank ${rank}`}
-    >
-      {rank === 1 ? <Trophy className="size-3.5" aria-hidden="true" /> : rank}
-    </span>
   );
 }
 

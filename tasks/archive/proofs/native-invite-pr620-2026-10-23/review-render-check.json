@@ -1,0 +1,43 @@
+{
+  "title": "Native invite signup",
+  "overflow": false,
+  "images": [
+    {
+      "loaded": true,
+      "alt": "Invited address stays locked. The account action remains reachable while entering a password."
+    },
+    {
+      "loaded": true,
+      "alt": "A successful register response enters the existing native Welcome flow."
+    },
+    {
+      "loaded": true,
+      "alt": "The invited student requests an inbox link without seeing password controls."
+    },
+    {
+      "loaded": true,
+      "alt": "One successful response disables repeat sending; Change resets this recovery state."
+    },
+    {
+      "loaded": true,
+      "alt": "An expired-token rejection preserves the entered name and passwords and offers resend."
+    },
+    {
+      "loaded": true,
+      "alt": "A new link for the same address removes the obsolete warning and enables the existing form. Submitting reaches Welcome."
+    },
+    {
+      "loaded": true,
+      "alt": "An unconfigured provider does not claim the email was sent."
+    },
+    {
+      "loaded": true,
+      "alt": "A rate-limit rejection explains the wait and remains retryable."
+    },
+    {
+      "loaded": true,
+      "alt": "Rendered email keeps browser setup as the primary action, with explicit updated-app setup underneath."
+    }
+  ],
+  "sections": 7
+}

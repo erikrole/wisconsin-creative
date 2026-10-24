@@ -7,8 +7,8 @@ describe("onboarding status page source wiring", () => {
 
     expect(source).toContain("Onboarding Status");
     expect(source).toContain('url: "/api/users/onboarding-readiness"');
-    expect(source).toContain("const STALE_DAYS = 14");
-    expect(source).toContain("Stale pending");
+    expect(source).toContain("const STALE_DAYS = 3");
+    expect(source).toContain("Not signed in");
     expect(source).toContain("Pending");
     expect(source).toContain("Claimed");
     expect(source).toContain("Operationally ready");
@@ -34,6 +34,17 @@ describe("onboarding status page source wiring", () => {
     expect(source).toContain("`/api/users/${account.id}/setup-reminder`");
     expect(source).toContain("!account.profileComplete");
     expect(source).toContain("Nudge to finish setup");
+  });
+
+  it("flags setup stalled past the window and students who have not said when they can't work, without sending anything on its own", () => {
+    const source = readFileSync("src/app/(app)/staff/onboarding-status/page.tsx", "utf8");
+
+    expect(source).toContain("Stalled setup");
+    expect(source).toContain("Nudge everyone stalled");
+    expect(source).toContain('setStatusFilter("stalled")');
+    expect(source).toContain("Hasn’t added when they can’t work");
+    // Nudges only go out when staff press a button.
+    expect(source).not.toContain("useEffect");
   });
 
   it("keeps old invitation links as a compatibility redirect into app login", () => {

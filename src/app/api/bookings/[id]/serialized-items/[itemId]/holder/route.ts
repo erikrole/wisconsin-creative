@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { getBookingDetail, updateBookingItemHolder } from "@/lib/services/bookings";
 import { getAllowedBookingActions } from "@/lib/services/booking-rules";
 import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
+import { notifyGearHandover } from "@/lib/services/gear-handover-notify";
 import { updateBookingItemHolderSchema } from "@/lib/validation";
 
 export const POST = withAuth<{ id: string; itemId: string }>(async (req, { user, params }) => {
@@ -14,7 +15,7 @@ export const POST = withAuth<{ id: string; itemId: string }>(async (req, { user,
   const body = updateBookingItemHolderSchema.refine((input) => input.targetUserId !== null, {
     message: "Select the person receiving the item", path: ["targetUserId"],
   }).parse(await req.json());
-  const transfer = await updateBookingItemHolder({
+  const { handover, ...transfer } = await updateBookingItemHolder({
     bookingId: params.id, serializedItemId: params.itemId,
     actorUserId: user.id, targetUserId: body.targetUserId, reason: body.reason,
     expectedUpdatedAt: parseBookingSnapshotHeader(req),
@@ -24,6 +25,7 @@ export const POST = withAuth<{ id: string; itemId: string }>(async (req, { user,
   // workflow rechecks current custody; a delivery failure cannot undo transfer.
   after(async () => {
     const results = await Promise.allSettled([
+      ...(handover ? [notifyGearHandover(handover)] : []),
       scheduleCheckoutReturnLiveActivity({ bookingId: transfer.targetBookingId, endsAt: transfer.endsAt }),
       ...(transfer.sourceClosed ? [endCheckoutReturnLiveActivities(transfer.sourceBookingId)] : []),
     ]);

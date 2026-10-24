@@ -131,7 +131,6 @@ describe("web sidebar source contract", () => {
   });
 
   it("avoids authenticated shell RSC prefetch failures in Safari", () => {
-    const appShell = source("src/components/AppShell.tsx");
     const sidebar = source("src/components/Sidebar.tsx");
     const sectionNav = source("src/components/SectionNav.tsx");
 
@@ -164,7 +163,7 @@ describe("web sidebar source contract", () => {
     const appShell = source("src/components/AppShell.tsx");
 
     expect(sidebar).toContain('label: "People"');
-    expect(sidebar).toContain('label: "Purchasing"');
+    expect(sidebar).toContain('label: "More"');
     expect(sidebar).toContain('label: "Library"');
     expect(sidebar).not.toContain('{ label: "Notifications"');
     expect(sidebar).not.toContain("unreadNotifications");
@@ -192,5 +191,13 @@ describe("web sidebar source contract", () => {
     expect(sidebar).not.toContain('fontFamily: "var(--font-heading)"');
     expect(css).toContain("--color-sidebar-border: var(--sidebar-border)");
     expect(css).toContain("--color-sidebar-ring: var(--sidebar-ring)");
+  });
+
+  it("gives truncated sidebar labels room for descenders", () => {
+    // `truncate` clips overflow, so a 1.0 line box cuts the tails off g, y, p, q and j in Lato.
+    const sidebar = source("src/components/Sidebar.tsx");
+    expect(sidebar).toContain("text-[13.5px] leading-5");
+    expect(sidebar).not.toContain("text-[13.5px] leading-none");
+    expect(sidebar).not.toContain("leading-[1.15]");
   });
 });

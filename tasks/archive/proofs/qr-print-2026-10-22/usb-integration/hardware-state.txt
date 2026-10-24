@@ -1,0 +1,103 @@
+Browser tab: 1047086659, Title: "Wisconsin Creative", URL: "http://127.0.0.1:3145/dev-labels?device-proof=1".
+1 AXWebArea Wisconsin Creative, URL: 127.0.0.1:3145/dev-labels?device-proof=1
+	2 container
+		3 heading Print labels, Value: 1
+			4 text Print labels
+		5 text Pick gear, choose how many, and print directly to the Brother over USB.
+	6 container Gear
+		7 container
+			8 text field (settable) Description: Search gear to label, ID: labels-search
+		9 Show
+			10 radio button All, Value: 1
+			11 radio button Serialized, Value: 0
+			12 radio button Families, Value: 0
+		13 text 12 of 12 shown
+		25 button Add all 11
+			26 text Add all 
+			27 text 11
+		28 content list
+			29 container
+				30 link Description: Open serialized item 24-70 2, Value: 127.0.0.1:3145/items/a-1bc3ee47
+				31 text Sony FE 24-70mm GM II · Camp Randall Lenses
+				32 checkbox Description: Add serialized item 24-70 2 to the print sheet, Value: 0
+			33 container
+				34 link Description: Open serialized item 100-400 1, Value: 127.0.0.1:3145/items/a-1bc3ee46
+				35 text Sony FE 100-400mm GM · Camp Randall Lenses
+				36 checkbox Description: Add serialized item 100-400 1 to the print sheet, Value: 0
+			37 container
+				38 link Description: Open serialized item FB A7 IV 1, Value: 127.0.0.1:3145/items/a-6d6623d4
+				39 text Sony A7 IV · Camp Randall Camera Bodies
+				40 checkbox Description: Add serialized item FB A7 IV 1 to the print sheet, Value: 0
+			41 container
+				42 link Description: Open serialized item FB A7 IV 2, Value: 127.0.0.1:3145/items/a-6d6623d5
+				43 text Sony A7 IV · Camp Randall Camera Bodies
+				44 checkbox Description: Add serialized item FB A7 IV 2 to the print sheet, Value: 0
+			45 container
+				46 link Description: Open serialized item FB FX3 1, Value: 127.0.0.1:3145/items/a-c62a82d7
+				47 text Sony FX3 · Camp Randall Camera Bodies
+				48 checkbox Description: Remove serialized item FB FX3 1 from the print sheet, Value: 1
+			49 container
+				50 link Description: Open serialized item FX3 1, Value: 127.0.0.1:3145/items/a-7a01fx31
+				51 text Sony FX3 · Kohl Center Camera Bodies
+				52 checkbox Description: Add serialized item FX3 1 to the print sheet, Value: 0
+			53 container
+				54 link Description: Open serialized item FX3 2, Value: 127.0.0.1:3145/items/a-7a01fx32
+				55 text Sony FX3 · Kohl Center Camera Bodies
+				56 checkbox Description: Add serialized item FX3 2 to the print sheet, Value: 0
+			57 container
+				58 link Description: Open quantity family Gaff Tape at Cage, Value: 127.0.0.1:3145/items/bulk-f-gaff
+				59 text Expendables · Cage 12 on hand
+				60 checkbox Description: Add quantity family Gaff Tape at Cage to the print sheet, Value: 0
+			61 container
+				62 link Description: Open serialized item MBB Z9 1, Value: 127.0.0.1:3145/items/a-9f00aa11
+				63 text Nikon Z9 · Kohl Center Camera Bodies
+				64 checkbox Description: Add serialized item MBB Z9 1 to the print sheet, Value: 0
+			65 container
+				66 link Description: Open numbered family Sony NP-F970 Battery at Cage, Value: 127.0.0.1:3145/items/bulk-f-npf
+				67 text Batteries · Cage 24 numbered units
+				68 checkbox Description: Add numbered family Sony NP-F970 Battery at Cage to the print sheet, Value: 0
+			69 container
+				70 link Description: Open numbered family Sony NP-FZ100 Battery at Cage, Value: 127.0.0.1:3145/items/bulk-f-batt
+				71 text Batteries · Cage 48 numbered units
+				72 checkbox Description: Add numbered family Sony NP-FZ100 Battery at Cage to the print sheet, Value: 0
+			73 container
+				74 link Description: Open quantity family XLR Cable 25 ft at Cage, Value: 127.0.0.1:3145/items/bulk-f-xlr
+				75 text Audio · Cage 36 on hand
+				76 checkbox Description: Add quantity family XLR Cable 25 ft at Cage to the print sheet, Value: 0
+	14 button (collapsed) Labels that aren't items SD card sets, plain text and number runs, Secondary Actions: Expand
+		15 text Labels that aren't items
+		16 text SD card sets, plain text and number runs
+	17 container Description: Print sheet, ID: print-sheet
+		18 container
+			19 heading Print sheet, Value: 2
+				20 text Print sheet
+			21 text 1 label from 1 line
+			77 button Clear
+		78 content list
+			79 container
+				80 text Camera Bodies.lbx 1 label
+			81 container
+				82 text FB FX3 1 c62a82d7
+				83 checkbox Description: Edit printed text for FB FX3 1, Value: 0
+				84 button Remove FB FX3 1
+				85 button Edit printed text for FB FX3 1
+				86 button (disabled) One fewer FB FX3 1 label
+				87 text field (settable) Description: Copies of FB FX3 1 label, Value: 1
+				88 button One more FB FX3 1 label
+				89 text 1 label
+		90 container
+			91 text Brother PT-D610BT Gotham · Medium Small QR · 12 mm tape
+			92 button Reconnect
+			93 button (disabled) Print 1 label
+			105 text 1  of  1  labels completed
+			106 text Check the labels and scan a QR before applying them.
+			107 button (collapsed) Review this batch, Secondary Actions: Expand
+				108 text Review this batch
+			109 button I checked the labels · New batch
+			101 button (collapsed) Export CSV for P-touch Editor, Secondary Actions: Expand
+				102 text Export CSV for P-touch Editor
+	24 container Notifications alt+T
+	103 pop up button (collapsed) Description: Open Next.js Dev Tools, ID: next-logo, Secondary Actions: Expand
+		104 image
+
+The focused UI element is 1 AXWebArea Wisconsin Creative, URL: 127.0.0.1:3145/dev-labels?device-proof=1

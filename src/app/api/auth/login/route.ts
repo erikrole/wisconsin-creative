@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requiresOnboarding } from "@/lib/profile-completion";
 import { createSession, verifyPassword } from "@/lib/auth";
 import { HttpError, ok } from "@/lib/http";
 import { loginSchema } from "@/lib/validation";
@@ -21,6 +22,9 @@ import { refreshCompanionProjection } from "@/lib/services/companion-projection"
 // public IP) does not lock out legitimate logins at peak.
 const LOGIN_EMAIL_LIMIT = { max: 10, windowMs: 15 * 60 * 1000 }; // per account
 const LOGIN_IP_LIMIT = { max: 150, windowMs: 15 * 60 * 1000 }; // per shared IP
+// A bcrypt hash of random bytes (cost 10) that matches no password. Compared
+// against when the email is unknown so both failure paths cost the same.
+const UNKNOWN_ACCOUNT_HASH = "$2b$10$oUzFeWuGFqS6.xERgjlHuuLEvyjQh7BUiD4sKqTPQ/0dDhq70OP6S";
 
 export const POST = withHandler(async (req) => {
   const ip = getClientIp(req);
@@ -40,18 +44,15 @@ export const POST = withHandler(async (req) => {
     include: { collaboratorPolicy: { select: collaboratorPolicyActorSelect } },
   });
 
-  if (!user) {
-    throw new HttpError(401, "Invalid credentials");
-  }
-
   // Verify the password before revealing anything account-specific. Checking
   // `active` first would let an unauthenticated caller enumerate which emails
   // map to deactivated accounts (403) versus valid-but-wrong-password (401).
-  const valid = await verifyPassword(user.passwordHash, body.password);
-  if (!valid) {
-    throw new HttpError(401, "Invalid credentials");
+  // An unknown address still pays for one bcrypt comparison so response time
+  // does not separate "no such account" from "wrong password".
+  const valid = await verifyPassword(user?.passwordHash ?? UNKNOWN_ACCOUNT_HASH, body.password);
+  if (!user || !valid) {
+    throw new HttpError(401, "Wrong email or password.");
   }
-
   if (!user.active) {
     throw new HttpError(403, "Your account has been deactivated. Contact Erik Role.");
   }
@@ -63,6 +64,9 @@ export const POST = withHandler(async (req) => {
   const companionLogin = body.companion === true;
   if (companionLogin && user.forcePasswordChange) {
     throw new HttpError(403, "Change your password in Wisconsin Creative before enrolling this companion.");
+  }
+  if (companionLogin && requiresOnboarding(user)) {
+    throw new HttpError(403, "Complete setup in Wisconsin Creative before enrolling this companion.");
   }
   if (!companionLogin) {
     await createSession(user.id, body.rememberMe ?? false);
@@ -88,6 +92,7 @@ export const POST = withHandler(async (req) => {
     capabilities: capabilitiesForActor(user),
     staffingType: user.staffingType,
     forcePasswordChange: user.forcePasswordChange,
+    onboardingRequired: requiresOnboarding(user),
   };
 
   if (companionLogin) {
@@ -112,6 +117,8 @@ export const POST = withHandler(async (req) => {
         role: true,
         active: true,
         forcePasswordChange: true,
+        onboardingRequired: true,
+        onboardingCompletedAt: true,
       },
     });
     if (
@@ -119,7 +126,9 @@ export const POST = withHandler(async (req) => {
       currentAuthority.passwordHash !== user.passwordHash ||
       currentAuthority.role !== user.role ||
       currentAuthority.active !== user.active ||
-      currentAuthority.forcePasswordChange !== user.forcePasswordChange
+      currentAuthority.forcePasswordChange !== user.forcePasswordChange ||
+      currentAuthority.onboardingRequired !== user.onboardingRequired ||
+      currentAuthority.onboardingCompletedAt?.getTime() !== user.onboardingCompletedAt?.getTime()
     ) {
       throw new HttpError(409, "Account access changed during companion enrollment. Sign in again.");
     }

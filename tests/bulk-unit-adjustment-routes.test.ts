@@ -81,6 +81,7 @@ beforeEach(() => {
   tx.bulkSku.findUnique.mockResolvedValue({
     id: "sku-1",
     trackByNumber: true,
+    active: true,
     locationId: "loc-1",
   });
   tx.bulkSku.findUniqueOrThrow.mockResolvedValue({
@@ -302,6 +303,27 @@ describe("bulk unit adjustment routes", () => {
     expect(tx.bulkSkuUnit.createMany).not.toHaveBeenCalled();
     expect(tx.bulkStockBalance.upsert).not.toHaveBeenCalled();
     expect(tx.bulkStockMovement.create).not.toHaveBeenCalled();
+    expect(createAuditEntryTx).not.toHaveBeenCalled();
+  });
+
+  it("refuses to receive units into an archived family", async () => {
+    tx.bulkSku.findUnique.mockResolvedValueOnce({
+      id: "sku-1",
+      trackByNumber: true,
+      active: false,
+      locationId: "loc-1",
+    });
+
+    const res = await addBulkUnits(
+      request("/api/bulk-skus/sku-1/units", "POST", { count: 2 }),
+      addRouteParams,
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("archived");
+    expect(tx.bulkSkuUnit.createMany).not.toHaveBeenCalled();
+    expect(tx.bulkStockBalance.upsert).not.toHaveBeenCalled();
     expect(createAuditEntryTx).not.toHaveBeenCalled();
   });
 

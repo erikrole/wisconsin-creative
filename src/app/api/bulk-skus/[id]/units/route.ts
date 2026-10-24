@@ -33,6 +33,9 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     const sku = await tx.bulkSku.findUnique({ where: { id } });
     if (!sku) throw new HttpError(404, "Bulk SKU not found");
     if (!sku.trackByNumber) throw new HttpError(400, "This SKU does not track by number");
+    // Receiving into an archived family would add stock that no picker,
+    // Battery Ops row, or count can see.
+    if (!sku.active) throw new HttpError(409, "This item family is archived. Restore it before adding units.");
 
     const product = body.productId
       ? await tx.bulkSkuProduct.findFirst({

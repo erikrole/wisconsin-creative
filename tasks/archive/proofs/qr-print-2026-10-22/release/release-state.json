@@ -1,0 +1,67 @@
+{
+  "sourceSha": "080356807a6aafc459060bcccbf852b486ef29aa",
+  "pr": 617,
+  "ciRun": 39858671132,
+  "validate": "success",
+  "postgres-integrity": "success",
+  "claude-review": "success",
+  "managedPreviewRun": 39859604628,
+  "managedPreview": "success on attempt 2",
+  "migration": "0202_label_print_jobs",
+  "migrationSha256": "3351c93ec76f64f963f526bb6785008fa5677a8bcbc269cb923381609d542e73",
+  "productionPreflight": {
+    "applied": 206,
+    "local": 207,
+    "pending": [
+      "0202_label_print_jobs"
+    ],
+    "failed": 0,
+    "dbOnly": 0,
+    "checksumMismatches": 0,
+    "unverifiedChecksums": 0,
+    "unexpectedDuplicateReceipts": 0
+  },
+  "cleanupCandidate": {
+    "pr": 534,
+    "gitBranch": "codex/performance-web-ios-neon",
+    "neonBranch": "br-wandering-thunder-auo1v28o",
+    "lastSeenAt": "2026-10-20T16:29:35.217854Z",
+    "deletionRecordedAt": "2026-10-21T15:26:18.313745Z",
+    "graceEndsAt": "2026-10-23T15:26:18.313745Z",
+    "pinned": false,
+    "emptyTestStores": 4,
+    "earlyRetirementApproval": "approved by user: Retire only the #534 preview now",
+    "result": "removed with one-target user-approved zero-day grace exception; all signature/ownership/activity/CAS guards retained",
+    "remainingPreviewChildren": 8
+  },
+  "previewMigration": {
+    "branchId": "br-jolly-recipe-au0clpjv",
+    "endpointId": "ep-spring-bread-aueyjyg6",
+    "migration": "0202_label_print_jobs",
+    "checksum": "3351c93ec76f64f963f526bb6785008fa5677a8bcbc269cb923381609d542e73",
+    "appliedAt": "2026-10-22T21:52:45.550632Z",
+    "indexes": 5,
+    "failed": 0
+  },
+  "previewDeployment": {
+    "id": "dpl_8vMib1PbnEMQmwgQ6njM67Rmjhtz",
+    "url": "https://wisconsin-creative-3u0hx260o-erikrole.vercel.app",
+    "state": "READY",
+    "sourceSha": "080356807a6aafc459060bcccbf852b486ef29aa"
+  },
+  "authenticatedChecks": "passed real admin and student APIs, browser login/history/draft restore; no USB output",
+  "production": {
+    "sourceSha": "dfdb50d236b3afab4b1bd15310a148eabdcad9c6",
+    "deploymentId": "dpl_DwtqGVjGte6df6Umg1r6EQtrXts1",
+    "state": "READY",
+    "domain": "https://wisconsincreative.com/labels",
+    "migrationHealth": "207/207; no pending/failed/db-only/checksum mismatch/unverified/unexpected duplicate rows; historical baseline preserved",
+    "indexes": 5,
+    "checks": 2,
+    "foreignKeys": 1,
+    "authenticatedReadback": "passed; real account, enabled USB, gear and history load",
+    "httpChecks": "reviewed font hash matches; USB self only on labels; anonymous history 401; dev fixture 404",
+    "printOrGearStateMutation": "none",
+    "mainCI": "39864268093 passed"
+  }
+}

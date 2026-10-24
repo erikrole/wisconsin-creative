@@ -15,6 +15,7 @@ import {
 import type { CalendarEventResult, CalendarEventSite, Prisma } from "@prisma/client";
 import { siteLabel, trimmedOrNull, winRate } from "@/lib/scoreboard-display";
 import { unique } from "@/lib/utils";
+import { footballScoreForEvent, type FootballScore } from "@/lib/football-results";
 
 const SCOREBOARD_SEASON_KEY = "2026-27";
 export const SCOREBOARD_SCOPE = {
@@ -56,6 +57,7 @@ export type ScoreboardEvent = {
   site: ScoreboardSite;
   venue: string | null;
   shiftAreas: string[];
+  finalScore?: FootballScore | null;
 };
 
 export type UserScoreboard = {
@@ -154,7 +156,9 @@ export function scoreboardEventWhere(
     endsAt: { lt: new Date() },
     status: { not: "CANCELLED" },
     isHidden: false,
-    archivedAt: null,
+    // No archivedAt filter: the season window bounds the record, and the
+    // nightly archive (4 months after an event ends) must not erase games
+    // from a season that is still running.
     // An active assignment or a worker an admin added outside the schedule; a
     // person holding both on one event is still one event.
     ...participatedEventWhere(userId),
@@ -205,6 +209,9 @@ export async function getScoreboardForUser(
         opponent: true,
         site: true,
         rawLocationText: true,
+        rawStartsAt: true,
+        rawAllDay: true,
+        resultObservations: true,
         shiftGroup: {
           select: {
             shifts: {
@@ -259,6 +266,7 @@ export async function getScoreboardForUser(
     site: event.site,
     venue: scheduleVenueDisplayName(event.rawLocationText),
     shiftAreas: orderedUniqueShiftAreas(event.shiftGroup?.shifts.map((shift) => shift.area) ?? []),
+    finalScore: footballScoreForEvent(event, event.resultObservations),
   }));
 
   return {

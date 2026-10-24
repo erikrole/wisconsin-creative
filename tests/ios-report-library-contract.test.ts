@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
 const reports = read("ios/Wisconsin/Views/ReportsView.swift");
-const client = read("ios/Wisconsin/Core/APIClient.swift");
+const client = apiClientSource();
 const screens = [
   "ios/Wisconsin/Views/Reports/CheckoutReportView.swift",
   "ios/Wisconsin/Views/Reports/UtilizationReportView.swift",

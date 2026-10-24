@@ -1,0 +1,42 @@
+{
+  "scope": "Isolated chained-print protocol probes; application default unchanged",
+  "attempt1": {
+    "pages": "Two identical approved FB FX3 1 bitmaps",
+    "sequence": "Single init/rastermode; per-page n9=2, magic, precut; chain K00 first, K08 final; 1A each",
+    "device": "Both type-1 acknowledgements, no error flags",
+    "physical": "User reported one good label and two blank strips",
+    "accepted": false
+  },
+  "attempt2": {
+    "pages": [
+      "TEST CHAIN A",
+      "TEST CHAIN B"
+    ],
+    "sequence": "Single init; per-page rastermode/drain/fresh status, n9=2, magic/precut; exact five-byte K00 first, four-byte K08 final; 1A each",
+    "device": "Both type-1 acknowledgements, no error flags",
+    "physical": "User reported A and two blanks; no B",
+    "accepted": false
+  },
+  "zeroRasterRelease": {
+    "sequence": "No initialization or label content; rastermode, zero-line D610 info n9=2, magic, M40, K08, 1A",
+    "device": "No completion within 20 seconds; closed USB, did not retry",
+    "manual": "User reported nothing came out or printer shows an error after manual Feed & Cut",
+    "accepted": false
+  },
+  "next": "Chained mode remains disabled; obtain exact-model known-good protocol capture before additional content experiments. Product source/USB journal/default unchanged.",
+  "attempt3": {
+    "pages": [
+      "TEST CHAIN C",
+      "TEST CHAIN D"
+    ],
+    "sequence": "Normal verified initialization and mode before each page; K00 only on first; final would omit K entirely.",
+    "device": "First page did not acknowledge within 20 seconds; USB closed; D never sent.",
+    "physical": "User reported one blank strip and no printed label.",
+    "accepted": false
+  },
+  "reset": {
+    "physical": "User powered printer off/on after the tests.",
+    "device": "Final status-only check: type0, phaseType0, phaseNumber0, both error bytes0; USB then closed.",
+    "printing": "No more content or feed jobs sent."
+  }
+}

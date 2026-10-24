@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 /**
  * iOS ↔ API response-contract pins.
@@ -66,7 +67,7 @@ describe("iOS API contracts — reservation pickup counters", () => {
 describe("iOS API contracts — reservation create payload", () => {
   it("iOS sends typed bulk items to the existing reservation schema", () => {
     const validation = source("src/lib/validation.ts");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
 
     expect(validation).toContain("bulkSkuId: z.string().cuid()");
     expect(validation).toContain("quantity: z.number().int().positive()");
@@ -127,7 +128,7 @@ describe("iOS user directory polish", () => {
   });
 
   it("refuses to attribute one person's shifts to another", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const route = source("src/app/api/my-shifts/route.ts");
     const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
 
@@ -151,7 +152,7 @@ describe("iOS user directory polish", () => {
   });
 
   it("keeps profile Next Up fed only by work that is actually live", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const detail = source("ios/Wisconsin/Views/UserDetailView.swift");
     const profile = source("ios/Wisconsin/Views/ProfileView.swift");
 
@@ -192,7 +193,7 @@ describe("iOS user directory polish", () => {
     // Contact actions are for reaching other people. Mailing yourself is a dead
     // end, and your own profile is the one place they were never useful.
     expect(detail).toContain(
-      "if detail.id != session.currentUser?.id && (!detail.email.isEmpty || detail.phone?.isEmpty == false) {",
+      "if detail.id != session.currentUser?.id && (!detail.email.isEmpty || detail.contactPhone != nil) {",
     );
     expect(profile).not.toContain("ContactActions(");
   });
@@ -298,7 +299,7 @@ describe("iOS API contracts — asset lookup item families", () => {
   it("iOS Items list renders the mixed /api/assets order and exposes web-backed sort choices", () => {
     const route = source("src/app/api/assets/route.ts");
     const models = source("ios/Wisconsin/Models/AssetModels.swift");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const itemsView = source("ios/Wisconsin/Views/ItemsView.swift");
 
     expect(route).toContain("shouldUseUnifiedAssetTagPagination");
@@ -480,7 +481,7 @@ describe("iOS API contracts — kiosk checkout context", () => {
 describe("iOS API contracts — availability check", () => {
   it("iOS decodes the route's top-level result (no data envelope)", () => {
     const route = source("src/app/api/availability/check/route.ts");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const models = source("ios/Wisconsin/Models/Models.swift");
 
     // Route returns the availability result spread at the top level.
@@ -600,7 +601,7 @@ describe("iOS API contracts — Open Work response tolerance", () => {
   it("keeps the native Trade Board tolerant of omitted Open Work sections", () => {
     const route = source("src/app/api/schedule/open-work/route.ts");
     const service = source("src/lib/services/schedule-open-work.ts");
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const models = source("ios/Wisconsin/Models/ShiftTradeModels.swift");
 
     expect(route).toContain("return ok({ data: work });");
@@ -695,18 +696,17 @@ describe("iOS API contracts — URL construction", () => {
   it("no query string is embedded in a request(path:) literal", () => {
     // appendingPathComponent percent-encodes `?`, so `?force=true` inside a
     // path literal becomes part of the last route param and the server 404s.
-    for (const file of [
-      "ios/Wisconsin/Core/APIClient.swift",
-      "ios/Wisconsin/Kiosk/KioskAPIClient.swift",
-    ]) {
-      const text = source(file);
+    for (const [file, text] of [
+      ["ios/Wisconsin/Core/APIClient*.swift", apiClientSource()],
+      ["ios/Wisconsin/Kiosk/KioskAPIClient.swift", source("ios/Wisconsin/Kiosk/KioskAPIClient.swift")],
+    ] as const) {
       const embedded = text.match(/request\(\s*path: "[^"]*\?[^"]*"/g) ?? [];
       expect(embedded, `${file} embeds a query string in request(path:): ${embedded.join(", ")}`).toEqual([]);
     }
   });
 
   it("deleteShift passes force=true as a query item", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     expect(apiClient).toMatch(/func deleteShift[\s\S]*?queryItems: \[\.init\(name: "force", value: "true"\)\]/);
   });
 });

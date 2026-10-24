@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 // Contracts from the Schedule stress-test pass: each assertion pins a fix for
 // a failure that was reproduced by reading the code.
@@ -11,7 +12,7 @@ describe("Schedule stress-test hardening", () => {
   const assign = source("ios/Wisconsin/Views/Schedule/AssignStudentSheet.swift");
   const addShift = source("ios/Wisconsin/Views/Schedule/AddShiftSheet.swift");
   const board = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
 
   it("never lets a reload wipe weeks another load added", () => {
     expect(schedule).toContain("private func replace(_ window: DateInterval, with result: ([ScheduleEvent], [MyShift]))");
@@ -62,14 +63,19 @@ describe("Schedule stress-test hardening", () => {
 
   it("never reads a Trade Board decision as a failure, and confirms declines", () => {
     expect(apiClient).toContain("func approveShiftTrade(id: String) async throws {");
-    expect(apiClient).toContain("private func sendDecision(path: String, fallback: String) async throws");
+    expect(apiClient).toContain("func sendDecision(path: String, fallback: String) async throws");
     expect(board).toContain("@State private var pendingDecline: PendingDecline?");
     expect(board).toContain('return "Decline \\(who)\'s request?"');
     expect(board).toContain("return Color.statusText(venueTone(event.venue))");
     expect(source("ios/Wisconsin/Models/ShiftTradeModels.swift")).toContain("var venue: ScheduleVenue {");
     expect(source("src/lib/services/schedule-open-work.ts")).toContain("site: true,");
+    // Call time, not event start, and the statuses the server actually sends
+    // (`isPostableForTrade` in ScheduleView.swift).
     expect(source("ios/Wisconsin/Views/Schedule/PostTradeSheet.swift")).toContain(
-      ".filter { ($0.callStartsAt ?? $0.startsAt) > now && $0.statusValue == .active }",
+      ".filter { $0.isPostableForTrade && !alreadyPostedIds.contains($0.id) }",
+    );
+    expect(source("ios/Wisconsin/Views/ScheduleView.swift")).toContain(
+      "statusValue.isActive && (callStartsAt ?? startsAt) > Date()",
     );
   });
 
@@ -88,13 +94,13 @@ describe("Schedule stress-test hardening", () => {
 });
 
 describe("Schedule follow-up hardening (drafts, claims, token)", () => {
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const detail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
   const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
 
   it("pins every draft edit to the draft on screen", () => {
     expect(models).toContain("let draftId: String?");
-    expect(apiClient).toContain("private func rememberDraft(_ editor: WorkingScheduleEditor) -> WorkingScheduleEditor");
+    expect(apiClient).toContain("func rememberDraft(_ editor: WorkingScheduleEditor) -> WorkingScheduleEditor");
     expect(apiClient).toContain("try container.encodeNil(forKey: .expectedDraftId)");
     expect(apiClient).toContain('items.append(.init(name: "expectedDraftId", value: expected ?? ""))');
     expect(source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx")).toContain("expectedDraftId: data.draftId ?? null");

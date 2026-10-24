@@ -1,25 +1,28 @@
 # Prisma + Neon Runbook
 
-Last updated: 2026-09-22
+Last updated: 2026-10-22
 
 ## Connection Rules
 
 - `DATABASE_URL` is the pooled Neon runtime URL used by the app and `@prisma/adapter-neon`.
 - `DIRECT_URL` is the repository's explicit direct Neon URL for Prisma CLI work,
   migration deploys, and migration health inspection.
-- `DATABASE_URL_UNPOOLED` is the equivalent direct connection supplied by the
-  Neon Vercel integration. Repository migration scripts resolve
-  `DIRECT_URL` first, then `DATABASE_URL_UNPOOLED`.
+- `DATABASE_URL_UNPOOLED` is the equivalent direct connection. It was originally
+  supplied by the Neon Vercel integration; Production now retains a static Vercel
+  variable after the legacy connection was disconnected on 2026-10-22.
+  Repository migration scripts resolve `DIRECT_URL` first, then
+  `DATABASE_URL_UNPOOLED`.
 - Do not run DDL through the pooled runtime URL. Migration writers refuse to
   run without `DIRECT_URL` or `DATABASE_URL_UNPOOLED`.
 - `DATABASE_URL` remains the pooled runtime URL and is never a migration
   fallback. A key named `DIRECT_URL` that points at a Neon `-pooler` host is
   rejected as well.
 - `prisma.config.ts` owns the Prisma CLI datasource and uses the same resolver
-  when a direct URL is present. Prisma 6 still requires a schema URL
-  syntactically, so the config supplies an internal `PRISMA_SCHEMA_URL`
-  placeholder rather than requiring runtime or direct credentials. The config's
-  datasource override remains authoritative for real CLI connections.
+  when a direct URL is present. Prisma 7 keeps URLs out of `schema.prisma`
+  entirely, so the config is the only place a CLI connection is defined, and
+  it falls back to an inert placeholder rather than requiring runtime or
+  direct credentials. `prisma migrate diff` uses `--from-schema` and
+  `--to-schema` (the `*-datamodel` flags were removed).
   Application runtime database access remains configured explicitly by the
   Neon Prisma adapter in `src/lib/db.ts`.
   Schema-only commands may use an inert localhost placeholder; deploy, health,
@@ -63,6 +66,30 @@ the supported paths:
 Do not copy a production database credential into a committed env file, and do
 not downgrade it from Sensitive merely to make CLI download work.
 
+### Credential maintenance after the legacy integration disconnect
+
+The [preview runbook](PREVIEW_ENVIRONMENTS.md#changelog-and-acceptance) records the
+2026-10-22 disconnect. Password rotations no longer synchronize Vercel variables
+automatically. For an explicitly authorized rotation:
+
+1. Identify the exact environment, protected branch and database role before
+   changing credentials. Production, review and sanitized previews are separate
+   targets.
+2. For Production, update its existing Sensitive `DATABASE_URL` with the pooled
+   URL and both `DIRECT_URL` and `DATABASE_URL_UNPOOLED` with the direct URL for
+   that same protected branch and role. Preserve variable targeting and secrecy.
+3. Refresh a sanitized preview only through its branch-owned hosted workflow.
+   It supplies that child's own credentials and overrides inherited provider
+   variables, including legacy Preview entries. Never copy Production URLs into
+   Preview targets or use the old Neon integration's `preview/<branch>` children.
+4. Verify the authorized deployment reaches Ready and passes its target's
+   migration-health and authenticated smoke checks. Existing running deployments
+   do not receive changed variable values until a new deployment.
+
+Existing legacy `preview/<branch>` children remain untouched. Retiring them needs
+a separate ownership review and explicit cleanup authorization; the sanitized
+project's cleanup workflow does not own them.
+
 ## Supported Commands
 
 ```bash
@@ -74,6 +101,7 @@ npm run build
 ```
 
 - `db:migrate:check` verifies local migration folder shape, required `migration.sql` files, and prefix uniqueness.
+- The exact `0200_account_onboarding_completion` / `0200_wrapped_recaps` pair retains its full applied names: onboarding was already applied to its managed preview when Wrapped reached main. Health and deployment identify receipts by full name and checksum. The local prefix policy permits only that exact pair; another `0200` migration still fails. Do not rename either receipt or rewrite its SQL. The duplicate incoming `0199_wrapped_recaps` copy was excluded during integration.
 - `db:migrate:status` and `db:migrate:health` run the repo's Neon-backed health checker. They compare local migration folders with live `_prisma_migrations`, fail on pending local migrations, unresolved failed rows, applied DB rows missing locally, missing/invalid SQL checksums, and checksum mismatches, and verify the newest local migration is applied. Rolled-back attempts are excluded from checksum comparisons. They also verify the validated, usable `asset_allocations_no_overlap` exclusion constraint and its active half-open `tsrange` definition.
 - `db:migrate:deploy` resolves `DIRECT_URL` or `DATABASE_URL_UNPOOLED`, exports
   the result to Prisma as `DIRECT_URL`, and validates complete history before any writer. Approved checkpoint targets

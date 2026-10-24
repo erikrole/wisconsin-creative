@@ -227,6 +227,10 @@ struct BookingDetailView: View {
             }
         }
         .navigationTitle(booking?.title ?? "Booking")
+        .userActivity(BookingHandoff.activityType, isActive: booking != nil) { activity in
+            guard let booking else { return }
+            BookingHandoff.configure(activity, for: booking)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -1476,7 +1480,7 @@ private struct BookingExtendBar: View {
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
         .controlSize(.large)
-        .tint(.green)
+        .tint(Color.statusText(.green))
         .disabled(isActioning)
         .accessibilityLabel("Extend Return")
         .padding(.horizontal, Brand.Space.md)

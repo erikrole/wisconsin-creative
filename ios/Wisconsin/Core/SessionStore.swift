@@ -39,6 +39,22 @@ final class SessionStore {
     var isLoading = false
     var isRestoring = true
     var error: String?
+    var pendingInvite: AuthInviteLink?
+    private(set) var registrationNeedsInviteLink = false
+
+    @discardableResult
+    func receiveInviteURL(_ url: URL) -> Bool {
+        guard let invite = AuthInviteLink.parse(url) else { return false }
+        pendingInvite = invite
+        registrationNeedsInviteLink = false
+        error = nil
+        return true
+    }
+
+    func clearPendingInvite() {
+        pendingInvite = nil
+        registrationNeedsInviteLink = false
+    }
     var isOffline = false
     /// A cold launch with no cached session could not reach the server, so we
     /// cannot yet say whether the stored cookie is valid. Held on the launch
@@ -75,7 +91,7 @@ final class SessionStore {
         // the strict path so they can't slip past that gate.
         if !AppRuntimeMode.isPerformanceTesting,
            let snapshot = SessionSnapshot.load(),
-           !snapshot.forcePasswordChange {
+           !snapshot.forcePasswordChange, !snapshot.onboardingRequired {
             currentUser = snapshot
             isRestoring = false
             didSeedFromSnapshot = true
@@ -133,6 +149,9 @@ final class SessionStore {
                 let user = try await APIClient.shared.login(email: email, password: password)
                 guard self.authRequests.owns(requestToken) else { return }
                 self.didSeedFromSnapshot = false
+                if self.pendingInvite?.email == email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+                    self.clearPendingInvite()
+                }
                 self.publishCurrentUserIfChanged(user)
                 // Not during a forced change: that password is about to be replaced.
                 if !user.forcePasswordChange {
@@ -147,22 +166,35 @@ final class SessionStore {
         await mutation.value
     }
 
-    func register(name: String, email: String, password: String) async {
+    func register(name: String, email: String, password: String, inviteToken: String? = nil) async {
         let mutation = authMutations.enqueue { [weak self] in
             guard let self else { return }
             let requestToken = self.authRequests.begin()
             self.isLoading = true
+            self.registrationNeedsInviteLink = false
             self.error = nil
             do {
-                let user = try await APIClient.shared.register(name: name, email: email, password: password)
+                let user = try await APIClient.shared.register(name: name, email: email, password: password, inviteToken: inviteToken)
                 guard self.authRequests.owns(requestToken) else { return }
                 self.didSeedFromSnapshot = false
+                if self.pendingInvite?.email == email, self.pendingInvite?.token == inviteToken {
+                    self.clearPendingInvite()
+                }
                 self.publishCurrentUserIfChanged(user)
                 Task { await Self.upgradeToPasskeyAfterSignIn(password: password) }
                 self.isOffline = false
             } catch {
                 guard self.authRequests.owns(requestToken) else { return }
-                self.error = error.localizedDescription
+                if case APIError.inviteLinkRequired = error,
+                   let current = self.pendingInvite,
+                   current.email != email || current.token != inviteToken {
+                    // A newer inbox link arrived while this request was in flight.
+                    // Its proof is ready; do not mark it expired from an old reply.
+                    self.error = nil
+                } else {
+                    if case APIError.inviteLinkRequired = error { self.registrationNeedsInviteLink = true }
+                    self.error = error.localizedDescription
+                }
             }
             if self.authRequests.owns(requestToken) { self.isLoading = false }
         }
@@ -424,6 +456,12 @@ final class SessionStore {
         }
     }
 
+    func applyConfirmedAvatar(_ avatarURL: String?, for userId: String) {
+        guard var user = currentUser, user.id == userId else { return }
+        user.avatarUrl = avatarURL
+        publishCurrentUserIfChanged(user)
+    }
+
     private func restoreSession(requestToken: UUID) async {
         let startedAt = Date()
         let signpost = AppPerformanceSignposts.begin("SessionValidation")
@@ -497,6 +535,6 @@ final class SessionStore {
         if currentUser != user {
             currentUser = user
         }
-        SessionSnapshot.save(user)
+        if !AppRuntimeMode.isPerformanceTesting { SessionSnapshot.save(user) }
     }
 }

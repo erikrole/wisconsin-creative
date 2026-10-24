@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useFetch } from "@/hooks/use-fetch";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 export type KitRow = {
   id: string;
@@ -41,12 +42,10 @@ type QueryDeps = {
 };
 
 export function useKitsQuery(deps: QueryDeps) {
-  const [page, setPage] = useState(0);
+  // Any filter or sort change starts back at the first page.
+  const filterKey = JSON.stringify([deps.search, deps.locationId, deps.includeArchived, deps.sortBy, deps.sortOrder]);
+  const [page, setPage] = useSyncedDraft(filterKey, () => 0);
   const limit = 25;
-
-  useEffect(() => {
-    setPage(0);
-  }, [deps.search, deps.locationId, deps.includeArchived, deps.sortBy, deps.sortOrder]);
 
   const params = new URLSearchParams();
   params.set("limit", String(limit));
@@ -77,7 +76,7 @@ export function useKitsQuery(deps: QueryDeps) {
     } else if (page > 0 && page >= totalPages) {
       setPage(totalPages - 1);
     }
-  }, [page, totalPages]);
+  }, [page, setPage, totalPages]);
 
   return {
     kits,

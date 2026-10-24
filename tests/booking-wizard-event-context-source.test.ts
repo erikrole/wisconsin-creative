@@ -9,7 +9,7 @@ describe("booking wizard event context recovery", () => {
 
     expect(hook).toContain("eventsLoadError");
     expect(hook).toContain('throw new Error(await parseErrorMessage(res, "Failed to load events"))');
-    expect(hook).toContain('setEventsLoadError(err instanceof TypeError ? "network" : "server")');
+    expect(hook).toContain('eventsQuery.error instanceof TypeError ? "network" : "server"');
     expect(hook).toContain("retryEvents");
 
     // The Apple-style refresh compressed the recovery copy; what matters is

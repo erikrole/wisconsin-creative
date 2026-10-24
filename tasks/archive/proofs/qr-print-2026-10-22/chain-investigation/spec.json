@@ -1,0 +1,73 @@
+{
+  "title": "QR Print: chained printing investigation",
+  "eyebrow": "Wisconsin Creative \u00b7 Hardware investigation \u00b7 22 October 2026",
+  "lede": "Chained printing did not pass physical acceptance on this PT-D610BT. The helper keeps its verified per-label transport, recovery journal and Stop behavior. No additional content will be sent automatically.",
+  "stats": [
+    {
+      "k": "Chained mode",
+      "v": "Disabled",
+      "n": "No change to the accepted application transport or layout."
+    },
+    {
+      "k": "Content probes",
+      "v": "3 failed",
+      "n": "Missing labels, continued blank waste or no completion."
+    },
+    {
+      "k": "Final printer state",
+      "v": "Ready",
+      "n": "Power-cycled; status-only readback confirmed no errors and idle phase zero."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Acknowledgement did not establish physical output",
+      "note": "After-only evidence from an isolated local protocol interface and actual Brother hardware. These are not application UI comparisons. Test QR payloads identify FB FX3 1; all rendering uses the approved exact Gotham/Medium Small bitmap. User observations, not green acknowledgements, decide acceptance.",
+      "shots": [
+        {
+          "title": "Revised A/B chain",
+          "tag": "Rejected hardware probe",
+          "image": "attempt-2.png",
+          "cap": "Two type-1/no-error acknowledgements. The user received A and two blank strips; no B."
+        },
+        {
+          "title": "Zero-raster final-feed attempt",
+          "tag": "Rejected finish path",
+          "image": "feed-only.png",
+          "cap": "No completion within 20 seconds. USB closed without replay. Manual Feed & Cut did not recover B or left an error."
+        },
+        {
+          "title": "Normal initialization comparison",
+          "tag": "Rejected hardware probe",
+          "image": "attempt-3.png",
+          "cap": "The first chained page timed out. D was never sent. The user received one blank strip and no printed label."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Existing helper behavior retained",
+      "was": "Independent labels had accepted centering/scans, Stop and disconnect recovery, at the cost of one blank leader per label.",
+      "now": "That verified path stays unchanged. No chained mode, provisional completion claim or hidden feed was introduced."
+    },
+    {
+      "h": "Investigation captured for the next safe attempt",
+      "was": "Final-feed and mixed-page D610 behavior were unverified.",
+      "now": "Failed wire sequences, source references, UI receipts and physical results are retained. A known-good exact-model capture must establish a reliable finish before implementation."
+    }
+  ],
+  "verification": [
+    "Both first and second two-page probes received no-error type-1 acknowledgements, but failed the user\u2019s physical count. They were rejected rather than recorded as completed application copies.",
+    "Zero-raster release timed out after 20 seconds; there was no software retry. The third probe timed out before its second page, so D was never sent.",
+    "The user power-cycled the Brother. Final status-only readback was type0, phaseType0, phaseNumber0, error bytes0; USB closed. No further print or feed commands were sent.",
+    "Prototype JavaScript syntax checks pass. The application renderer, transport, journal/domain/controller, server and defaults are unchanged; no app build or new application behavior is claimed for this investigation.",
+    "Necessary independent protocol review identified provisional acknowledgements, final-feed journaling and phase-number requirements for any future chain implementation."
+  ],
+  "notes": [
+    "Chained printing remains unresolved. No lower-waste claim is made.",
+    "The current helper still produces one blank leader offcut per label. A verified exact-model chain/final-feed capture is required before trying more content commands.",
+    "The one-blank-raster Stop-release candidate was prepared but never executed, because two-page chaining did not pass.",
+    "All test receipts stay separate from real application history. No migration, commit, push or deployment."
+  ]
+}

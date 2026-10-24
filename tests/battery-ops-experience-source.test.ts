@@ -5,7 +5,7 @@ describe("Battery Ops experience source contract", () => {
   it("keeps numbered counts unit-derived and exposes explicit operational actions", () => {
     const page = source("src/app/(app)/bulk-inventory/batteries/page.tsx");
 
-    expect(page).toContain("Numbered availability comes from unit status.");
+    expect(page).toContain("Availability follows unit status.");
     expect(page).toContain("Add units");
     expect(page).toContain("Adjust live count");
     expect(page).toContain("Edit metadata");

@@ -386,7 +386,8 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(contract).not.toContain("@/lib/db");
     expect(deviceRoute).toContain("requireCompanion(req)");
     expect(deviceRoute).not.toContain("@/lib/db");
-    expect(store).toContain("UPSTASH_REDIS_REST_URL");
+    expect(store).toContain("getUpstashRedis()");
+    expect(source("src/lib/redis.ts")).toContain("UPSTASH_REDIS_REST_URL");
     expect(store).toContain('createHmac("sha256"');
     expect(store).toContain('decoded["revision"]');
     expect(store).toContain(">= tonumber(ARGV[2])");

@@ -115,6 +115,15 @@ final class TradeBoardViewModel {
         return sections.availableOpenShifts.count + sections.availableTrades.count
     }
     var isLoading: Bool { isLoadingTrades || isLoadingOpenWork }
+    /// Your shifts that already have an open or claimed post. The post picker
+    /// leaves them out instead of offering a post the server refuses with a
+    /// conflict. Best effort: an area filter or an unloaded page can miss one,
+    /// and the server's 409 still covers that.
+    var postedAssignmentIds: Set<String> {
+        Set(trades
+            .filter { ($0.status == .open || $0.status == .claimed) && $0.postedBy.id == currentUserId }
+            .map(\.shiftAssignment.id))
+    }
     var hasSourceFailure: Bool { tradeLoadError != nil || openWorkLoadError != nil }
     var allSourcesFailed: Bool { tradeLoadError != nil && openWorkLoadError != nil }
     var error: String? {
@@ -371,7 +380,7 @@ private struct BoardRowModel: Identifiable {
     let startText: String
     var endText: String?
     let fullWhen: String
-    let area: String
+    let areaLabel: String
     let venueLabel: String
     let venueColor: Color
     let eventId: String?
@@ -419,8 +428,6 @@ struct TradeBoardSheet: View {
     let myShifts: [MyShift]
     let currentUserId: String
     var currentUserRole: String = ""
-    var onTradePosted: ((String) -> Void)? = nil
-    var onTradeClaimed: ((String, String) -> Void)? = nil
 
     @State private var vm = TradeBoardViewModel()
     @State private var showPostSheet = false
@@ -438,6 +445,10 @@ struct TradeBoardSheet: View {
     /// re-enable another row's buttons while its request is still running.
     @State private var pendingActionIds: Set<String> = []
     @State private var actionError: String?
+    /// Confirmation for a post or a claim, shown on the board itself. Hosts
+    /// used to toast these behind the sheet, where nobody saw them, and Home
+    /// and Event detail did not confirm at all.
+    @State private var toast: Toast?
     @Environment(\.today) private var today
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.dismiss) private var dismiss
@@ -474,6 +485,7 @@ struct TradeBoardSheet: View {
                     )
                 }
             }
+            .toast($toast, dismissAfter: 3.5)
             .onChange(of: actionError) { _, message in
                 if let message {
                     AccessibilityNotification.Announcement(message).post()
@@ -517,8 +529,16 @@ struct TradeBoardSheet: View {
             }
             .refreshable { await vm.load(forceRefresh: true) }
             .navigationDestination(isPresented: $showPostSheet) {
-                PostTradeSheet(myShifts: myShifts, wrapsInNavigationStack: false) { posted in
-                    onTradePosted?(posted.area)
+                PostTradeSheet(
+                    myShifts: myShifts,
+                    alreadyPostedIds: vm.postedAssignmentIds,
+                    wrapsInNavigationStack: false
+                ) { posted in
+                    toast = Toast(
+                        message: "Posted your \(posted.area.shiftAreaLabel) shift. You stay on it until an Admin approves a claim.",
+                        icon: "checkmark.circle.fill",
+                        role: .success
+                    )
                     Task { await vm.load() }
                 }
             }
@@ -680,7 +700,7 @@ struct TradeBoardSheet: View {
             if isPlaceholder {
                 Section {
                     ForEach(Self.placeholderRows) { row in
-                        TradeBoardRow(row: row, busyIds: [])
+                        TradeBoardRow(row: row, busyIds: [], onOpenDetails: {})
                     }
                 }
                 .redacted(reason: .placeholder)
@@ -775,16 +795,12 @@ struct TradeBoardSheet: View {
     /// Swipe and long-press carry the same actions the row's control does, in
     /// the places iOS people already look for them.
     private func boardRow(_ row: BoardRowModel) -> some View {
-        TradeBoardRow(row: row, busyIds: pendingActionIds)
+        TradeBoardRow(row: row, busyIds: pendingActionIds) { detailRowId = row.id }
             .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-            .contentShape(Rectangle())
-            .onTapGesture { detailRowId = row.id }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint("Shows details")
             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                 if let yes = row.yesAction {
                     Button(action: yes.run) { Text(yes.label) }
-                        .tint(.green)
+                        .tint(Color.statusText(.green))
                         .disabled(pendingActionIds.contains(yes.id))
                 }
             }
@@ -849,7 +865,7 @@ struct TradeBoardSheet: View {
             startText: "6:00 PM",
             endText: "10:00 PM",
             fullWhen: "",
-            area: "Video",
+            areaLabel: "Video",
             venueLabel: "Home",
             venueColor: .gray,
             eventId: nil,
@@ -970,7 +986,7 @@ struct TradeBoardSheet: View {
             startText: parts.start,
             endText: parts.end,
             fullWhen: shift.fullWhen(personalStartsAt: personalStartsAt, personalEndsAt: personalEndsAt),
-            area: shift.area.shiftAreaLabel,
+            areaLabel: shift.area.shiftAreaLabel,
             venueLabel: shift.classificationLabel,
             venueColor: shift.classificationColor,
             eventId: shift.shiftGroup?.event?.id,
@@ -1179,8 +1195,18 @@ struct TradeBoardSheet: View {
         guard let item = openShiftToPickup else { return }
         runAction(item.id, { try await vm.pickup(id: item.id) }, onSuccess: {
             let when = item.shift.effectiveStartsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-            onTradeClaimed?(item.shift.area, when)
+            confirmClaim(area: item.shift.area, when: when)
         }, finally: { openShiftToPickup = nil })
+    }
+
+    /// A claim is a request until an Admin approves it, so the confirmation
+    /// says requested, not picked up.
+    private func confirmClaim(area: String, when: String) {
+        toast = Toast(
+            message: "Requested \(area.shiftAreaLabel) on \(when). An Admin reviews it next.",
+            icon: "checkmark.circle.fill",
+            role: .success
+        )
     }
 
     private func claimConfirmedTrade() {
@@ -1188,7 +1214,7 @@ struct TradeBoardSheet: View {
         runAction(trade.id, { try await vm.claim(id: trade.id) }, onSuccess: {
             let when = trade.shiftAssignment.shift.effectiveStartsAt
                 .formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-            onTradeClaimed?(trade.shiftAssignment.shift.area, when)
+            confirmClaim(area: trade.shiftAssignment.shift.area, when: when)
         }, finally: { tradeToConfirm = nil })
     }
 
@@ -1252,6 +1278,7 @@ private struct BoardDayGroup: Identifiable {
 private struct TradeBoardRow: View {
     let row: BoardRowModel
     let busyIds: Set<String>
+    let onOpenDetails: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .subheadline) private var timeColumn: CGFloat = 62
 
@@ -1261,22 +1288,44 @@ private struct TradeBoardRow: View {
         Group {
             if isAX {
                 VStack(alignment: .leading, spacing: 8) {
-                    timeStack
-                    details
+                    detailsButton
                     trailing
                 }
             } else {
                 HStack(alignment: .center, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        timeStack
-                            .frame(width: timeColumn, alignment: .leading)
-                        details
-                    }
+                    detailsButton
                     trailing
                 }
             }
         }
         .opacity(row.muted ? 0.6 : 1)
+    }
+
+    /// The row's main content and its review/claim actions are sibling buttons.
+    /// A native button supplies keyboard and VoiceOver activation without
+    /// intercepting the independent action at the trailing edge.
+    private var detailsButton: some View {
+        Button(action: onOpenDetails) {
+            Group {
+                if isAX {
+                    VStack(alignment: .leading, spacing: 8) {
+                        timeStack
+                        details
+                    }
+                } else {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        timeStack.frame(width: timeColumn, alignment: .leading)
+                        details
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(row.title), \(row.fullWhen), \(row.areaLabel), \(row.summary)")
+        .accessibilityValue(row.rowNotice?.text ?? "")
+        .accessibilityHint("Shows details")
     }
 
     private var timeStack: some View {
@@ -1301,7 +1350,7 @@ private struct TradeBoardRow: View {
                 // long event name wraps rather than losing its ending.
                 .lineLimit(isAX ? 3 : (row.trailing == .review ? 2 : 1))
                 .truncationMode(.tail)
-            Text("\(row.area) \u{00B7} \(row.summary)")
+            Text("\(row.areaLabel) \u{00B7} \(row.summary)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .lineLimit(isAX ? 4 : 2)
@@ -1339,7 +1388,7 @@ private struct TradeBoardRow: View {
                 .buttonBorderShape(.capsule)
                 .controlSize(.small)
                 // Green like Approve: claiming is the action this row exists for.
-                .tint(.green)
+                .tint(Color.statusText(.green))
                 .disabled(isBusy)
                 .accessibilityLabel(claim.accessibilityLabel ?? claim.label)
             }
@@ -1397,7 +1446,7 @@ private struct RoundIconButton: View {
     var body: some View {
         Button(action: action.run) {
             ZStack {
-                Circle().fill(isApprove ? Color.green : Color(.tertiarySystemFill))
+                Circle().fill(isApprove ? Color.statusText(.green) : Color(.tertiarySystemFill))
                 if isBusy {
                     ProgressView().controlSize(.small)
                 } else {
@@ -1451,7 +1500,7 @@ private struct TradeBoardDetailSheet: View {
                         HStack(spacing: 6) {
                             Circle().fill(row.venueColor).frame(width: 8, height: 8)
                                 .accessibilityHidden(true)
-                            Text("\(row.area) \u{00B7} \(row.venueLabel)")
+                            Text("\(row.areaLabel) \u{00B7} \(row.venueLabel)")
                         }
                     }
                     if let person = row.person {
@@ -1552,8 +1601,8 @@ private struct TradeBoardDetailSheet: View {
     private func actionButton(_ action: BoardAction, bordered: Bool) -> some View {
         let isBusy = busyIds.contains(action.id)
         let tint: Color = action.style == .primary
-            ? Color.green
-            : (action.style == .destructive && row.trailing != .review ? .red : Color(.systemGray))
+            ? Color.statusText(.green)
+            : (action.style == .destructive && row.trailing != .review ? Color.statusText(.red) : Color(.systemGray))
         let button = Button(role: action.style == .destructive ? .destructive : nil) {
             onAction(action)
         } label: {

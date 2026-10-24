@@ -1,0 +1,3 @@
+Browser tab: 1047086678, Title: "QR chained printing check", URL: "http://127.0.0.1:3146/chain.html".
+There has been no change in the accessibility tree.
+The focused UI element is 1 AXWebArea QR chained printing check, URL: 127.0.0.1:3146/chain.html

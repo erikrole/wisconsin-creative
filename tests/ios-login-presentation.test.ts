@@ -38,7 +38,7 @@ describe("iOS Login presentation", () => {
     expect(discoveryAdvance).toContain("APIClient.shared.discoverAuth");
     expect(login).toContain("if reduceMotion");
     expect(login).toContain("@AccessibilityFocusState private var accessibilityFocused: Field?");
-    expect(login).toContain('step == .identity ? "Enter your email address" : "Enter your password"');
+    expect(login).toContain('step == .identity ? "Enter your email address" : step == .password ? "Enter your password"');
   });
 
   it("keeps recovery quiet under Password and supports changing identity", () => {
@@ -52,7 +52,7 @@ describe("iOS Login presentation", () => {
       passwordStep.indexOf('Text("Password")'),
     );
     expect(login).toContain('password = ""');
-    expect(login).toContain("focused = step == .identity ? .email : .password");
+    expect(login).toContain("focused = step == .identity ? .email : step == .password ? .password : nil");
     expect(passwordStep).toContain(".accessibilityFocused($accessibilityFocused, equals: .password)");
   });
 

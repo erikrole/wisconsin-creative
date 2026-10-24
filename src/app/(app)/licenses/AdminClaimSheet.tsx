@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Trash2, Archive, AlertCircle, KeyRound, RefreshCw } from "lucide-react";
 import {
@@ -65,6 +66,9 @@ type AssignableUser = {
   role: "ADMIN" | "STAFF" | "STUDENT";
 };
 
+const NO_HISTORY: ClaimRecord[] = [];
+const NO_USERS: AssignableUser[] = [];
+
 async function throwLicenseError(res: Response, fallback: string) {
   if (handleAuthRedirect(res)) return true;
   if (!res.ok) throw new Error(await parseErrorMessage(res, fallback));
@@ -72,15 +76,10 @@ async function throwLicenseError(res: Response, fallback: string) {
 }
 
 export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, onAction }: Props) {
-  const [history, setHistory] = useState<ClaimRecord[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [historyError, setHistoryError] = useState(false);
   const [releasing, setReleasing] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [occupantLabel, setOccupantLabel] = useState("");
   const [addingOccupant, setAddingOccupant] = useState(false);
-  const [users, setUsers] = useState<AssignableUser[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [assigningUser, setAssigningUser] = useState(false);
   const [editExpiry, setEditExpiry] = useState("");
@@ -93,30 +92,42 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
 
   const licenseId = license?.id ?? null;
 
-  const loadHistory = useCallback(async (signal?: AbortSignal) => {
-    if (!licenseId) return;
-    setLoadingHistory(true);
-    setHistoryError(false);
-    try {
+  const historyQuery = useQuery({
+    queryKey: ["licenses", "history", licenseId],
+    queryFn: async ({ signal }) => {
       const res = await fetch(`/api/licenses/${licenseId}/history`, { signal });
-      if (handleAuthRedirect(res)) return;
+      if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
       if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load license history"));
       const json = await parseJsonSafely<LicenseHistoryResponse>(res);
-      setHistory(json?.data ?? []);
-    } catch (err) {
-      if (isAbortError(err)) return;
-      setHistory([]);
-      setHistoryError(true);
-    } finally {
-      if (!signal?.aborted) setLoadingHistory(false);
-    }
-  }, [licenseId]);
+      return json?.data ?? [];
+    },
+    enabled: licenseId !== null,
+    // Claims change from other sheets and devices; read fresh on every open.
+    staleTime: 0,
+    retry: false,
+  });
+  const history = historyQuery.data ?? NO_HISTORY;
+  const loadingHistory = historyQuery.isFetching && !historyQuery.data;
+  const historyError = historyQuery.isError && !historyQuery.isFetching && !isAbortError(historyQuery.error);
+  const loadHistory = () => historyQuery.refetch();
+
+  const usersQuery = useQuery({
+    queryKey: ["users", "active-picker", "by-name"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/users?limit=200&active=true&sort=name", { signal });
+      if (await throwLicenseError(res, "Failed to load users")) return NO_USERS;
+      const json = await parseJsonSafely<{ data?: AssignableUser[] }>(res);
+      return json?.data ?? NO_USERS;
+    },
+    enabled: licenseId !== null,
+    retry: false,
+  });
+  const users = usersQuery.data ?? NO_USERS;
+  const usersLoading = usersQuery.isFetching && !usersQuery.data;
 
   useEffect(() => {
     if (!license) {
       lastLicenseIdRef.current = null;
-      setHistory([]);
-      setHistoryError(false);
       return;
     }
     // Only reset form state when a DIFFERENT license opens — the license prop
@@ -126,21 +137,8 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
     setEditExpiry(license.expiresAt ? licenseExpiryInputValue(license.expiresAt) : "");
     setEditAccount(license.accountEmail ?? "");
     setEditLabel(license.label ?? "");
-    setHistory([]);
     setSelectedUserId("");
-    setUsersLoading(true);
-    void fetch("/api/users?limit=200&active=true&sort=name")
-      .then(async (res) => {
-        if (await throwLicenseError(res, "Failed to load users")) return null;
-        return parseJsonSafely<{ data?: AssignableUser[] }>(res);
-      })
-      .then((json) => setUsers(json?.data ?? []))
-      .catch(() => setUsers([]))
-      .finally(() => setUsersLoading(false));
-    const controller = new AbortController();
-    void loadHistory(controller.signal);
-    return () => controller.abort();
-  }, [license, loadHistory]);
+  }, [license]);
 
   async function handleReleaseClaim(claimId?: string) {
     if (!license) return;

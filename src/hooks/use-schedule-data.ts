@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -951,7 +951,9 @@ export function useScheduleData(): UseScheduleDataResult {
     () => mergeRowsById(schedule?.entries ?? [], timelineExtra),
     [schedule, timelineExtra],
   );
-  loadedEntriesRef.current = entries;
+  useLayoutEffect(() => {
+    loadedEntriesRef.current = entries;
+  }, [entries]);
   const timelineTruncated = schedule?.truncated ?? false;
   const { data: healthData = null, error: healthError, refetch: refetchScheduleHealth } = useQuery({
     queryKey: ["schedule-health", healthUrl],

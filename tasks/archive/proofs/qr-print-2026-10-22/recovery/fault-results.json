@@ -1,0 +1,9 @@
+{
+  "mixed": "All six kinds, display order, acknowledged separately",
+  "media": "Changed tape detected before output; no uncertain label claimed",
+  "stop": "Current label completes; next two are not sent",
+  "logFailure": "Known completion retained; next copy blocked; retry saves log only",
+  "corrupt": "Blocked until explicit physical review; original bytes archived",
+  "glyph": "Unsupported font glyph blocks before device setup",
+  "undo": "Undo preserves selections added after Clear"
+}

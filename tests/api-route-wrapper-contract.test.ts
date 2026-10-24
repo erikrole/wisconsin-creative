@@ -8,6 +8,7 @@ const WRAPPER_NAMES = ["withAuth", "withKiosk", "withHandler", "withCron"] as co
 const PUBLIC_HANDLER_ROUTES: Record<string, string[]> = {
   "src/app/api/auth/discover/route.ts": ["POST"],
   "src/app/api/auth/forgot-password/route.ts": ["POST"],
+  "src/app/api/auth/invite/resend/route.ts": ["POST"],
   "src/app/api/auth/login/route.ts": ["POST"],
   "src/app/api/auth/passkey/login/options/route.ts": ["POST"],
   "src/app/api/auth/passkey/login/verify/route.ts": ["POST"],
@@ -15,6 +16,7 @@ const PUBLIC_HANDLER_ROUTES: Record<string, string[]> = {
   "src/app/api/auth/reset-password/route.ts": ["POST"],
   "src/app/api/auth/reset-password/account/route.ts": ["POST"],
   "src/app/api/companion/devices/route.ts": ["POST", "DELETE"],
+  "src/app/api/companion/diagnostics/route.ts": ["POST"],
   "src/app/api/companion/projection/route.ts": ["GET"],
   "src/app/api/companion/session/route.ts": ["POST"],
   "src/app/api/kiosk/activate/route.ts": ["POST"],
@@ -28,6 +30,10 @@ const PUBLIC_ROUTE_SAFETY: Record<string, RegExp[]> = {
     /\bgetClientIp\s*\(/,
   ],
   "src/app/api/auth/forgot-password/route.ts": [
+    /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
+    /\bgetClientIp\s*\(/,
+  ],
+  "src/app/api/auth/invite/resend/route.ts": [
     /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
     /\bgetClientIp\s*\(/,
   ],
@@ -56,6 +62,11 @@ const PUBLIC_ROUTE_SAFETY: Record<string, RegExp[]> = {
     /\bgetClientIp\s*\(/,
   ],
   "src/app/api/companion/devices/route.ts": [
+    /\brequireCompanion\s*\(/,
+    /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
+    /\bgetClientIp\s*\(/,
+  ],
+  "src/app/api/companion/diagnostics/route.ts": [
     /\brequireCompanion\s*\(/,
     /\b(?:checkRateLimit|enforceRateLimit)\s*\(/,
     /\bgetClientIp\s*\(/,

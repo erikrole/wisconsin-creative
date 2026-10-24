@@ -22,7 +22,6 @@ const RESOURCE_ASSET_MAX_NAME_LENGTH = 180;
 const RESOURCE_ASSET_UPLOAD_TTL_MS = 30 * 60 * 1000;
 const RESOURCE_ASSET_VERSION_NOTE_MAX_LENGTH = 500;
 
-export { RESOURCE_ASSET_KIND_LABELS, RESOURCE_ASSET_KIND_OPTIONS } from "./resource-assets-client";
 
 const ALLOWED_CONTENT_TYPES = new Set([
   "application/illustrator",

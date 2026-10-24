@@ -6,6 +6,8 @@ import {
   AlertCircleIcon,
   ArrowLeftRightIcon,
   CalendarDaysIcon,
+  CalendarOffIcon,
+  CalendarPlusIcon,
   CheckIcon,
   ChevronRightIcon,
   ClockIcon,
@@ -48,6 +50,10 @@ export type Slot<T> =
   | { state: "error"; onRetry: () => void }
   | { state: "ready"; rows: T };
 
+/** Students' upcoming dated "can't work" entries, plus the names of weekly ones. */
+export type CantWorkSlot = Slot<{ away: CantWorkRow[]; weekly: string[] }>;
+export type CantWorkRow = { id: string; title: string; when: string };
+
 export type HomeSync = { label: string; live: boolean; description?: string };
 
 export type HomeViewProps = {
@@ -69,6 +75,9 @@ export type HomeViewProps = {
   attention?: Slot<AttentionItem[]>;
   upNext?: Slot<UpNextItem[]>;
   upNextEmpty?: { title: string; description: string; href: string; action: string };
+  /** Students only: days they can't work, kept one tap away every day. */
+  cantWork?: CantWorkSlot;
+  onAddCantWork?: () => void;
   myGear?: Slot<GearRow[]>;
   myGearHref?: string;
   coverage?: Slot<CoverageRow[]>;
@@ -118,12 +127,19 @@ const ATTENTION_ICON = {
 const ROW =
   "group flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left no-underline transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50";
 
+const VENUE_CHIP: Record<CoverageRow["venue"], string> = {
+  home: "bg-[var(--green-bg)] text-[var(--green-text)]",
+  away: "bg-[var(--orange-bg)] text-[var(--orange-text)]",
+  neutral: "bg-muted text-muted-foreground",
+  "non-game": "bg-muted text-muted-foreground",
+};
+
 const ATTENTION_PREVIEW = 5;
 
 export function HomeView(props: HomeViewProps) {
   const { role, now, pageError, onRetry } = props;
   const teamGearInMain = !props.activity;
-  const hasPrimary = Boolean(props.attention || props.upNext);
+  const hasPrimary = Boolean(props.attention || props.upNext || props.cantWork);
   const hasSecondary = Boolean(props.activity || (teamGearInMain && props.teamGear));
   const hasAside = Boolean(props.myGear || props.trades || props.crew || props.coverage || (!teamGearInMain && props.teamGear));
   const splitColumns = (hasPrimary || hasSecondary) && hasAside;
@@ -166,6 +182,7 @@ export function HomeView(props: HomeViewProps) {
               {props.upNext && (
                 <UpNextSection slot={props.upNext} now={now} empty={props.upNextEmpty} onTarget={props.onTarget} />
               )}
+              {props.cantWork && <CantWorkSection slot={props.cantWork} onAdd={props.onAddCantWork} />}
             </div>}
             {hasAside && <div className={cn(
               "flex min-w-0 flex-col gap-5",
@@ -190,8 +207,8 @@ export function HomeView(props: HomeViewProps) {
                 <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
               )}
               {props.crew && <CrewSection slot={props.crew} />}
-              {props.coverage && <CoverageSection slot={props.coverage} />}
               {!teamGearInMain && props.teamGear && <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />}
+              {props.coverage && <CoverageSection slot={props.coverage} />}
             </div>}
             {hasSecondary && <div className={cn(
               "flex min-w-0 flex-col gap-5",
@@ -240,9 +257,9 @@ function HomeHeader({ name, now, canReserve, dayLine, sync, updatedLabel, refres
         )}
         {onRefresh && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="size-10"
+            className="size-10 text-muted-foreground hover:text-foreground"
             onClick={onRefresh}
             disabled={refreshing}
             aria-label="Refresh home"
@@ -251,8 +268,8 @@ function HomeHeader({ name, now, canReserve, dayLine, sync, updatedLabel, refres
           </Button>
         )}
         {canReserve && (
-          // The wc-fresh dark accent is a light tint; the button keeps the solid fill.
-          <Button asChild className="h-10 bg-[var(--btn-primary-bg)] text-white hover:bg-[var(--btn-primary-bg-hover)]">
+          // Home's one brand-led action wears Badger red, not the wc-fresh blue.
+          <Button asChild className="h-10 bg-[var(--brand-red)] text-white hover:bg-[var(--brand-red-hover)]">
             <Link href="/reservations/new"><PlusIcon data-icon="inline-start" />New reservation</Link>
           </Button>
         )}
@@ -289,7 +306,7 @@ function SectionHeader({ id, title, count, href, linkLabel = "View all" }: {
       {href && (
         <Link
           href={href}
-          className="-mr-2 flex min-h-10 items-center gap-0.5 rounded-md px-2 text-[13px] font-bold text-[var(--blue-text)] no-underline hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="-mr-2 flex min-h-10 items-center gap-0.5 rounded-md px-2 text-[13px] font-bold text-muted-foreground no-underline transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {linkLabel}
           <ChevronRightIcon className="size-3.5" aria-hidden="true" />
@@ -579,9 +596,10 @@ function FeaturedNext({ row, now, onTarget }: { row: UpNextItem; now: Date; onTa
   const target = row.target;
   const action = row.kind === "pickup" ? "View pickup" : row.kind === "shift" ? "Open event" : "Open";
   return (
-    <div className="mx-3 mt-1 mb-2 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-[var(--accent-soft)] px-4 py-3.5" data-featured-next>
+    <div className="mx-3 mt-1 mb-2 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-foreground/[0.045] px-4 py-3.5" data-featured-next>
       <div className="flex min-w-[min(100%,220px)] flex-1 basis-[220px] flex-col gap-0.5">
-        <p className="text-xs font-bold text-[var(--blue-text)]">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+          <span aria-hidden="true" className={cn("size-1.5 rounded-full", row.kind === "pickup" ? "bg-[var(--purple)]" : "bg-[var(--accent)]")} />
           {row.kind === "pickup" ? "Next pickup" : "Next up"} · {soon === "now" ? "happening now" : soon}
         </p>
         <p className="truncate text-base font-black text-foreground">{row.title}</p>
@@ -592,6 +610,9 @@ function FeaturedNext({ row, now, onTarget }: { row: UpNextItem; now: Date; onTa
       <div className="flex shrink-0 items-center gap-2">
         {row.badge && (
           <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", TONE_TILE[row.badge.tone])}>{row.badge.label}</span>
+        )}
+        {row.pickup && (
+          <Button variant="ghost" className="h-10" onClick={() => onTarget({ kind: "booking", bookingId: row.pickup!.bookingId })}>View pickup</Button>
         )}
         {target.kind === "link" ? (
           <Button asChild variant="outline" className="h-10 bg-card">
@@ -627,6 +648,65 @@ function UpNextRow({ row, onTarget }: { row: UpNextItem; onTarget: (t: Attention
   if (row.target.kind === "link") return <Link href={row.target.href} className={ROW}>{body}</Link>;
   const target = row.target;
   return <button type="button" className={cn(ROW, "cursor-pointer")} onClick={() => onTarget(target)}>{body}</button>;
+}
+
+const CANT_WORK_PREVIEW = 3;
+
+function CantWorkSection({ slot, onAdd }: { slot: CantWorkSlot; onAdd?: () => void }) {
+  const away = slot.state === "ready" ? slot.rows.away : [];
+  const weekly = slot.state === "ready" ? slot.rows.weekly : [];
+  const empty = slot.state === "ready" && away.length === 0;
+  return (
+    <HomeCard aria-labelledby="home-cant-work" data-cant-work>
+      <SectionHeader id="home-cant-work" title="Can’t work" count={away.length} href="/welcome/availability" linkLabel="All times" />
+      {slot.state === "loading" ? (
+        <RowsSkeleton rows={2} />
+      ) : slot.state === "error" ? (
+        <SectionError what="the days you can’t work" onRetry={slot.onRetry} />
+      ) : (
+        <div className="flex flex-col pb-1.5">
+          {empty ? (
+            <div className="flex items-start gap-3 px-4 py-2.5">
+              <span aria-hidden="true" className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <CalendarOffIcon className="size-4" />
+              </span>
+              <p className="text-[13px] text-muted-foreground">
+                Away for a trip, an exam or another job? Add it so you aren’t scheduled then.
+              </p>
+            </div>
+          ) : (
+            <ul className="flex flex-col">
+              {away.slice(0, CANT_WORK_PREVIEW).map((row) => (
+                <li key={row.id} className="flex min-h-12 items-center gap-3 px-4 py-2">
+                  <span aria-hidden="true" className="w-[3px] self-stretch rounded-full bg-[var(--orange)]" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
+                    <span className="truncate text-[13px] tabular-nums text-muted-foreground">{row.when}</span>
+                  </span>
+                </li>
+              ))}
+              {away.length > CANT_WORK_PREVIEW && (
+                <li className="px-4 pb-1 text-[13px] text-muted-foreground">+{away.length - CANT_WORK_PREVIEW} more</li>
+              )}
+            </ul>
+          )}
+          {weekly.length > 0 && (
+            <p className="truncate px-4 pt-1 text-[13px] text-muted-foreground" data-cant-work-weekly>
+              Every week: {weekly.join(", ")}
+            </p>
+          )}
+          {onAdd && (
+            <div className="px-4 pt-2 pb-2">
+              <Button variant="outline" className="h-10" onClick={onAdd}>
+                <CalendarPlusIcon data-icon="inline-start" />
+                Add days you can’t work
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </HomeCard>
+  );
 }
 
 /* ── Right rail ─────────────────────────────────────────── */
@@ -667,6 +747,7 @@ function GearList({ rows, onSelectBooking }: { rows: GearRow[]; onSelectBooking:
       {rows.map((row) => (
         <li key={row.id}>
           <button type="button" className={cn(ROW, "cursor-pointer")} onClick={() => onSelectBooking(row.id)}>
+            {row.person && <UserAvatar name={row.person} avatarUrl={row.personAvatarUrl} size="default" />}
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
               <span className="truncate text-[13px] text-muted-foreground">
@@ -781,7 +862,7 @@ function ActivitySection({ slot, onSelectBooking }: { slot: Slot<ActivityRow[]>;
                   </span>
                   <span className="truncate text-[13px] text-muted-foreground">{row.title}</span>
                 </span>
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{row.ago}</span>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title={row.exactTime}>{row.ago}</span>
               </button>
             </li>
           ))}
@@ -824,7 +905,10 @@ function CoverageSection({ slot }: { slot: Slot<CoverageRow[]> }) {
                 <Link href={`/events/${row.id}`} className={ROW}>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
-                    <span className="truncate text-[13px] text-muted-foreground">{row.when}</span>
+                    <span className="flex items-center gap-1.5 truncate text-[13px] text-muted-foreground">
+                      <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[11px] font-bold", VENUE_CHIP[row.venue])}>{row.venueLabel}</span>
+                      <span className="truncate">{[row.when, row.where].filter(Boolean).join(" · ")}</span>
+                    </span>
                   </span>
                   {row.total > 0 ? (
                     <span className="flex w-[72px] shrink-0 flex-col items-end gap-1" aria-label={`${row.filled} of ${row.total} shifts filled`}>

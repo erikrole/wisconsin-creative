@@ -1,0 +1,969 @@
+--- before/src/app/(app)/labels/USBPrintControls.tsx
++++ after/src/app/(app)/labels/USBPrintControls.tsx
+@@ -2,15 +2,19 @@
+ import { Check, CircleAlert, History, Loader2, Printer, Usb } from "lucide-react";
+ import { useCurrentUser } from "@/hooks/use-current-user";
+ import { Button } from "@/components/ui/button";
+-import { labelName, printedLabels, remainingLabels, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
++import { labelName, printedLabels, remainingLabels, uncertainIndices, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
+ import { useUsbPrintJob } from "./use-usb-print-job";
+ export type UsbPrintLabel = PrintLabel;
+ const time = (value: string) => new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+ function BatchDetails({ job }: { job: PrintJob }) {
+-  return <ol className="mt-2 max-h-52 list-decimal space-y-2 overflow-auto pl-5">{job.labels.map((label, i) => {
++  const download = () => {
++    const url = URL.createObjectURL(new Blob([JSON.stringify(job, null, 2)], { type: "application/json" }));
++    const link = document.createElement("a"); link.href = url; link.download = `label-print-${job.id}.json`; link.click(); URL.revokeObjectURL(url);
++  };
++  return <><ol className="mt-2 max-h-52 list-decimal space-y-2 overflow-auto pl-5">{job.labels.map((label, i) => {
+     const outcome = job.outcomes[i]!;
+-    return <li key={label.copyId}><span className="font-medium">{labelName(label)}</span><span className="block text-muted-foreground">{outcome.status === "printed" ? `${outcome.evidence === "printer" ? "Printer completed" : `Confirmed printed by ${outcome.resolvedBy?.name}`} · ${time(outcome.recordedAt!)}` : outcome.status === "sending" ? "Output uncertain · check the physical label" : outcome.status === "not-printed" ? `${outcome.evidence === "not-sent" ? "Not sent" : "Confirmed not printed"} · ${time(outcome.recordedAt!)}` : "Not sent"}</span>{label.row.qrCodeValue && <span className="block break-all font-mono text-[11px] text-muted-foreground">QR: {label.row.qrCodeValue}</span>}</li>;
+-  })}</ol>;
++    return <li key={label.copyId}><span className="font-medium">{labelName(label)}</span><span className="block text-muted-foreground">{outcome.status === "printed" ? `${outcome.evidence === "printer" ? "Printer completed" : `Confirmed printed by ${outcome.resolvedBy?.name}`} · ${time(outcome.recordedAt!)}` : outcome.status === "buffered" ? "Received by printer · final feed not confirmed" : outcome.status === "sending" ? "Output uncertain · check the physical label" : outcome.status === "not-printed" ? `${outcome.evidence === "not-sent" ? "Not sent" : "Confirmed not printed"} · ${time(outcome.recordedAt!)}` : "Not sent"}</span>{label.row.qrCodeValue && <span className="block break-all font-mono text-[11px] text-muted-foreground">QR: {label.row.qrCodeValue}</span>}</li>;
++  })}</ol><Button variant="outline" size="sm" className="mt-3 h-10" onClick={download}>Download batch receipt</Button></>;
+ }
+ export function USBPrintControls({ labels, total, blocked, onCompleted }: { labels: PrintLabel[]; total: number; blocked: boolean; onCompleted: (label: PrintLabel) => void }) {
+   const { data: me } = useCurrentUser();
+@@ -18,12 +22,15 @@
+   const print = useUsbPrintJob(operator, onCompleted);
+   const savedJob = print.envelope?.job;
+   const job = savedJob && me && (savedJob.actor.id === me.id || ["ADMIN", "STAFF"].includes(me.role)) ? savedJob : undefined;
+-  const uncertain = job?.activeIndex !== null && job?.activeIndex !== undefined;
++  const unknown = job ? uncertainIndices(job) : [];
++  const uncertain = unknown.length > 0;
++  const reviewIndex = unknown[0];
++  const held = job?.outcomes.filter(o => o.status === "buffered").length ?? 0;
+   const remaining = job && !uncertain ? remainingLabels(job) : [];
+   const canReview = job && me && (me.id === job.actor.id || ["ADMIN", "STAFF"].includes(me.role)) && !me.preview;
+   const historyJobs = print.history.jobs.filter((entry) => me && (["ADMIN", "STAFF"].includes(me.role) || entry.actor.id === me.id));
+   const pendingCommand = print.envelope?.pending?.type === "checkpoint" ? print.envelope.pending.input.command : null;
+-  const canReconcile = pendingCommand && ["begin", "complete", "cancel-unsent"].includes(pendingCommand.type);
++  const canReconcile = !job?.transport && pendingCommand && ["begin", "complete", "cancel-unsent"].includes(pendingCommand.type);
+   const inactive = !print.supported || !operator || !print.historyReady || Boolean(print.historyError || print.unreadable || print.history.blockedByOtherOperator);
+   return <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
+     <div className="flex items-center justify-between gap-2">
+@@ -32,13 +39,14 @@
+     </div>
+     {!print.supported && <p className="text-xs text-muted-foreground">Open this helper in Chrome or Edge on a computer for USB printing.</p>}
+     <p className="text-xs text-muted-foreground">Gotham XNarrow Bold · Medium Small QR</p>
++    <p className="text-xs text-muted-foreground">Labels share one tape feed to reduce waste. One initial blank is normal; stopping early adds a small blank to release the last label.</p>
+     {operator && <p className="text-xs text-muted-foreground">Printing as <span className="font-medium text-foreground">{operator.name}</span></p>}
+     {!operator && <p className="text-xs text-destructive">Sign in with your own account to record who prints these labels.</p>}
+     <Button className="h-11 w-full font-bold" disabled={inactive || !print.device || print.busy || blocked || Boolean(savedJob) || !labels.length || total > 500} onClick={() => void print.print(labels)}>
+       {print.busy ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />}{print.busy ? "Printer in use…" : `Print ${total.toLocaleString()} ${total === 1 ? "label" : "labels"}`}
+     </Button>
+     {total > 500 && <p role="status" className="text-xs text-destructive">Print up to 500 labels in one USB batch. Reduce the sheet first.</p>}
+-    {print.busy && <Button variant="outline" className="h-10" onClick={print.stop}>Stop after current label</Button>}
++    {print.busy && <Button variant="outline" className="h-10" onClick={print.stop}>Stop and release labels</Button>}
+     {print.message && print.message !== job?.error && <p role="status" className={`text-xs ${print.messageError ? "text-destructive" : "text-muted-foreground"}`}>{print.message}</p>}
+     {print.historyError && <div role="alert" className="text-xs text-destructive">{print.historyError}<Button variant="outline" size="sm" className="mt-2 h-10 w-full" disabled={print.busy} onClick={() => void print.refresh()}>Reload print history</Button></div>}
+     {print.history.blockedByOtherOperator && <p role="alert" className="text-xs text-destructive">Another person has an unfinished batch on this browser. Ask them or staff to review it before printing.</p>}
+@@ -46,11 +54,11 @@
+     {job && <div aria-label="Current print batch" className="rounded-lg border border-border p-3 text-xs">
+       <div role="status" className="flex items-center gap-1.5 font-bold">{print.busy ? <Loader2 className="size-4 animate-spin" /> : uncertain || print.envelope?.pending ? <CircleAlert className="size-4 text-destructive" /> : <Check className="size-4 text-emerald-600 dark:text-emerald-400" />}{printedLabels(job).length} of {job.labels.length} labels completed</div>
+       <p className="mt-1 text-muted-foreground">{job.actor.name} · Started {time(job.createdAt)}</p>
+-      {uncertain && print.busy ? <p className="mt-2 text-muted-foreground">Waiting for the printer to confirm label {job.activeIndex! + 1}…</p> : uncertain ? <p className="mt-2 text-destructive">Completion of label {job.activeIndex! + 1} is unknown. Check that physical label before continuing. Nothing retries automatically.</p> : job.state === "completed" ? <p className="mt-2">Check the labels and scan a QR before applying them.</p> : <p className="mt-2">{remaining.length} remaining labels. Confirmed completed copies will be excluded when you continue.</p>}
++      {uncertain && print.busy ? <p className="mt-2 text-muted-foreground">{held > 0 && `${held} received; waiting for the final feed. `}{job.activeIndex !== null ? `Sending label ${job.activeIndex + 1}…` : "Finishing the tape feed…"}</p> : uncertain ? <p className="mt-2 text-destructive">{unknown.length} {unknown.length === 1 ? "label needs" : "labels need"} physical review. Check label {reviewIndex! + 1}: {labelName(job.labels[reviewIndex!]!)}. Check the printer for a held label before recording its outcome. Nothing prints or feeds automatically.</p> : job.state === "completed" ? <p className="mt-2">Check the labels and scan a QR before applying them.</p> : <p className="mt-2">{remaining.length} remaining {remaining.length === 1 ? "label" : "labels"}. Confirmed completed copies will be excluded when you continue.</p>}
+       {job.error && <p className="mt-1 text-destructive">{job.error}</p>}
+       <details className="mt-2"><summary className="cursor-pointer py-1">Review this batch</summary><BatchDetails job={job} /></details>
+       {!print.busy && canReview && <div className="mt-3 flex flex-col gap-2">
+-        {print.envelope?.pending ? <><p className="text-destructive">Print logging is incomplete. Save this exact pending log before continuing.</p><Button variant="outline" className="h-10" onClick={() => void print.sync()}>Save pending log · No printing</Button>{canReconcile && <><p className="text-muted-foreground">If that log cannot be saved, check the physical label and record its actual outcome. The original pending record is retained.</p><Button variant="outline" className="h-auto min-h-10 whitespace-normal" onClick={() => void print.reconcile(true)}>I checked · This pending label printed correctly</Button><Button variant="outline" className="h-auto min-h-10 whitespace-normal" onClick={() => void print.reconcile(false)}>I checked · This pending label did not print correctly</Button></>}{print.envelope?.pending?.type === "create" && <Button variant="outline" className="h-10" onClick={() => void print.adopt()}>I checked the printer · Recover unstarted batch</Button>}</> : uncertain ? <><Button variant="outline" className="h-10" onClick={() => void print.command({ type: "resolve", index: job.activeIndex!, printed: true })}>Label {job.activeIndex! + 1} printed correctly</Button><Button variant="outline" className="h-10" onClick={() => void print.command({ type: "resolve", index: job.activeIndex!, printed: false })}>Label {job.activeIndex! + 1} did not print correctly</Button></> : <>
++        {print.envelope?.pending ? <><p className="text-destructive">Print logging is incomplete. Save this exact pending log before continuing.</p><Button variant="outline" className="h-10" onClick={() => void print.sync()}>Save pending log · No printing</Button>{job.transport && pendingCommand && !["reconcile", "recover-chain", "review"].includes(pendingCommand.type) && <Button variant="outline" className="h-auto min-h-10 whitespace-normal" onClick={() => void print.recoverChain()}>Recover saved progress for physical review · No printing</Button>}{canReconcile && <><p className="text-muted-foreground">If that log cannot be saved, check the physical label and record its actual outcome. The original pending record is retained.</p><Button variant="outline" className="h-auto min-h-10 whitespace-normal" onClick={() => void print.reconcile(true)}>I checked · This pending label printed correctly</Button><Button variant="outline" className="h-auto min-h-10 whitespace-normal" onClick={() => void print.reconcile(false)}>I checked · This pending label did not print correctly</Button></>}{print.envelope?.pending?.type === "create" && <Button variant="outline" className="h-10" onClick={() => void print.adopt()}>I checked the printer · Recover unstarted batch</Button>}</> : uncertain ? <><Button variant="outline" className="h-10" onClick={() => void print.command({ type: "resolve", index: reviewIndex!, printed: true })}>Label {reviewIndex! + 1} printed correctly</Button><Button variant="outline" className="h-10" onClick={() => void print.command({ type: "resolve", index: reviewIndex!, printed: false })}>Label {reviewIndex! + 1} did not print correctly</Button></> : <>
+           {remaining.length > 0 && <Button className="h-10" disabled={inactive || !print.device} onClick={() => void print.continueRemaining()}>Continue {remaining.length} remaining {remaining.length === 1 ? "label" : "labels"}</Button>}
+           <Button variant="outline" className="h-10" onClick={() => void print.command({ type: "review" })}>{remaining.length ? "Finish batch without printing the rest" : "Labels checked · Finish batch"}</Button>
+         </>}
+@@ -61,7 +69,7 @@
+       <p className="mb-2 text-muted-foreground">Operator, exact labels and completion times. Physical application is confirmed separately.</p>
+       {!print.historyReady && !print.historyError && <p className="py-2 text-muted-foreground">Loading history…</p>}
+       {print.historyReady && !historyJobs.length && <p className="py-2 text-muted-foreground">No print batches yet.</p>}
+-      <ul className="max-h-80 divide-y divide-border overflow-auto">{historyJobs.map((entry) => <li key={entry.id} className="py-3"><details><summary className="cursor-pointer"><span className="font-bold">{entry.actor.name}</span> · {printedLabels(entry).length}/{entry.labels.length} completed<span className="mt-0.5 block text-muted-foreground">{time(entry.createdAt)} · {entry.state === "reviewed" ? "Reviewed" : entry.activeIndex !== null ? "Needs review" : entry.state === "completed" ? "Completed" : "Open batch"}</span></summary><BatchDetails job={entry} />{entry.parentId && <p className="mt-2 text-muted-foreground">Continued from batch {entry.parentId.slice(0, 8)}</p>}<p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">Batch {entry.id}</p></details></li>)}</ul>
++      <ul className="max-h-80 divide-y divide-border overflow-auto">{historyJobs.map((entry) => <li key={entry.id} className="py-3"><details><summary className="cursor-pointer"><span className="font-bold">{entry.actor.name}</span> · {printedLabels(entry).length}/{entry.labels.length} completed<span className="mt-0.5 block text-muted-foreground">{time(entry.createdAt)} · {entry.state === "reviewed" ? "Reviewed" : uncertainIndices(entry).length > 0 ? "Needs review" : entry.state === "completed" ? "Completed" : "Open batch"}</span></summary><BatchDetails job={entry} />{entry.parentId && <p className="mt-2 text-muted-foreground">Continued from batch {entry.parentId.slice(0, 8)}</p>}<p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">Batch {entry.id}</p></details></li>)}</ul>
+       {print.history.nextCursor && <Button variant="outline" className="mt-2 h-10 w-full" disabled={print.busy} onClick={() => void print.loadMore()}>Load earlier batches</Button>}
+     </details>
+   </div>;
+--- before/src/app/(app)/labels/use-usb-print-job.ts
++++ after/src/app/(app)/labels/use-usb-print-job.ts
+@@ -3,7 +3,7 @@
+ import { BROTHER_USB_LOCK, BrotherUsbPrinter, brotherUsbAccess, chooseBrotherUsb, type BrotherUsbDevice } from "@/lib/brother-usb";
+ import { LabelPrintController } from "@/lib/label-print-controller";
+ import { PrintApiError, printJobApi, type PrintHistory } from "@/lib/label-print-client";
+-import { labelName, remainingLabels, type PrintActor, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
++import { labelName, remainingLabels, uncertainIndices, type PrintActor, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
+ import { PRINT_JOURNAL_KEY, LEGACY_PRINT_KEY, archiveUnreadableJournal, printerBrowserId, readPrintJournal, savePrintJournal, type JournalRead, type PrintEnvelope } from "@/lib/label-print-storage";
+ import { preparePrintBitmaps } from "./use-print-preflight";
+ 
+@@ -53,15 +53,20 @@
+         // Re-read inside the lock AFTER the network wait; never overwrite an outbox captured earlier.
+         const saved = readPrintJournal(localStorage);
+         if (saved.kind === "unreadable") setUnreadable(saved); else setUnreadable(null);
+-        if (saved.kind === "valid") update(saved.envelope);
++        const pendingMirror = mirror.current?.pending ? mirror.current : null;
++        // A failed local save may leave the newest acknowledged progress only in
++        // memory. A focus/storage refresh must not discard that exact outbox.
++        if (pendingMirror && saved.kind === "valid" && (saved.envelope.job.id !== pendingMirror.job.id || saved.envelope.job.revision > pendingMirror.job.revision ||
++            (saved.envelope.job.revision === pendingMirror.job.revision && saved.envelope.pending && JSON.stringify(saved.envelope.pending) !== JSON.stringify(pendingMirror.pending)))) throw new Error("A different saved print journal conflicts with this tab's pending log. Keep this tab open and review the pending log first.");
++        if (saved.kind === "valid" && !pendingMirror) update(saved.envelope);
+         setHistory(latest);
+         if (saved.kind !== "unreadable") {
+           if (saved.kind === "valid" && saved.envelope.job.browserId !== browserId) throw new Error("The saved journal belongs to a different browser identity. Review its record before printing.");
+           if (latest.active && saved.kind === "valid" && saved.envelope.job.id !== latest.active.id && saved.envelope.pending) throw new Error("The local pending log and saved active batch differ. Keep this tab open and reconcile the pending log first.");
+-          if (latest.active && !(saved.kind === "valid" && saved.envelope.pending)) {
++          if (latest.active && !pendingMirror && !(saved.kind === "valid" && saved.envelope.pending)) {
+             savePrintJournal(localStorage, { job: latest.active }); update({ job: latest.active });
+-          } else if (!latest.active && saved.kind === "missing") update(null);
+-          else if (!latest.active && saved.kind === "valid" && !saved.envelope.pending) {
++          } else if (!latest.active && !pendingMirror && saved.kind === "missing") update(null);
++          else if (!latest.active && !pendingMirror && saved.kind === "valid" && !saved.envelope.pending) {
+             const recorded = latest.jobs.find((job) => job.id === saved.envelope.job.id) ?? await printJobApi.get(saved.envelope.job.id);
+             if (generation !== refreshGeneration.current || actorId !== currentActor.current?.id) return;
+             if (recorded?.state === "reviewed") { localStorage.removeItem(PRINT_JOURNAL_KEY); update(null); }
+@@ -113,7 +118,7 @@
+     const chosen = await chooseBrotherUsb(); // Keep chooser inside the user gesture.
+     await exclusive(async () => {
+       const latest = await checkCurrent();
+-      if ((latest.active && latest.active.activeIndex !== null) || mirror.current?.pending) throw new Error("Review the uncertain label or save its pending log before reconnecting.");
++      if ((latest.active && uncertainIndices(latest.active).length > 0) || mirror.current?.pending) throw new Error("Review the uncertain label or save its pending log before reconnecting.");
+       const printer = new BrotherUsbPrinter(chosen);
+       try { await printer.open(); await printer.checkReady(); } finally { await printer.close(); }
+     });
+@@ -131,8 +136,8 @@
+       if (mirror.current?.pending) throw new Error("Save the pending print log first.");
+       if (currentActor.current?.id !== operator.id) throw new Error("The signed-in account changed. Start again after reviewing the sheet.");
+       const printer = new BrotherUsbPrinter(device), jobController = controller();
+-      const job = await jobController.start({ id: crypto.randomUUID(), browserId: printerBrowserId(localStorage), labels: snapshot, ...(parent ? { parentId: parent.id, parentRevision: parent.revision } : {}) }, operator);
+-      await jobController.run(printer, bitmaps, operator, () => stop.current || currentActor.current?.id !== operator.id,
++      const job = await jobController.start({ transport: "sdk-chain-v1", id: crypto.randomUUID(), browserId: printerBrowserId(localStorage), labels: snapshot, ...(parent ? { parentId: parent.id, parentRevision: parent.revision } : {}) }, operator);
++      await jobController.runChain(printer, bitmaps, operator, () => stop.current || currentActor.current?.id !== operator.id,
+         (i) => setMessage(`Printing ${i + 1} of ${job.labels.length} · ${labelName(job.labels[i]!)}`));
+       setMessage("");
+     });
+@@ -174,6 +179,13 @@
+     await checkCurrent(); await controller().reconcilePending(currentActor.current, printed);
+     setHistory(await printJobApi.list(printerBrowserId(localStorage)));
+   }));
++  const recoverChain = () => action(() => exclusive(async () => {
++    if (!currentActor.current) throw new Error("Sign in to review this batch.");
++    if (await adoptReviewedOutbox()) return;
++    await checkCurrent(); await controller().recoverChainLog(currentActor.current);
++    setHistory(await printJobApi.list(printerBrowserId(localStorage)));
++    setMessage("Saved progress recovered. Check each uncertain label; no print or feed was sent.");
++  }));
+   const adopt = () => action(() => exclusive(async () => {
+     if (await adoptReviewedOutbox()) return;
+     const latest = await checkCurrent();
+@@ -195,7 +207,7 @@
+     setHistory((previous) => ({ ...next, jobs: [...previous.jobs, ...next.jobs] }));
+   });
+   return { supported, device, busy, message, messageError, envelope, unreadable, history, historyReady, historyError,
+-    connect, print, command, sync, reconcile, adopt, archive, refresh, loadMore,
+-    stop: () => { stop.current = true; setMessage("Stopping after the current label finishes…"); },
++    connect, print, command, sync, reconcile, recoverChain, adopt, archive, refresh, loadMore,
++    stop: () => { stop.current = true; setMessage("Stopping after the current label and releasing held labels…"); },
+     continueRemaining: () => { const parent = mirror.current?.job; return parent ? print(remainingLabels(parent), parent) : Promise.resolve(); } };
+ }
+--- before/src/app/dev-labels/LabelsLab.tsx
++++ after/src/app/dev-labels/LabelsLab.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++import { installUsbSimulation, UsbSimulationControls } from "./UsbSimulation";
+ import { applyPrintCommand, newPrintJob, remainingLabels, type PrintJob } from "@/lib/label-print-job";
+ import { Button } from "@/components/ui/button";
+ import { Suspense, useEffect, useState } from "react";
+@@ -100,31 +101,32 @@
+ export default function LabelsLab() {
+   const [deviceCheck, setDeviceCheck] = useState(false), [checkMessage, setCheckMessage] = useState("");
+   useEffect(() => { setDeviceCheck(new URLSearchParams(location.search).get("device-proof") === "1"); }, []);
+-  const loadDeviceCheck = (restore = false) => {
++  const loadDeviceCheck = (restore = false, letters = false) => {
+     if (localStorage.getItem("wc-qr-usb-journal-v2") || localStorage.getItem("wc-qr-usb-last-batch-v1")) { setCheckMessage("Review and finish the current printer batch first."); return; }
+     const actor = JSON.parse(localStorage.getItem("dev-labels-actor") ?? "null") ?? { id: "dev" };
+     const key = `labels.cart.v3:${actor.id}`, backup = "dev-labels-device-check-previous-sheet";
+     if (restore) { const previous = localStorage.getItem(backup); if (previous !== null) localStorage.setItem(key, previous); }
+     else {
+-      localStorage.setItem(backup, localStorage.getItem(key) ?? "[]");
+-      const rows = [
++      if (localStorage.getItem(backup) === null) localStorage.setItem(backup, localStorage.getItem(key) ?? "[]");
++      const rows = (letters ? ["A", "B", "C"].map(letter => ["body", "TEST", "CHAIN", letter, "c62a82d7"]) : [
+         ["body", "TEST", "FX3", "1", "c62a82d7"], ["lens", "TEST", "100-400", "1", "c62a82d7"],
+         ["sd", "TEST", "FX3", "1A", ""], ["text", "", "USB TEST", "", ""],
+         ["numberTag", "", "", "1", "c62a82d7"], ["battery", "", "", "1", "c62a82d7"],
+-      ].map(([kind, dept, model, number, qrCodeValue], i) => ({ id: `device-check-${i}`, name: kind, title: `Device check · ${kind}`, kind, dept, model, number, qrCodeValue, copies: 1 }));
++      ]).map(([kind, dept, model, number, qrCodeValue], i) => ({ id: `device-check-${i}`, name: kind, title: `Device check · ${kind}`, kind, dept, model, number, qrCodeValue, copies: 1 }));
+       localStorage.setItem(key, JSON.stringify(rows));
+     }
+     location.reload();
+   };
+   const [client] = useState(() => {
+-    if (typeof window !== "undefined") installFetchMock();
++    if (typeof window !== "undefined") { installFetchMock(); installUsbSimulation(); }
+     return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+   });
+   return (
+     <QueryClientProvider client={client}>
+       <div className="min-h-screen bg-background px-4 py-6 sm:px-8">
+         <div className="mx-auto max-w-6xl">
+-          {deviceCheck && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 text-xs"><span className="mr-auto">Local printer check · Four QR samples open FB FX3 1 · SD and text have no QR</span><Button variant="outline" size="sm" onClick={() => loadDeviceCheck()}>Load six-layout device check</Button><Button variant="outline" size="sm" onClick={() => loadDeviceCheck(true)}>Restore previous sheet</Button>{checkMessage && <p role="alert" className="w-full text-destructive">{checkMessage}</p>}</div>}
++          {deviceCheck && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 text-xs"><span className="mr-auto">Local printer check · Four QR samples open FB FX3 1 · SD and text have no QR</span><Button variant="outline" size="sm" onClick={() => loadDeviceCheck()}>Load six-layout device check</Button><Button variant="outline" size="sm" onClick={() => loadDeviceCheck(false, true)}>Load A/B/C Stop check</Button><Button variant="outline" size="sm" onClick={() => loadDeviceCheck(true)}>Restore previous sheet</Button>{checkMessage && <p role="alert" className="w-full text-destructive">{checkMessage}</p>}</div>}
++          <UsbSimulationControls />
+           <Suspense>
+             <LabelsHelper />
+           </Suspense>
+--- before/src/lib/brother-usb.ts
++++ after/src/lib/brother-usb.ts
+@@ -1,3 +1,4 @@
++import { brotherChainPage, brotherChainFeed } from "./brother-chain";
+ import type { LabelBitmap } from "./brother-label-render";
+ 
+ // PT-D610BT only. Protocol facts verified against ptouch-print's model table,
+@@ -42,6 +43,9 @@
+   private input = 0;
+   private output = 0;
+   private backlog: number[] = [];
++  private chainNext = 0;
++  private chainTotal = 0;
++  private chainFinal = false;
+   constructor(private device: BrotherUsbDevice) {}
+   async open() {
+     try {
+@@ -95,10 +99,49 @@
+     while (Date.now() < deadline) {
+       const frame = await this.status(deadline);
+       if (frame[18] !== 0) continue; // Old phase/completion frames are not a fresh status reply.
+-      if (frame[19] !== 0) throw new Error("The printer is busy. Wait for it to finish.");
++      if (frame[19] !== 0 || frame[20] !== 0 || frame[21] !== 0) throw new Error("The printer is busy. Wait for it to finish.");
++      while (this.backlog.length) {
++        const trailing = await this.status(deadline);
++        if ((trailing[18] === 6 && trailing[19] === 1) || (trailing[18] === 0 && (trailing[19] || trailing[20] || trailing[21]))) throw new Error("The printer is busy. Wait for it to finish.");
++      }
+       return;
+     }
+     throw new Error("The printer did not confirm it is ready.");
++  }
++  private async receivePhase() {
++    const deadline = Date.now() + 45000;
++    let sawPrinting = false, phase: number | undefined;
++    while (Date.now() < deadline) {
++      const frame = await this.status(deadline);
++      if (frame[18] === 6) {
++        if (frame[19] === 1) { sawPrinting = true; phase = 1; }
++        else if (frame[19] === 0 && sawPrinting) phase = 0;
++      }
++      // Consume trailing errors and phase changes before allowing the next page.
++      if (sawPrinting && phase === 0 && this.backlog.length === 0) return;
++    }
++    throw new Error("The current label's printing and receive phases were not confirmed.");
++  }
++  async printChainPage(bitmap: LabelBitmap, index: number, total: number, started: () => void) {
++    const bytes = brotherChainPage(bitmap, index, total);
++    if (index !== this.chainNext || (index > 0 && total !== this.chainTotal) || this.chainFinal) throw new Error("The printer's page order changed. Review the batch.");
++    if (index === 0) await this.checkReady();
++    started(); // Durable begin checkpoint precedes every setup/content byte.
++    this.chainTotal = total; this.chainNext++;
++    await this.send(bytes);
++    await this.receivePhase();
++    if (index === total - 1) this.chainFinal = true;
++  }
++  async finishHeldChain(total: number) {
++    if (this.chainFinal || this.chainNext < 1 || this.chainNext >= total || total !== this.chainTotal) throw new Error("This connection has no held labels to release.");
++    this.chainFinal = true; // A failed finish may never be retried on this connection.
++    await this.send(brotherChainFeed(total));
++    await this.receivePhase();
++    await this.endChain();
++  }
++  async endChain() {
++    if (!this.chainFinal) throw new Error("The final printer page has not completed.");
++    await this.send([0x1b, 0x69, 0x61, 0xff]);
+   }
+   async print(bitmap: LabelBitmap, started: () => void) {
+     if (bitmap.height !== 76 || bitmap.width < 1 || bitmap.width > 536 || bitmap.ink.length !== bitmap.width * 76) throw new Error("Invalid label image.");
+--- before/src/lib/label-print-job.ts
++++ after/src/lib/label-print-job.ts
+@@ -18,41 +18,45 @@
+ export type PrintLabel = z.infer<typeof printLabelSchema>;
+ export type PrintActor = z.infer<typeof actorSchema>;
+ const outcomeSchema = z.object({
+-  status: z.enum(["pending", "sending", "printed", "not-printed"]),
++  status: z.enum(["pending", "sending", "buffered", "printed", "not-printed"]),
+   attemptedAt: z.string().datetime().optional(),
+   recordedAt: z.string().datetime().optional(),
+   evidence: z.enum(["printer", "physical-review", "not-sent"]).optional(),
+   resolvedBy: actorSchema.optional(),
+ }).strict().superRefine((outcome, ctx) => {
+-  if ((outcome.status === "sending" && !outcome.attemptedAt) ||
++  if ((["sending", "buffered"].includes(outcome.status) && !outcome.attemptedAt) ||
+     (["printed", "not-printed"].includes(outcome.status) && (!outcome.recordedAt || !outcome.evidence)) ||
+     (outcome.evidence === "physical-review" && !outcome.resolvedBy) ||
+     (outcome.status === "not-printed" && !["physical-review", "not-sent"].includes(outcome.evidence ?? ""))) ctx.addIssue({ code: "custom", message: "Invalid label outcome." });
+ });
+ export const printJobSchema = z.object({
+-  version: z.literal(2), id: z.string().uuid(), browserId: z.string().uuid(), actor: actorSchema,
++  version: z.literal(2), transport: z.literal("sdk-chain-v1").optional(), id: z.string().uuid(), browserId: z.string().uuid(), actor: actorSchema,
+   createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
+   revision: z.number().int().nonnegative(), parentId: z.string().uuid().optional(),
+   labels: z.array(printLabelSchema).min(1).max(500), outcomes: z.array(outcomeSchema).min(1).max(500),
+   activeIndex: z.number().int().nonnegative().nullable(),
+   state: z.enum(["ready", "printing", "stopped", "completed", "needs-review", "reviewed"]),
++  finish: z.object({ kind: z.enum(["last-page", "stop-feed"]), state: z.enum(["intent", "completed"]), attemptedAt: z.string().datetime(), recordedAt: z.string().datetime().optional() }).strict().optional(),
+   error: z.string().max(2000).optional(), reviewedAt: z.string().datetime().optional(),
+ }).strict().superRefine((job, ctx) => {
+   if (new Set(job.labels.map((label) => label.copyId)).size !== job.labels.length) ctx.addIssue({ code: "custom", message: "Duplicate copy identity." });
+   const active = job.outcomes.flatMap((o, i) => o.status === "sending" ? [i] : []);
++  const buffered = job.outcomes.some((o) => o.status === "buffered");
+   const allPrinted = job.outcomes.every((o) => o.status === "printed");
+   if (job.outcomes.length !== job.labels.length || active.length > 1 ||
+       (active[0] ?? null) !== job.activeIndex ||
+       (job.activeIndex !== null && !["printing", "needs-review"].includes(job.state)) ||
+       (job.state === "printing" && job.activeIndex === null) ||
+       (job.state === "completed" && !allPrinted) ||
+-      (job.state === "reviewed" && (!job.reviewedAt || job.activeIndex !== null))) {
++      (job.state === "reviewed" && (!job.reviewedAt || job.activeIndex !== null || buffered)) ||
++      ((buffered || job.finish) && job.transport !== "sdk-chain-v1") ||
++      (job.finish?.state === "completed" && (!job.finish.recordedAt || buffered || job.activeIndex !== null))) {
+     ctx.addIssue({ code: "custom", message: "The saved print progress is inconsistent. Review it before printing." });
+   }
+ });
+ export type PrintJob = z.infer<typeof printJobSchema>;
+ export const createPrintJobSchema = z.object({
+-  id: z.string().uuid(), browserId: z.string().uuid(), labels: z.array(printLabelSchema).min(1).max(500),
++  transport: z.literal("sdk-chain-v1").optional(), id: z.string().uuid(), browserId: z.string().uuid(), labels: z.array(printLabelSchema).min(1).max(500),
+   parentId: z.string().uuid().optional(), parentRevision: z.number().int().nonnegative().optional(),
+ }).strict();
+ export type CreatePrintJob = z.infer<typeof createPrintJobSchema>;
+@@ -60,6 +64,9 @@
+   z.object({ type: z.literal("begin"), index: z.number().int().nonnegative() }).strict(),
+   z.object({ type: z.literal("cancel-unsent"), index: z.number().int().nonnegative() }).strict(),
+   z.object({ type: z.literal("complete"), index: z.number().int().nonnegative() }).strict(),
++  z.object({ type: z.literal("buffer"), index: z.number().int().nonnegative() }).strict(),
++  z.object({ type: z.literal("begin-feed") }).strict(),
++  z.object({ type: z.literal("settle-chain") }).strict(),
+   z.object({ type: z.literal("halt"), error: z.string().max(2000).optional() }).strict(),
+   z.object({ type: z.literal("resolve"), index: z.number().int().nonnegative(), printed: z.boolean() }).strict(),
+   z.object({ type: z.literal("review") }).strict(),
+@@ -67,7 +74,7 @@
+ const originalCheckpointSchema = z.object({ requestId: z.string().uuid(), revision: z.number().int().nonnegative(), command: ordinaryCommandSchema }).strict();
+ export const printCommandSchema = z.union([ordinaryCommandSchema, z.object({
+   type: z.literal("reconcile"), original: originalCheckpointSchema, printed: z.boolean(),
+-}).strict()]);
++}).strict(), z.object({ type: z.literal("recover-chain"), original: originalCheckpointSchema }).strict()]);
+ export const checkpointSchema = z.object({
+   requestId: z.string().uuid(), revision: z.number().int().nonnegative(), command: printCommandSchema,
+ }).strict();
+@@ -78,13 +85,14 @@
+   return [label.row.dept, label.row.model, label.row.number].filter(Boolean).join(" ") || label.row.qrCodeValue;
+ }
+ export function printedLabels(job: PrintJob) { return job.labels.filter((_, i) => job.outcomes[i]!.status === "printed"); }
++export function uncertainIndices(job: PrintJob) { return job.outcomes.flatMap((outcome, index) => ["sending", "buffered"].includes(outcome.status) ? [index] : []); }
+ export function remainingLabels(job: PrintJob) {
+-  if (job.activeIndex !== null) throw new Error("Check the uncertain physical label first.");
++  if (uncertainIndices(job).length) throw new Error("Check the uncertain physical label first.");
+   return job.labels.filter((_, i) => ["pending", "not-printed"].includes(job.outcomes[i]!.status));
+ }
+ export function newPrintJob(input: CreatePrintJob, actor: PrintActor, now: string): PrintJob {
+   return printJobSchema.parse({ version: 2, id: input.id, browserId: input.browserId, actor,
+-    createdAt: now, updatedAt: now, revision: 0, ...(input.parentId ? { parentId: input.parentId } : {}),
++    createdAt: now, updatedAt: now, revision: 0, ...(input.transport ? { transport: input.transport } : {}), ...(input.parentId ? { parentId: input.parentId } : {}),
+     labels: input.labels, outcomes: input.labels.map(() => ({ status: "pending" })), activeIndex: null, state: "ready" });
+ }
+ /** Pure state transitions shared by durable server writes and the browser's recovery mirror. */
+@@ -94,31 +102,51 @@
+   const firstPending = job.outcomes.findIndex((o) => o.status === "pending");
+   switch (command.type) {
+     case "begin":
+-      if (job.actor.id !== actor.id || job.activeIndex !== null || command.index !== firstPending || !["ready", "printing"].includes(job.state)) throw new Error("This label is not ready to print.");
++      if (job.actor.id !== actor.id || job.activeIndex !== null || command.index !== firstPending || job.finish || !["ready", "printing"].includes(job.state)) throw new Error("This label is not ready to print.");
+       job.activeIndex = command.index; job.state = "printing";
+-      job.outcomes[command.index] = { status: "sending", attemptedAt: now }; break;
++      job.outcomes[command.index] = { status: "sending", attemptedAt: now };
++      if (job.transport && command.index === job.labels.length - 1) job.finish = { kind: "last-page", state: "intent", attemptedAt: now };
++      break;
+     case "cancel-unsent":
+       if (job.actor.id !== actor.id || job.activeIndex !== command.index) throw new Error("The active label changed.");
+       job.outcomes[command.index] = { ...job.outcomes[command.index]!, status: "not-printed", recordedAt: now, evidence: "not-sent" };
+-      job.activeIndex = null; job.state = "stopped"; break;
++      job.activeIndex = null; job.state = uncertainIndices(job).length ? "needs-review" : "stopped";
++      if (job.finish?.kind === "last-page") delete job.finish;
++      break;
+     case "complete": {
+-      if (job.actor.id !== actor.id || job.activeIndex !== command.index) throw new Error("The active label changed. Review the batch.");
++      if (job.transport || job.actor.id !== actor.id || job.activeIndex !== command.index) throw new Error("The active label changed. Review the batch.");
+       job.outcomes[command.index] = { ...job.outcomes[command.index]!, status: "printed", recordedAt: now, evidence: "printer" };
+       job.activeIndex = null;
+       // The final acknowledgement and terminal state are one durable checkpoint.
+       job.state = job.outcomes.every((o) => o.status === "printed") ? "completed" : "ready";
+       break;
+     }
++    case "buffer":
++      if (!job.transport || job.actor.id !== actor.id || job.activeIndex !== command.index || command.index === job.labels.length - 1 || job.finish) throw new Error("This page cannot be recorded as held by the printer.");
++      job.outcomes[command.index] = { ...job.outcomes[command.index]!, status: "buffered", recordedAt: now };
++      job.activeIndex = null; job.state = "ready"; break;
++    case "begin-feed":
++      if (!job.transport || job.actor.id !== actor.id || job.activeIndex !== null || job.finish || !job.outcomes.some(o => o.status === "buffered") || !["ready", "stopped", "needs-review"].includes(job.state)) throw new Error("This batch cannot release its held labels.");
++      job.finish = { kind: "stop-feed", state: "intent", attemptedAt: now }; job.state = "needs-review"; break;
++    case "settle-chain": {
++      if (!job.transport || job.actor.id !== actor.id || job.finish?.state !== "intent" ||
++          (job.finish.kind === "last-page" ? job.activeIndex !== job.labels.length - 1 : job.activeIndex !== null) ||
++          !uncertainIndices(job).length) throw new Error("This batch has no pending final feed.");
++      for (const index of uncertainIndices(job)) job.outcomes[index] = { ...job.outcomes[index]!, status: "printed", recordedAt: now, evidence: "printer" };
++      job.activeIndex = null; job.finish.state = "completed"; job.finish.recordedAt = now;
++      job.state = job.outcomes.every(o => o.status === "printed") ? "completed" : "stopped"; break;
++    }
+     case "halt":
+-      job.state = job.activeIndex !== null ? "needs-review" : job.outcomes.every((o) => o.status === "printed") ? "completed" : "stopped";
++      job.state = uncertainIndices(job).length ? "needs-review" : job.outcomes.every((o) => o.status === "printed") ? "completed" : "stopped";
+       if (command.error) job.error = command.error; break;
+     case "resolve":
+-      if (job.activeIndex !== command.index) throw new Error("There is no uncertain label at that position.");
++      if (!uncertainIndices(job).includes(command.index)) throw new Error("There is no uncertain label at that position.");
+       job.outcomes[command.index] = { ...job.outcomes[command.index]!, status: command.printed ? "printed" : "not-printed", recordedAt: now, evidence: "physical-review", resolvedBy: actor };
+-      job.activeIndex = null;
+-      job.state = job.outcomes.every((o) => o.status === "printed") ? "completed" : "stopped";
+-      delete job.error; break;
++      if (job.activeIndex === command.index) job.activeIndex = null;
++      job.state = uncertainIndices(job).length ? "needs-review" : job.outcomes.every((o) => o.status === "printed") ? "completed" : "stopped";
++      if (!uncertainIndices(job).length) delete job.error; break;
+     case "reconcile": {
++      if (job.transport) throw new Error("Recover the chained batch for individual physical review.");
+       const original = command.original.command;
+       if (!("index" in original) || !["begin", "complete", "cancel-unsent"].includes(original.type)) throw new Error("This pending command has no physical label to reconcile.");
+       const index = original.index, outcome = job.outcomes[index];
+@@ -129,8 +157,24 @@
+       job.activeIndex = null; job.state = job.outcomes.every((o) => o.status === "printed") ? "completed" : "stopped";
+       delete job.error; break;
+     }
++    case "recover-chain": {
++      if (!job.transport || command.original.revision > previous.revision || !["begin", "buffer", "cancel-unsent", "begin-feed", "settle-chain", "halt", "resolve"].includes(command.original.command.type)) throw new Error("This pending chain log cannot be recovered.");
++      const original = command.original.command;
++      // A failed begin may or may not have committed. Preserve that copy as unknown;
++      // recovery is journal-only and never authorizes output or a feed.
++      if ("index" in original && ["begin", "buffer"].includes(original.type)) {
++        const outcome = job.outcomes[original.index];
++        if (!outcome) throw new Error("The pending label is outside this batch.");
++        if (outcome.status === "pending") {
++          if (original.index !== firstPending || job.activeIndex !== null) throw new Error("The pending copy changed.");
++          job.outcomes[original.index] = { status: "sending", attemptedAt: now }; job.activeIndex = original.index;
++        }
++      }
++      job.state = uncertainIndices(job).length ? "needs-review" : job.outcomes.every(o => o.status === "printed") ? "completed" : "stopped";
++      break;
++    }
+     case "review":
+-      if (job.activeIndex !== null) throw new Error("Check the uncertain physical label first.");
++      if (uncertainIndices(job).length) throw new Error("Check the uncertain physical label first.");
+       job.state = "reviewed"; job.reviewedAt = now; break;
+   }
+   job.revision++; job.updatedAt = now;
+--- before/src/lib/label-print-controller.ts
++++ after/src/lib/label-print-controller.ts
+@@ -42,10 +42,13 @@
+       // An older committed request may have been followed by a review in another tab.
+       // Reconcile its observable result; never replay device output or discard known progress.
+       const command = envelope.pending.input.command;
+-      if (command.type === "begin") throw error; // A later outcome never authorizes device output.
++      if (["begin", "begin-feed"].includes(command.type)) throw error; // A later outcome never authorizes device output.
+       const saved = await this.api.get(envelope.job.id);
+       const outcome = "index" in command ? saved.outcomes[command.index] : undefined;
+-      const satisfied = command.type === "complete" ? outcome?.status === "printed"
++      const satisfied = command.type === "buffer" ? ["buffered", "printed"].includes(outcome?.status ?? "")
++        : command.type === "settle-chain" ? saved.finish?.state === "completed"
++        : command.type === "recover-chain" ? ["needs-review", "stopped", "completed", "reviewed"].includes(saved.state)
++        : command.type === "complete" ? outcome?.status === "printed"
+         : command.type === "resolve" ? outcome?.status === (command.printed ? "printed" : "not-printed")
+         : command.type === "review" ? saved.state === "reviewed"
+         : command.type === "halt" ? ["stopped", "completed", "reviewed", "needs-review"].includes(saved.state)
+@@ -54,7 +57,7 @@
+       if (!satisfied || saved.revision <= envelope.pending.input.revision) throw error;
+       response = saved;
+     }
+-    if (response.id !== envelope.job.id || response.browserId !== envelope.job.browserId || JSON.stringify(response.labels) !== JSON.stringify(envelope.job.labels)) throw new Error("The saved batch identity changed. Reload history and review it.");
++    if (response.transport !== envelope.job.transport || response.id !== envelope.job.id || response.browserId !== envelope.job.browserId || JSON.stringify(response.labels) !== JSON.stringify(envelope.job.labels)) throw new Error("The saved batch identity changed. Reload history and review it.");
+     this.save({ job: response }); return response;
+   }
+   async start(input: CreatePrintJob, actor: PrintActor) {
+@@ -70,12 +73,25 @@
+   }
+   async reconcilePending(actor: PrintActor, printed: boolean) {
+     const envelope = this.envelope;
+-    if (!envelope?.pending || envelope.pending.type !== "checkpoint" || envelope.pending.input.command.type === "reconcile") throw new Error("Save the pending log or review the saved server batch.");
++    if (!envelope?.pending || envelope.pending.type !== "checkpoint" || (envelope.pending.input.command.type === "reconcile" || envelope.pending.input.command.type === "recover-chain")) throw new Error("Save the pending log or review the saved server batch.");
+     const originalCommand = envelope.pending.input.command;
+     const original = { ...envelope.pending.input, command: originalCommand }, saved = await this.api.get(envelope.job.id);
+     this.storage.setItem(`wc-qr-usb-pending-archive-${crypto.randomUUID()}`, JSON.stringify({ archivedAt: new Date().toISOString(), envelope }));
+     if (saved.state === "reviewed") { this.save({ job: saved }); return saved; }
+     const command = { type: "reconcile" as const, original, printed };
++    const input = { requestId: crypto.randomUUID(), revision: saved.revision, command };
++    this.save({ job: applyPrintCommand(saved, command, actor, new Date().toISOString()), pending: { type: "checkpoint", input } });
++    return this.sync();
++  }
++  async recoverChainLog(actor: PrintActor) {
++    const envelope = this.envelope;
++    if (!envelope?.job.transport || envelope.pending?.type !== "checkpoint" || ["reconcile", "recover-chain"].includes(envelope.pending.input.command.type)) throw new Error("Save the pending log before reviewing this batch.");
++    const original = envelope.pending.input as { requestId: string; revision: number; command: Exclude<PrintCommand, { type: "reconcile" | "recover-chain" }> };
++    const saved = await this.api.get(envelope.job.id);
++    if (saved.transport !== envelope.job.transport || saved.browserId !== envelope.job.browserId || JSON.stringify(saved.labels) !== JSON.stringify(envelope.job.labels)) throw new Error("The saved batch identity changed.");
++    this.storage.setItem(`wc-qr-usb-pending-archive-${crypto.randomUUID()}`, JSON.stringify({ archivedAt: new Date().toISOString(), envelope }));
++    if (saved.state === "reviewed") { this.save({ job: saved }); return saved; }
++    const command = { type: "recover-chain" as const, original };
+     const input = { requestId: crypto.randomUUID(), revision: saved.revision, command };
+     this.save({ job: applyPrintCommand(saved, command, actor, new Date().toISOString()), pending: { type: "checkpoint", input } });
+     return this.sync();
+@@ -94,10 +110,55 @@
+     this.storage.setItem(`wc-qr-usb-pending-archive-${crypto.randomUUID()}`, JSON.stringify({ archivedAt: new Date().toISOString(), envelope }));
+     this.storage.removeItem(PRINT_JOURNAL_KEY); this.envelope = null; this.expectedRaw = null;
+   }
++  async runChain(printer: Pick<BrotherUsbPrinter, "open" | "close" | "printChainPage" | "finishHeldChain" | "endChain">, bitmaps: LabelBitmap[], actor: PrintActor,
++    shouldStop: () => boolean, progress: (index: number) => void) {
++    const initial = this.envelope?.job;
++    if (!initial?.transport || this.envelope?.pending || initial.state !== "ready" || initial.outcomes.some(o => o.status !== "pending") || bitmaps.length !== initial.labels.length) throw new Error("A new complete batch must be prepared and saved before printing.");
++    let mainError: unknown, started = false;
++    try {
++      await printer.open();
++      for (let i = 0; i < initial.labels.length && !shouldStop(); i++) {
++        const expectedRevision = this.envelope!.job.revision + 1;
++        const begun = await this.command({ type: "begin", index: i }, actor);
++        if (begun.revision !== expectedRevision || begun.state !== "printing" || begun.activeIndex !== i || begun.outcomes[i]?.status !== "sending") throw new Error("This label no longer has the active print checkpoint. No device output was sent.");
++        started = false;
++        if (shouldStop()) { await this.command({ type: "cancel-unsent", index: i }, actor); break; }
++        progress(i);
++        await printer.printChainPage(bitmaps[i]!, i, initial.labels.length, () => {
++          if (shouldStop()) throw new Error("Stopped before sending this label.");
++          started = true;
++        });
++        if (i === initial.labels.length - 1) {
++          await printer.endChain();
++          await this.command({ type: "settle-chain" }, actor);
++        } else await this.command({ type: "buffer", index: i }, actor);
++      }
++      if (this.envelope!.job.outcomes.some(o => o.status === "buffered")) {
++        const expectedRevision = this.envelope!.job.revision + 1;
++        const finish = await this.command({ type: "begin-feed" }, actor);
++        if (finish.revision !== expectedRevision || finish.state !== "needs-review" || finish.finish?.kind !== "stop-feed" || finish.finish.state !== "intent" || finish.activeIndex !== null) throw new Error("The held-label finish checkpoint changed. No feed was sent.");
++        // This is the only Stop feed. Errors/storage failures never enter here.
++        await printer.finishHeldChain(initial.labels.length);
++        await this.command({ type: "settle-chain" }, actor);
++      } else if (this.envelope!.job.state === "ready") await this.command({ type: "halt" }, actor);
++    } catch (error) {
++      mainError = error;
++      if (!(error instanceof PrintPersistenceError) && this.envelope && !this.envelope.pending) {
++        try {
++          if (!started && this.envelope.job.activeIndex !== null) await this.command({ type: "cancel-unsent", index: this.envelope.job.activeIndex }, actor);
++          await this.command({ type: "halt", error: error instanceof Error ? error.message.slice(0, 2000) : "Printing stopped." }, actor);
++        } catch (logError) { throw new Error(`${error instanceof Error ? error.message : "Printing stopped."} ${logError instanceof Error ? logError.message : "The print log also needs recovery."}`); }
++      }
++      throw error;
++    } finally {
++      try { await printer.close(); }
++      catch (error) { throw new Error(`${mainError instanceof Error ? `${mainError.message} ` : ""}USB cleanup failed: ${error instanceof Error ? error.message : "Reconnect the cable before printing again."}`); }
++    }
++  }
+   async run(printer: Pick<BrotherUsbPrinter, "open" | "close" | "print">, bitmaps: LabelBitmap[], actor: PrintActor,
+     shouldStop: () => boolean, progress: (index: number) => void) {
+     const initial = this.envelope?.job;
+-    if (!initial || this.envelope?.pending || initial.state !== "ready" || bitmaps.length !== initial.labels.length) throw new Error("The complete batch must be prepared and saved before printing.");
++    if (!initial || initial.transport || this.envelope?.pending || initial.state !== "ready" || bitmaps.length !== initial.labels.length) throw new Error("The complete batch must be prepared and saved before printing.");
+     let mainError: unknown;
+     let started = false;
+     try {
+--- before/src/lib/label-print-storage.ts
++++ after/src/lib/label-print-storage.ts
+@@ -14,7 +14,7 @@
+   const pending = envelope.pending;
+   if (!pending) return;
+   if (pending.type === "create") {
+-    if (pending.input.id !== envelope.job.id || pending.input.browserId !== envelope.job.browserId || JSON.stringify(pending.input.labels) !== JSON.stringify(envelope.job.labels) || envelope.job.revision !== 0) ctx.addIssue({ code: "custom", message: "Invalid pending batch identity." });
++    if (pending.input.transport !== envelope.job.transport || pending.input.id !== envelope.job.id || pending.input.browserId !== envelope.job.browserId || JSON.stringify(pending.input.labels) !== JSON.stringify(envelope.job.labels) || envelope.job.revision !== 0) ctx.addIssue({ code: "custom", message: "Invalid pending batch identity." });
+   } else if (pending.input.revision + 1 !== envelope.job.revision) ctx.addIssue({ code: "custom", message: "Invalid pending print revision." });
+ });
+ export type PrintEnvelope = z.infer<typeof envelopeSchema>;
+--- before/src/lib/services/label-print-jobs.ts
++++ after/src/lib/services/label-print-jobs.ts
+@@ -20,7 +20,7 @@
+       const existing = await tx.labelPrintJob.findUnique({ where: { id: input.id } });
+       if (existing) {
+         const job = printJobSchema.parse(existing.job);
+-        if (job.actor.id !== user.id || job.browserId !== input.browserId || job.parentId !== input.parentId || JSON.stringify(job.labels) !== JSON.stringify(input.labels)) throw new HttpError(409, "This batch ID already belongs to a different print sheet.");
++        if (job.actor.id !== user.id || job.browserId !== input.browserId || job.parentId !== input.parentId || job.transport !== input.transport || JSON.stringify(job.labels) !== JSON.stringify(input.labels)) throw new HttpError(409, "This batch ID already belongs to a different print sheet.");
+         return job;
+       }
+       const now = new Date().toISOString();
+@@ -52,7 +52,7 @@
+     if (!row) throw new HttpError(404, "Print batch not found.");
+     const previous = printJobSchema.parse(row.job);
+     mayReview(user, previous);
+-    if (["begin", "complete", "cancel-unsent"].includes(input.command.type) && previous.actor.id !== user.id) throw new HttpError(403, "Only the batch's operator can send or acknowledge its labels.");
++    if (["begin", "complete", "cancel-unsent", "buffer", "begin-feed", "settle-chain"].includes(input.command.type) && previous.actor.id !== user.id) throw new HttpError(403, "Only the batch's operator can send or acknowledge its labels.");
+     if (row.lastRequestId === input.requestId) {
+       if (row.lastRequestHash !== hash(input)) throw new HttpError(409, "This log request ID was already used for different progress.");
+       return previous;
+--- before/tests/brother-usb.test.ts
++++ after/tests/brother-usb.test.ts
+@@ -1,3 +1,5 @@
++import { createHash } from "node:crypto";
++import { brotherChainPage, brotherChainFeed } from "@/lib/brother-chain";
+ import { afterEach, describe, expect, it, vi } from "vitest";
+ import { BrotherUsbPrinter, type BrotherUsbDevice } from "@/lib/brother-usb";
+ import type { LabelBitmap } from "@/lib/brother-label-render";
+@@ -122,3 +124,72 @@
+     await printer.close(); expect(usb.closes).toBe(1);
+   });
+ });
++
++class ChainUsb extends Usb {
++  chainFrames = [status(6, { 19: 1 }), status(1, { 19: 1 }), status(6)];
++  shortPage = false;
++  override async transferOut(endpoint: number, data: Uint8Array) {
++    const result = await super.transferOut(endpoint, data);
++    if (data.length > 4 && [12, 26].includes(data.at(-1)!)) {
++      this.incoming.push(...this.chainFrames);
++      if (this.shortPage) return { status: "ok", bytesWritten: data.length - 1 };
++    }
++    return result;
++  }
++}
++describe("SDK chained output", () => {
++  it("pins native first/middle/final framing, lossless raster data and the accepted zero-ink Stop feed", () => {
++    const bitmap = image();
++    for (const [index, mode, ending] of [[0, 0, 12], [1, 1, 12], [2, 2, 26]]) {
++      const bytes = brotherChainPage(bitmap, index!, 3), info = index === 0 ? 214 : 0;
++      expect([...bytes.slice(info, info + 13)]).toEqual([27, 105, 122, 196, 1, 12, 0, 3, 0, 0, 0, mode, 0]);
++      expect(bytes.at(-1)).toBe(ending);
++      let offset = info + 38 + (index === 0 ? 39 : 0);
++      const rows: number[][] = [];
++      while (offset < bytes.length - 1) {
++        expect(bytes[offset]).toBe(71);
++        const end = offset + 3 + bytes[offset + 1]! + 256 * bytes[offset + 2]!;
++        let cursor = offset + 3; const row: number[] = [];
++        while (cursor < end) {
++          const code = bytes[cursor++]!;
++          if (code < 128) for (let count = 0; count <= code; count++) row.push(bytes[cursor++]!);
++          else if (code > 128) { const value = bytes[cursor++]!; for (let count = 0; count < 257 - code; count++) row.push(value); }
++        }
++        expect(row).toHaveLength(16); rows.push(row); offset = end;
++      }
++      expect(rows).toHaveLength(3);
++      expect(rows[0]![3]).toBe(32); expect(rows[2]![12]).toBe(4);
++      expect(rows.flat().reduce((sum, byte) => sum + byte, 0)).toBe(36);
++    }
++    const feed = brotherChainFeed(3);
++    expect(feed).toHaveLength(59);
++    expect(createHash("sha256").update(feed).digest("hex")).toBe("c244a46c4d00762592292b3ad3a1b911e9dca73171887883133bbbd8d2b8d404");
++  });
++  it("initializes once, waits for each printing→receive transition, and explicitly finishes without resetting between labels", async () => {
++    const usb = new ChainUsb(), printer = new BrotherUsbPrinter(usb); await printer.open();
++    await printer.printChainPage(image(), 0, 2, vi.fn());
++    await printer.printChainPage(image(), 1, 2, vi.fn()); await printer.endChain(); await printer.close();
++    expect(usb.writes.map(b => b.length)).toEqual([3, brotherChainPage(image(), 0, 2).length, brotherChainPage(image(), 1, 2).length, 4]);
++    expect(usb.writes[1]!.slice(0, 200).every(b => b === 0)).toBe(true);
++    expect(usb.writes[2]!.slice(0, 3)).toEqual([27, 105, 122]);
++    expect(usb.writes.at(-1)).toEqual([27, 105, 97, 255]);
++  });
++  it.each(["short", "old-phase", "trailing-error", "trailing-printing"])("fails closed without feeding or replaying after %s", async (fault) => {
++    vi.useFakeTimers();
++    const usb = new ChainUsb(), printer = new BrotherUsbPrinter(usb); await printer.open();
++    if (fault === "short") usb.shortPage = true;
++    if (fault === "old-phase") usb.chainFrames = [status(1), status(6)];
++    if (fault === "trailing-error") usb.chainFrames = [new Uint8Array([...status(6, { 19: 1 }), ...status(6), ...status(2, { 8: 1 })])];
++    if (fault === "trailing-printing") usb.chainFrames = [new Uint8Array([...status(6, { 19: 1 }), ...status(6), ...status(6, { 19: 1 })])];
++    const result = printer.printChainPage(image(), 0, 3, vi.fn()).catch(error => error);
++    await vi.runAllTimersAsync(); expect(await result).toBeInstanceOf(Error);
++    await printer.close(); expect(usb.writes).toHaveLength(2);
++  });
++  it("releases a deliberately stopped chain with only the zero-ink final page and end-mode command", async () => {
++    const usb = new ChainUsb(), printer = new BrotherUsbPrinter(usb); await printer.open();
++    await printer.printChainPage(image(), 0, 3, vi.fn()); await printer.finishHeldChain(3);
++    expect(usb.writes[2]).toEqual([...brotherChainFeed(3)]);
++    await expect(printer.finishHeldChain(3)).rejects.toThrow("no held labels");
++    await printer.close(); expect(usb.writes.at(-1)).toEqual([27, 105, 97, 255]);
++  });
++});
+--- before/tests/label-print-recovery.test.ts
++++ after/tests/label-print-recovery.test.ts
+@@ -14,18 +14,18 @@
+   setItem(key: string, value: string) { if (this.fail) throw new Error("Quota exceeded"); this.data.set(key, value); }
+   removeItem(key: string) { this.data.delete(key); } clear() { this.data.clear(); }
+ }
+-function harness(count = 3) {
++function harness(count = 3, chain = false) {
+   const storage = new MemoryStorage(); let server: PrintJob | undefined, mirror: PrintEnvelope | undefined;
+-  let failure: "begin" | "complete" | undefined;
++  let failure: string | undefined;
+   const api = {
+     create: vi.fn(async (value) => server = newPrintJob(value, actor, at)),
+     checkpoint: vi.fn(async (_id, value) => { if (value.command.type === failure) throw new Error("Server unavailable"); return server = applyPrintCommand(server!, value.command, actor, at); }),
+     get: vi.fn(async () => server!), list: vi.fn(),
+   } satisfies PrintJobApi;
+   const controller = new LabelPrintController(storage, api, null, (value) => { mirror = value; });
+-  const printer = { open: vi.fn(async () => {}), close: vi.fn(async () => {}), print: vi.fn(async (_bitmap, started: () => void) => { started(); }) };
++  const printer = { printChainPage: vi.fn(async (_bitmap, _index: number, _total: number, started: () => void) => { started(); }), finishHeldChain: vi.fn(async () => {}), endChain: vi.fn(async () => {}), open: vi.fn(async () => {}), close: vi.fn(async () => {}), print: vi.fn(async (_bitmap, started: () => void) => { started(); }) };
+   const bitmaps = Array.from({ length: count }, () => ({ width: 194, height: 76, ink: new Uint8Array(194 * 76), preview: "fixture" }));
+-  return { storage, api, controller, printer, bitmaps, start: () => controller.start(input(count), actor), mirror: () => mirror!, server: () => server!, fail: (type: typeof failure) => { failure = type; } };
++  return { storage, api, controller, printer, bitmaps, start: () => controller.start({ ...input(count), ...(chain ? { transport: "sdk-chain-v1" as const } : {}) }, actor), mirror: () => mirror!, server: () => server!, fail: (type: typeof failure) => { failure = type; } };
+ }
+ describe("durable print recovery", () => {
+   it("commits final completion and terminal state in one checkpoint, including after reload", async () => {
+@@ -127,3 +127,84 @@
+     savePrintJournal(storage, { job }); expect(readPrintJournal(storage).kind).toBe("valid");
+   });
+ });
++
++describe("chained journal recovery", () => {
++  it("keeps every intermediate page provisional and settles all copies only after the final feed", async () => {
++    const h = harness(3, true); await h.start();
++    h.printer.printChainPage.mockImplementation(async (_bitmap, index, _total, started) => {
++      started();
++      expect(h.mirror().job.outcomes.slice(0, index).every(o => o.status === "buffered")).toBe(true);
++      expect(h.mirror().job.outcomes.some(o => o.status === "printed")).toBe(false);
++    });
++    h.printer.endChain.mockImplementation(async () => { expect(h.mirror().job.finish).toMatchObject({ kind: "last-page", state: "intent" }); });
++    await h.controller.runChain(h.printer, h.bitmaps, actor, () => false, () => {});
++    expect(h.server().state).toBe("completed"); expect(h.server().outcomes.every(o => o.status === "printed")).toBe(true);
++    expect(h.printer.finishHeldChain).not.toHaveBeenCalled(); expect(h.printer.endChain).toHaveBeenCalledOnce();
++  });
++  it("Stop durably authorizes one zero-ink finish and excludes unsent copies from completion", async () => {
++    const h = harness(3, true); await h.start(); let stop = false;
++    h.printer.printChainPage.mockImplementation(async (_bitmap, _index, _total, started) => { started(); stop = true; });
++    h.printer.finishHeldChain.mockImplementation(async () => { expect(h.server().finish).toMatchObject({ kind: "stop-feed", state: "intent" }); });
++    await h.controller.runChain(h.printer, h.bitmaps, actor, () => stop, () => {});
++    expect(h.printer.printChainPage).toHaveBeenCalledTimes(1); expect(h.printer.finishHeldChain).toHaveBeenCalledTimes(1);
++    expect(h.server().outcomes.map(o => o.status)).toEqual(["printed", "pending", "pending"]);
++    expect(remainingLabels(h.server()).map(l => l.copyId)).toEqual(labels.slice(1).map(l => l.copyId));
++    const reloaded = new LabelPrintController(h.storage, h.api, h.mirror(), () => {});
++    await expect(reloaded.runChain(h.printer, h.bitmaps, actor, () => false, () => {})).rejects.toThrow("new complete batch");
++    expect(h.printer.printChainPage).toHaveBeenCalledTimes(1);
++  });
++  it.each([0, 1])("Stop during begin checkpoint %s sends no content for that copy", async (stopAt) => {
++    const h = harness(3, true); await h.start(); let stop = false;
++    const checkpoint = h.api.checkpoint.getMockImplementation()!;
++    h.api.checkpoint.mockImplementation(async (id, value) => {
++      const response = await checkpoint(id, value);
++      if (value.command.type === "begin" && value.command.index === stopAt) stop = true;
++      return response;
++    });
++    await h.controller.runChain(h.printer, h.bitmaps, actor, () => stop, () => {});
++    expect(h.printer.printChainPage).toHaveBeenCalledTimes(stopAt);
++    expect(h.printer.finishHeldChain).toHaveBeenCalledTimes(stopAt);
++    expect(h.server().outcomes[stopAt]).toMatchObject({ status: "not-printed", evidence: "not-sent" });
++  });
++  it.each(["buffer", "begin-feed", "settle-chain"])("a failed %s checkpoint never replays pixels or silently feeds during log recovery", async (checkpoint) => {
++    const h = harness(3, true); await h.start(); let stop = false; h.fail(checkpoint);
++    h.printer.printChainPage.mockImplementation(async (_bitmap, _index, _total, started) => { started(); stop = true; });
++    await expect(h.controller.runChain(h.printer, h.bitmaps, actor, () => stop, () => {})).rejects.toThrow("Server unavailable");
++    const feedCount = h.printer.finishHeldChain.mock.calls.length;
++    expect(feedCount).toBe(checkpoint === "settle-chain" ? 1 : 0);
++    h.fail(undefined); await h.controller.sync();
++    expect(h.printer.printChainPage).toHaveBeenCalledTimes(1); expect(h.printer.finishHeldChain).toHaveBeenCalledTimes(feedCount);
++    if (checkpoint !== "settle-chain") expect(() => remainingLabels(h.server())).toThrow("uncertain");
++  });
++  it("retains every held and in-flight copy on a disconnect and requires separate physical decisions before recovery", async () => {
++    const h = harness(3, true); await h.start();
++    h.printer.printChainPage.mockImplementation(async (_bitmap, index, _total, started) => { started(); if (index === 1) throw new Error("USB unplugged"); });
++    await expect(h.controller.runChain(h.printer, h.bitmaps, actor, () => false, () => {})).rejects.toThrow("USB unplugged");
++    expect(h.server().outcomes.map(o => o.status)).toEqual(["buffered", "sending", "pending"]);
++    expect(h.printer.finishHeldChain).not.toHaveBeenCalled();
++    await h.controller.command({ type: "resolve", index: 0, printed: true }, actor);
++    expect(() => remainingLabels(h.server())).toThrow("uncertain");
++    await h.controller.command({ type: "resolve", index: 1, printed: false }, actor);
++    expect(remainingLabels(h.server()).map(l => l.copyId)).toEqual(labels.slice(1).map(l => l.copyId));
++  });
++  it("archives an unrecoverable pending chain checkpoint and adopts only uncertain server progress, without output", async () => {
++    const h = harness(3, true); await h.start(); h.fail("buffer");
++    await expect(h.controller.runChain(h.printer, h.bitmaps, actor, () => false, () => {})).rejects.toThrow();
++    h.fail(undefined); await h.controller.recoverChainLog(actor);
++    expect(h.server().outcomes.map(o => o.status)).toEqual(["sending", "pending", "pending"]);
++    expect(h.server().state).toBe("needs-review");
++    expect([...h.storage.data.keys()].some(key => key.startsWith("wc-qr-usb-pending-archive-"))).toBe(true);
++    expect(h.printer.printChainPage).toHaveBeenCalledTimes(1); expect(h.printer.finishHeldChain).not.toHaveBeenCalled();
++  });
++  it("rejects stale finish authorization and sends no zero-ink feed", async () => {
++    const h = harness(3, true); await h.start(); let stop = false;
++    h.printer.printChainPage.mockImplementation(async (_bitmap, _index, _total, started) => { started(); stop = true; });
++    const checkpoint = h.api.checkpoint.getMockImplementation()!;
++    h.api.checkpoint.mockImplementation(async (id, value) => {
++      const response = await checkpoint(id, value);
++      return value.command.type === "begin-feed" ? applyPrintCommand(response, { type: "settle-chain" }, actor, at) : response;
++    });
++    await expect(h.controller.runChain(h.printer, h.bitmaps, actor, () => stop, () => {})).rejects.toThrow("finish checkpoint changed");
++    expect(h.printer.finishHeldChain).not.toHaveBeenCalled(); expect(h.printer.printChainPage).toHaveBeenCalledTimes(1);
++  });
++});
+--- before/tests/label-print-jobs.postgres.test.ts
++++ after/tests/label-print-jobs.postgres.test.ts
+@@ -106,6 +106,42 @@
+     expect(audits).toHaveLength(1); expect(audits[0]!.actorUserId).toBe(user.id);
+     expect(audits[0]!.afterJson).toMatchObject({ original });
+   });
++  it("persists chain Stop intent atomically, preserves provisional copies and creates an exact remaining-only child", async () => {
++    let job = await createLabelPrintJob({ ...createInput(), transport: "sdk-chain-v1" }, user);
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "begin", index: 0 }), user);
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "buffer", index: 0 }), user);
++    expect(job.outcomes[0]!.status).toBe("buffered");
++    await expect(createLabelPrintJob({ ...createInput(), browserId: job.browserId, parentId: job.id, parentRevision: job.revision }, user)).rejects.toThrow("uncertain");
++    const beforeFeed = job;
++    await holder.db.$executeRawUnsafe("ALTER TABLE audit_logs ADD CONSTRAINT reject_feed_test CHECK (action <> 'label_print_begin-feed')");
++    try { await expect(checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "begin-feed" }), user)).rejects.toThrow(); }
++    finally { await holder.db.$executeRawUnsafe("ALTER TABLE audit_logs DROP CONSTRAINT reject_feed_test"); }
++    expect(await getLabelPrintJob(job.id, user)).toEqual(beforeFeed);
++    const feed = checkpoint(job.revision, { type: "begin-feed" });
++    job = await checkpointLabelPrintJob(job.id, feed, user);
++    expect(await checkpointLabelPrintJob(job.id, feed, user)).toEqual(job);
++    expect(job.finish).toMatchObject({ kind: "stop-feed", state: "intent" });
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "settle-chain" }), user);
++    expect(job.outcomes.map(o => o.status)).toEqual(["printed", "pending", "pending"]);
++    const child = await createLabelPrintJob({ id: crypto.randomUUID(), browserId: job.browserId, transport: "sdk-chain-v1", parentId: job.id, parentRevision: job.revision, labels: remainingLabels(job) }, user);
++    expect(child.labels.map(l => l.copyId)).toEqual(["copy-1", "copy-2"]);
++    expect((await getLabelPrintJob(job.id, user)).state).toBe("reviewed");
++    const audit = await holder.db.auditLog.findFirstOrThrow({ where: { action: "label_print_begin-feed" } });
++    expect(audit.actorUserId).toBe(user.id); expect(audit.afterJson).toMatchObject({ type: "begin-feed", recordedAt: expect.any(String) });
++  });
++  it("allows staff to review held copies individually while reserving chain output acknowledgements to the original operator", async () => {
++    let job = await createLabelPrintJob({ ...createInput(), transport: "sdk-chain-v1" }, student);
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "begin", index: 0 }), student);
++    for (const command of [{ type: "buffer", index: 0 }, { type: "begin-feed" }, { type: "settle-chain" }]) await expect(checkpointLabelPrintJob(job.id, checkpoint(job.revision, command), user)).rejects.toMatchObject({ status: 403 });
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "buffer", index: 0 }), student);
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "begin", index: 1 }), student);
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "halt", error: "Disconnected" }), student);
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "resolve", index: 0, printed: true }), user);
++    expect(() => remainingLabels(job)).toThrow("uncertain");
++    job = await checkpointLabelPrintJob(job.id, checkpoint(job.revision, { type: "resolve", index: 1, printed: false }), user);
++    expect(job.outcomes[0]).toMatchObject({ evidence: "physical-review", resolvedBy: { id: user.id } });
++    expect(job.actor.id).toBe(student.id); expect(remainingLabels(job).map(l => l.copyId)).toEqual(["copy-1", "copy-2"]);
++  });
+   it("keeps print history and actor snapshot after account removal", async () => {
+     const operator = { ...student, id: "student-2" }, job = await createLabelPrintJob(createInput(), operator);
+     await holder.db.$executeRaw`DELETE FROM users WHERE id='student-2'`;
+--- /dev/null
++++ after/src/lib/brother-chain.ts
+@@ -0,0 +1,70 @@
++import type { LabelBitmap } from "./brother-label-render";
++
++// D610 framing verified byte-for-byte against MacPrintSDK (SHA 3b958667...e85b),
++// then on physical 04f9:20e1 hardware. First/middle pages remain provisional;
++// only the final 1A or the explicitly journaled zero-ink feed releases the tail.
++function packBits(line: Uint8Array) {
++  const encoded: number[] = [];
++  let index = 0;
++  while (index < line.length) {
++    let end = index + 1;
++    while (end < line.length && line[end] === line[index] && end - index < 128) end++;
++    if (end - index >= 2) {
++      encoded.push(257 - (end - index), line[index]!);
++      index = end;
++      continue;
++    }
++    const begin = index++;
++    while (index < line.length && index - begin < 128) {
++      if (index + 1 < line.length && line[index] === line[index + 1]) break;
++      index++;
++    }
++    encoded.push(index - begin - 1, ...line.slice(begin, index));
++  }
++  return encoded;
++}
++function sdkPage(columns: Uint8Array[], index: number, total: number) {
++  if (!Number.isInteger(total) || total < 1 || total > 500 || !Number.isInteger(index) || index < 0 || index >= total ||
++      columns.length < 1 || columns.length > 536 || columns.some(column => column.length !== 16)) throw new Error("Invalid D610 page.");
++  const rows = columns.length, mode = index === total - 1 ? 2 : index === 0 ? 0 : 1;
++  const bytes: number[] = [];
++  if (index === 0) bytes.push(...new Uint8Array(200), 27, 105, 97, 1, 27, 64, 27, 105, 33, 0, 27, 105, 112, 1);
++  bytes.push(
++    27, 105, 122, 0xc4, 1, 12, 0, rows & 255, (rows >> 8) & 255, 0, 0, mode, 0,
++    27, 105, 75, 8,           // Native no-chain mode; intermediate 0C keeps the tail held.
++    27, 105, 77, 64,          // Automatic cut, one per label.
++    27, 105, 65, 1,
++    27, 105, 107, 99, total & 255, (total >> 8) & 255,
++    27, 105, 100, 14, 0,     // Native 14-dot margin.
++    77, 2,                   // TIFF PackBits raster compression.
++  );
++  // Native assembly appends the first/middle/final media checks to the first vector.
++  if (index === 0) for (let check = 0; check < Math.min(total, 3); check++) {
++    bytes.push(27, 105, 76, 0, 1, 1, 27, 105, 67, 1, 255, 255, 255);
++  }
++  for (const line of columns) {
++    const packed = packBits(line);
++    if (packed.length <= 16) bytes.push(71, packed.length, 0, ...packed);
++    else bytes.push(71, 17, 0, 15, ...line);
++  }
++  bytes.push(index === total - 1 ? 26 : 12);
++  return Uint8Array.from(bytes);
++}
++
++export function brotherChainPage(bitmap: LabelBitmap, index: number, total: number): Uint8Array {
++  if (bitmap.height !== 76 || !Number.isInteger(bitmap.width) || bitmap.width < 1 || bitmap.width > 536 || bitmap.ink.length !== bitmap.width * 76) throw new Error("Invalid label image.");
++  const columns = Array.from({ length: bitmap.width }, (_, x) => {
++    const line = new Uint8Array(16);
++    for (let y = 0; y < 76; y++) if (bitmap.ink[y * bitmap.width + x]) {
++      const pin = 101 - y;
++      line[15 - Math.floor(pin / 8)]! |= 1 << (pin % 8);
++    }
++    return line;
++  });
++  return sdkPage(columns, index, total);
++}
++/** Four empty rows satisfy the native minimum-length guard; never replay ink. */
++export function brotherChainFeed(total: number): Uint8Array {
++  if (total < 2) throw new Error("There is no held chain to finish.");
++  return sdkPage(Array.from({ length: 4 }, () => new Uint8Array(16)), total - 1, total);
++}
+--- /dev/null
++++ after/src/app/dev-labels/UsbSimulation.tsx
+@@ -0,0 +1,60 @@
++"use client";
++import { useEffect, useState } from "react";
++import { Button } from "@/components/ui/button";
++import { Label } from "@/components/ui/label";
++import type { BrotherUsbDevice } from "@/lib/brother-usb";
++
++type Mode = "normal" | "pause-first" | "disconnect-second" | "fail-local-final";
++type Simulation = { mode: Mode; log: string[]; release?: () => void };
++let simulation: Simulation | undefined;
++/** Opt-in, loopback fixture only. No real USB methods are called in this mode. */
++export function installUsbSimulation() {
++  if (typeof window === "undefined" || !new URLSearchParams(location.search).has("simulate-usb") || simulation) return;
++  const state: Simulation = simulation = { mode: "normal", log: [] };
++  let queue: Uint8Array[] = [], pages = 0, failSave = false;
++  const notify = (message: string) => { state.log.push(message); window.dispatchEvent(new Event("label-usb-simulation")); };
++  const frame = (type = 0, phase = 0) => {
++    const bytes = new Uint8Array(32); bytes.set([128, 32, 66]); bytes[10] = 12; bytes[11] = 1;
++    bytes[18] = type; bytes[19] = phase; bytes[24] = 8; bytes[25] = 1; return bytes;
++  };
++  const originalSet = Storage.prototype.setItem;
++  Storage.prototype.setItem = function(key, value) {
++    if (key === "wc-qr-usb-journal-v2" && failSave) { failSave = false; notify("Simulated local journal write failed once"); throw new DOMException("Simulated quota failure", "QuotaExceededError"); }
++    return originalSet.call(this, key, value);
++  };
++  const device: BrotherUsbDevice = {
++    vendorId: 0x04f9, productId: 0x20e1, productName: "SIMULATED PT-D610BT", opened: false,
++    configuration: { interfaces: [{ interfaceNumber: 0, alternates: [{ alternateSetting: 0, interfaceClass: 7, endpoints: [{ endpointNumber: 1, direction: "in", type: "bulk" }, { endpointNumber: 2, direction: "out", type: "bulk" }] }] }] },
++    async open() { device.opened = true; pages = 0; queue = []; notify("Opened simulated USB"); },
++    async close() { device.opened = false; notify("Closed simulated USB"); },
++    async selectConfiguration() {}, async claimInterface() {}, async selectAlternateInterface() {}, async clearHalt() {},
++    async transferOut(_endpoint, bytes) {
++      if (bytes.length === 3) queue.push(frame());
++      else if (bytes.length > 4 && [12, 26].includes(bytes.at(-1)!)) {
++        const info = bytes[0] === 0 ? 214 : 0, rows = bytes[info + 7]! + 256 * bytes[info + 8]!;
++        const feed = rows === 4;
++        if (!feed) pages++;
++        notify(feed ? "Zero-ink Stop feed" : `Label content ${pages} · ${bytes.at(-1) === 26 ? "final" : "provisional"}`);
++        if (state.mode === "disconnect-second" && pages === 2) throw new Error("Simulated USB disconnect");
++        queue.push(frame(6, 1));
++        if (state.mode === "pause-first" && pages === 1 && !feed) state.release = () => { queue.push(frame(6)); delete state.release; notify("Released simulated page"); };
++        else queue.push(frame(6));
++        if (state.mode === "fail-local-final" && bytes.at(-1) === 26) failSave = true;
++      } else notify("End print mode");
++      return { status: "ok", bytesWritten: bytes.length };
++    },
++    async transferIn() {
++      const bytes = queue.shift() ?? new Uint8Array();
++      return { status: "ok", data: new DataView(bytes.buffer) };
++    },
++  };
++  const access = Object.assign(new EventTarget(), { getDevices: async () => [device], requestDevice: async () => device });
++  Object.defineProperty(navigator, "usb", { configurable: true, value: access });
++}
++export function UsbSimulationControls() {
++  const [, render] = useState(0);
++  const [mounted, setMounted] = useState(false);
++  useEffect(() => { setMounted(true); const changed = () => render(n => n + 1); window.addEventListener("label-usb-simulation", changed); return () => window.removeEventListener("label-usb-simulation", changed); }, []);
++  if (!mounted || !simulation) return null;
++  return <div className="mb-4 rounded-lg border border-amber-600 p-3 text-xs"><p className="font-bold">Simulated USB · No physical printer output</p><div className="mt-2 flex flex-wrap items-center gap-2"><Label htmlFor="usb-simulation">Next simulation</Label><select id="usb-simulation" className="h-10 rounded border bg-background px-2" value={simulation.mode} onChange={event => { simulation!.mode = event.target.value as Mode; render(n => n + 1); }}><option value="normal">Normal chain</option><option value="pause-first">Pause first page for Stop</option><option value="disconnect-second">Disconnect on second label</option><option value="fail-local-final">Fail local save after final feed</option></select><Button variant="outline" size="sm" disabled={!simulation.release} onClick={() => simulation?.release?.()}>Release simulated page</Button><Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new Event("focus"))}>Refresh saved progress</Button></div><pre aria-label="Simulated USB commands" className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">{simulation.log.join("\n") || "No USB commands yet"}</pre></div>;
++}

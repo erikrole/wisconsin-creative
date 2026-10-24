@@ -1,5 +1,8 @@
+import OSLog
 import UIKit
 import UserNotifications
+
+private let pushLog = Logger(subsystem: "com.erikrole.Wisconsin", category: "Push")
 
 /// Delivered alerts mirror unread inbox rows. Each push carries its row's
 /// `notificationId`, so reading the row in the app clears its alert.
@@ -78,7 +81,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 } catch {
                     guard PushTokenStorage.registrationAllowed else { return }
                     sharedAppState?.pushRegistrationState = .failed
-                    print("[APNS] Device token registration failed: \(error.localizedDescription)")
+                    pushLog.error("Device token registration failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
             await mutation.value
@@ -88,7 +91,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         guard PushTokenStorage.registrationAllowed else { return }
         sharedAppState?.pushRegistrationState = .failed
-        print("[APNS] Registration failed: \(error.localizedDescription)")
+        pushLog.error("APNs registration failed: \(error.localizedDescription, privacy: .public)")
     }
 
     /// Delivered banners sit in the system Notification Center forever unless

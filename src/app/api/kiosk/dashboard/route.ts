@@ -18,18 +18,9 @@ import {
   type HomePickupRow,
 } from "@/lib/services/kiosk-dashboard-home";
 import { kioskNudgedTodaySet } from "@/lib/services/kiosk-nudge";
+import { settledReader } from "@/lib/settled";
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[kiosk/dashboard] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("kiosk/dashboard");
 
 function timeZoneOffsetMs(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -161,7 +152,7 @@ function quantityLabel(name: string, quantity: number) {
 }
 
 /** Kiosk idle screen data: stats, nearby events, active items, and active checkouts. */
-export const GET = withKiosk(async (_req, { kiosk }) => {
+export const GET = withKiosk(async () => {
   const now = new Date();
   const nearPast = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const nearFuture = new Date(now.getTime() + 90 * 60 * 1000);

@@ -111,7 +111,7 @@ export function sampleDashboard(role: "STUDENT" | "STAFF" | "ADMIN", now: Date):
       itemCount: 5,
       items: [],
     }],
-    myReservations: [booking(now, { id: "b-res-1", title: "Football vs Iowa", requesterName: "Maya Chen", kind: "RESERVATION", startsAt: at(now, 3 * D - 3 * H), status: "BOOKED" })],
+    myReservations: [booking(now, { id: "b-res-1", title: "Football vs Iowa", requesterName: "Maya Chen", kind: "RESERVATION", eventId: "e-fb", eventIds: ["e-fb"], linkedEventId: "e-fb", startsAt: at(now, 3 * D - 3 * H), status: "BOOKED" })],
     drafts: team ? [{ id: "d-1", kind: "RESERVATION", title: "Wrestling open", itemCount: 3, updatedAt: at(now, -5 * H) }] : [],
     myShifts: [
       {
@@ -212,8 +212,8 @@ export function sampleActivity(now: Date): HomeActivity[] {
   const person = (id: string, name: string) => ({ id, name, avatarUrl: null });
   return [
     { id: "a-1", kind: "returned", bookingId: "b-ret-1", title: "Volleyball practice B-roll", person: person("u3", "Maya Chen"), at: ago(8) },
-    { id: "a-2", kind: "out", bookingId: "b-out-1", title: "Hockey practice media", person: person("u1", "Ava Patel"), at: ago(52) },
-    { id: "a-3", kind: "out", bookingId: "b-out-2", title: "Hockey practice media", person: person("u2", "Sam Okafor"), at: ago(64) },
+    { id: "a-2", kind: "checkout", bookingId: "b-out-1", title: "Hockey practice media", person: person("u1", "Ava Patel"), at: ago(52) },
+    { id: "a-3", kind: "pickup", bookingId: "b-out-2", title: "Hockey practice media", person: person("u2", "Sam Okafor"), at: ago(64) },
     { id: "a-4", kind: "returned", bookingId: "b-ret-2", title: "Softball headshots", person: person("u4", "Ben Ortiz"), at: ago(190) },
   ];
 }

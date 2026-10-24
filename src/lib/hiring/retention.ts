@@ -206,9 +206,9 @@ export async function sweepPendingBlobs(limit = 25): Promise<{ swept: number; fa
   return { swept, failed };
 }
 
-export const RETENTION_BATCH_SIZE = 25;
+const RETENTION_BATCH_SIZE = 25;
 /** Per-run ceiling on batches so a run is bounded even without the time budget. */
-export const RETENTION_MAX_BATCHES = 20;
+const RETENTION_MAX_BATCHES = 20;
 /**
  * Default wall-clock budget for one pass. The crons that run this are sized for the Hobby
  * 10-second function limit (the repo's other crons reserve 8 seconds in total), and the

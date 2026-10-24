@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 /**
  * Browse > What's new lists every announcement a person could have been
@@ -7,7 +8,7 @@ import { source } from "./_helpers/source";
  */
 describe("iOS What's new (announcement history)", () => {
   const route = source("src/app/api/announcements/history/route.ts");
-  const client = source("ios/Wisconsin/Core/APIClient.swift");
+  const client = apiClientSource();
   const models = source("ios/Wisconsin/Models/AnnouncementModels.swift");
   const view = source("ios/Wisconsin/Views/Announcements/WhatsNewView.swift");
   const browse = source("ios/Wisconsin/Views/BrowseView.swift");

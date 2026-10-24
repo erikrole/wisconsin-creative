@@ -115,7 +115,7 @@ struct ScheduleCalendarSubscriptionSheet: View {
                 } label: {
                     HStack(spacing: 8) {
                         if isOpening {
-                            ProgressView().tint(.white)
+                            ProgressView().tint(Color(.systemBackground))
                         } else {
                             Image(systemName: token == nil ? "calendar.badge.plus" : "arrow.up.forward.app")
                         }
@@ -124,9 +124,9 @@ struct ScheduleCalendarSubscriptionSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.statusText(.purple))
-                .controlSize(.large)
+                // The shared adaptive pill, like Post to Trade Board. The
+                // purple constructive tint is retired across Schedule.
+                .authButton(.primary, adaptive: true)
                 .disabled(isLoading || isOpening || isResetting || loadFailed)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -156,11 +156,13 @@ struct ScheduleCalendarSubscriptionSheet: View {
 
     private var statusCard: some View {
         HStack(alignment: .top, spacing: 14) {
+            // Green only once the feed is ready; until then the mark stays
+            // neutral, so colour means something when it appears.
             Image(systemName: token == nil ? "calendar.badge.plus" : "calendar.badge.checkmark")
                 .font(.title2)
-                .foregroundStyle(Color.statusText(token == nil ? .purple : .green))
+                .foregroundStyle(token == nil ? Color.secondary : Color.statusText(.green))
                 .frame(width: 46, height: 46)
-                .background(Color.statusBackground(token == nil ? .purple : .green), in: Circle())
+                .background(token == nil ? Color.flatRaised : Color.statusBackground(.green), in: Circle())
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 5) {
@@ -178,14 +180,13 @@ struct ScheduleCalendarSubscriptionSheet: View {
                     if resetComplete {
                         Text("Link reset. Subscribe again, then remove the old calendar in Settings > Calendar > Accounts > Subscribed Calendars.")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.statusText(.purple))
+                            .foregroundStyle(Color.primary)
                     }
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+        .flatCard(padding: 16, radius: Brand.Radius.lg)
         .accessibilityElement(children: .combine)
     }
 
@@ -200,8 +201,7 @@ struct ScheduleCalendarSubscriptionSheet: View {
             calendarExplanationRow("Apple Calendar controls when subscribed calendars refresh.")
             calendarExplanationRow("Editing a calendar event does not change your official Schedule assignment.")
         }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+        .flatCard(padding: 16, radius: Brand.Radius.lg)
     }
 
     private var securityCard: some View {
@@ -228,14 +228,14 @@ struct ScheduleCalendarSubscriptionSheet: View {
             .font(.subheadline.weight(.medium))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+        .flatCard(padding: 16, radius: Brand.Radius.lg)
     }
 
     private func calendarExplanationRow(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 9) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Color.statusText(.purple))
+            Image(systemName: "checkmark")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             Text(text)
                 .font(.subheadline)
@@ -248,6 +248,7 @@ struct ScheduleCalendarSubscriptionSheet: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(Color.statusText(.red))
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(failure.title)
                     .font(.subheadline.weight(.semibold))
@@ -260,7 +261,9 @@ struct ScheduleCalendarSubscriptionSheet: View {
             // failures retry from their own buttons.
             if loadFailed {
                 Button("Retry") { Task { await loadStatus() } }
-                    .font(.caption.weight(.semibold))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primary)
+                    .frame(minWidth: 44, minHeight: 44)
                     .disabled(isLoading || isOpening || isResetting)
             }
         }

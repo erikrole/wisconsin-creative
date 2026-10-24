@@ -36,13 +36,16 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import { OPEN_PROFILE_COMPLETION_EVENT } from "@/lib/profile-completion-events";
 import {
   PROFILE_STEP_COPY,
+  PROFILE_FIELD_SHORT_LABELS,
   PROFILE_STEP_SHORT_LABELS,
   visibleProfileSteps,
   type ProfileCompletionStep,
 } from "@/lib/profile-completion";
+import { uploadAvatarPhoto } from "@/lib/avatar-upload";
+import { syncAvatarCaches } from "@/lib/user-list-cache";
 import { AvatarCropDialog } from "@/app/(app)/staff/[id]/AvatarCropDialog";
 import { formatPhoneInput } from "@/lib/profile-phone";
-import { MENS_SHOE_SIZE_OPTIONS, TOP_SIZE_OPTIONS, WOMENS_SHOE_SIZE_OPTIONS } from "@/lib/profile-sizing";
+import { APPAREL_FIT_OPTIONS, MENS_SHOE_SIZE_OPTIONS, SHOE_SYSTEM_OPTIONS, TOP_SIZE_OPTIONS, WOMENS_SHOE_SIZE_OPTIONS } from "@/lib/profile-sizing";
 import {
   anticipatedGraduationOptions,
   anticipatedGraduationValue,
@@ -52,10 +55,13 @@ import {
 } from "@/lib/student-profile";
 import {
   PROFILE_COMPLETION_QUERY_KEY,
+  fetchProfileCompletion,
   type ProfileCompletionResponse,
   useProfileCompletion,
 } from "@/hooks/use-profile-completion";
 import { cn } from "@/lib/utils";
+import { useOnboardingSave } from "@/hooks/use-onboarding-save";
+import type { OnboardingGroup } from "@/lib/onboarding-save";
 
 type LegacyPhoneType = "PERSONAL" | "WORK" | "";
 type ApiEnvelope = { data?: ProfileCompletionResponse };
@@ -118,6 +124,7 @@ export function ProfileCompletionWizard({
   const [stepDirection, setStepDirection] = useState<StepDirection>(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [needsProfileRefresh, setNeedsProfileRefresh] = useState(false);
   const autoOpenedRef = useRef(false);
   const closeWithoutSnoozeRef = useRef(false);
   const manualReviewRef = useRef(false);
@@ -138,9 +145,45 @@ export function ProfileCompletionWizard({
   const [shoeSizeChoice, setShoeSizeChoice] = useState("");
   const [shoeSizeOther, setShoeSizeOther] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const graduationDraft = parseAnticipatedGraduation(anticipatedGraduation);
+  const autosave = useOnboardingSave({
+    data,
+    onResume: (next) => {
+      if (isPage && next.completion.firstIncompleteStep) setStep(next.completion.firstIncompleteStep);
+    },
+    values: {
+      athleticsEmail: athleticsEmail.trim() || null, personalPhone: personalPhone.trim() || null,
+      workPhone: noWorkPhone ? null : workPhone.trim() || null, workPhoneNotApplicable: noWorkPhone,
+      wiscardCardNumber: wiscardCardNumber || null, wiscardIssueCode: wiscardIssueCode || null,
+      studentYearOverride: studentYear || null,
+      graduationTerm: graduationDraft?.term ?? null, gradYear: graduationDraft?.year ?? null,
+      topSizeFit: topSizeFit || null, topSize: topSizeChoice === "OTHER" ? topSizeOther.trim() : topSizeChoice || null,
+      shoeSizeSystem: shoeSizeSystem || null, shoeSize: shoeSizeChoice === "OTHER" ? shoeSizeOther.trim() : shoeSizeChoice || null,
+    },
+    applyGroup: (group, profile) => {
+      if (group === "EMAIL") setAthleticsEmail(profile.athleticsEmail ?? "");
+      if (group === "PERSONAL_PHONE") setPersonalPhone(profile.personalPhone ?? (profile.role === "STUDENT" ? profile.phone : null) ?? "");
+      if (group === "WORK_PHONE") { setWorkPhone(profile.workPhone ?? ""); setNoWorkPhone(profile.workPhoneNotApplicable); }
+      if (group === "WISCARD") { setWiscardCardNumber(profile.wiscardCardNumber ?? ""); setWiscardIssueCode(profile.wiscardIssueCode ?? ""); }
+      if (group === "STUDENT") setStudentYear(profile.studentYearOverride ?? "");
+      if (group === "GRADUATION") setAnticipatedGraduation(anticipatedGraduationValue(profile.graduationTerm, profile.gradYear));
+      if (group === "CLOTHING") {
+        setTopSizeFit(profile.topSizeFit ?? "");
+        const known = !profile.topSize || isKnownOption(profile.topSize, [...TOP_SIZE_OPTIONS]);
+        setTopSizeChoice(known ? profile.topSize ?? "" : "OTHER"); setTopSizeOther(known ? "" : profile.topSize ?? "");
+      }
+      if (group === "SHOES") {
+        setShoeSizeSystem(profile.shoeSizeSystem ?? "");
+        const options = profile.shoeSizeSystem === "US_MENS" ? MENS_SHOE_SIZE_OPTIONS : WOMENS_SHOE_SIZE_OPTIONS;
+        const known = !profile.shoeSize || isKnownOption(profile.shoeSize, options);
+        setShoeSizeChoice(known ? profile.shoeSize ?? "" : "OTHER"); setShoeSizeOther(known ? "" : profile.shoeSize ?? "");
+      }
+    },
+  });
 
   useEffect(() => {
-    if (!data) return;
+    // Background refreshes must not replace details the person is typing.
+    if (!data || open) return;
     const profile = data.profile;
     setAthleticsEmail(profile.athleticsEmail ?? "");
     setPersonalPhone(profile.personalPhone ?? (profile.role === "STUDENT" ? profile.phone : null) ?? "");
@@ -174,7 +217,7 @@ export function ProfileCompletionWizard({
       setShoeSizeChoice("OTHER");
       setShoeSizeOther(profile.shoeSize);
     }
-  }, [data]);
+  }, [data, open]);
 
   useEffect(() => {
     if (!data) return;
@@ -183,7 +226,7 @@ export function ProfileCompletionWizard({
       autoOpenedRef.current = true;
       setStep(
         data.completion.firstIncompleteStep
-          ?? (data.profile.role === "STUDENT" || data.profile.role === "COLLABORATOR" ? "PHONES" : "EMAIL"),
+          ?? visibleProfileSteps(data.profile.role)[0]!,
       );
       setOpen(true);
       return;
@@ -192,7 +235,7 @@ export function ProfileCompletionWizard({
     autoOpenedRef.current = true;
     setStep(
       data.completion.firstIncompleteStep
-        ?? (data.profile.role === "STUDENT" || data.profile.role === "COLLABORATOR" ? "PHONES" : "EMAIL"),
+        ?? visibleProfileSteps(data.profile.role)[0]!,
     );
     setOpen(true);
   }, [autoOpen, data, isPage]);
@@ -203,7 +246,7 @@ export function ProfileCompletionWizard({
       closeWithoutSnoozeRef.current = false;
       manualReviewRef.current = data.completion.isComplete;
       setError("");
-      setStep(data.completion.firstIncompleteStep ?? (data.profile.role === "STUDENT" || data.profile.role === "COLLABORATOR" ? "PHONES" : "EMAIL"));
+      setStep(data.completion.firstIncompleteStep ?? visibleProfileSteps(data.profile.role)[0]!);
       setOpen(true);
     };
     window.addEventListener(OPEN_PROFILE_COMPLETION_EVENT, openWizard);
@@ -214,6 +257,10 @@ export function ProfileCompletionWizard({
   const stepIndex = visibleSteps.indexOf(step);
   const isLastStep = stepIndex === visibleSteps.length - 1;
   const shoeOptions = shoeSizeSystem === "US_MENS" ? MENS_SHOE_SIZE_OPTIONS : WOMENS_SHOE_SIZE_OPTIONS;
+  const selectedTopSize = topSizeChoice === "OTHER" ? topSizeOther.trim() : topSizeChoice;
+  const selectedShoeSize = shoeSizeChoice === "OTHER" ? shoeSizeOther.trim() : shoeSizeChoice;
+  const clothingLabel = APPAREL_FIT_OPTIONS.find((option) => option.value === topSizeFit)?.label;
+  const shoeSystemLabel = SHOE_SYSTEM_OPTIONS.find((option) => option.value === shoeSizeSystem)?.label;
   const legacyPhone = data?.profile.phone?.trim() ?? "";
   const isStudent = data?.profile.role === "STUDENT";
   const isCollaborator = data?.profile.role === "COLLABORATOR";
@@ -223,6 +270,8 @@ export function ProfileCompletionWizard({
   const copy = step === "PHONES" && hasSimplePhoneStep
     ? { title: "Add your phone number", description: "Add the personal phone number we should use to reach you." }
     : PROFILE_STEP_COPY[step];
+  const requiresSetup = data?.completion.requiresSetup === true;
+  const isOptionalStep = step === "PHOTO" || step === "WISCARD" || (step === "APPAREL" && !requiresSetup);
   const stepMotionContext = { direction: stepDirection, reduceMotion };
   const needsLegacyClassification = Boolean(
     !hasSimplePhoneStep && legacyPhone && !data?.profile.personalPhone && !data?.profile.workPhone,
@@ -242,10 +291,10 @@ export function ProfileCompletionWizard({
         && (noWorkPhone || workPhone.replace(/\D/g, "").length === 10);
     }
     if (step === "WISCARD") {
-      return /^\d{4,32}$/.test(wiscardCardNumber.trim()) && /^\d{1,8}$/.test(wiscardIssueCode.trim());
+      return /^\d{10}$/.test(wiscardCardNumber.trim()) && /^\d$/.test(wiscardIssueCode.trim());
     }
     if (step === "STUDENT") {
-      return Boolean(studentYear && parseAnticipatedGraduation(anticipatedGraduation));
+      return Boolean(studentYear);
     }
     if (step === "PHOTO") return Boolean(data.profile.avatarUrl);
     const topSize = topSizeChoice === "OTHER" ? topSizeOther.trim() : topSizeChoice;
@@ -264,7 +313,6 @@ export function ProfileCompletionWizard({
     shoeSizeSystem,
     step,
     studentYear,
-    anticipatedGraduation,
     topSizeChoice,
     topSizeFit,
     topSizeOther,
@@ -274,6 +322,7 @@ export function ProfileCompletionWizard({
   ]);
 
   async function patchCompletion(body: Record<string, unknown>) {
+    await autosave.protectMutation();
     const response = await fetch("/api/me/profile-completion", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -283,7 +332,10 @@ export function ProfileCompletionWizard({
     if (!response.ok) throw new Error(await parseErrorMessage(response, "Profile details were not saved."));
     const json = await parseJsonSafely<ApiEnvelope>(response);
     if (!json?.data) throw new Error("Profile details were saved, but the response could not be read. Refresh before continuing.");
+    await autosave.protectMutation();
+    await queryClient.cancelQueries({ queryKey: PROFILE_COMPLETION_QUERY_KEY });
     queryClient.setQueryData(PROFILE_COMPLETION_QUERY_KEY, json.data);
+    setNeedsProfileRefresh(false);
     return json.data;
   }
 
@@ -298,6 +350,15 @@ export function ProfileCompletionWizard({
     setSaving(true);
     setError("");
     try {
+      if (data?.versions) {
+        const activeGroups: OnboardingGroup[] = step === "EMAIL" ? ["EMAIL"]
+          : step === "PHONES" ? hasSimplePhoneStep ? ["PERSONAL_PHONE"] : ["PERSONAL_PHONE", "WORK_PHONE"]
+          : step === "WISCARD" ? ["WISCARD"] : step === "STUDENT" ? ["STUDENT", "GRADUATION"] : ["CLOTHING", "SHOES"];
+        activeGroups.forEach((group) => autosave.markDirty(group));
+        if (!await autosave.flush()) return;
+        goToStep(visibleSteps[Math.min(stepIndex + 1, visibleSteps.length - 1)]!, 1);
+        return;
+      }
       const graduation = parseAnticipatedGraduation(anticipatedGraduation);
       const body = step === "EMAIL"
         ? { step, athleticsEmail: athleticsEmail.trim() }
@@ -316,12 +377,11 @@ export function ProfileCompletionWizard({
                 wiscardCardNumber: wiscardCardNumber.trim(),
                 wiscardIssueCode: wiscardIssueCode.trim(),
               }
-            : step === "STUDENT" && graduation && studentYear
+            : step === "STUDENT" && studentYear
               ? {
                   step,
                   studentYearOverride: studentYear,
-                  graduationTerm: graduation.term,
-                  gradYear: graduation.year,
+                  ...(graduation ? { graduationTerm: graduation.term, gradYear: graduation.year } : {}),
                 }
               : {
                   step,
@@ -340,12 +400,7 @@ export function ProfileCompletionWizard({
         onComplete?.();
         return;
       }
-      goToStep(
-        manualReviewRef.current
-          ? visibleSteps[Math.min(stepIndex + 1, visibleSteps.length - 1)]!
-          : updated.completion.firstIncompleteStep ?? visibleSteps[Math.min(stepIndex + 1, visibleSteps.length - 1)]!,
-        1,
-      );
+      goToStep(visibleSteps[Math.min(stepIndex + 1, visibleSteps.length - 1)]!, 1);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Profile details were not saved.");
     } finally {
@@ -353,25 +408,47 @@ export function ProfileCompletionWizard({
     }
   }
 
-  async function uploadPhoto(file: File) {
+  async function uploadPhoto(file: File, expectedAvatarUrl: string | null, expectedActorId: string | null) {
     if (!data || saving) return false;
     setSaving(true);
     setError("");
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch(`/api/users/${data.profile.id}/avatar`, { method: "POST", body: formData });
-      if (handleAuthRedirect(response)) return false;
-      if (!response.ok) throw new Error(await parseErrorMessage(response, "Profile photo was not saved."));
-      await queryClient.invalidateQueries({ queryKey: PROFILE_COMPLETION_QUERY_KEY });
-      closeWithoutSnoozeRef.current = true;
-      setOpen(false);
-      toast.success("Profile complete");
-      onComplete?.();
+      const avatarUrl = await uploadAvatarPhoto(data.profile.id, file, expectedAvatarUrl, expectedActorId);
+      if (!avatarUrl) return false;
+      await syncAvatarCaches(queryClient, data.profile.id, avatarUrl);
+      try {
+        await refreshProfile();
+      } catch {
+        setNeedsProfileRefresh(true);
+      }
+      toast.success("Profile photo saved");
       return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Profile photo was not saved.");
-      return false;
+      throw reason instanceof Error ? reason : new Error("Your photo could not be saved. Your crop is still here.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function refreshProfile() {
+    await queryClient.cancelQueries({ queryKey: PROFILE_COMPLETION_QUERY_KEY });
+    const updated = await queryClient.fetchQuery({
+      queryKey: PROFILE_COMPLETION_QUERY_KEY,
+      queryFn: ({ signal }) => fetchProfileCompletion(signal),
+      staleTime: 0,
+    });
+    if (!updated) throw new Error("Setup could not be refreshed.");
+    setNeedsProfileRefresh(false);
+  }
+
+  async function retryProfileRefresh() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await refreshProfile();
+    } catch {
+      setNeedsProfileRefresh(true);
     } finally {
       setSaving(false);
     }
@@ -385,19 +462,34 @@ export function ProfileCompletionWizard({
     goToStep(visibleSteps[stepIndex + 1]!, 1);
   }
 
-  function finishPhotoStep() {
-    closeWithoutSnoozeRef.current = true;
-    setOpen(false);
-    toast.success("Profile complete");
-    onComplete?.();
+  async function finishPhotoStep() {
+    if (saving) return;
+    setSaving(true); setError("");
+    try {
+      if (!await autosave.flush()) return;
+      let updated: ProfileCompletionResponse | null;
+      try { updated = await patchCompletion({ step: "FINISH", expectedUserId: data?.profile.id }); }
+      catch (error) {
+        updated = await autosave.refresh();
+        if (!updated?.completion.onboardingComplete) throw error;
+      }
+      if (!updated?.completion.onboardingComplete) return;
+      closeWithoutSnoozeRef.current = true;
+      setOpen(false);
+      toast.success("Setup complete");
+      onComplete?.();
+    } catch (error) { setError(error instanceof Error ? error.message : "Couldn’t finish setup. Retry to continue."); }
+    finally { setSaving(false); }
   }
 
   async function snooze() {
-    if (saving) return;
+    if (saving || requiresSetup) return;
     setSaving(true);
     setError("");
     try {
-      await patchCompletion({ step: "SNOOZE" });
+      if (!await autosave.flush()) return;
+      const updated = await patchCompletion({ step: "SNOOZE" });
+      if (!updated) return;
       closeWithoutSnoozeRef.current = true;
       setOpen(false);
       toast.message("We’ll remind you tomorrow.");
@@ -434,6 +526,8 @@ export function ProfileCompletionWizard({
       setNoWorkPhone(false);
       if (personalPhone === legacyPhone) setPersonalPhone("");
     }
+    autosave.markDirty("PERSONAL_PHONE");
+    autosave.markDirty("WORK_PHONE");
   }
 
   if (!data) return null;
@@ -444,6 +538,7 @@ export function ProfileCompletionWizard({
       <AvatarCropDialog
         file={photoFile}
         profileName={data.profile.name}
+        avatarUrl={data.profile.avatarUrl}
         onClose={() => setPhotoFile(null)}
         onConfirm={uploadPhoto}
       />
@@ -451,7 +546,21 @@ export function ProfileCompletionWizard({
   }
 
   const stepFields = (
-              <>
+              <div onBlurCapture={() => { void autosave.flush(); }}>
+          <div className="mb-4 flex flex-col gap-2" aria-live="polite">
+            <p className="text-xs text-muted-foreground">{autosave.state === "saving" ? "Saving…" : autosave.state === "saved" ? "Saved to your account" : autosave.message || "Changes waiting to save"}</p>
+            {autosave.state === "error" && <Button type="button" variant="outline" className="self-start" onClick={() => { void autosave.flush(); }}>Retry save</Button>}
+            {autosave.state === "conflict" && <Alert>
+              <AlertCircleIcon aria-hidden="true" />
+              <AlertDescription className="col-start-2 flex min-w-0 flex-col gap-3">
+                <span>Some answers changed elsewhere. Use the saved answers or keep the edits shown in this form.</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={autosave.useSaved}>Use saved answers</Button>
+                  <Button type="button" onClick={() => { void autosave.keepEdits(); }}>Save my answers</Button>
+                </div>
+              </AlertDescription>
+            </Alert>}
+          </div>
           {step === "EMAIL" && (
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
@@ -467,7 +576,7 @@ export function ProfileCompletionWizard({
                   type="email"
                   autoComplete="email"
                   value={athleticsEmail}
-                  onChange={(event) => { setAthleticsEmail(event.target.value); setError(""); }}
+                  onChange={(event) => { setAthleticsEmail(event.target.value); setError(""); autosave.markDirty("EMAIL"); }}
                   placeholder="name@athletics.wisc.edu"
                   aria-invalid={Boolean(athleticsEmail && !athleticsEmail.toLowerCase().endsWith("@athletics.wisc.edu"))}
                   disabled={saving}
@@ -509,7 +618,7 @@ export function ProfileCompletionWizard({
                     type="tel"
                     autoComplete="tel"
                     value={personalPhone}
-                    onChange={(event) => { setPersonalPhone(formatPhoneInput(event.target.value)); setError(""); }}
+                    onChange={(event) => { setPersonalPhone(formatPhoneInput(event.target.value)); setError(""); autosave.markDirty("PERSONAL_PHONE"); }}
                     placeholder="(XXX) XXX-XXXX"
                     disabled={saving}
                   />
@@ -523,7 +632,7 @@ export function ProfileCompletionWizard({
                       type="tel"
                       autoComplete="work tel"
                       value={workPhone}
-                      onChange={(event) => { setWorkPhone(formatPhoneInput(event.target.value)); setNoWorkPhone(false); setError(""); }}
+                      onChange={(event) => { setWorkPhone(formatPhoneInput(event.target.value)); setNoWorkPhone(false); setError(""); autosave.markDirty("WORK_PHONE"); }}
                       placeholder="(XXX) XXX-XXXX"
                       disabled={saving || noWorkPhone}
                     />
@@ -535,7 +644,7 @@ export function ProfileCompletionWizard({
                   <Checkbox
                     id="profile-completion-no-work-phone"
                     checked={noWorkPhone}
-                    onCheckedChange={(checked) => { setNoWorkPhone(checked === true); if (checked) setWorkPhone(""); }}
+                    onCheckedChange={(checked) => { setNoWorkPhone(checked === true); if (checked) setWorkPhone(""); autosave.markDirty("WORK_PHONE", true); }}
                     disabled={saving}
                   />
                   <Label htmlFor="profile-completion-no-work-phone" className="font-normal">I don’t have a work phone</Label>
@@ -555,7 +664,7 @@ export function ProfileCompletionWizard({
                     inputMode="numeric"
                     autoComplete="off"
                     value={wiscardCardNumber}
-                    onChange={(event) => setWiscardCardNumber(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                    onChange={(event) => { setWiscardCardNumber(event.target.value.replace(/\D/g, "").slice(0, 10)); autosave.markDirty("WISCARD"); }}
                     placeholder="XXXXXXXXXX"
                     disabled={saving}
                   />
@@ -568,13 +677,13 @@ export function ProfileCompletionWizard({
                     inputMode="numeric"
                     autoComplete="off"
                     value={wiscardIssueCode}
-                    onChange={(event) => setWiscardIssueCode(event.target.value.replace(/\D/g, "").slice(0, 1))}
+                    onChange={(event) => { setWiscardIssueCode(event.target.value.replace(/\D/g, "").slice(0, 1)); autosave.markDirty("WISCARD"); }}
                     placeholder="X"
                     disabled={saving}
                   />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Issue code can be found in the bottom right of your Wiscard. Wisconsin Creative combines both values into the exact kiosk lookup value.</p>
+              <p className="text-xs text-muted-foreground">Issue code can be found in the bottom right of your Wiscard. Enter the 10-digit card number and the single-digit issue code.</p>
             </div>
           )}
 
@@ -582,7 +691,7 @@ export function ProfileCompletionWizard({
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="profile-completion-student-year">Year</Label>
-                <Select value={studentYear} onValueChange={(value) => setStudentYear(value as StudentYearValue)} disabled={saving}>
+                <Select value={studentYear} onValueChange={(value) => { setStudentYear(value as StudentYearValue); autosave.markDirty("STUDENT", true); }} disabled={saving}>
                   <SelectTrigger id="profile-completion-student-year"><SelectValue placeholder="Select year" /></SelectTrigger>
                   <SelectContent><SelectGroup>
                     {STUDENT_YEAR_OPTIONS.map((option) => (
@@ -593,7 +702,7 @@ export function ProfileCompletionWizard({
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="profile-completion-graduation">Anticipated graduation</Label>
-                <Select value={anticipatedGraduation} onValueChange={setAnticipatedGraduation} disabled={saving}>
+                <Select value={anticipatedGraduation} onValueChange={(value) => { setAnticipatedGraduation(value); autosave.markDirty("GRADUATION", true); }} disabled={saving}>
                   <SelectTrigger id="profile-completion-graduation"><SelectValue placeholder="Select term and year" /></SelectTrigger>
                   <SelectContent><SelectGroup>
                     {GRADUATION_OPTIONS.map((option) => (
@@ -609,20 +718,24 @@ export function ProfileCompletionWizard({
             <div className="flex flex-col gap-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="profile-completion-top-fit">Clothing fit</Label>
-                  <Select value={topSizeFit} onValueChange={(value) => setTopSizeFit(value as typeof topSizeFit)} disabled={saving}>
-                    <SelectTrigger id="profile-completion-top-fit"><SelectValue placeholder="Select fit" /></SelectTrigger>
+                  <Label htmlFor="profile-completion-top-fit">Clothing sizing</Label>
+                  <Select value={topSizeFit} onValueChange={(value) => { setTopSizeFit(value as typeof topSizeFit); autosave.markDirty("CLOTHING", true); }} disabled={saving}>
+                    <SelectTrigger id="profile-completion-top-fit">
+                      <SelectValue placeholder="Men’s or Women’s">{topSizeFit === "UNISEX" ? "Unisex (saved)" : undefined}</SelectValue>
+                    </SelectTrigger>
                     <SelectContent><SelectGroup>
-                      <SelectItem value="UNISEX">Unisex</SelectItem>
-                      <SelectItem value="WOMENS">Women’s</SelectItem>
-                      <SelectItem value="MENS">Men’s</SelectItem>
+                      {APPAREL_FIT_OPTIONS.filter((option) => option.value !== "UNISEX").map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectGroup></SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="profile-completion-top-size">Top size</Label>
-                  <Select value={topSizeChoice} onValueChange={setTopSizeChoice} disabled={saving}>
-                    <SelectTrigger id="profile-completion-top-size"><SelectValue placeholder="Select size" /></SelectTrigger>
+                  <Select value={topSizeChoice} onValueChange={(value) => { setTopSizeChoice(value); autosave.markDirty("CLOTHING", true); }} disabled={saving || !topSizeFit}>
+                    <SelectTrigger id="profile-completion-top-size"><SelectValue placeholder={topSizeFit ? "Select size" : "Choose clothing sizing first"} /></SelectTrigger>
                     <SelectContent><SelectGroup>
                       {TOP_SIZE_OPTIONS.map((size) => <SelectItem key={size} value={size}>{size}</SelectItem>)}
                       <SelectItem value="OTHER">Other</SelectItem>
@@ -633,28 +746,35 @@ export function ProfileCompletionWizard({
               {topSizeChoice === "OTHER" && (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="profile-completion-top-other">Other top size</Label>
-                  <Input id="profile-completion-top-other" value={topSizeOther} onChange={(event) => setTopSizeOther(event.target.value)} maxLength={40} disabled={saving} />
+                  <Input id="profile-completion-top-other" value={topSizeOther} onChange={(event) => { setTopSizeOther(event.target.value); autosave.markDirty("CLOTHING"); }} maxLength={40} disabled={saving} />
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 border-t pt-5 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="profile-completion-shoe-system">Shoe sizing</Label>
+                  <Label htmlFor="profile-completion-shoe-system">US shoe sizing</Label>
                   <Select
                     value={shoeSizeSystem}
-                    onValueChange={(value) => { setShoeSizeSystem(value as typeof shoeSizeSystem); setShoeSizeChoice(""); setShoeSizeOther(""); }}
+                    onValueChange={(value) => {
+                      if (value === shoeSizeSystem) return;
+                      setShoeSizeSystem(value as typeof shoeSizeSystem);
+                      setShoeSizeChoice("");
+                      setShoeSizeOther("");
+                      autosave.markDirty("SHOES", true);
+                    }}
                     disabled={saving}
                   >
-                    <SelectTrigger id="profile-completion-shoe-system"><SelectValue placeholder="Select system" /></SelectTrigger>
+                    <SelectTrigger id="profile-completion-shoe-system"><SelectValue placeholder="Men’s or Women’s" /></SelectTrigger>
                     <SelectContent><SelectGroup>
-                      <SelectItem value="US_WOMENS">Women’s</SelectItem>
-                      <SelectItem value="US_MENS">Men’s</SelectItem>
+                      {SHOE_SYSTEM_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
                     </SelectGroup></SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="profile-completion-shoe-size">Shoe size</Label>
-                  <Select value={shoeSizeChoice} onValueChange={setShoeSizeChoice} disabled={saving || !shoeSizeSystem}>
-                    <SelectTrigger id="profile-completion-shoe-size"><SelectValue placeholder="Select size" /></SelectTrigger>
+                  <Select value={shoeSizeChoice} onValueChange={(value) => { setShoeSizeChoice(value); autosave.markDirty("SHOES", true); }} disabled={saving || !shoeSizeSystem}>
+                    <SelectTrigger id="profile-completion-shoe-size"><SelectValue placeholder={shoeSizeSystem ? "Select size" : "Choose shoe sizing first"} /></SelectTrigger>
                     <SelectContent><SelectGroup>
                       {shoeOptions.map((size) => <SelectItem key={size} value={size}>{size}</SelectItem>)}
                       <SelectItem value="OTHER">Other</SelectItem>
@@ -665,7 +785,13 @@ export function ProfileCompletionWizard({
               {shoeSizeChoice === "OTHER" && (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="profile-completion-shoe-other">Other shoe size</Label>
-                  <Input id="profile-completion-shoe-other" value={shoeSizeOther} onChange={(event) => setShoeSizeOther(event.target.value)} maxLength={40} disabled={saving} />
+                  <Input id="profile-completion-shoe-other" value={shoeSizeOther} onChange={(event) => { setShoeSizeOther(event.target.value); autosave.markDirty("SHOES"); }} maxLength={40} disabled={saving} />
+                </div>
+              )}
+              {clothingLabel && selectedTopSize && shoeSystemLabel && selectedShoeSize && (
+                <div role="status" className="rounded-lg bg-muted/50 px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Your sizes for team orders</p>
+                  <p className="mt-1 text-sm font-medium">{clothingLabel} {selectedTopSize} · US {shoeSystemLabel} {selectedShoeSize}</p>
                 </div>
               )}
             </div>
@@ -691,21 +817,37 @@ export function ProfileCompletionWizard({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   className="sr-only"
-                  onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+        onChange={(event) => {
+          setPhotoFile(event.target.files?.[0] ?? null);
+          event.target.value = "";
+        }}
                   disabled={saving}
                 />
                 <p className="text-xs text-muted-foreground">JPEG, PNG, or WebP. You can crop and reposition before saving.</p>
               </div>
+              {!data.completion.requiredComplete && (
+                <p className="text-sm text-muted-foreground">
+                  To finish, go back and add your {data.completion.missingFields
+                    .filter((field) => field !== "photo")
+                    .map((field) => PROFILE_FIELD_SHORT_LABELS[field])
+                    .join(", ")}.
+                </p>
+              )}
             </div>
           )}
-              </>
+              </div>
   );
 
+  // The photo is optional: setup finishes without one and the profile keeps
+  // a snoozable reminder.
+  const skippingPhoto = isLastStep && step === "PHOTO" && !canContinue;
   const actions = (
     <>
-      <Button type="button" variant="ghost" onClick={snooze} disabled={saving} className="mr-auto h-10">
-        Remind me tomorrow
-      </Button>
+      {!requiresSetup && step !== "PHOTO" && (
+        <Button type="button" variant="ghost" onClick={snooze} disabled={saving} className="order-last h-10 w-full sm:order-none sm:mr-auto sm:w-auto">
+          Remind me tomorrow
+        </Button>
+      )}
       {stepIndex > 0 && (
         <Button
           type="button"
@@ -718,19 +860,14 @@ export function ProfileCompletionWizard({
           Back
         </Button>
       )}
-      {(step === "APPAREL" || step === "PHOTO") && !canContinue && (
-        <Button type="button" variant="outline" className="h-10" onClick={skipOptionalStep} disabled={saving}>
-          Skip for now
-        </Button>
-      )}
       <Button
         type="button"
         className="h-10"
-        onClick={step === "PHOTO" ? finishPhotoStep : saveCurrentStep}
-        disabled={saving || !canContinue}
+        onClick={step === "PHOTO" ? finishPhotoStep : isOptionalStep && !canContinue ? skipOptionalStep : saveCurrentStep}
+        disabled={saving || needsProfileRefresh || (step === "PHOTO" && !data.completion.requiredComplete) || (!canContinue && !isOptionalStep)}
       >
-        {saving ? <Spinner data-icon="inline-start" /> : isLastStep ? <CheckIcon data-icon="inline-start" /> : null}
-        {isLastStep ? "Finish" : "Continue"}
+        {saving ? <Spinner data-icon="inline-start" /> : isLastStep && !skippingPhoto ? <CheckIcon data-icon="inline-start" /> : null}
+        {skippingPhoto ? "Skip for now" : isLastStep ? "Finish" : isOptionalStep && !canContinue ? "Skip for now" : "Continue"}
         {!saving && !isLastStep && <ArrowRightIcon data-icon="inline-end" />}
       </Button>
     </>
@@ -740,82 +877,54 @@ export function ProfileCompletionWizard({
     <AvatarCropDialog
       file={photoFile}
       profileName={data.profile.name}
+      avatarUrl={data.profile.avatarUrl}
       onClose={() => setPhotoFile(null)}
       onConfirm={uploadPhoto}
     />
   );
 
+  const refreshNotice = needsProfileRefresh && (
+    <Alert>
+      <AlertCircleIcon />
+      <AlertDescription className="space-y-3">
+        <p>Your photo was saved, but setup couldn’t refresh. Refresh setup to continue.</p>
+        <Button type="button" variant="outline" onClick={retryProfileRefresh} disabled={saving}>Refresh setup</Button>
+      </AlertDescription>
+    </Alert>
+  );
+
   if (isPage) {
     return (
-      <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <nav aria-label="Setup steps" className="hidden lg:block">
-          <ol className="space-y-1">
-            {visibleSteps.map((visibleStep, index) => {
-              const current = visibleStep === step;
-              const completeByStep =
-                visibleStep === "EMAIL"
-                  ? data.completion.completeByField.campusEmail
-                    && data.completion.completeByField.athleticsEmail
-                  : visibleStep === "PHONES"
-                    ? data.completion.completeByField.personalPhone
-                      && (hasSimplePhoneStep || data.completion.completeByField.workPhone)
-                    : visibleStep === "WISCARD"
-                      ? data.completion.completeByField.wiscard
-                      : visibleStep === "STUDENT"
-                        ? data.completion.completeByField.studentYear
-                          && data.completion.completeByField.anticipatedGraduation
-                        : visibleStep === "APPAREL"
-                          ? data.completion.completeByField.clothingSize
-                            && data.completion.completeByField.shoeSize
-                          : data.completion.completeByField.photo;
-              return (
-                <li key={visibleStep}>
-                  <button
-                    type="button"
-                    onClick={() => goToStep(visibleStep, index > stepIndex ? 1 : -1)}
-                    disabled={saving}
+      <div className="flex flex-col gap-4">
+        <nav aria-label="Setup steps" className="space-y-2">
+          <ol className="flex gap-1.5">
+            {visibleSteps.map((visibleStep, index) => (
+              <li key={visibleStep} className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => goToStep(visibleStep, index > stepIndex ? 1 : -1)}
+                  disabled={saving}
+                  aria-label={`${PROFILE_STEP_SHORT_LABELS[visibleStep]}, step ${index + 1} of ${visibleSteps.length}`}
+                  aria-current={visibleStep === step ? "step" : undefined}
+                  className="group flex h-6 w-full items-center"
+                >
+                  <span
                     className={cn(
-                      "flex h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition-colors",
-                      current
-                        ? "bg-accent font-medium text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                      "h-1 w-full rounded-full transition-colors",
+                      index <= stepIndex ? "bg-[var(--accent)]" : "bg-[var(--border)] group-hover:bg-[var(--text-muted)]",
                     )}
-                    aria-current={current ? "step" : undefined}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums",
-                        completeByStep
-                          ? "bg-[var(--green-bg)] text-[var(--green-text)]"
-                          : current
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {completeByStep ? <CheckIcon className="size-3" aria-hidden="true" /> : index + 1}
-                    </span>
-                    {PROFILE_STEP_SHORT_LABELS[visibleStep]}
-                  </button>
-                </li>
-              );
-            })}
+                  />
+                </button>
+              </li>
+            ))}
           </ol>
+          <p className="text-sm text-[var(--text-secondary)] tabular-nums">
+            Step {stepIndex + 1} of {visibleSteps.length} · {PROFILE_STEP_SHORT_LABELS[step]}
+          </p>
         </nav>
 
-        <section className="min-w-0 rounded-lg border bg-card shadow-xs">
-          <header className="space-y-3 border-b px-5 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Badge variant="orange" size="sm">
-                Step {stepIndex + 1} of {visibleSteps.length}
-              </Badge>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {data.completion.completedCount} of {data.completion.totalCount} details complete
-              </span>
-            </div>
-            <Progress
-              value={((stepIndex + 1) / visibleSteps.length) * 100}
-              aria-label={`Step ${stepIndex + 1} of ${visibleSteps.length}`}
-            />
+        <section className="min-w-0 rounded-2xl border border-[var(--border)] bg-card shadow-xs">
+          <header className="space-y-1 px-5 pt-6 sm:px-8">
             <div className="grid">
               <AnimatePresence initial={false} custom={stepMotionContext}>
                 <motion.div
@@ -827,14 +936,14 @@ export function ProfileCompletionWizard({
                   exit="exit"
                   className="col-start-1 row-start-1 flex flex-col gap-1"
                 >
-                  <h2 className="text-lg font-semibold tracking-tight">{copy.title}</h2>
-                  <p className="text-sm text-muted-foreground">{copy.description}</p>
+                  <h2 className="text-xl">{copy.title}</h2>
+                  <p className="text-sm text-[var(--text-secondary)]">{copy.description}</p>
                 </motion.div>
               </AnimatePresence>
             </div>
           </header>
 
-          <div className="flex min-h-[280px] flex-col gap-5 px-5 py-5 sm:px-6">
+          <div className="flex min-h-[260px] flex-col gap-5 px-5 py-6 sm:px-8">
             <div className="relative grid flex-1">
               <AnimatePresence initial={false} custom={stepMotionContext}>
                 <motion.div
@@ -858,7 +967,7 @@ export function ProfileCompletionWizard({
             )}
           </div>
 
-          <footer className="flex flex-wrap items-center gap-2 border-t px-5 py-4 sm:px-6">
+          <footer className="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-8 max-sm:[&>button]:w-full">
             {actions}
           </footer>
         </section>
@@ -893,7 +1002,7 @@ export function ProfileCompletionWizard({
                 className="col-start-1 row-start-1 flex flex-col gap-1"
               >
                 <DialogTitle>{copy.title}</DialogTitle>
-                <DialogDescription>{copy.description}</DialogDescription>
+                <DialogDescription>{copy.description}{isOptionalStep ? " Optional — you can add this later from your profile." : ""}</DialogDescription>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -922,6 +1031,7 @@ export function ProfileCompletionWizard({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          {refreshNotice}
         </DialogBody>
 
         <DialogFooter className="border-t pt-4">

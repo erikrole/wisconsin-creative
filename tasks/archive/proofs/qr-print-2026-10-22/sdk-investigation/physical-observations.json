@@ -1,0 +1,34 @@
+{
+  "source": "User answers in this chat, 2026-10-22 America/Chicago",
+  "twoPage": {
+    "receiptId": "95e44e2a-dad8-495f-bce2-d03d2118cbdd",
+    "goodLabels": 2,
+    "initialBlankStrips": 1,
+    "betweenLabelBlankStrips": 0,
+    "userResponse": "Two good labels, one initial blank"
+  },
+  "stop": {
+    "receiptId": "063008bd-f133-4f41-9dfa-423513b3b52c",
+    "goodLabels": 0,
+    "blankStrips": 1,
+    "userResponse": "one blank, nothing else",
+    "firstPageOutcome": "uncertain, possibly held",
+    "hostUnsentPages": 2
+  },
+  "stopFeed": {
+    "receiptId": "063008bd-f133-4f41-9dfa-423513b3b52c",
+    "goodLabels": 1,
+    "blankStrips": 1,
+    "userResponse": "One good label plus a blank strip",
+    "inkPixelsResent": 0,
+    "packetSha256": "c244a46c4d00762592292b3ad3a1b911e9dca73171887883133bbbd8d2b8d404"
+  },
+  "recovery": {
+    "childId": "1c7f380b-debd-441b-9bca-206aa31ac726",
+    "sourcePageIndices": [
+      1,
+      2
+    ],
+    "status": "Both USB printing-to-receive transitions received; physical count pending"
+  }
+}

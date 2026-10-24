@@ -1,10 +1,10 @@
 # Tasks Index
 
-Last updated: 2026-10-20
+Last updated: 2026-10-22
 
 ## Start Here
 
-- Use `DESLOPPIFY.md` for standing cleanup policy (backlog closed 2026-06-22).
+- Use `docs/DESLOPPIFY.md` for standing cleanup policy (backlog closed 2026-06-22).
 - Use `tasks/repo-hygiene-cleanup-plan-2026-10-07.md` for the current hygiene slice and remaining database follow-ups.
 - Use `tasks/item-data-hygiene-status-2026-10-07.md` for item catalog data quality: what is done, physical queues, and Operations hygiene parity.
 - Use `tasks/item-cleanup-wizard-plan-2026-10-07.md` for the guided Cleanup wizard (legacy QR + missing serial).
@@ -38,6 +38,8 @@ As of the 2026-10-07 hygiene pass, root `tasks/` contains:
 Audit files intentionally remain at root for now because the repo audit skills read and write `tasks/audit-*.md` paths directly.
 
 ## Active Follow-up Ledgers
+
+- `onboarding-continuity-2026-10-22.md` — web/iOS save and resume, optional-photo Finish and avatar recovery; local verification is separate from authenticated bidirectional handoff and Monday rollout.
 
 - `performance-web-ios-neon-2026-10-20.md` — browser cache/request lifecycle, native decode/persistence/network work, and production Neon diagnostics; tracks rollout and physical-device energy proof separately.
 
@@ -203,3 +205,11 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `web-interface-audit-plan-2026-06-05.md` - completed web interface audit execution plan.
 - `web-bug-sweep-plan-2026-05-24.md` - completed web bug sweep ledger.
 - `sprint-april-plan-2026-04-17.md` - completed April sprint plan.
+
+## Completed 2026-10-22
+
+- [Recent iOS review fixes and Welcome refinement](archive/completed-2026-10-22/ios-review-fixes.md): all 11 findings fixed, seven simulator UI scenarios verified, local visual reviews retained. Authenticated/physical rollout and existing style drift are explicitly separate.
+
+- [iOS style-drift cleanup](archive/completed-2026-10-22/ios-style-drift.md): zero detector hits, simulator verification wrapper and interaction checks pass; matched light/dark review retained.
+
+- [QR Print direct USB and safe history](archive/completed-2026-10-22/qr-print-audit-plan-2026-10-22.md): shipped in #617; physical mixed-layout/scan/Stop/recovery, authenticated admin/student/browser checks, production migration and Ready deployment verified.

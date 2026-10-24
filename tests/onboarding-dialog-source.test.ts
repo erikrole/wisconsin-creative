@@ -10,7 +10,7 @@ describe("onboarding dialog source wiring", () => {
     expect(source).toContain("Max 50 per batch");
     expect(source).toContain("already allowlisted or registered");
     expect(source).toContain("Users set their own password the first time they sign in.");
-    expect(source).toContain("No shared first-login password is created.");
+    expect(source).toContain("Each new person was emailed their setup link.");
     expect(source).toContain("Upload CSV");
     expect(source).toContain('accept=".csv,text/csv"');
     expect(source).toContain("Retry failed invitations");
@@ -53,7 +53,9 @@ describe("onboarding dialog source wiring", () => {
     expect(source).toContain("Authenticated preview checks existing users and invitations before commit.");
     expect(source).toContain("Review account status before saving invitations.");
     expect(source).toContain("serverBlockingRows.length > 0");
-    expect(source).toContain("Send users to the app login page. They enter their invited email and are routed to password setup automatically.");
+    expect(source).toContain("These invitations were not emailed.");
+    expect(source).toContain("...(emailInviteNow ? { sendInvite: true } : {}),");
+    expect(source).toContain("Nothing new to add");
     expect(source).toContain("requested: emails.length");
   });
 

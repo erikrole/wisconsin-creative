@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { withLatestKioskBeats } from "@/lib/kiosk-heartbeat-cache";
 import { withAuth } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
@@ -14,7 +15,7 @@ import { displayBookingTitle } from "@/lib/booking-display-title";
 export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "kiosk_device", "view");
 
-  const devices = await db.kioskDevice.findMany({
+  const storedDevices = await db.kioskDevice.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       location: { select: { id: true, name: true } },
@@ -22,6 +23,8 @@ export const GET = withAuth(async (req, { user }) => {
   });
 
   // Aggregate open custody and pending reservation handoffs per location.
+  // Idle kiosks heartbeat through Redis; show their newest beat.
+  const devices = await withLatestKioskBeats(storedDevices);
   const locationIds = unique(devices.map((d) => d.locationId));
   const now = new Date();
   const [openCheckoutStats, pendingPickupStats, pendingPickupsByLocation] = await Promise.all([

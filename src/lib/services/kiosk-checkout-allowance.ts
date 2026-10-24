@@ -5,8 +5,7 @@ import { findLeftoverReservationPickup } from "@/lib/services/reservation-pickup
 
 type Client = Prisma.TransactionClient | PrismaClient;
 
-export const CHECKOUT_LIMIT_CODE = "checkout_limit";
-export const LEFTOVER_PICKUP_CODE = "leftover_pickup";
+const CHECKOUT_LIMIT_CODE = "checkout_limit";
 
 export type KioskCheckoutAllowance = {
   /** Personal OPEN + PENDING_PICKUP checkouts, the set the limit counts. */
@@ -33,7 +32,7 @@ export async function countPersonalActiveCheckouts(tx: Client, userId: string) {
   });
 }
 
-export async function loadCheckoutLimit(tx: Client): Promise<number | null> {
+async function loadCheckoutLimit(tx: Client): Promise<number | null> {
   const policyRow = await tx.systemConfig.findUnique({
     where: { key: "checkout_policies" },
     select: { value: true },

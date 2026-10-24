@@ -20,20 +20,24 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
+vi.mock("@/lib/services/invite-token", () => ({
+  inviteTokenMatches: vi.fn(async (_invite: unknown, raw: string | undefined) => raw === "valid-invite-token"),
+}));
+
 import { db } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { POST } from "@/app/api/auth/discover/route";
 
 const noParams = { params: Promise.resolve({}) };
 
-function postDiscover(email: string) {
+function postDiscover(email: string, invite?: string) {
   return new Request("https://app.example.com/api/auth/discover", {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "x-forwarded-for": "127.0.0.1",
     },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, ...(invite ? { invite } : {}) }),
   });
 }
 
@@ -62,12 +66,14 @@ describe("POST /api/auth/discover", () => {
     const response = await POST(postDiscover(" INVITED@EXAMPLE.COM "), noParams);
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ flow: "onboarding" });
+    await expect(response.json()).resolves.toEqual({ flow: "onboarding", inviteLink: "required" });
     expect(db.allowedEmail.findUnique).toHaveBeenCalledWith({
       where: { email: "invited@example.com" },
       select: {
         claimedAt: true,
         role: true,
+        inviteTokenHash: true,
+        inviteTokenIssuedAt: true,
         collaboratorPolicy: { select: { status: true } },
       },
     });
@@ -106,6 +112,16 @@ describe("POST /api/auth/discover", () => {
     expect(db.user.findUnique).not.toHaveBeenCalled();
   });
 
+  it("opens account setup only when the visit carries the emailed invite link", async () => {
+    vi.mocked(db.allowedEmail.findUnique).mockResolvedValue(allowed as never);
+
+    const withLink = await (await POST(postDiscover("invited@example.com", "valid-invite-token"), noParams)).json();
+    const wrongLink = await (await POST(postDiscover("invited@example.com", "someone-elses-token"), noParams)).json();
+
+    expect(withLink).toEqual({ flow: "onboarding", inviteLink: "valid" });
+    expect(wrongLink).toEqual({ flow: "onboarding", inviteLink: "required" });
+  });
+
   it("does not expose account metadata in the response", async () => {
     vi.mocked(db.allowedEmail.findUnique).mockResolvedValue({
       ...allowed,
@@ -114,7 +130,7 @@ describe("POST /api/auth/discover", () => {
 
     const body = await (await POST(postDiscover("staff@example.com"), noParams)).json();
 
-    expect(body).toEqual({ flow: "onboarding" });
+    expect(body).toEqual({ flow: "onboarding", inviteLink: "required" });
     expect(body).not.toHaveProperty("role");
     expect(body).not.toHaveProperty("name");
     expect(body).not.toHaveProperty("profile");

@@ -11,6 +11,9 @@ import AppSidebar from "@/components/Sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CurrentUser } from "@/hooks/use-current-user";
+import { GettingStartedCard } from "@/app/(app)/_home/GettingStartedCard";
+import { WrappedBannerView } from "@/components/wrapped/WrappedBanner";
+import { CantWorkDialog } from "@/components/availability/CantWorkDialog";
 import { HomeSkeleton, HomeView, type HomeViewProps, type Slot } from "@/app/(app)/_home/HomeView";
 import {
   TRADE_BOARD_HREF,
@@ -96,6 +99,15 @@ function buildProps(role: HomeRole, state: LabState, now: Date): Omit<HomeViewPr
     teamGear: ready({ rows: gearRows(data.teamCheckouts.items.slice(0, 5), now, true), total: data.teamCheckouts.total }),
     trades: role === "STUDENT" ? (partial ? error : ready(tradeRows(claimable.slice(0, 3), now))) : undefined,
     tradesHref: TRADE_BOARD_HREF,
+    cantWork: role === "STUDENT"
+      ? ready(state === "empty" ? { away: [], weekly: [] } : {
+        away: [
+          { id: "a1", title: "Trip home", when: "Wed, Nov 25 – Sun, Nov 29" },
+          { id: "a2", title: "Chem midterm", when: "Tue, Dec 8 · 6 PM – 9 PM" },
+        ],
+        weekly: ["COMM 201", "Job at the Union"],
+      })
+      : undefined,
   };
 }
 
@@ -107,6 +119,7 @@ function Lab({ fontClass }: { fontClass: string }) {
   const state = (STATES.includes(params.get("state") as LabState) ? params.get("state") : "ready") as LabState;
   const at = params.get("at");
   const [now] = useState(() => (at ? new Date(at) : new Date()));
+  const [cantWorkOpen, setCantWorkOpen] = useState(false);
   const [reminded, setReminded] = useState<ReadonlySet<string>>(() => new Set());
   const user = { id: "dev", name: NAMES[role], email: "dev@example.com", role } as CurrentUser;
 
@@ -127,7 +140,11 @@ function Lab({ fontClass }: { fontClass: string }) {
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <AppSidebar user={user} overdueBadgeCount={role === "COLLABORATOR" ? 0 : 1} />
+        <AppSidebar
+          user={user}
+          overdueBadgeCount={role === "COLLABORATOR" ? 0 : 1}
+          attentionCounts={role === "ADMIN" ? { "/wishlist": { count: 4, suffix: "waiting on a decision" }, "/issues": { count: 3, suffix: "open" } } : undefined}
+        />
         <BreadcrumbProvider>
           <div className="min-w-0 flex-1 bg-background">
             <AppTopBar isCollaborator={role === "COLLABORATOR"} onSearch={() => {}} unreadNotifications={3} user={user} />
@@ -148,8 +165,9 @@ function Lab({ fontClass }: { fontClass: string }) {
               {state === "loading" && params.get("skeleton") === "route" ? (
                 <HomeSkeleton />
               ) : (
-                <HomeView {...buildProps(role, state, now)} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
+                <HomeView {...buildProps(role, state, now)} onAddCantWork={() => setCantWorkOpen(true)} banners={<>{params.get("firstrun") === "1" && <GettingStartedCard />}{(params.get("wrapped") === "preview" || params.get("wrapped") === "open") && <WrappedBannerView state={params.get("wrapped") as "preview" | "open"} />}</>} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
               )}
+              <CantWorkDialog userId="dev" open={cantWorkOpen} onOpenChange={setCantWorkOpen} />
             </main>
           </div>
         </BreadcrumbProvider>
@@ -172,7 +190,9 @@ function Lab({ fontClass }: { fontClass: string }) {
 export default function HomeLab({ fontClass }: { fontClass: string }) {
   const [queryClient] = useState(() => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-    client.setQueryData(["me"], null);
+    // `?wrapped=preview|open` shows the Creative Wrapped banner. `?firstrun=1` shows the new-student Getting started card for a 3-day-old student account.
+    client.setQueryData(["me"], { id: "dev", name: "Maya Chen", email: "maya@wisc.edu", role: "STUDENT", accountCreatedAt: new Date(Date.now() - 3 * 86_400_000).toISOString() });
+    client.setQueryData(["profile-completion"], { profile: { role: "STUDENT" }, completion: { profileComplete: false } });
     return client;
   });
   return (

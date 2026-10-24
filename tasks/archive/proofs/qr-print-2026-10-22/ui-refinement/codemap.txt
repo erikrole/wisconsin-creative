@@ -1,0 +1,5 @@
+
+> creative-ops@2026.04.08.1 codemap
+> node scripts/generate-codemaps.mjs
+
+Generated 8 codemap files.

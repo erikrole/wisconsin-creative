@@ -164,6 +164,8 @@ struct AuthScreen<Content: View, Footer: View>: View {
     let subtitle: String
     /// Sheets opened from sign-in drop the mark; the page behind carries it.
     var showsMark = true
+    /// Long forms let the system reduce the viewport above the keyboard.
+    var avoidsKeyboard = false
     @ViewBuilder var content: Content
     @ViewBuilder var footer: Footer
 
@@ -213,7 +215,7 @@ struct AuthScreen<Content: View, Footer: View>: View {
                 .scrollDismissesKeyboard(.interactively)
             }
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .ignoresSafeArea(avoidsKeyboard ? [] : .keyboard, edges: .bottom)
         .preferredColorScheme(.dark)
     }
 }

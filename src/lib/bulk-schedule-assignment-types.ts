@@ -55,7 +55,7 @@ export const bulkAssignmentScopeSchema = z.object({
   period: z.enum(ASSIGNMENT_PERIOD_VALUES).default("custom"),
 }).superRefine((scope, ctx) => {
   if (new Date(scope.rangeEndsAt) <= new Date(scope.rangeStartsAt)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rangeEndsAt"], message: "End date must be after start date" });
+    ctx.addIssue({ code: "custom", path: ["rangeEndsAt"], message: "End date must be after start date" });
   }
 });
 

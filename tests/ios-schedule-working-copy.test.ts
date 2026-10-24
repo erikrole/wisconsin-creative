@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
-const apiClient = readFileSync("ios/Wisconsin/Core/APIClient.swift", "utf8");
+const apiClient = apiClientSource();
 const scheduleModels = readFileSync("ios/Wisconsin/Models/ScheduleModels.swift", "utf8");
 const eventDetail = readFileSync("ios/Wisconsin/Views/EventDetailSheet.swift", "utf8");
 const assignSheet = readFileSync("ios/Wisconsin/Views/Schedule/AssignStudentSheet.swift", "utf8");

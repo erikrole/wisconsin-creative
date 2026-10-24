@@ -1,0 +1,7 @@
+{
+  "nativeSource": "84586e71f11548b83b119588bbdf7dd7f59025b7",
+  "webCandidate": "09561456e64fade677afc6c03552537c158e2f8f",
+  "iosTree": "ea9187f1c58a43d108a2423412c4cc573130a64d",
+  "privatePreviewSwiftFilesIdentical": 225,
+  "intentionalDifferences": "Separate bundle/app-group identity and private live test driver; no production Swift differences"
+}

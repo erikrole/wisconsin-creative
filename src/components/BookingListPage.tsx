@@ -45,6 +45,7 @@ import {
   type ListResponse,
 } from "./booking-list";
 import type { TabKey as BookingSheetSection } from "./booking-details/types";
+import { useHydrated } from "@/hooks/use-browser-state";
 
 /* ───── Re-exports for backward compatibility ───── */
 export type { BookingItem, BookingListConfig, StatusOption, ContextMenuExtra };
@@ -116,12 +117,8 @@ export default function BookingListPage({
   const [locationFilter, setLocationFilter] = useState(urlParams.get("location_id") || "");
   const [userFilter, setUserFilter] = useState(urlParams.get("requester_id") || "");
   const [specialFilter, setSpecialFilter] = useState(urlParams.get("filter") || "");
-  const [clientReady, setClientReady] = useState(false);
+  const clientReady = useHydrated();
   const defaultStatusFiltersKey = config.defaultStatusFilters?.join(",") ?? "";
-
-  useEffect(() => {
-    setClientReady(true);
-  }, []);
 
   useEffect(() => {
     const nextParams = new URLSearchParams(urlSignature);

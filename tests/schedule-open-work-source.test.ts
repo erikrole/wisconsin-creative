@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("schedule open work source contracts", () => {
   it("keeps Open Work separate from trade listing while preserving trade actions", () => {
@@ -81,7 +82,7 @@ describe("schedule open work source contracts", () => {
   });
 
   it("keeps native iOS on the same Open Work contract as web", () => {
-    const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const apiClient = apiClientSource();
     const models = source("ios/Wisconsin/Models/ShiftTradeModels.swift");
     const sheet = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
 

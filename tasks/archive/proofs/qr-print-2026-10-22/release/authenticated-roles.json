@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-22T22:02:52.823Z",
+  "branchId": "br-jolly-recipe-au0clpjv",
+  "jobId": "a47ac840-d2fb-4599-922c-a87ada2ce462",
+  "syntheticStudentIds": [
+    "e4395d1d-e8b6-48d8-a320-36a590491ec6",
+    "90d6c245-b073-4f96-a40b-588248cce96f"
+  ],
+  "checks": [
+    "two real synthetic student logins",
+    "student print create remains allowed",
+    "session attribution ignores other accounts",
+    "foreign student history and checkpoints blocked",
+    "shared-browser reservation enforced",
+    "staff cannot send or acknowledge another operator label",
+    "staff can explicitly reconcile without impersonation",
+    "actual audit actor preserves reviewer identity",
+    "own-history query contains only the signed-in student"
+  ],
+  "physicalOutput": "None; all test records explicitly synthetic, no USB commands sent."
+}

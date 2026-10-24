@@ -50,14 +50,14 @@ export const workingSchedulePayloadSchema = z.object({
   slots: z.array(workingSlotSchema).max(250),
 }).superRefine((payload, ctx) => {
   if (new Date(payload.eventEndsAt) <= new Date(payload.eventStartsAt)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Event end must be after event start" });
+    ctx.addIssue({ code: "custom", message: "Event end must be after event start" });
   }
 
   const keys = new Set<string>();
   for (const [index, slot] of payload.slots.entries()) {
     if (keys.has(slot.key)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["slots", index, "key"],
         message: "Working slot keys must be unique",
       });
@@ -65,21 +65,21 @@ export const workingSchedulePayloadSchema = z.object({
     keys.add(slot.key);
     if (new Date(slot.endsAt) <= new Date(slot.startsAt)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["slots", index, "endsAt"],
         message: "Shift end must be after shift start",
       });
     }
     if (Boolean(slot.callStartsAt) !== Boolean(slot.callEndsAt)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["slots", index],
         message: "Call start and end must both be set or both be empty",
       });
     }
     if (slot.callStartsAt && slot.callEndsAt && new Date(slot.callEndsAt) <= new Date(slot.callStartsAt)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["slots", index, "callEndsAt"],
         message: "Call end must be after call start",
       });
@@ -93,7 +93,7 @@ export const workingSchedulePayloadSchema = z.object({
     if (assignment) {
       if (Boolean(assignment.callStartsAt) !== Boolean(assignment.callEndsAt)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["slots", index, "assignment"],
           message: "Call start and end must both be set or both be empty",
         });
@@ -104,7 +104,7 @@ export const workingSchedulePayloadSchema = z.object({
         && new Date(assignment.callEndsAt) <= new Date(assignment.callStartsAt)
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["slots", index, "assignment", "callEndsAt"],
           message: "Call end must be after call start",
         });

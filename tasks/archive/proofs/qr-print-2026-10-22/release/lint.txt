@@ -1,0 +1,90 @@
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/board-sizes/app.js
+    23:82   warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+    24:81   warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+    27:73   warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+   206:57   warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  1238:121  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  1869:166  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  1871:14   warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  2270:102  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  2503:14   warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/frame/app.js
+   59:85  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+   67:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  623:71  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  637:65  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  732:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  777:76  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  793:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/frame/core.js
+  139:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/golden-hour/app.js
+   29:67  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+   42:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+   64:86  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+   65:93  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+   84:76  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+   88:83  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  667:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/golden-hour/core.js
+  126:86  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  175:85  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/qrcode/app.js
+    91:61  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+    95:74  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+   363:16  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+   621:67  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+   631:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+   754:85  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  1057:55  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  1080:78  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  1087:45  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  1088:78  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  1181:67  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  1328:78  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/qrcode/core.js
+  203:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  954:16  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/timelapse/app.js
+   54:82  warning  'e' is defined but never used              @typescript-eslint/no-unused-vars
+   55:81  warning  'e' is defined but never used              @typescript-eslint/no-unused-vars
+  176:9   warning  'list' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  478:71  warning  'e' is defined but never used              @typescript-eslint/no-unused-vars
+  484:85  warning  'e' is defined but never used              @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/public/timelapse/core.js
+  441:118  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/src/app/(app)/reports/utilization/charts.tsx
+  14:3   warning  'REPORT_CHART_COLORS' is defined but never used  @typescript-eslint/no-unused-vars
+  91:35  warning  'index' is defined but never used                @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/src/app/api/kiosk/dashboard/route.ts
+  164:37  warning  '_req' is defined but never used   @typescript-eslint/no-unused-vars
+  164:45  warning  'kiosk' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/src/lib/services/bookings-checkin.ts
+  6:3  warning  'BulkMovementKind' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/tests/hiring-retention.test.ts
+  23:70  warning  '_options' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/tests/ios-crew-row-standardization.test.ts
+  6:7  warning  'SCHEDULE' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/tests/ios-launch-experience.test.ts
+  141:11  warning  'launch' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/role/.codex/worktrees/qr-print-audit/wisconsin-creative/tests/web-sidebar-source.test.ts
+  134:11  warning  'appShell' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 55 problems (0 errors, 55 warnings)
+

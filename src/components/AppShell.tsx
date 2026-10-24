@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon } from "lucide-react";
 import AppSidebar from "./Sidebar";
@@ -12,6 +12,7 @@ import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
+import { useOnline } from "@/hooks/use-browser-state";
 import { clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { toast } from "sonner";
@@ -115,7 +116,9 @@ export default function AppShell({
   // tore the poll down and re-bootstrapped it on every client-side navigation,
   // which re-POSTed the app-open easter-egg event and reset the 15s interval.
   const rewardPathRef = useRef(pathname);
-  rewardPathRef.current = pathname;
+  useLayoutEffect(() => {
+    rewardPathRef.current = pathname;
+  });
 
   useEffect(() => {
     if (!isLoading && !user) router.replace("/login");
@@ -335,16 +338,7 @@ export default function AppShell({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isCollaborator, pathname]);
 
-  // Offline detection
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    setOnline(navigator.onLine);
-    const goOnline = () => setOnline(true);
-    const goOffline = () => setOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => { window.removeEventListener("online", goOnline); window.removeEventListener("offline", goOffline); };
-  }, []);
+  const online = useOnline();
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -405,6 +399,7 @@ export default function AppShell({
         attentionCounts={{
           "/wishlist": { count: sidebarCounts?.openWishes ?? 0, suffix: "waiting on a decision" },
           "/licenses": { count: sidebarCounts?.reportedLicenses ?? 0, suffix: "reported codes" },
+          "/damage": { count: sidebarCounts?.openDamageCases ?? 0, suffix: "open damage and loss cases" },
           "/issues": { count: sidebarCounts?.openProblems ?? 0, suffix: "open problems" },
         }}
       />

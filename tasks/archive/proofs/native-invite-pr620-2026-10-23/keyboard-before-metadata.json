@@ -1,0 +1,21 @@
+{
+  "sourceRevision": "7bf5f38658611eb7da72a71c482f1514b7e03bc8",
+  "sourcePatchSha256": "a3da4dd322ce63864feea3fff6902e59d2e86561ffecf22f8fa8cf6765f09522",
+  "settings": {
+    "device": "iPhone 18 Pro Max",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "native-valid-invite-Student82A",
+    "role": "signed-out student",
+    "route": "native registration",
+    "appearance": "auth dark",
+    "textSize": "default",
+    "locale": "en_US",
+    "timezone": "America/Chicago",
+    "clock": "status bar 9:41; fixture not time-sensitive",
+    "scroll": "one upward swipe after confirming password; keyboard present"
+  },
+  "comparisonStatus": "Diagnostic reference only. Scroll action is known, final scroll offset was not measured. Not eligible for a matched-pair receipt."
+}

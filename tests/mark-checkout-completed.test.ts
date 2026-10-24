@@ -540,4 +540,44 @@ describe("forceCompleteCheckout", () => {
       expect.objectContaining({ userId: "user-1", bookingId: "b-1" }),
     );
   });
+
+  it("never restocks a battery already reported missing at check-in", async () => {
+    const numberedBulk = makeBulkItem({
+      id: "bulk-numbered",
+      bulkSkuId: "sku-numbered",
+      plannedQuantity: 3,
+      checkedOutQuantity: 3,
+      checkedInQuantity: 2,
+      // Unit #7 was reported missing at check-in: LOST, allocation already closed.
+      unitAllocations: [],
+    });
+    mockTx.bulkStockMovement.groupBy.mockResolvedValue([
+      movementRow("sku-numbered", "CHECKOUT", 3),
+      movementRow("sku-numbered", "CHECKIN", 2),
+    ]);
+    mockTx.checkinItemReport.findMany.mockResolvedValueOnce([
+      { bulkSkuId: null, quantity: null, bulkSkuUnit: { bulkSkuId: "sku-numbered" } },
+    ]);
+    mockTx.booking.findUnique.mockResolvedValue(openCheckout({ serializedItems: [], bulkItems: [numberedBulk] }));
+    mockTx.bookingSerializedItem.updateMany.mockResolvedValue({});
+    mockTx.bookingBulkItem.update.mockResolvedValue({});
+    mockTx.assetAllocation.updateMany.mockResolvedValue({});
+    mockTx.bulkStockBalance.findMany.mockResolvedValue([]);
+    mockTx.bulkStockBalance.upsert.mockResolvedValue({});
+    mockTx.bulkStockMovement.createMany.mockResolvedValue({});
+    mockTx.booking.update.mockResolvedValue({});
+    mockTx.scanSession.updateMany.mockResolvedValue({});
+    mockTx.overrideEvent.create.mockResolvedValue({});
+    mockTx.auditLog.create.mockResolvedValue({});
+
+    await forceCompleteCheckout({
+      bookingId: "b-1",
+      actorUserId: "actor-1",
+      reason: "Scanner offline, all gear verified on shelf.",
+    });
+
+    // 3 out - 2 in - 1 reported missing = nothing left to restore.
+    expect(mockTx.bulkStockBalance.upsert).not.toHaveBeenCalled();
+    expect(mockTx.bulkStockMovement.createMany).not.toHaveBeenCalled();
+  });
 });

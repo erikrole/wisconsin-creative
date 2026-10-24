@@ -30,6 +30,7 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: GearOps
+      - path: ../ios/Wisconsin/Shared/DiagnosticBreadcrumbs.swift
       - path: ../ios/Wisconsin/Assets.xcassets
     resources:
       - path: GearOps/Supporting/AppIcon.icns

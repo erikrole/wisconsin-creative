@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { scheduleSurfaceSource, source } from "./_helpers/source";
+import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("iOS collaborator Published Schedule redesign", () => {
   const schedule = scheduleSurfaceSource();
-  const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+  const apiClient = apiClientSource();
   const service = source("src/lib/services/collaborator-schedule.ts");
 
   it("keeps discovery on current published snapshots and paginates safely", () => {

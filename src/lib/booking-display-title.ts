@@ -5,6 +5,9 @@ import { SPORT_CODE_SET, generateEventTitle, sportLabel } from "@/lib/sports";
 /** A legacy "(Neutral)" tag; the neutral site belongs in the event detail, not the title. */
 const NEUTRAL_SUFFIX = /\s*\(neutral\)\s*$/i;
 
+/** Old promo text that rode along on game bookings ("Stuff the Fieldhouse"); never part of the title. */
+const LEFTOVER_PROMO = /\s*[-–—(]*\s*stuff the field\s?house\)?/gi;
+
 /**
  * The one booking-title scheme: "<Sport name> vs|at <Opponent>".
  *
@@ -25,7 +28,7 @@ function expandLeadingSportCode(title: string): string {
  * rewrites stored or audit values.
  */
 export function displayBookingTitle(title: string): string {
-  const cleaned = cleanSourceSummary(title);
+  const cleaned = cleanSourceSummary(title.replace(LEFTOVER_PROMO, " ")).replace(/\s*[-–—:]\s*$/, "") || cleanSourceSummary(title);
   const game = cleaned.match(/^(.+?)\s+(vs\.?|at)\s+(.+)$/i);
   if (game) {
     const [, sport = "", word = "vs", rawOpponent = ""] = game;
