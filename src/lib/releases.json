@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-24",
+    "title": "Contact details on profiles",
+    "type": "feature",
+    "summary": "Staff and student profiles in the iPhone app now show email and phone numbers, with quick Message, Call and Email buttons.",
+    "details": [
+      "Hold an email or phone row to copy it.",
+      "Hold a phone row to text or call from the menu.",
+      "Your own profile doesn't show the card."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 631
+  },
+  {
+    "date": "2026-10-24",
     "title": "iPhone app: Chicago time everywhere",
     "type": "fix",
     "summary": "Today, Tomorrow and every shift and game time in the iPhone app now follow Central time, even if your phone is set to another zone.",
