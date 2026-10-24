@@ -139,6 +139,7 @@
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`
+- `test:postgres`: `node scripts/test-onboarding-postgres.mjs`
 - `test:watch`: `vitest`
 - `verify:docs`: `node scripts/check-repo-hygiene.mjs && npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`
