@@ -92,7 +92,7 @@
     "analyze": "node scripts/run-next.mjs analyze",
     "start": "node scripts/run-next.mjs start",
     "lint": "eslint .",
-    "lint:ci": "eslint . --max-warnings=230",
+    "lint:ci": "eslint . --max-warnings=203",
     "lint:summary": "node scripts/lint-summary.mjs",
     "codemap": "node scripts/generate-codemaps.mjs",
     "codemap:check": "node scripts/generate-codemaps.mjs --check",

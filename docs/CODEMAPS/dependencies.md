@@ -10,9 +10,9 @@
 | `@neondatabase/serverless` | `1.2.0` |
 | `@prisma/adapter-neon` | `^7.10.1` |
 | `@prisma/client` | `^7.10.1` |
-| `@sentry/nextjs` | `^10.76.2` |
-| `@simplewebauthn/browser` | `^13.3.0` |
-| `@simplewebauthn/server` | `^13.3.3` |
+| `@sentry/nextjs` | `^11.8.0` |
+| `@simplewebauthn/browser` | `^14.0.0` |
+| `@simplewebauthn/server` | `^14.0.3` |
 | `@tailwindcss/postcss` | `^4.3.3` |
 | `@tanstack/query-sync-storage-persister` | `^5.104.0` |
 | `@tanstack/react-query` | `^5.104.0` |
@@ -20,7 +20,7 @@
 | `@tanstack/react-table` | `^8.21.3` |
 | `@upstash/ratelimit` | `^2.2.0` |
 | `@upstash/redis` | `^1.38.0` |
-| `@vercel/analytics` | `1.6.1` |
+| `@vercel/analytics` | `2.0.1` |
 | `@vercel/blob` | `^2.8.1` |
 | `@vercel/functions` | `3.10.1` |
 | `@vercel/speed-insights` | `2.0.0` |
@@ -31,14 +31,14 @@
 | `date-fns` | `^4.4.0` |
 | `exceljs` | `4.4.0` |
 | `geist` | `^1.7.2` |
-| `lucide-react` | `^0.577.0` |
-| `motion` | `^12.43.0` |
+| `lucide-react` | `^1.59.0` |
+| `motion` | `^14.3.0` |
 | `next` | `^16.4.2` |
 | `postcss` | `^8.5.30` |
 | `qrcode` | `^1.5.4` |
 | `radix-ui` | `^1.8.1` |
 | `react` | `^19.3.0` |
-| `react-day-picker` | `^9.14.0` |
+| `react-day-picker` | `^10.0.2` |
 | `react-dom` | `^19.3.0` |
 | `react-markdown` | `^10.1.0` |
 | `recharts` | `^3.10.1` |
@@ -68,6 +68,7 @@
 | `@types/react-dom` | `^19.3.0` |
 | `@types/web-push` | `^3.6.4` |
 | `@vitest/coverage-v8` | `^5.0.5` |
+| `axe-core` | `^4.14.0` |
 | `dotenv` | `^16.6.1` |
 | `esbuild` | `0.28.1` |
 | `eslint` | `^9.39.4` |
@@ -115,7 +116,7 @@
 - `ios:xcode:verify`: `bash scripts/ios-xcode-verify.sh`
 - `ios:xcode:verify:kiosk`: `IOS_SCHEME=WisconsinKiosk bash scripts/ios-xcode-verify.sh`
 - `lint`: `eslint .`
-- `lint:ci`: `eslint . --max-warnings=230`
+- `lint:ci`: `eslint . --max-warnings=203`
 - `lint:summary`: `node scripts/lint-summary.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
@@ -136,6 +137,7 @@
 - `smoke:deploy`: `node scripts/deploy-smoke.mjs`
 - `start`: `node scripts/run-next.mjs start`
 - `test`: `vitest run`
+- `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`

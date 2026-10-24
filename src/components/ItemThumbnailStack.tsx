@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { isOptimizableAssetImageSrc, normalizeAssetImageSrc } from "@/lib/asset-image";
 
@@ -68,11 +68,8 @@ export function ItemThumbnailStack({
 
 function StackImage({ src, fallback }: { src?: string | null; fallback: string }) {
   const normalizedSrc = normalizeAssetImageSrc(src);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [normalizedSrc]);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = failedSrc !== null && failedSrc === normalizedSrc;
 
   if (!normalizedSrc || failed) {
     return fallback.toUpperCase();
@@ -87,7 +84,7 @@ function StackImage({ src, fallback }: { src?: string | null; fallback: string }
       className="object-cover"
       loading="lazy"
       unoptimized={!isOptimizableAssetImageSrc(normalizedSrc)}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(normalizedSrc)}
     />
   );
 }

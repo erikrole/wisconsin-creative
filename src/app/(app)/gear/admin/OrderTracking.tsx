@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Trash2Icon } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { GEAR_CATALOG } from "@/lib/gear-picks/catalog";
 import { buildOrderPlan } from "@/lib/gear-picks/order";
 import { orderPhase, receivingRows, type OrderPhase, type ReceivingRow } from "@/lib/gear-picks/receiving";
 import type { GearPickAdminParticipant, GearPickAdminStudent, GearPickOrderDto, GearPickReceiptDto } from "@/lib/gear-picks/types";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 type Change =
   | { action: "setOrder"; placedAt: string | null; poNumber: string | null; orderNumber: string | null; expectedAt: string | null }
@@ -76,16 +77,10 @@ export function OrderTracking({ participants, students, order, receipts, pending
 }
 
 function OrderRecord({ order, pending, onApply }: Pick<Props, "order" | "pending" | "onApply">) {
-  const [poNumber, setPoNumber] = useState(order.poNumber ?? "");
-  const [orderNumber, setOrderNumber] = useState(order.orderNumber ?? "");
-  const [placed, setPlaced] = useState(isoToDay(order.placedAt));
-  const [expected, setExpected] = useState(isoToDay(order.expectedAt));
-  useEffect(() => {
-    setPoNumber(order.poNumber ?? "");
-    setOrderNumber(order.orderNumber ?? "");
-    setPlaced(isoToDay(order.placedAt));
-    setExpected(isoToDay(order.expectedAt));
-  }, [order]);
+  const [poNumber, setPoNumber] = useSyncedDraft(order, (o) => o.poNumber ?? "");
+  const [orderNumber, setOrderNumber] = useSyncedDraft(order, (o) => o.orderNumber ?? "");
+  const [placed, setPlaced] = useSyncedDraft(order, (o) => isoToDay(o.placedAt));
+  const [expected, setExpected] = useSyncedDraft(order, (o) => isoToDay(o.expectedAt));
   const changed =
     poNumber.trim() !== (order.poNumber ?? "") ||
     orderNumber.trim() !== (order.orderNumber ?? "") ||
