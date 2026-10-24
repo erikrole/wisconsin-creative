@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-24",
+    "title": "UA gear shows everything you'll receive",
+    "type": "improvement",
+    "summary": "The UA staff gear page now opens on your picks and the gear in your kit, with photos and status, and the full catalog sits below.",
+    "details": [
+      "Your gear lists your picks first, then your standard-issue kit, each with a photo you can tap to enlarge.",
+      "Pieces that still need a size are flagged so you can fix them before the order goes in.",
+      "The Catalog button jumps to the full assortment."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-24",
     "title": "Clearer validation messages",
     "type": "improvement",
     "summary": "Form and request validation moved to a newer checker, so a few default messages read differently, such as \"Too big: expected array to have <=5 items\" where a limit is exceeded.",
