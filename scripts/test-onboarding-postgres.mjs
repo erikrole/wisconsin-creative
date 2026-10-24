@@ -43,7 +43,7 @@ try {
   run(join(binaries, "psql"), [connection.href, "-X", "-v", "ON_ERROR_STOP=1"], generateBaselineSql(connection.href));
   console.log("Disposable PostgreSQL: current Prisma schema; Unix socket only.");
   process.exitCode = await new Promise((resolve, reject) => {
-    child = spawn(process.execPath, [require.resolve("vitest/vitest.mjs"), "run", "--config", "vitest.onboarding-postgres.config.ts"], { env: environment, stdio: "inherit" });
+    child = spawn(process.execPath, [join(require.resolve("vitest/package.json"), "..", require("vitest/package.json").bin.vitest), "run", "--config", "vitest.onboarding-postgres.config.ts"], { env: environment, stdio: "inherit" });
     child.once("error", reject); child.once("exit", (code) => resolve(code ?? 1));
   });
 } finally {
