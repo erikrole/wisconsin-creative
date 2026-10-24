@@ -39,7 +39,7 @@ export const POST = withAuth<{ sportCode: string }>(async (req, { user, params }
     body = rosterBodySchema.parse(await req.json());
   } catch (err) {
     if (err instanceof z.ZodError) {
-      throw new HttpError(400, err.errors.map((e) => e.message).join(", "));
+      throw new HttpError(400, err.issues.map((e) => e.message).join(", "));
     }
     throw err;
   }

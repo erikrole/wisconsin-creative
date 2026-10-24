@@ -51,7 +51,7 @@
 | `vaul` | `^1.1.2` |
 | `web-push` | `^3.6.7` |
 | `workflow` | `4.8.13` |
-| `zod` | `^3.24.2` |
+| `zod` | `^4.6.7` |
 
 ## Dev Dependencies
 

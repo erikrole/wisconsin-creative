@@ -20,7 +20,7 @@ export const DELETE = withAuth(async (req, { user }) => {
     body = schema.parse(await req.json());
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new HttpError(400, error.errors[0]?.message ?? "Invalid request.");
+      throw new HttpError(400, error.issues[0]?.message ?? "Invalid request.");
     }
     throw error;
   }

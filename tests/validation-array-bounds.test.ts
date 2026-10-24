@@ -58,7 +58,7 @@ describe("shared mutation array bounds", () => {
         ...maximum,
         `cm${MAX_SPORT_ROSTER_USERS_PER_REQUEST.toString(36).padStart(23, "0")}`,
       ],
-    })).toThrow(`Array must contain at most ${MAX_SPORT_ROSTER_USERS_PER_REQUEST} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_SPORT_ROSTER_USERS_PER_REQUEST} items`);
   });
 
   it("accepts the exact scan maxima", () => {
@@ -92,15 +92,15 @@ describe("shared mutation array bounds", () => {
         { length: MAX_NUMBERED_UNITS_PER_CREATE + 1 },
         (_, index) => index + 1,
       ),
-    })).toThrow(`Array must contain at most ${MAX_NUMBERED_UNITS_PER_CREATE} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_NUMBERED_UNITS_PER_CREATE} items`);
     expect(() => scanSchema.parse({
       ...baseScan,
       quantity: MAX_BULK_QUANTITY_PER_LINE + 1,
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_QUANTITY_PER_LINE}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_QUANTITY_PER_LINE}`);
     expect(() => scanSchema.parse({
       ...baseScan,
       unitNumbers: [MAX_BULK_UNIT_NUMBER + 1],
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_UNIT_NUMBER}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_UNIT_NUMBER}`);
   });
 
   it("rejects duplicate scan unit numbers", () => {
@@ -122,7 +122,7 @@ describe("shared mutation array bounds", () => {
       ...bulkSkuInput,
       initialQuantity: MAX_BULK_QUANTITY_PER_LINE + 1,
       trackByNumber: false,
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_QUANTITY_PER_LINE}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_QUANTITY_PER_LINE}`);
     expect(() => createBulkSkuSchema.parse({
       ...bulkSkuInput,
       initialQuantity: MAX_NUMBERED_UNITS_PER_CREATE,
@@ -143,13 +143,13 @@ describe("shared mutation array bounds", () => {
     expect(() => createBulkSkuSchema.parse({
       ...bulkSkuInput,
       minThreshold: MAX_BULK_QUANTITY_PER_LINE + 1,
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_QUANTITY_PER_LINE}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_QUANTITY_PER_LINE}`);
     expect(() => updateBulkSkuSchema.parse({
       minThreshold: MAX_BULK_QUANTITY_PER_LINE,
     })).not.toThrow();
     expect(() => updateBulkSkuSchema.parse({
       minThreshold: MAX_BULK_QUANTITY_PER_LINE + 1,
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_QUANTITY_PER_LINE}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_QUANTITY_PER_LINE}`);
   });
 
   it("caps bulk-unit label numbers at the PostgreSQL Int maximum", () => {
@@ -160,7 +160,7 @@ describe("shared mutation array bounds", () => {
     expect(() => markBulkUnitLabelsSchema.parse({
       unitNumbers: [MAX_BULK_UNIT_NUMBER + 1],
       printed: true,
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_UNIT_NUMBER}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_UNIT_NUMBER}`);
   });
 
   it("accepts all six sport shift areas across each mutation schema", () => {
@@ -173,18 +173,18 @@ describe("shared mutation array bounds", () => {
     })).not.toThrow();
   });
 
-  it("rejects the duplicate area required to form a seventh shift config", () => {
+  it("rejects a seventh shift config before checking area uniqueness", () => {
     const overLimit = [...shiftConfigs, { area: ShiftArea.VIDEO }];
 
     expect(() => upsertSportConfigSchema.parse({
       sportCode: "FB",
       shiftConfigs: overLimit,
-    })).toThrow("Shift config areas must be unique");
+    })).toThrow("Too big: expected array to have <=6 items");
     expect(() => updateSportConfigSchema.parse({ shiftConfigs: overLimit }))
-      .toThrow("Shift config areas must be unique");
+      .toThrow("Too big: expected array to have <=6 items");
     expect(() => updateSportConfigGroupSchema.parse({
       codes: ["FB"],
       shiftConfigs: overLimit,
-    })).toThrow("Shift config areas must be unique");
+    })).toThrow("Too big: expected array to have <=6 items");
   });
 });

@@ -157,7 +157,7 @@ export const PATCH = withAuth(async (req, { user }) => {
     body = patchSchema.parse(await req.json());
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new HttpError(400, error.errors[0]?.message ?? "Invalid profile details");
+      throw new HttpError(400, error.issues[0]?.message ?? "Invalid profile details");
     }
     throw error;
   }

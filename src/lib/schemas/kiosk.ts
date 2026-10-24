@@ -38,7 +38,7 @@ export const checkoutCompleteBody = z.object({
 }).superRefine((body, ctx) => {
   if (!body.eventId && !body.customPurpose) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["eventId"],
       message: "Select an event or enter what this checkout is for",
     });
@@ -120,11 +120,11 @@ export const pickupSubstituteBody = z.object({
 });
 /** Admin: create a kiosk device (`POST /api/kiosk-devices`). */
 export const kioskDeviceCreateBody = z.object({
-  name: z.string({ required_error: "Name and location are required" })
+  name: z.string({ error: "Name and location are required" })
     .trim()
     .min(1, "Name and location are required")
     .max(100, "Kiosk name must be 100 characters or fewer"),
-  locationId: z.string({ required_error: "Name and location are required" })
+  locationId: z.string({ error: "Name and location are required" })
     .trim()
     .min(1, "Name and location are required"),
 });

@@ -94,7 +94,7 @@ const patchSchema = z.discriminatedUnion("action", [
   }),
 ]).superRefine((value, ctx) => {
   if (value.action === "updateParticipant" && value.fit === undefined && value.allowanceCents === undefined) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Change the fit or the allowance", path: ["fit"] });
+    ctx.addIssue({ code: "custom", message: "Change the fit or the allowance", path: ["fit"] });
   }
 });
 

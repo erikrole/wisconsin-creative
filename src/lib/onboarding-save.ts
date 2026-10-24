@@ -34,7 +34,7 @@ export const onboardingSaveSchema = z.object({
   step: z.literal("SAVE"),
   group: z.enum(Object.keys(ONBOARDING_GROUP_FIELDS) as [OnboardingGroup, ...OnboardingGroup[]]),
   expectedVersion: z.string().regex(/^[a-f0-9]{64}$/),
-  values: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  values: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
 }).strict();
 
 export function groupValues(profile: object, group: OnboardingGroup): OnboardingValues {
