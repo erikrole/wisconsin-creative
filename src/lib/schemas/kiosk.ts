@@ -12,7 +12,10 @@ import {
  * details, so handlers don't need to catch validation errors explicitly.
  */
 
-const cuidish = z.string().min(1);
+const cuidish = z.string().min(1).max(128);
+// Barcodes, QR payloads and Wiscard strips are short; the ceiling only stops
+// absurd payloads from reaching asset lookups.
+const scanValueField = z.string().trim().min(1, "Scan value required").max(256);
 const bulkUnitNumber = z.number().int().positive().max(MAX_BULK_UNIT_NUMBER);
 
 const checkoutCompleteItem = z.union([
@@ -63,7 +66,7 @@ export const activeCheckoutUpdateBody = z.object({
 });
 export const activeCheckoutAddItemBody = z.object({
   actorId: cuidish,
-  scanValue: z.string().trim().min(1, "Scan value required"),
+  scanValue: scanValueField,
 });
 export const activeCheckoutRemoveItemBody = z.object({
   actorId: cuidish,
@@ -83,13 +86,13 @@ export const activeCheckoutSwapItemBody = z.object({
     z.object({ assetId: cuidish }).strict(),
     z.object({ bulkSkuId: cuidish, unitNumber: bulkUnitNumber }).strict(),
   ]),
-  scanValue: z.string().trim().min(1, "Scan value required"),
+  scanValue: scanValueField,
 });
 export const checkinCompleteBody = z.object({
   actorId: cuidish,
 });
 const scanBody = z.object({
-  scanValue: z.string().trim().min(1, "Scan value required"),
+  scanValue: scanValueField,
   actorId: cuidish.optional(),
 });
 
@@ -103,7 +106,7 @@ export const pickupScanBody = scanBody.extend({
 export const scanLookupBody = scanBody;
 
 export const resolveKioskScanBody = z.object({
-  scanValue: z.string().trim().min(1, "Scan value required").max(256),
+  scanValue: scanValueField,
   userId: cuidish.optional(),
 });
 export const pickupConfirmBody = z.object({
@@ -115,7 +118,7 @@ export const pickupConfirmBody = z.object({
 });
 export const pickupSubstituteBody = z.object({
   actorId: cuidish,
-  scanValue: z.string().trim().min(1, "Scan value required"),
+  scanValue: scanValueField,
   reservedAssetId: cuidish,
 });
 /** Admin: create a kiosk device (`POST /api/kiosk-devices`). */
