@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useId } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { BoxesIcon, CameraIcon, LinkIcon, PackageOpen, TriangleAlert } from "luc
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { minimumBookingEndDate } from "@/lib/quarter-hour";
 import type { BookingDetail, BookingPhoto } from "./types";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 type Props = {
   booking: BookingDetail;
@@ -251,13 +252,9 @@ function NotesField({
   canEdit: boolean;
   onSave: (v: string) => Promise<void>;
 }) {
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useSyncedDraft(value);
   const saveField = useSaveField(onSave);
   const fieldId = useId();
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
 
   const isDirty = draft.trim() !== (value || "");
 
