@@ -89,9 +89,10 @@ export function GearPickLineList({
                   type="button"
                   onClick={() => onJump(entry.item.style)}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                  aria-label={`${entry.item.name}, ${entry.color.label}. Show it in the catalog.`}
                 >
                   {content}
+                  {/* The visible text stays the accessible name, so voice control can say what it sees. */}
+                  <span className="sr-only">Show it in the catalog.</span>
                 </button>
               ) : (
                 <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>

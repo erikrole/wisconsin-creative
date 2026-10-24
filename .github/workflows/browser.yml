@@ -1,0 +1,60 @@
+name: Browser
+
+# Fixture-backed browser tests (tests/browser): the real gear picker and setup
+# wizard bundled with esbuild, every API answered by fixtures, plus an axe-core
+# accessibility scan. No database, credentials or deploy. Path filters keep it
+# off docs-only and iOS-only pushes; it is not a required check.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/browser/**"
+      - "tests/fixtures/**"
+      - "playwright.*.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/browser.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/browser/**"
+      - "tests/fixtures/**"
+      - "playwright.*.config.ts"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/tasks/**
+            !/goldie/**
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.17.0
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium-headless-shell
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: test-results/
+          retention-days: 7

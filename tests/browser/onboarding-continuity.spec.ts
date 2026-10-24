@@ -7,6 +7,7 @@ import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import sharp from "sharp";
 import { getProfileCompletion } from "@/lib/profile-completion";
+import { seriousAxeViolations } from "./axe";
 
 let browser: Browser; let server: Server; let origin: string;
 const baseProfile = () => ({
@@ -25,7 +26,7 @@ test.beforeAll(async () => {
     if (req.url === "/bundle.js") { res.setHeader("Content-Type", "text/javascript"); res.end(bundle.outputFiles[0]!.text); }
     else if (req.url === "/style.css") { res.setHeader("Content-Type", "text/css"); res.end(css.css); }
     else if (req.url?.startsWith("/fonts/")) { try { res.end(await readFile(path.join("public", req.url))); } catch { res.statusCode = 404; res.end(); } }
-    else { res.setHeader("Content-Type", "text/html"); res.end('<html lang="en" data-theme="light"><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><main id="root"></main><script src="/bundle.js"></script></body></html>'); }
+    else { res.setHeader("Content-Type", "text/html"); res.end('<html lang="en" data-theme="light"><head><title>Set up your account</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><main id="root"></main><script src="/bundle.js"></script></body></html>'); }
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address(); if (!address || typeof address === "string") throw new Error("No fixture address");
@@ -84,7 +85,8 @@ test("keeps an empty Other field visible, saves its value, and finishes without 
   await expect(page.getByRole("heading", { name: "Add a profile photo", exact: true })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Top size", exact: true })).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 }); await capture(page, "web-optional-photo");
-  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  // Without a photo the last step reads "Skip for now" (#627).
+  await page.getByRole("button", { name: "Skip for now", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Setup complete", exact: true })).toBeVisible();
   expect(state.profile.onboardingCompletedAt).not.toBeNull();
   expect(state.profile.avatarUrl).toBeNull();
@@ -225,4 +227,16 @@ test("supports touch pinch and keyboard crop recovery without sliders", async ()
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   await expect.poll(() => preview.evaluate((el) => (el as HTMLCanvasElement).toDataURL())).toBe(initial);
   await page.close();
+});
+
+test("setup steps have no serious accessibility violations on desktop and phone", async () => {
+  for (const width of [1280, 390]) {
+    const { page } = await open(width);
+    expect(await seriousAxeViolations(page)).toEqual([]);
+    await topSize(page, "M");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Add a profile photo", exact: true })).toBeVisible();
+    expect(await seriousAxeViolations(page)).toEqual([]);
+    await page.close();
+  }
 });
