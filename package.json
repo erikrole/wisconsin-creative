@@ -199,9 +199,9 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.5",
-    "@next/bundle-analyzer": "^16.3.7",
-    "@playwright/test": "^1.63.0",
+    "@eslint/eslintrc": "^3.3.7",
+    "@next/bundle-analyzer": "^16.4.2",
+    "@playwright/test": "^1.64.1",
     "@prisma/adapter-pg": "^7.10.1",
     "@types/node": "^24.19.2",
     "@types/qrcode": "^1.5.6",
@@ -211,12 +211,12 @@
     "@vitest/coverage-v8": "^5.0.5",
     "axe-core": "^4.14.0",
     "dotenv": "^16.6.1",
-    "esbuild": "0.28.1",
+    "esbuild": "0.28.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.4.2",
     "plist": "^5.0.0",
     "prisma": "^7.10.1",
-    "typescript": "6.0.2",
+    "typescript": "6.0.3",
     "vitest": "^5.0.5"
   }
 }
