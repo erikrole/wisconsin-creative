@@ -2,15 +2,17 @@
 
 > Event-driven gear operations for Wisconsin Athletics Creative.
 
-[Production site](https://wisconsincreative.com) · [Public product overview](https://wisconsincreative.com/about) · [Releases](https://github.com/erikrole/wisconsin-creative/releases)
+[Production site](https://wisconsincreative.com) · [Public product overview](https://wisconsincreative.com/about) · [Releases](https://github.com/erikrole/wisconsin-creative/releases) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [License](LICENSE)
+
+[![CI](https://github.com/erikrole/wisconsin-creative/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/erikrole/wisconsin-creative/actions/workflows/ci.yml)
 
 Wisconsin Creative is the operational command system for equipment, reservations,
 game-day schedules, and physical handoffs. It replaces spreadsheets and manual
 sign-out sheets with a scan-enforced, conflict-aware workflow from reservation
 through return.
 
-The repository is public for review, but the production application is
-invite-only. The public `/about` route set is a static stakeholder overview;
+The repository is public for review (all rights reserved; see [LICENSE](LICENSE)),
+but the production application is invite-only. The public `/about` route set is a static stakeholder overview;
 operational routes require an authenticated account. The public [apps directory](https://wisconsincreative.com/apps) links to screenshot and feature overviews for Wisconsin Creative, Offload, Fetch, Radio Clip and Media Lab; unreleased apps are labeled as development previews.
 
 ## The product
@@ -108,19 +110,16 @@ PR previews use isolated branch resources; activation is tracked in the
 CalVer milestone records, not a second production trigger.
 
 Release versions use `YYYY.M.N`, where `N` increments within the calendar
-month. For example, the first two August 2026 releases are `2026.8.1` and
-`2026.8.2`.
-
-After a clean, verified `main` commit and explicit shipping approval:
+month (`2026.10.1`, `2026.10.2`). Notes come from `src/lib/releases.json`, the
+same entries the public /releases page shows.
 
 ```bash
 npm run release
 ```
 
-The release script updates `package.json` and `package-lock.json`, creates the
-CalVer tag, and pushes the commit and tag. The tag-triggered GitHub Action then
-creates the GitHub Release with generated notes. It is a shipping action, not
-an ordinary development command.
+This starts the `GitHub Release` workflow, which tags the current `main` and
+publishes the notes. It commits nothing, so it never triggers a deploy. It is
+a shipping action, not an ordinary development command.
 
 ## Repository map
 

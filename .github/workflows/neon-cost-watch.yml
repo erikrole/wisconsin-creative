@@ -13,11 +13,11 @@ jobs:
     environment: preview-infrastructure
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
       - run: node scripts/neon-cost-watch.mjs

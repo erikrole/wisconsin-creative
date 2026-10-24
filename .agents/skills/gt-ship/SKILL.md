@@ -17,7 +17,7 @@ Identify intentional tracked and untracked paths; never sweep unrelated dirty wo
 - Commit: stage explicit paths, inspect staged content and staged file list, and create a specific conventional outcome-oriented commit. Preserve unrelated staged changes; use an isolated approach if scope cannot be separated safely.
 - Push/PR: confirm branch, remote, target, and exact commit; push or update the requested PR, then read back its state. Account for automatic deployment associated with the target.
 - Deployment: identify environment and source SHA, use safe migration preflight where relevant, and verify the affected deployed surface. A pushed commit is not deployment proof.
-- Release: inspect `scripts/release.sh` before invocation. It updates package versions, commits, creates a CalVer tag, and pushes branch/tag; it is not a compile/test-only command. Preview with its dry-run on a suitable clean checkout and run the mutating path only when release is authorized. A GitHub release is distinct from App Store/TestFlight distribution.
+- Release: inspect `scripts/release.sh` before invocation. It dispatches the GitHub Release workflow, which tags `main` with the next CalVer version and publishes notes from `src/lib/releases.json`; it commits nothing but is still a shipping action. Preview with its dry-run on a suitable clean checkout and run the mutating path only when release is authorized. A GitHub release is distinct from App Store/TestFlight distribution.
 
 Never stash or delete unrelated work to satisfy a clean-tree requirement. Do not make a standalone generated-artifact or tsbuildinfo commit.
 
