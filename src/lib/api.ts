@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth, requireKiosk, type AuthUser, type KioskContext } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { failRequest, tagRequestJsonParseErrors } from "@/lib/api-handler";
 import { deferCompanionProjectionRefresh } from "@/lib/services/companion-projection-publisher";
 import { isRolePreviewBlockedRequest, readRolePreviewFromRequest } from "@/lib/role-preview";
@@ -129,6 +130,9 @@ type KioskCtx<P extends Record<string, string> = Record<string, string>> = {
   params: P;
 };
 
+const KIOSK_MAX_BODY_BYTES = 256 * 1024;
+export const KIOSK_MUTATION_LIMIT = { max: 300, windowMs: 60_000 };
+
 /**
  * Kiosk-authenticated API route handler.
  * Validates kiosk device session cookie (not user session).
@@ -143,13 +147,22 @@ export function withKiosk<P extends Record<string, string> = Record<string, stri
      * null to continue to `handler`.
      */
     withoutDatabase?: (req: Request) => Promise<NextResponse | null>;
+    /** Largest accepted request body in bytes. Defaults to 256 KB. */
+    maxBodyBytes?: number;
   } = {},
 ) {
   return async (req: Request, context: { params: Promise<P> }): Promise<NextResponse> => {
     try {
       // CSRF: require Origin on mutating requests (matches withAuth).
-      if (req.method !== "GET" && req.method !== "HEAD") {
+      const mutating = req.method !== "GET" && req.method !== "HEAD";
+      if (mutating) {
         assertKioskSameOrigin(req);
+        // Kiosk bodies are small JSON; refuse a declared oversize body before
+        // any session lookup or parsing.
+        const declared = Number(req.headers.get("content-length") ?? "0");
+        if (declared > (options.maxBodyBytes ?? KIOSK_MAX_BODY_BYTES)) {
+          throw new HttpError(413, "Request body too large");
+        }
       }
       if (await readRolePreviewFromRequest(req)) {
         throw new HttpError(403, "Kiosk access is unavailable in role preview");
@@ -157,6 +170,12 @@ export function withKiosk<P extends Record<string, string> = Record<string, stri
       const early = options.withoutDatabase ? await options.withoutDatabase(req) : null;
       if (early) return early;
       const kiosk = await requireKiosk();
+      // A stolen or runaway kiosk session cannot flood writes. The budget is
+      // far above rapid scanning (about 2 scans a second); it lives in Redis,
+      // never Neon.
+      if (mutating) {
+        await enforceRateLimit(`kiosk:mutations:${kiosk.kioskId}`, KIOSK_MUTATION_LIMIT);
+      }
       const params = (context?.params ? await context.params : {}) as P;
       const response = await handler(tagRequestJsonParseErrors(req), { kiosk, params });
       deferCompanionProjectionRefresh(req, response);
