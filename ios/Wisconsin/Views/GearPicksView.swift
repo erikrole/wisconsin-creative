@@ -577,6 +577,13 @@ struct GearCatalogRoute: Hashable {}
 /// The full assortment, one pushed screen away from the main picks list.
 struct GearCatalogView: View {
     var model: GearPicksModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// One column at accessibility sizes so names don't truncate.
+    private var columns: [GridItem] {
+        let count = typeSize.isAccessibilitySize ? 1 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: 14, alignment: .top), count: count)
+    }
 
     var body: some View {
         let sections = model.sections()
@@ -598,11 +605,7 @@ struct GearCatalogView: View {
                             Text(section.category)
                                 .font(.title3.weight(.bold))
                                 .accessibilityAddTraits(.isHeader)
-                            LazyVGrid(
-                                columns: [GridItem(.flexible(), spacing: 14, alignment: .top),
-                                          GridItem(.flexible(), spacing: 14, alignment: .top)],
-                                spacing: 18
-                            ) {
+                            LazyVGrid(columns: columns, spacing: 18) {
                                 ForEach(section.items) { item in
                                     NavigationLink(value: GearPickStyleRoute(style: item.style)) {
                                         GearPickCatalogTile(item: item, picked: model.pickCount(for: item.style))
