@@ -192,8 +192,22 @@ jobs:
       - run: node scripts/audit-gate.mjs
         if: steps.scope.outputs.heavy == 'true'
 
+      - run: npm run lint -- --max-warnings=0
+        if: steps.scope.outputs.heavy == 'true'
+
       - run: npm test
         if: steps.scope.outputs.heavy == 'true'
+
+      # Next's compile cache. Keyed per commit so every run saves; restores the
+      # newest cache for the same lockfile, falling back to any older one.
+      - uses: actions/cache@v4
+        if: steps.scope.outputs.heavy == 'true'
+        with:
+          path: .next/build/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
 
       - run: npm run build:app
         if: steps.scope.outputs.heavy == 'true'
