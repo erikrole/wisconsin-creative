@@ -127,6 +127,13 @@ const ATTENTION_ICON = {
 const ROW =
   "group flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left no-underline transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50";
 
+const VENUE_CHIP: Record<CoverageRow["venue"], string> = {
+  home: "bg-[var(--green-bg)] text-[var(--green-text)]",
+  away: "bg-[var(--orange-bg)] text-[var(--orange-text)]",
+  neutral: "bg-muted text-muted-foreground",
+  "non-game": "bg-muted text-muted-foreground",
+};
+
 const ATTENTION_PREVIEW = 5;
 
 export function HomeView(props: HomeViewProps) {
@@ -200,8 +207,8 @@ export function HomeView(props: HomeViewProps) {
                 <TradesSection slot={props.trades} href={props.tradesHref ?? "/schedule"} onQuick={props.onQuick} busyTradeId={props.busyTradeId} />
               )}
               {props.crew && <CrewSection slot={props.crew} />}
-              {props.coverage && <CoverageSection slot={props.coverage} />}
               {!teamGearInMain && props.teamGear && <TeamGearSection slot={props.teamGear} onSelectBooking={props.onSelectBooking} />}
+              {props.coverage && <CoverageSection slot={props.coverage} />}
             </div>}
             {hasSecondary && <div className={cn(
               "flex min-w-0 flex-col gap-5",
@@ -604,6 +611,9 @@ function FeaturedNext({ row, now, onTarget }: { row: UpNextItem; now: Date; onTa
         {row.badge && (
           <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", TONE_TILE[row.badge.tone])}>{row.badge.label}</span>
         )}
+        {row.pickup && (
+          <Button variant="ghost" className="h-10" onClick={() => onTarget({ kind: "booking", bookingId: row.pickup!.bookingId })}>View pickup</Button>
+        )}
         {target.kind === "link" ? (
           <Button asChild variant="outline" className="h-10 bg-card">
             <Link href={target.href}>{action}</Link>
@@ -737,6 +747,7 @@ function GearList({ rows, onSelectBooking }: { rows: GearRow[]; onSelectBooking:
       {rows.map((row) => (
         <li key={row.id}>
           <button type="button" className={cn(ROW, "cursor-pointer")} onClick={() => onSelectBooking(row.id)}>
+            {row.person && <UserAvatar name={row.person} avatarUrl={row.personAvatarUrl} size="default" />}
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
               <span className="truncate text-[13px] text-muted-foreground">
@@ -851,7 +862,7 @@ function ActivitySection({ slot, onSelectBooking }: { slot: Slot<ActivityRow[]>;
                   </span>
                   <span className="truncate text-[13px] text-muted-foreground">{row.title}</span>
                 </span>
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{row.ago}</span>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title={row.exactTime}>{row.ago}</span>
               </button>
             </li>
           ))}
@@ -894,7 +905,10 @@ function CoverageSection({ slot }: { slot: Slot<CoverageRow[]> }) {
                 <Link href={`/events/${row.id}`} className={ROW}>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-bold text-foreground">{row.title}</span>
-                    <span className="truncate text-[13px] text-muted-foreground">{row.when}</span>
+                    <span className="flex items-center gap-1.5 truncate text-[13px] text-muted-foreground">
+                      <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[11px] font-bold", VENUE_CHIP[row.venue])}>{row.venueLabel}</span>
+                      <span className="truncate">{[row.when, row.where].filter(Boolean).join(" · ")}</span>
+                    </span>
                   </span>
                   {row.total > 0 ? (
                     <span className="flex w-[72px] shrink-0 flex-col items-end gap-1" aria-label={`${row.filled} of ${row.total} shifts filled`}>

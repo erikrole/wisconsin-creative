@@ -126,8 +126,8 @@
   --sidebar-text-active: #1c2024;
   --sidebar-muted: #8b8d98;
   --sidebar-border: #e8e8ec;
-  --sidebar-ring: #3e63dd;
-  --sidebar-icon-active: #3e63dd;
+  --sidebar-ring: #c5050c;
+  --sidebar-icon-active: #c5050c;
   --sidebar-width: 240px;
 
   /* Surfaces — clean gray with subtle depth layering */
@@ -455,8 +455,8 @@
   --sidebar-text-active: #ececef;
   --sidebar-muted: #7b7d86;
   --sidebar-border: #26282d;
-  --sidebar-ring: #8da4ef;
-  --sidebar-icon-active: #8da4ef;
+  --sidebar-ring: #ff6b70;
+  --sidebar-icon-active: #ff6b70;
 
   /* Brand — official Wisconsin RGB red */
   --wi-red: #c80000;

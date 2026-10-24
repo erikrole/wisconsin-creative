@@ -73,6 +73,9 @@ export type BookingSummary = {
 
 export type MyReservation = {
   id: string;
+  eventId?: string | null;
+  eventIds?: string[];
+  linkedEventId?: string | null;
   title: string;
   refNumber: string | null;
   sportCode: string | null;
