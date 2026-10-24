@@ -126,7 +126,7 @@ export function HistoryBoard() {
         />
         <Stat label="Other spend" value={usd(cycle.otherSpendCents)} helper="Outside the budgeted rows" />
       </div>
-      {cycle.note && <p className="mb-4 text-xs text-[#8B8D98]">{cycle.note}</p>}
+      {cycle.note && <p className="mb-4 text-xs text-[#6B6F7A] dark:text-muted-foreground">{cycle.note}</p>}
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-extrabold tracking-[-0.02em]">Items</h3>
@@ -148,8 +148,8 @@ export function HistoryBoard() {
             <div key={item.sku} className={ROW}>
               <span>
                 <span className="font-bold">{item.itemName}</span>
-                <span className="ml-2 text-xs text-[#8B8D98]">{item.colorLabel}</span>
-                <span className="ml-2 font-mono text-[11px] text-[#8B8D98]">{item.sku}</span>
+                <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{item.colorLabel}</span>
+                <span className="ml-2 font-mono text-[11px] text-[#6B6F7A] dark:text-muted-foreground">{item.sku}</span>
               </span>
               <span className="text-right font-mono text-[13px]">{item.unitPriceCents > 0 ? usd(item.unitPriceCents) : "—"}</span>
               <span className="text-right font-mono">{item.plannedQty}</span>
@@ -160,7 +160,7 @@ export function HistoryBoard() {
           ))}
         </div>
       </div>
-      <p className="mb-6 text-xs text-[#8B8D98]">
+      <p className="mb-6 text-xs text-[#6B6F7A] dark:text-muted-foreground">
         Listed prices add up to {usd(listedCents)}. That doesn’t match the budget summary above, which only counts rows the old sheet marked as budgeted.
       </p>
 
@@ -179,7 +179,7 @@ export function HistoryBoard() {
                   <li key={person.name} className="flex items-center justify-between gap-3 border-b border-[#F0F1F3] px-5 py-2 text-sm last:border-b-0 dark:border-white/10">
                     <span>
                       {person.name}
-                      <span className="ml-2 text-xs text-[#8B8D98]">{person.fit}</span>
+                      <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{person.fit}</span>
                     </span>
                     <span className="font-mono text-xs text-[#60646C] dark:text-muted-foreground">
                       {person.topSize ?? "no top"} · {person.shoeSize ?? "no shoe"}

@@ -216,7 +216,7 @@ function ReceivingTable({
                 <div key={key} className={ROW}>
                   <span>
                     <span className="font-bold">{row.itemName}</span>
-                    {row.colorLabel && <span className="ml-2 text-xs text-[#8B8D98]">{row.colorLabel}</span>}
+                    {row.colorLabel && <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{row.colorLabel}</span>}
                     {row.ordered === 0 && <span className="ml-2 text-xs font-bold text-[#AB6400]">Not on order</span>}
                   </span>
                   <span className="font-mono text-[13px]">{row.size ?? "—"}</span>
@@ -266,7 +266,7 @@ function ReceivingTable({
                 <span>
                   <span className="font-bold">{receipt.quantity} × {nameFor(receipt.sku)}</span>
                   <span className="ml-2 font-mono text-xs text-[#60646C] dark:text-muted-foreground">{receipt.size ?? ""}</span>
-                  <span className="ml-2 text-xs text-[#8B8D98]">{shortDate(receipt.receivedAt)}{receipt.receivedBy ? ` · ${receipt.receivedBy}` : ""}</span>
+                  <span className="ml-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">{shortDate(receipt.receivedAt)}{receipt.receivedBy ? ` · ${receipt.receivedBy}` : ""}</span>
                 </span>
                 <Button
                   type="button"
@@ -290,7 +290,7 @@ function ReceivingTable({
               </li>
             ))}
           </ul>
-          {receipts.length > 10 && <p className="mt-1 text-xs text-[#8B8D98]">Showing the latest 10 of {receipts.length}.</p>}
+          {receipts.length > 10 && <p className="mt-1 text-xs text-[#6B6F7A] dark:text-muted-foreground">Showing the latest 10 of {receipts.length}.</p>}
         </div>
       )}
     </>

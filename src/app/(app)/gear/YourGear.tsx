@@ -56,7 +56,7 @@ function GroupHeading({ title, detail }: { title: string; detail: string }) {
   return (
     <div className={cn("flex items-baseline justify-between gap-3 border-b px-5 pb-2 pt-4", DIVIDER)}>
       <h3 className="text-sm font-extrabold tracking-[-0.01em]">{title}</h3>
-      <span className="text-xs text-[#8B8D98]">{detail}</span>
+      <span className="text-xs text-[#6B6F7A] dark:text-muted-foreground">{detail}</span>
     </div>
   );
 }
@@ -131,7 +131,7 @@ export function YourGear({
                 />
                 <button type="button" onClick={onEditPicks} className="min-w-0 flex-1 text-left focus-visible:outline-none">
                   <span className="block truncate font-bold">{item.name}</span>
-                  <span className={cn("block truncate text-xs", sizeMissing ? "text-[#C2282F]" : "text-[#8B8D98]")}>
+                  <span className={cn("block truncate text-xs", sizeMissing ? "text-[#C2282F]" : "text-[#6B6F7A] dark:text-muted-foreground")}>
                     {entry!.color.label} · {sizeMissing ? "Size needed" : line.size ? `Size ${line.size}` : "One size"}
                     {line.quantity > 1 ? ` · ×${line.quantity}` : ""}
                   </span>
@@ -171,7 +171,7 @@ export function YourGear({
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold">{piece.itemName}</span>
-                    <span className="block truncate text-xs text-[#8B8D98]">
+                    <span className="block truncate text-xs text-[#6B6F7A] dark:text-muted-foreground">
                       {piece.colorLabel ? `${piece.colorLabel} · ` : ""}
                       {piece.size === SIZE_NEEDED ? "No size yet" : `Size ${piece.size}`}
                       {piece.quantity > 1 ? ` · ×${piece.quantity}` : ""}

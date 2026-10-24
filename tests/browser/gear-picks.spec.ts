@@ -370,19 +370,15 @@ test("intro explains the current sizing and selection workflow", async () => {
   } finally {await page.close();}
 });
 
-// The gear pages' #8B8D98 secondary grey is about 3.3:1 on white, under the
-// 4.5:1 AA minimum for small text. Known and awaiting a design pass.
-const KNOWN_GEAR_AXE = ["color-contrast: Elements must meet minimum color contrast ratio thresholds (.pb-2 > .text-\\[\\#8B8D98\\]"];
-
 test("catalog and review have no serious accessibility violations on desktop and phone", async () => {
   for (const width of [1280, 390]) {
     const { page } = await open(width);
     try {
-      expect(await seriousAxeViolations(page, KNOWN_GEAR_AXE)).toEqual([]);
+      expect(await seriousAxeViolations(page)).toEqual([]);
       await page.getByRole("searchbox").fill("6021649");
       await page.getByRole("button", { name: width < 640 ? "Review" : "Review & submit", exact: true }).click();
       await browserExpect(page.getByRole("dialog")).toBeVisible();
-      expect(await seriousAxeViolations(page, KNOWN_GEAR_AXE)).toEqual([]);
+      expect(await seriousAxeViolations(page)).toEqual([]);
     } finally { await page.close(); }
   }
 });

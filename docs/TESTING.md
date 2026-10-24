@@ -115,10 +115,18 @@ Without any credential variables, local tests skip explicitly so `npx playwright
 
 - **Service tests:** Pure or DB-mocked business logic, such as booking rules, availability, reports, badge evaluation, schedule health, and status derivation.
 - **Route tests:** API route handlers with mocked auth, database, and request context. These protect permission gates, safe parsing, transaction behavior, and response contracts.
-- **Source-contract tests:** Static tests that pin important architectural decisions, app/iOS contracts, route wrappers, and UI affordance ownership.
+- **Source-contract tests:** Static tests that pin architectural decisions, app/iOS contracts, and route wrappers. New web-source string checks are not allowed; see Source-Text Tests.
 - **iOS contract tests:** Static checks over Swift files and API contracts used by the native app. These do not replace a simulator build.
 - **Regression tests:** Tests that prevent a fixed bug from returning. They should name the bug in plain language and point at the behavior that must stay true.
 - **Browser smoke tests:** Authenticated Playwright checks against an isolated target. They prove rendered route, responsive, keyboard, role, and recovery behavior that source contracts and builds cannot establish.
+
+## Source-Text Tests
+
+A test that reads a web source file and asserts a string appears in it breaks on harmless refactors and still passes when the behavior is broken. Do not add new ones.
+
+- **Prefer behavior:** call the route through its real wrapper (`tests/_helpers/route-request.ts`), call the service, or render the component in a browser fixture test (`tests/browser/`).
+- **Still allowed:** Swift and iOS contract reads (cross-language, no other way to check them from the web suite), and a genuine architecture contract such as every route using its wrapper. Mark such a web-source test with a `// source-contract: <why>` line.
+- **Guard:** `tests/source-text-guard.test.ts` fails when a new test file reads web source text without that marker. Existing files are listed in `tests/_helpers/source-text-tests.json`. When you touch one, convert it and remove it from the list; the list only shrinks.
 
 ## Mock Pattern: `vi.mock("@/lib/db")` + `_mockTx`
 
@@ -227,6 +235,9 @@ tests/_setup.ts
 tests/_helpers/assert-transaction.ts
 tests/_helpers/factories.ts
 tests/_helpers/mock-db.ts
+tests/_helpers/route-request.ts
+tests/_helpers/source.ts
+tests/browser/axe.ts
 ```
 
 ## Notes

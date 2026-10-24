@@ -19,6 +19,20 @@
   },
   {
     "date": "2026-10-24",
+    "title": "Easier to read gear details",
+    "type": "fixes",
+    "summary": "The small grey text on the UA gear pages, like colors, sizes and dates, is darker so it is easier to read.",
+    "details": [
+      "Gear details now meet the standard contrast for small text.",
+      "Applies to picking gear, your kit and the staff gear boards."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 658
+  },
+  {
+    "date": "2026-10-24",
     "title": "Photo reminder respects Not now",
     "type": "fixes",
     "summary": "On the iPhone app, tapping Not now on the photo step at the end of setup no longer brings the photo reminder straight back.",
