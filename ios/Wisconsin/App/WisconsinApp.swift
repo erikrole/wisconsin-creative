@@ -106,6 +106,8 @@ struct WisconsinApp: App {
 #if DEBUG
         if ProcessInfo.processInfo.environment["GT_ASSIGN_PICKER_FIXTURE"] != nil {
             AssignStudentSheet.reviewFixture()
+        } else if let scenario = ProcessInfo.processInfo.environment["GT_GEAR_FIXTURE"] {
+            GearPicksReviewFixture(scenario: scenario, route: ProcessInfo.processInfo.environment["GT_GEAR_ROUTE"])
         } else if let scenario = AppRuntimeMode.performanceScenario {
             PerformanceTestRootView(scenario: scenario)
         } else {
