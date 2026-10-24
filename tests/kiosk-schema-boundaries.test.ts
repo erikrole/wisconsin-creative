@@ -118,3 +118,13 @@ describe("kiosk request resource boundaries", () => {
     })).toThrow();
   });
 });
+
+describe("kiosk scan and id field ceilings", () => {
+  it("rejects oversize scan values and ids at the schema boundary", async () => {
+    const { checkoutScanBody, checkinCompleteBody, activeCheckoutAddItemBody } = await import("@/lib/schemas/kiosk");
+    expect(checkoutScanBody.safeParse({ scanValue: "A".repeat(256) }).success).toBe(true);
+    expect(checkoutScanBody.safeParse({ scanValue: "A".repeat(257) }).success).toBe(false);
+    expect(activeCheckoutAddItemBody.safeParse({ actorId: "u1", scanValue: "A".repeat(257) }).success).toBe(false);
+    expect(checkinCompleteBody.safeParse({ actorId: "x".repeat(129) }).success).toBe(false);
+  });
+});
