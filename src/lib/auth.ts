@@ -89,7 +89,7 @@ export async function verifyPassword(hash: string, password: string) {
   return bcrypt.compare(password, hash);
 }
 
-export function sessionWindow(persistent: boolean) {
+function sessionWindow(persistent: boolean) {
   return persistent
     ? { idleMs: SESSION_REMEMBERED_IDLE_MS, maxMs: SESSION_REMEMBERED_MAX_MS, slideAfterMs: SESSION_REMEMBERED_SLIDE_AFTER_MS }
     : { idleMs: SESSION_IDLE_MS, maxMs: SESSION_MAX_MS, slideAfterMs: SESSION_SLIDE_AFTER_MS };

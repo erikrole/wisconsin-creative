@@ -108,6 +108,12 @@ enum AppRuntimeMode {
         /// per-day sections and the read/unread swipe actions can be reviewed
         /// without a signed-in session.
         case notificationsInbox = "notifications-inbox"
+        /// iPad signature capture against canned collections, a roster, and a
+        /// capture surface seeded with a synthetic signature (the simulator has
+        /// no Apple Pencil, and no real person's signature is committed).
+        case signatureCollections = "signature-collections"
+        case signatureRoster = "signature-roster"
+        case signatureCapture = "signature-capture"
         case passwordSetup = "password-setup"
         /// Settings > Report a Problem with a few recent actions seeded, so
         /// the attachment list can be reviewed without a real session.

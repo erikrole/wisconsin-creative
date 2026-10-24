@@ -51,6 +51,7 @@ function textInk(lines: string[], outlines: Outlines, size: number, rotated: boo
   const ink = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const on = rgba[((y + top) * width + x + left) * 4 + 3]! >= 128 ? 1 : 0;
+    // Rotated (battery) text reads bottom-to-top with the digit bottoms toward the QR. Erik confirmed this on tape 2026-10-23; keep it.
     ink[rotated ? (w - 1 - x) * h + y : y * w + x] = on;
   }
   return { width: rotated ? h : w, height: rotated ? w : h, ink };

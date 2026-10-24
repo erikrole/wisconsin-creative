@@ -1,7 +1,7 @@
 /* Home: pure view-model builders. Everything the page shows is derived here so
    the dev preview and the live page render the same rows from the same rules. */
 
-import { formatCountdownCompact, formatDueLabel, formatOperationalDateTime, isDueToday } from "@/lib/format";
+import { formatCountdownCompact, formatDueLabel, formatOperationalDateTime, institutionDayOffset, isDueToday } from "@/lib/format";
 import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
 import type { ShiftTradeAction } from "@/lib/shift-trade-actions";
 import { AREA_LABELS } from "@/types/areas";
@@ -433,9 +433,9 @@ export function formatClock(iso: string) {
 /** Group key and heading for an Up next row: Today, Tomorrow, or "Fri, Oct 24". */
 export function dayHeading(iso: string, now: Date, allDay = false) {
   const d = allDay ? utcCalendarDate(iso) : new Date(iso);
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const diffDays = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - start.getTime()) / 86_400_000);
+  const diffDays = allDay
+    ? Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000)
+    : institutionDayOffset(d, now);
   if (diffDays <= 0) return "Today";
   if (diffDays === 1) return "Tomorrow";
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });

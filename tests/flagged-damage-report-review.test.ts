@@ -11,7 +11,7 @@ describe("flagged damage report review", () => {
   });
 
   it("shows the photo and a maintenance action on web, not just a Photo badge", () => {
-    const banner = source("src/app/(app)/dashboard/flagged-items-banner.tsx");
+    const banner = source("src/app/(app)/dashboard/flagged-report-dialog.tsx");
     expect(banner).toContain("function FlaggedReportDialog");
     expect(banner).toContain("src={item.imageUrl}");
     expect(banner).toContain("/api/assets/${item.assetId}/maintenance");

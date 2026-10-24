@@ -9,13 +9,13 @@ const SERIALIZABLE = { isolationLevel: Prisma.TransactionIsolationLevel.Serializ
 export const CLEANUP_WIZARD_KINDS = ["legacy_qr", "missing_serial", "attachment_candidate"] as const;
 export type CleanupWizardKind = (typeof CLEANUP_WIZARD_KINDS)[number];
 
-export const DEFERRED_CONFIG_KEY = "item_cleanup_wizard_deferred";
+const DEFERRED_CONFIG_KEY = "item_cleanup_wizard_deferred";
 
 /** Cheqroom-era shelf labels that still sit in QR / primary scan fields. */
 export const LEGACY_QR_LABEL_PATTERN = /^[A-Z]\d-\d{3,}$/i;
 
 /** Terms that mark a standalone row as a likely married accessory (matches cleanup script). */
-export const ATTACHMENT_CANDIDATE_TERMS = [
+const ATTACHMENT_CANDIDATE_TERMS = [
   "handle",
   "cage",
   "top plate",

@@ -144,6 +144,11 @@ describe("print sheet rows", () => {
     expect(new Set(sheet.labels.map((label) => label.copyId)).size).toBe(4);
     expect(sheet.labels.every((label) => label.row.copies === 1)).toBe(true);
   });
+  it("queues at most 500 USB copies, matching the print job cap", () => {
+    const sheet = preparedSheet([{ ...camera, copies: 500 }, { ...camera, id: "a2", copies: 1 }], {});
+    expect(sheet.total).toBe(501);
+    expect(sheet.labels).toHaveLength(500);
+  });
   it("keeps copies between 1 and 500", () => {
     expect(clampCopies(0)).toBe(1);
     expect(clampCopies(Number.NaN)).toBe(1);

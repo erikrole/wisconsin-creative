@@ -118,6 +118,9 @@ SettingsView.swift                     | profile                     | audit
 ReportProblemSheet.swift               | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 SharedLoginsView.swift                 | shared-logins               | audit
+Signatures/SignaturesView.swift        | signatures                  | audit
+Signatures/SignatureCaptureView.swift  | signatures                  | audit
+Signatures/SignatureCanvasView.swift   | signatures                  | audit
 GuidesView.swift                       | resources                   | audit
 BrandAssetsView.swift                  | brand-assets                | audit
 GearPicksView.swift                    | gear-picks                  | audit

@@ -135,10 +135,6 @@ export function getStatusVisual(status: string, isOverdue: boolean, kind?: "CHEC
   return bookingStatusVisual(status, { overdue: isOverdue, kind });
 }
 
-export function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
 export function roundTo15Min(date: Date): Date {
   return roundUpToQuarterHour(date);
 }

@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 
 /** Holds the OAuth state and PKCE verifier between start and callback. */
 export const OAUTH_COOKIE = "wc_youtube_oauth";
-export const OAUTH_COOKIE_PATH = "/api/youtube/oauth";
+const OAUTH_COOKIE_PATH = "/api/youtube/oauth";
 export const OAUTH_COOKIE_MAX_AGE = 600;
 
 export const oauthCookieOptions = () => ({

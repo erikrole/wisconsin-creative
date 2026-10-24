@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    "public/**",
+    "tasks/archive/**",
+    "design-qa/**",
+    "goldie/**",
+    "src/components/ui/**"
+  ],
+  "ignoreDependencies": ["eslint-config-next"]
+}

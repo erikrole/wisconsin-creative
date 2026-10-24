@@ -3,180 +3,49 @@ import { readFileSync } from "node:fs";
 import sharp from "sharp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAllowedRoles } from "@/lib/permissions";
-import { appendDistinctSignaturePoints, isIpadDevice, shouldRetainSignatureSaveRequestId, signatureCanvasViewport, signaturePointFromClient } from "@/lib/signatures/capture";
-import { buildSignatureDraft, isFreshSignatureDraft, signatureDraftKey, signatureDraftMatchesMember } from "@/lib/signatures/drafts";
+import { removeRepeatedSignatureSamples } from "@/lib/signatures/capture";
 import { renderSignatureArtifacts, SIGNATURE_PNG_MIN_WIDTH } from "@/lib/signatures/artifacts";
 import { buildSignatureCurve, buildSignatureSvg, resolveSignatureExportSize, resolveSignatureStrokeWidth, signaturePathData, SIGNATURE_STROKE_SCALE_MIN } from "@/lib/signatures/geometry";
-import { acceptsSignaturePointer, appendCoalescedPointerEvents } from "@/lib/signatures/pointer";
 import { captureSaveRequestSchema, DEFAULT_SIGNATURE_PEN_SETTINGS, isRequiredSignatureGroup, SIGNATURE_IMPORTED_SPORT_CODES, SIGNATURE_MAX_POINTS_PER_STROKE, SIGNATURE_MAX_STROKES, SIGNATURE_SPORT_REGISTRY, signatureAdHocMemberSchema, signatureCollectionTitle, signatureCollectionVersionSchema, signatureRosterEntrySchema } from "@/lib/signatures/types";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
 import { buildUWBadgersRosterUrl, fetchUWBadgersRoster, isAllowedUWBadgersUrl, normalizedRosterHash, parseUWBadgersRosterHtml } from "@/lib/signatures/uwbadgers";
 
-describe("signature input and draft contracts", () => {
-  it("recognizes iPadOS while rejecting desktop and iPhone clients", () => {
-    expect(isIpadDevice("Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X)", "iPad", 5)).toBe(true);
-    expect(isIpadDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 5)).toBe(true);
-    expect(isIpadDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 0)).toBe(false);
-    expect(isIpadDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", "iPhone", 5)).toBe(false);
+describe("signature capture contracts", () => {
+  it("exports stored strokes without their duplicated sample runs", () => {
+    // Start of a real 2026-27 WHKY stroke as stored: every two-sample batch arrived twice.
+    const stored = [
+      [26, 40.5], [26, 40], [26, 40.5], [26, 40], [25.5, 40], [25.5, 41], [25.5, 41.5], [25.5, 41], [25.5, 41.5],
+      [25.5, 43], [25.5, 45], [25.5, 43], [25.5, 45], [25.5, 47], [25.5, 50], [25.5, 47], [25.5, 50],
+    ].map(([x, y]) => ({ x: x!, y: y! }));
+    const clean = [[26, 40.5], [26, 40], [25.5, 40], [25.5, 41], [25.5, 41.5], [25.5, 43], [25.5, 45], [25.5, 47], [25.5, 50]]
+      .map(([x, y]) => ({ x: x!, y: y! }));
+    expect(removeRepeatedSignatureSamples(stored)).toEqual(clean);
+    expect(buildSignatureSvg([{ points: stored }], DEFAULT_SIGNATURE_PEN_SETTINGS).svg)
+      .toBe(buildSignatureSvg([{ points: clean }], DEFAULT_SIGNATURE_PEN_SETTINGS).svg);
+    // A longer run repeated once (the pen tip's down-and-back) collapses too; a real return path is kept.
+    const run = [[33, 122.5], [33, 124.5], [33, 126], [33, 128], [33, 129]].map(([x, y]) => ({ x: x!, y: y! }));
+    expect(removeRepeatedSignatureSamples([...run, ...run, { x: 32, y: 119 }])).toEqual([...run, { x: 32, y: 119 }]);
+    expect(removeRepeatedSignatureSamples([...run, ...run.slice().reverse()])).toEqual([...run, ...run.slice(0, -1).reverse()]);
   });
 
-  it("only accepts pen-class drawing input while leaving controls independent", () => {
-    expect(acceptsSignaturePointer("pen")).toBe(true);
-    expect(acceptsSignaturePointer("touch")).toBe(false);
-    expect(acceptsSignaturePointer("mouse")).toBe(false);
-    expect(acceptsSignaturePointer("")).toBe(false);
-  });
-
-  it("keeps the dispatched Pencil point after coalesced history", () => {
-    const historical = { pointerId: 7, clientX: 10, clientY: 10 } as PointerEvent;
-    const event = {
-      pointerId: 7,
-      clientX: 20,
-      clientY: 20,
-      getCoalescedEvents: () => [historical],
-    } as unknown as Pick<PointerEvent, "getCoalescedEvents">;
-
-    expect(appendCoalescedPointerEvents(event)).toEqual([historical, event]);
-  });
-
-  it("keys drafts by actor, target, settings, and capture version", () => {
-    const key = signatureDraftKey("user", "collection", "member", 3, 7);
-    const draft = buildSignatureDraft({
-      key,
-      userId: "user",
-      collectionId: "collection",
-      memberId: "member",
-      settingsVersion: 3,
-      captureVersion: 7,
-      canvasSize: { width: 1024, height: 640 },
-      strokes: [{ points: [{ x: 1, y: 2 }] }],
-    }, 1000);
-    expect(key).toBe("user:collection:member:3:7");
-    expect(draft.expiresAt).toBeGreaterThan(draft.savedAt);
-    expect(isFreshSignatureDraft(draft, draft.savedAt + 1)).toBe(true);
-    expect(isFreshSignatureDraft(draft, draft.expiresAt)).toBe(false);
-  });
-
-  it("keeps one save request ID with a device-local draft across an ambiguous reload", () => {
-    const draft = buildSignatureDraft({
-      key: signatureDraftKey("operator", "collection", "member", 1, 0),
-      userId: "operator",
-      collectionId: "collection",
-      memberId: "member",
-      settingsVersion: 1,
-      captureVersion: 0,
-      saveRequestId: "request-ambiguous-1234",
-      canvasSize: { width: 1024, height: 640 },
-      strokes: [{ points: [{ x: 4, y: 8 }] }],
-    });
-
-    expect(draft.saveRequestId).toBe("request-ambiguous-1234");
-    expect(draft.key).toBe("operator:collection:member:1:0");
-  });
-
-  it("finds a prior device-local draft without treating its request as current", () => {
-    const identity = { userId: "operator", collectionId: "collection", memberId: "member", settingsVersion: 1 };
-    expect(signatureDraftMatchesMember(identity, identity)).toBe(true);
-    expect(signatureDraftMatchesMember(identity, { ...identity, memberId: "other-member" })).toBe(false);
-  });
-
-  it("retains the same operation for retryable responses while making a 409 retry fresh", () => {
-    expect(shouldRetainSignatureSaveRequestId(425)).toBe(true);
-    expect(shouldRetainSignatureSaveRequestId(429)).toBe(true);
-    expect(shouldRetainSignatureSaveRequestId(500)).toBe(true);
-    expect(shouldRetainSignatureSaveRequestId(503)).toBe(true);
-    expect(shouldRetainSignatureSaveRequestId(409)).toBe(false);
-    expect(shouldRetainSignatureSaveRequestId(400)).toBe(false);
-  });
-
-  it("preserves logical signature proportions when the display rotates", () => {
-    const viewport = signatureCanvasViewport(
-      { width: 500, height: 1_000 },
-      { width: 1_000, height: 500 },
-    );
-    expect(viewport).toEqual({ scale: 0.5, offsetX: 0, offsetY: 375 });
-    expect(signaturePointFromClient(
-      250,
-      500,
-      { left: 0, top: 0, width: 500, height: 1_000 },
-      { width: 1_000, height: 500 },
-    )).toEqual({ x: 500, y: 250 });
-    expect(signaturePointFromClient(
-      250,
-      100,
-      { left: 0, top: 0, width: 500, height: 1_000 },
-      { width: 1_000, height: 500 },
-    )).toBeNull();
-  });
-
-  it("keeps real samples while removing only consecutive duplicates", () => {
-    const existing = [{ x: 10, y: 20 }];
-    expect(appendDistinctSignaturePoints(existing, [{ x: 10, y: 20 }])).toBe(existing);
-    expect(appendDistinctSignaturePoints(existing, [
-      { x: 10, y: 20 },
-      { x: 11, y: 21 },
-      { x: 11, y: 21 },
-      { x: 12, y: 22 },
-    ])).toEqual([
-      { x: 10, y: 20 },
-      { x: 11, y: 21 },
-      { x: 12, y: 22 },
-    ]);
-  });
-
-  it("keeps the browser capture lifecycle and retry protections wired", () => {
-    const source = readFileSync(
-      "src/app/(app)/signatures/[id]/capture/[memberId]/SignatureCapturePage.tsx",
-      "utf8",
-    );
-    expect(source).toContain("window.requestAnimationFrame");
-    expect(source).toContain("onLostPointerCapture");
-    expect(source).toContain('document.addEventListener("visibilitychange"');
-    expect(source).toContain('window.addEventListener("pagehide"');
-    expect(source).toContain("appendPointerSamples(event.nativeEvent");
-    expect(source).toContain("saveRequestIdRef.current ?? crypto.randomUUID()");
-    expect(source).toContain("persistDraftSnapshot(snapshot, draftRevisionRef.current, requestId)");
-    expect(source).toContain("shouldRetainSignatureSaveRequestId(response.status)");
-    expect(source).toContain("persistDraftSnapshot(snapshot, draftRevisionRef.current, null)");
-    expect(source).toContain("deleteSignatureDraftsForMember");
-    expect(source).toContain("draft && draft.captureVersion === member?.captureVersion");
-    expect(source).toContain("loadSignatureDraft(draftKey, Date.now()");
-    expect(source).toContain("draft.captureVersion === member?.captureVersion");
-    expect(source).toContain("if (!draftLoaded)");
-    expect(source).toContain("draftLoaded && !saving");
-    expect(source).toContain("strokesRef.current.length === 0 && (clearedStrokes || redoStack.length > 0)");
-    expect(source).toContain("isCurrentDeviceIpad");
-    expect(source).toContain("Capture can only be done on an iPad with an Apple Pencil.");
-    expect(source).toContain("/api/signatures/collections/${collectionId}/members/${memberId}");
-    expect(source).toContain("enabled: isIpad === true");
-    expect(source).toContain("Couldn’t load this signer");
-    expect(source).toContain(">Retry</Button>");
-    expect(source).toContain("invalidateSignatureCollectionCaches");
-    expect(source).toContain("setSaveSucceeded(true)");
-    expect(source).toContain('window.matchMedia("(prefers-reduced-motion: reduce)")');
-    expect(source).toContain("motion-safe:animate-in");
-    expect(source).toContain("router.replace(`/signatures/${collection.id}`)");
-    expect(source).toContain("if (committed)");
-    expect(source).toContain("Signature saved. Return to the roster to continue.");
-    expect(source).toContain("disabled={saveSucceeded || saving || drawing || strokes.length === 0}");
-    expect(source).toContain("data-signature-signer-line");
-    expect(source).toContain("{member.name}</span>");
-    expect(source).toContain("Check the name on the line before saving.");
-    expect(source).not.toContain("SignatureAthleteProfileForm");
-    expect(source).not.toContain("/profile");
-  });
-
-  it("BUG: reads the nested capture bootstrap before checking collection state", () => {
-    const source = readFileSync(
-      "src/app/(app)/signatures/[id]/capture/[memberId]/SignatureCapturePage.tsx",
-      "utf8",
-    );
-
-    expect(source).toContain("type CaptureBootstrap = { collection: Collection; member: Member };");
-    expect(source).toContain("useFetch<CaptureBootstrap>");
-    expect(source).toContain("const collection = bootstrap?.collection ?? null;");
-    expect(source).toContain("const member = bootstrap?.member ?? null;");
-    expect(source).not.toContain("const member = collection?.member ?? null;");
+  it("retires web capture: the app captures, the web keeps everything else", () => {
+    const route = readFileSync("src/app/(app)/signatures/[id]/capture/[memberId]/page.tsx", "utf8");
+    const detail = readFileSync("src/app/(app)/signatures/[id]/SignatureCollectionPage.tsx", "utf8");
+    const landing = readFileSync("src/app/(app)/signatures/SignatureCollectionsPage.tsx", "utf8");
+    // Old capture links land on the roster.
+    expect(route).toContain("redirect(`/signatures/${id}`)");
+    expect(route).not.toContain("SignatureCapturePage");
+    // No web surface links into capture any more.
+    for (const page of [detail, landing]) {
+      expect(page).not.toMatch(/\/signatures\/\$\{[^}]+\}\/capture/);
+      expect(page).not.toContain("isCurrentDeviceIpad");
+    }
+    expect(detail).toContain("Capture in iPad app");
+    expect(detail).toContain("Signatures are captured with Apple Pencil in the Wisconsin app on iPad (Browse → Signatures).");
+    expect(landing).toContain("router.push(`/signatures/${collectionId}`)");
+    expect(landing).toContain("Capture their signature in the Wisconsin app on iPad.");
+    // Remove signature stays on the web (the DELETE on the capture endpoint).
+    expect(detail).toContain('"DELETE", { expectedCaptureVersion: member.captureVersion }');
   });
 });
 
@@ -515,18 +384,17 @@ describe("signature roster presentation", () => {
     expect(source).toContain("<CheckCircle2");
     expect(source).toContain("Signature complete");
     expect(source).toContain('className="h-auto max-h-8 w-auto max-w-28 object-contain brightness-0 dark:invert"');
-    expect(source).toContain('className="h-11 w-40"');
+    expect(source).toContain("h-11 w-40");
     expect(source).toContain('text-2xl leading-none tracking-[0.06em] tabular-nums');
     expect(source).toContain("!isCreativeStaffRoster && <span");
     expect(source).toContain("member.title || roleLabel(member.roleGroup)");
     expect(source).toContain('title={member.title || roleLabel(member.roleGroup)}');
     expect(source).toContain('primaryCapture={member.roleGroup === "PLAYER" || member.roleGroup === "CREATIVE_STAFF" || isAdministrationRoster}');
-    expect(source).toContain('variant={primaryCapture ? "brand" : "outline"}');
+    expect(source).toContain('primaryCapture ? "text-foreground" : "text-muted-foreground"');
     expect(source).not.toContain('<span>Requirement</span>');
     expect(source).not.toContain('<span>Status</span>');
     expect(source).not.toContain("Collection readiness");
     expect(source).not.toContain(">Optional</Badge>");
-    expect(source).toContain('data-icon="inline-start" />Capture</Link>');
     expect(source).not.toMatch(/<Badge[^>]*>Needs signature<\/Badge>/);
     expect(source).toContain('aria-label={`Quick Look ${member.name}\'s signature`}');
     expect(source).toContain('style={{ fontFamily: "var(--font-heading)", fontWeight: 800 }}');
@@ -542,9 +410,7 @@ describe("signature roster presentation", () => {
     expect(source).toContain("Remove from roster");
     expect(source).toContain("Their saved signature history will be kept.");
     expect(source).toContain("A future roster import may add this player again.");
-    expect(source).toContain("Capture on iPad");
-    expect(source).toContain("Capture can only be done on an iPad with an Apple Pencil.");
-    expect(source).toContain("disabled");
+    expect(source).toContain("Capture in iPad app");
     expect(source).not.toContain("SignatureAthleteProfileForm");
     expect(source).not.toContain("Profile needed");
     expect(source).not.toContain("Edit athlete profile");

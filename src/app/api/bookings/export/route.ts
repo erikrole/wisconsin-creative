@@ -1,3 +1,4 @@
+import { appTzDateKey } from "@/lib/app-time";
 import { BookingKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -107,7 +108,7 @@ export const GET = withAuth(async (req, { user }) => {
   });
 
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-  const date = new Date().toISOString().slice(0, 10);
+  const date = appTzDateKey(new Date());
 
   return new NextResponse(csv, {
     headers: {

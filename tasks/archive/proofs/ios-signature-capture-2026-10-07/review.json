@@ -1,0 +1,35 @@
+{
+  "title": "iPad Signature Capture",
+  "eyebrow": "iOS · Wisconsin Creative · iPad",
+  "lede": "Staff at a media day open a team roster on the iPad, find whoever walks up, and capture an Apple Pencil signature in the same layout they know from the web.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "New screens (after only)",
+      "note": "These screens did not exist in the iOS app before, so there is no baseline to pair. Captured by `SignatureScreenshotUITests` on a dedicated iPad Air 13-inch (M4) simulator, iOS 27.0, light appearance, fixture scenarios `signature-collections`, `signature-roster`, `signature-capture` (fictional names; synthetic ink from the web's pen-preview sample). Landscape frames were rotated upright from the native-portrait framebuffer.",
+      "shots": [
+        {"title": "Collections", "image": "signature-collections-landscape-light.png", "wide": true, "tag": "Collections", "cap": "Web roster cards: season, Open badge, Complete x/y with progress, staff count, % ready, Open roster."},
+        {"title": "Roster", "image": "signature-roster-landscape-light.png", "wide": true, "tag": "Roster", "cap": "Readiness header, search by name/number/title, group filter, collapsible groups with signed counts, jersey circles, green signed rows with saved-signature previews, red Capture for players and neutral Capture for staff."},
+        {"title": "Capture", "image": "signature-capture-landscape-light.png", "wide": true, "tag": "Capture", "cap": "Header card (Roster / signer / status), the Undo · Redo · Clear · Replay bar above a dashed canvas, then Cancel and Save signature."},
+        {"title": "Portrait", "image": "signature-capture-portrait-light.png", "tag": "Portrait", "cap": "iPadOS will not let a multitasking app force rotation, so portrait shows a rotate prompt; ink drawn so far is kept."}
+      ]
+    }
+  ],
+  "changes": [
+    {"h": "Capture moves from Safari to the app", "was": "Pencil samples reached the page through Safari's coalesced Pointer Events; the 2026-27 captures recorded about half of them twice.", "now": "UIKit coalesced touches deliver each Pencil sample once with its timestamp; predicted touches only hide latency and are never saved. Repeated runs are still dropped, with the web's rule."},
+    {"h": "History is one big bar", "was": "Small icon buttons, and Clear could only be undone through a separate state.", "now": "Large Undo, Redo, Clear, and Replay sit together above the canvas. Undo restores a Clear. Pencil double-tap or squeeze and Command-Z also undo."},
+    {"h": "Replay before saving", "was": "No way to see the signature drawn back.", "now": "Replay redraws the unsaved strokes at the signer's real Pencil pace, with pen lifts capped at half a second."}
+  ],
+  "verification": [
+    "15 XCTest cases (recorder, retry rule, history, replay, roster filtering): TEST SUCCEEDED on the iPad simulator.",
+    "SignatureScreenshotUITests (landscape screens and portrait prompt): TEST SUCCEEDED.",
+    "Wisconsin scheme builds for iPad Air 13 and iPhone 18 Pro Max simulators (BUILD SUCCEEDED, no new warnings).",
+    "All 124 iOS source-contract test files and `tests/signature-capture.test.ts` pass; iOS drift check clean; audit inventory has no gaps.",
+    "Not verified: a real Apple Pencil (palm rejection, double-tap/squeeze, 240 Hz sampling), an authenticated save against a server, and saved-preview loading from the private artifact route."
+  ],
+  "notes": [
+    "Fixture captures prove layout only. The acceptance gate is a physical iPad + Pencil save; see `docs/IOS_DEVICE_WALKTHROUGH.md`.",
+    "Unsaved ink lives in memory only; leaving capture or the app being killed loses it (the web keeps device-local drafts).",
+    "Replaying a saved signature needs pen timing stored on the server (plan slice 2)."
+  ]
+}

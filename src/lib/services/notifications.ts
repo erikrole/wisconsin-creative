@@ -18,7 +18,6 @@ export {
   notifyPublishedShiftGroupWorkers,
   notifyPublishedScheduleFollowers,
   SHIFT_REMINDER_LEAD_MS,
-  effectiveShiftCallStart,
   getShiftReminderTiming,
   sendShiftReminder,
 } from "./shift-notifications";

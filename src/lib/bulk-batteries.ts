@@ -20,14 +20,14 @@ const BATTERY_TERM_PATTERNS = BATTERY_TERMS.map((term) =>
 );
 
 /** A family is low when under this share of the units the shop owns. */
-export const BATTERY_LOW_STOCK_SHARE = 0.2;
+const BATTERY_LOW_STOCK_SHARE = 0.2;
 
 /**
  * Only families at least this big raise a low-stock notification. A family of
  * a handful of batteries running down is routine; a large one (the Sony pool)
  * running low is worth interrupting someone for.
  */
-export const BATTERY_NOTIFY_MIN_FAMILY = 20;
+const BATTERY_NOTIFY_MIN_FAMILY = 20;
 
 /**
  * Low-stock line, relative to family size: the larger of the configured

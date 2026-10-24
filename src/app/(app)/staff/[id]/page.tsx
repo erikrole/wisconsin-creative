@@ -1105,6 +1105,7 @@ export default function UserDetailPage() {
           canRevoke={currentUserRole === "ADMIN"}
           canAward={currentUserRole === "ADMIN"}
           onAwardRequest={handleAwardRequest}
+          gallery={currentUserRole && currentUserRole !== "COLLABORATOR" && profile.role !== "COLLABORATOR" ? { isSelf } : null}
         />
       )}
 

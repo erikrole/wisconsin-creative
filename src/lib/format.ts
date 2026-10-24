@@ -121,6 +121,34 @@ export function formatTimeShort(iso: string) {
 }
 
 /**
+ * Whole calendar days from `now` to `iso` on the Central (institution) calendar:
+ * 0 = today, 1 = tomorrow, -1 = yesterday. Uses a fixed zone rather than the
+ * runtime's, because the server renders in UTC and would otherwise file tonight's
+ * 7 PM event under tomorrow. Client-safe, so it does not read `env`.
+ */
+const INSTITUTION_TZ = "America/Chicago";
+const dayFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: INSTITUTION_TZ,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+function institutionDayNumber(date: Date): number {
+  const parts = dayFormatter.formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return Math.floor(Date.UTC(get("year"), get("month") - 1, get("day")) / 86_400_000);
+}
+/** `YYYY-MM-DD` of an instant on the Central calendar, for file names and "today" keys. */
+export function institutionDateKey(date: Date = new Date()): string {
+  const parts = dayFormatter.formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month").padStart(2, "0")}-${get("day").padStart(2, "0")}`;
+}
+export function institutionDayOffset(iso: string | Date, now: Date): number {
+  return institutionDayNumber(new Date(iso)) - institutionDayNumber(now);
+}
+
+/**
  * Calendar-relative operational time, such as "Today, 2:30 PM",
  * "Tomorrow, 2:30 PM", "Yesterday, 2:30 PM", or "July 29, 2:30 PM".
  * Dense surfaces can pass `{ month: "short" }` for "Jul 29, 2:30 PM".
@@ -131,24 +159,14 @@ export function formatOperationalDateTime(
   options?: { month?: "long" | "short" },
 ): string {
   const date = new Date(iso);
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const dayAfterTomorrow = new Date(today);
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+  const offset = institutionDayOffset(date, now);
 
   let dayLabel: string;
-  if (date >= today && date < tomorrow) {
+  if (offset === 0) {
     dayLabel = "Today";
-  } else if (date >= tomorrow && date < dayAfterTomorrow) {
+  } else if (offset === 1) {
     dayLabel = "Tomorrow";
-  } else if (date >= yesterday && date < today) {
+  } else if (offset === -1) {
     dayLabel = "Yesterday";
   } else {
     dayLabel = date.toLocaleDateString("en-US", {
@@ -208,18 +226,12 @@ function formatOverdueElapsed(endsAt: string, now: Date): string {
 
 /** Check if endsAt falls on today */
 export function isDueToday(endsAt: string, now: Date): boolean {
-  const end = new Date(endsAt);
-  return end.getFullYear() === now.getFullYear() &&
-    end.getMonth() === now.getMonth() &&
-    end.getDate() === now.getDate();
+  return institutionDayOffset(endsAt, now) === 0;
 }
 
 /** Check if startsAt falls on today (mirrors isDueToday for reservations) */
 export function isStartingToday(startsAt: string, now: Date): boolean {
-  const start = new Date(startsAt);
-  return start.getFullYear() === now.getFullYear() &&
-    start.getMonth() === now.getMonth() &&
-    start.getDate() === now.getDate();
+  return institutionDayOffset(startsAt, now) === 0;
 }
 
 /** Compact relative start time: "Started 2h ago" / "Starts in 3h" / "Starts in 30m" */
@@ -285,15 +297,11 @@ export function formatDateWithDayTime(iso: string): { date: string; dayTime: str
 /** "Today", "Tomorrow", or "Wednesday, Apr 9" */
 export function formatDayLabel(dateStr: string, now: Date, allDay = false): string {
   const date = calendarDate(dateStr, allDay);
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const tomorrowStart = new Date(todayStart);
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  const dayAfterTomorrow = new Date(tomorrowStart);
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
-
-  if (date >= todayStart && date < tomorrowStart) return "Today";
-  if (date >= tomorrowStart && date < dayAfterTomorrow) return "Tomorrow";
+  const offset = allDay
+    ? Math.round((date.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000)
+    : institutionDayOffset(date, now);
+  if (offset === 0) return "Today";
+  if (offset === 1) return "Tomorrow";
   return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 

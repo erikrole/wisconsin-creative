@@ -1,3 +1,4 @@
+import { appTzDateKey } from "@/lib/app-time";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
 import { HttpError } from "@/lib/http";
@@ -42,7 +43,7 @@ export const GET = withAuth(async (_req, { user }) => {
   });
 
   const body = [header, ...rows].join("\n");
-  const filename = `licenses-${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `licenses-${appTzDateKey(new Date())}.csv`;
 
   await createAuditEntry({
     actorId: user.id,

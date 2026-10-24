@@ -1,33 +1,66 @@
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
-describe("Badges Operations surface", () => {
-  it("places Badges inside the staff Operations sidebar group", () => {
+describe("Badges gallery surface", () => {
+  it("lists Badges in the People sidebar group for everyone, not in a staff-only group", () => {
     const sidebar = source("src/components/Sidebar.tsx");
-    const operationsIndex = sidebar.indexOf('label: "Staff tools"');
+    const peopleIndex = sidebar.indexOf('label: "People"');
+    const staffToolsIndex = sidebar.indexOf('label: "Staff tools"');
     const badgesEntry = '{ label: "Badges", href: "/badges", icon: MedalIcon }';
+    const badgesIndex = sidebar.indexOf(badgesEntry);
 
-    expect(sidebar).toContain(badgesEntry);
-    expect(sidebar.indexOf(badgesEntry)).toBeGreaterThan(operationsIndex);
+    expect(badgesIndex).toBeGreaterThan(peopleIndex);
+    expect(badgesIndex).toBeLessThan(staffToolsIndex);
+    expect(sidebar.split(badgesEntry).length).toBe(2);
   });
 
-  it("keeps the page internal and exposes direct user selection", () => {
+  it("opens the page to everyone who can earn badges and keeps awarding with staff", () => {
     const page = source("src/app/(app)/badges/page.tsx");
     const client = source("src/app/(app)/badges/BadgesClient.tsx");
 
-    expect(page).toContain("Role.ADMIN");
-    expect(page).toContain("Role.STAFF");
+    expect(page).toContain("Role.COLLABORATOR");
+    expect(page).not.toContain("user.role !== Role.ADMIN && user.role !== Role.STAFF");
     expect(page).toContain("badgesEnabled()");
-    expect(client).toContain('"/api/badges?manualOnly=true"');
-    expect(client).toContain('"/api/users?limit=200&sort=name"');
-    expect(client).toContain("Checkbox");
-    expect(client).toContain("selectedUserIds");
-    expect(client).toContain("Select all visible");
-    expect(client).toContain("BulkBadgeAwardDialog");
-    expect(client).toContain("userIds={selectedUserIds}");
-    expect(client).toContain("isAdmin &&");
-    expect(client).toContain("MAX_BULK_BADGE_TARGETS");
-    expect(client).not.toContain("UserFilters");
-    expect(client).not.toContain("useUrlState");
+    expect(client).toContain('"/api/badges/gallery"');
+    expect(client).toContain('{isStaff ? <TabsTrigger value="award">Award</TabsTrigger> : null}');
+    expect(client).toContain("<BadgeAwardPanel");
+  });
+
+  it("keeps direct user selection in the staff award panel", () => {
+    const panel = source("src/app/(app)/badges/BadgeAwardPanel.tsx");
+
+    expect(panel).toContain('"/api/badges?manualOnly=true"');
+    expect(panel).toContain('"/api/users?limit=200&sort=name"');
+    expect(panel).toContain("Checkbox");
+    expect(panel).toContain("selectedUserIds");
+    expect(panel).toContain("Select all visible");
+    expect(panel).toContain("BulkBadgeAwardDialog");
+    expect(panel).toContain("userIds={selectedUserIds}");
+    expect(panel).toContain("isAdmin &&");
+    expect(panel).toContain("MAX_BULK_BADGE_TARGETS");
+    expect(panel).not.toContain("UserFilters");
+    expect(panel).not.toContain("useUrlState");
+  });
+
+  it("deep links badges and comparisons, and links in from the profile tab", () => {
+    const page = source("src/app/(app)/badges/page.tsx");
+    const client = source("src/app/(app)/badges/BadgesClient.tsx");
+    const profileTab = source("src/app/(app)/staff/[id]/UserBadgesTab.tsx");
+    const profilePage = source("src/app/(app)/staff/[id]/page.tsx");
+
+    expect(page).toContain("initialBadgeKey=");
+    expect(page).toContain("initialCompareId=");
+    // A mystery tile's key is never written into a shareable URL.
+    expect(client).toContain('replaceSearchParam("badge", badge && !badge.mystery ? badge.key : null)');
+    expect(client).toContain("data.canCompare && data.people.some");
+    expect(client).toContain("<UpNext badges={data.badges}");
+    // The weekly strip reads holder rows only, which are already empty for private badges.
+    expect(client).toContain("<EarnedThisWeek data={data} filter={filter}");
+    expect(client).toContain('badge.mystery ? "a surprise badge" : badge.name');
+    expect(client).toContain('surprises === 1 ? "1 surprise badge" : `${surprises} surprise badges`');
+    // Surprises and bloopers have no holder list to link to.
+    expect(profileTab).toContain("!isHiddenUntilEarnedBadge(badge.key) && !isPrivateHolderBadge(badge.key)");
+    expect(profileTab).toContain("/badges?tab=team&compare=");
+    expect(profilePage).toContain('profile.role !== "COLLABORATOR" ? { isSelf } : null');
   });
 });
