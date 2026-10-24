@@ -9,20 +9,11 @@ import {
 } from "@/lib/services/dashboard-counts";
 import { startOfDayInAppTz } from "@/lib/app-time";
 import { hasCollaboratorCapability } from "@/lib/collaborator-access";
+import { settledReader } from "@/lib/settled";
 
 const STATS_LIMIT = { max: 180, windowMs: 60_000 };
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[dashboard/stats] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("dashboard/stats");
 
 // Lightweight stats-only endpoint — runs the single shared count aggregate and
 // returns nothing else. Used by the dashboard to keep stat cards, the overdue

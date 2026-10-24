@@ -182,8 +182,8 @@ function getItemAssetTagSortParts(assetTag: string) {
  * for a BEFORE INSERT/UPDATE trigger, so non-TypeScript writers (seed and
  * import `.mjs` scripts, raw SQL) stay in sync as well.
  */
-export const ASSET_TAG_SORT_KEY_SEPARATOR = "";
-export const ASSET_TAG_SORT_KEY_NUMERIC_WIDTH = 12;
+const ASSET_TAG_SORT_KEY_SEPARATOR = "";
+const ASSET_TAG_SORT_KEY_NUMERIC_WIDTH = 12;
 
 function padNumericRun(run: string) {
   return run.length >= ASSET_TAG_SORT_KEY_NUMERIC_WIDTH

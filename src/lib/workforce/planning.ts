@@ -1,7 +1,7 @@
 import { ApplicationStage, GraduationTerm, ShiftArea } from "@prisma/client";
 import { compareTerms } from "@/lib/workforce/contract";
 
-export const NO_AREA = "NONE" as const;
+const NO_AREA = "NONE" as const;
 export type PlanningAreaKey = ShiftArea | typeof NO_AREA;
 
 export type PlanningStudent = {

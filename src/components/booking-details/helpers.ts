@@ -26,7 +26,7 @@ export function statusLabel(status: string, kind?: BookingDisplayKind): string {
   return bookingStatusLabel(status, kind);
 }
 
-export const actionLabels: Record<string, string> = {
+const actionLabels: Record<string, string> = {
   create: "created booking",
   created: "created booking",
   update: "updated",

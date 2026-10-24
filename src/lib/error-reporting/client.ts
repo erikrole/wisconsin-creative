@@ -33,7 +33,7 @@ let installed = false;
 const queue: ClientReport[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-export const BUILD = {
+const BUILD = {
   appBuild: process.env.NEXT_PUBLIC_BUILD_SHA || null,
   releaseChannel: process.env.NEXT_PUBLIC_DEPLOY_ENV || "development",
 };
@@ -43,11 +43,11 @@ export function addBreadcrumb(type: BreadcrumbType, message: string, data?: Brea
   if (breadcrumbs.length > MAX_BREADCRUMBS) breadcrumbs.splice(0, breadcrumbs.length - MAX_BREADCRUMBS);
 }
 
-export function recentBreadcrumbs(): Breadcrumb[] {
+function recentBreadcrumbs(): Breadcrumb[] {
   return breadcrumbs.slice();
 }
 
-export function currentScreen(): string | null {
+function currentScreen(): string | null {
   return typeof window === "undefined" ? null : stripQuery(window.location.pathname);
 }
 

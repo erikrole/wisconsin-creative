@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { calendarSourceFailureDetail, getCalendarSyncFailureCounts } from "@/lib/services/calendar-sync-health";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
 import { batteryLowThreshold, batterySkuCandidateWhere, isBatterySku } from "@/lib/bulk-batteries";
+import { settledReader } from "@/lib/settled";
 
 const SAMPLE_LIMIT = 5;
 const KIOSK_OFFLINE_AFTER_MINUTES = 15;
@@ -52,17 +53,7 @@ function section(input: AdminFixTodaySection): AdminFixTodaySection {
   return input;
 }
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[admin-fix-today] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("admin-fix-today");
 
 function bookingLabel(row: { refNumber: string | null; title: string }) {
   return row.refNumber ? `${row.refNumber} / ${row.title}` : row.title;

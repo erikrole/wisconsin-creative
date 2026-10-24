@@ -64,7 +64,7 @@ export interface PublishJournal {
   save(record: PublishRecord): Promise<void>;
 }
 
-export const PREVIEW_TTL_MS = 5 * 60_000;
+const PREVIEW_TTL_MS = 5 * 60_000;
 const OPEN_PHASES: PublishPhase[] = ["pending", "uncertain", "conflict"];
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

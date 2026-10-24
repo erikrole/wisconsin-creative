@@ -91,7 +91,7 @@ export const EVENT_LINK_STATUSES = new Set<BookingStatus>([
   BookingStatus.OPEN,
 ]);
 
-export function hasDuplicateIds(ids: string[]) {
+function hasDuplicateIds(ids: string[]) {
   return new Set(ids).size !== ids.length;
 }
 

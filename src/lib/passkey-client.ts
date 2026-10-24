@@ -79,7 +79,7 @@ type PublicKeyCredentialWithCapabilities = {
 };
 
 /** WebAuthn conditional create: the browser's password manager can save a passkey without a prompt. */
-export async function supportsAutomaticPasskeyUpgrade(): Promise<boolean> {
+async function supportsAutomaticPasskeyUpgrade(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   const credential = window.PublicKeyCredential as unknown as PublicKeyCredentialWithCapabilities | undefined;
   if (typeof credential?.getClientCapabilities !== "function") return false;

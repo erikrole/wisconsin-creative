@@ -2,7 +2,7 @@ import type { ApplicantDocumentKind } from "@prisma/client";
 
 export const MAX_APPLICANT_FILE_BYTES = 4 * 1024 * 1024; // under the 4.5 MB serverless body limit
 
-export const APPLICANT_FILE_TYPES = ["application/pdf", "image/png", "image/jpeg"] as const;
+const APPLICANT_FILE_TYPES = ["application/pdf", "image/png", "image/jpeg"] as const;
 export type ApplicantFileType = (typeof APPLICANT_FILE_TYPES)[number];
 
 export function isApplicantFileType(value: string): value is ApplicantFileType {

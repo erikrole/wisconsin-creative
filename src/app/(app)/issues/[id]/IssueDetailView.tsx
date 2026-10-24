@@ -14,9 +14,9 @@ import { chromeFont } from "@/lib/chrome-font";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatDateTime, formatRelativeTime, pluralize } from "@/lib/format";
 import type { Breadcrumb } from "@/lib/error-reporting/grouping";
-import { parseErrorMessage } from "@/lib/errors";
+import { parseErrorMessage, readApiData } from "@/lib/errors";
 import { cn } from "@/lib/utils";
-import { ActionTimeline, CHANNEL_LABELS, KIND_LABELS, PLATFORM_META, PlatformBadge, StatusPill, readJson } from "../issue-ui";
+import { ActionTimeline, CHANNEL_LABELS, KIND_LABELS, PLATFORM_META, PlatformBadge, StatusPill } from "../issue-ui";
 
 type Frame = { binaryName: string | null; binaryUUID: string | null; offset: number | null; address: number | null };
 type EventRow = {
@@ -114,7 +114,7 @@ export function IssueDetailView({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const detail = useQuery<Detail>({
     queryKey: ["issues", "detail", id],
-    queryFn: async ({ signal }) => readJson(await fetch(`/api/issues/${id}`, { signal }), "Couldn't load this issue", `/issues/${id}`),
+    queryFn: async ({ signal }) => readApiData(await fetch(`/api/issues/${id}`, { signal }), "Couldn't load this issue", `/issues/${id}`),
   });
   const [index, setIndex] = useState(0);
   const [note, setNote] = useState<string | null>(null);

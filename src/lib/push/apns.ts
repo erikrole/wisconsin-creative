@@ -120,7 +120,7 @@ interface SendOpts {
 }
 
 type APNsInterruptionLevel = "passive" | "active" | "time-sensitive";
-export const DEFAULT_APNS_INTERRUPTION_LEVEL: APNsInterruptionLevel = "passive";
+const DEFAULT_APNS_INTERRUPTION_LEVEL: APNsInterruptionLevel = "passive";
 
 function sendOne(
   client: http2.ClientHttp2Session,

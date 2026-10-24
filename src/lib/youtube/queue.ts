@@ -36,7 +36,7 @@ import { YouTubeToolError, type CatalogVideo, type Game, type LiveVideo, type Re
 export const actorRole = (user: AuthUser) => user.preview?.actualRole ?? user.role;
 
 /** Refresh stops preparing new videos after this long so the request stays inside the function budget. */
-export const PREPARE_BUDGET_MS = 40_000;
+const PREPARE_BUDGET_MS = 40_000;
 /** Playlist membership checks stop here; an incomplete check is reported, never shown as "not in a playlist". */
 const MEMBERSHIP_BUDGET_MS = 50_000;
 const RECAP_CONCURRENCY = 4;
@@ -44,7 +44,7 @@ const RECAP_CONCURRENCY = 4;
 type DraftRow = Prisma.YouTubeReviewDraftGetPayload<object>;
 type LibraryRow = Prisma.YouTubeLibraryVideoGetPayload<object>;
 
-export function draftFromRow(row: DraftRow): ReviewDraft {
+function draftFromRow(row: DraftRow): ReviewDraft {
   return {
     videoId: row.videoId,
     version: row.version,

@@ -26,7 +26,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 
 /* ── Shared: Urgency Badge ────────────────────────────── */
 
-export function UrgencyBadge({ startsAt, endsAt, now }: { startsAt: string; endsAt: string; now: Date }) {
+function UrgencyBadge({ startsAt, endsAt, now }: { startsAt: string; endsAt: string; now: Date }) {
   const urgency = getUrgency(startsAt, endsAt, now);
   const variant = urgency === "critical" || urgency === "overdue" ? "red" : urgency === "warning" ? "orange" : "blue";
   return <Badge variant={variant} className="mt-1">{formatCountdown(endsAt, now)}</Badge>;
@@ -34,7 +34,7 @@ export function UrgencyBadge({ startsAt, endsAt, now }: { startsAt: string; ends
 
 /* ── Shared: Upcoming Reservations List ──────────────── */
 
-export function UpcomingReservationsList({
+function UpcomingReservationsList({
   reservations, now, onSelectBooking,
 }: {
   reservations: UpcomingReservation[];
@@ -137,7 +137,7 @@ function formatBookingRange(start: ReturnType<typeof formatDateWithDayTime>, end
   return `${start.date} to ${end.date}`;
 }
 
-export function PastBookingsPreview({
+function PastBookingsPreview({
   history,
   now,
   onSelectBooking,

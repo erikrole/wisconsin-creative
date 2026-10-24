@@ -31,7 +31,7 @@ import { db } from "@/lib/db";
  * row someone wants back can still be marked unread.
  */
 
-export const SETTLED_BADGE_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const SETTLED_BADGE_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 const BOOKING_ROW_TYPES = [
   "overdue_nudge",
