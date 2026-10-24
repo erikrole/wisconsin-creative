@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Download, Info, MoreHorizontal, Plus, RefreshCw, SlidersHorizontal, Tag, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 
 type UnitStatus = "AVAILABLE" | "CHECKED_OUT" | "LOST" | "RETIRED";
@@ -163,6 +164,8 @@ type UnitFilter = "ALL" | UnitStatus;
 
 type CheckedOutRow = BatteryUnit & { skuId: string; skuName: string; locationName: string };
 
+const BATTERY_COCKPIT_KEY = ["bulk-skus", "batteries"] as const;
+
 const STATUS_META: Record<UnitStatus, { label: string; className: string; dot: string }> = {
   AVAILABLE: {
     label: "Available",
@@ -235,10 +238,6 @@ function productOptionLabel(product: BatteryProduct) {
 }
 
 export default function BatteryCockpitPage() {
-  const [data, setData] = useState<BatteryCockpitData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const busyRef = useRef(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -263,40 +262,33 @@ export default function BatteryCockpitPage() {
   const [repairBusy, setRepairBusy] = useState(false);
   const repairBusyRef = useRef(false);
 
-  async function load({ refresh = false } = {}) {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const res = await fetch("/api/bulk-skus/batteries");
-      if (handleAuthRedirect(res, "/bulk-inventory/batteries")) return;
-      if (!res.ok) {
-        const message = await parseErrorMessage(res, "Failed to load batteries");
-        if (!refresh) setError(message);
-        else toast.error(message);
-        return;
-      }
+  const queryClient = useQueryClient();
+  const cockpitQuery = useQuery({
+    queryKey: BATTERY_COCKPIT_KEY,
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/bulk-skus/batteries", { signal });
+      if (handleAuthRedirect(res, "/bulk-inventory/batteries")) throw new DOMException("Auth redirect", "AbortError");
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load batteries"));
       const json = await parseJsonSafely<{ data?: BatteryCockpitData }>(res);
-      if (!json?.data) {
-        const message = "Battery data response was incomplete. Refresh and try again.";
-        if (!refresh) setError(message);
-        else toast.error(message);
-        return;
-      }
-      setData(json.data);
-      setError(null);
-    } catch (err) {
-      if (refresh) toast.error("Network error — battery data may be stale.");
-      else setError(err instanceof TypeError ? "Network error. Try again." : "Failed to load batteries.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
+      if (!json?.data) throw new Error("Battery data response was incomplete. Refresh and try again.");
+      return json.data;
+    },
+    retry: false,
+  });
+  const data = cockpitQuery.data ?? null;
+  const loading = cockpitQuery.isPending;
+  const refreshing = cockpitQuery.isRefetching;
+  const loadError = cockpitQuery.error;
+  const error = loadError && !isAbortError(loadError)
+    ? loadError instanceof TypeError ? "Network error. Try again." : loadError.message || "Failed to load batteries."
+    : null;
 
-  useEffect(() => {
-    void load();
-  }, []);
+  /** A failed refresh keeps the last data on screen and says so in a toast. */
+  async function load({ refresh = false } = {}) {
+    const result = await cockpitQuery.refetch();
+    if (!refresh || !result.error || isAbortError(result.error)) return;
+    toast.error(result.error instanceof TypeError ? "Network error — battery data may be stale." : result.error.message);
+  }
 
   const checkedOutUnits = useMemo(() => {
     return (data?.skus ?? [])
@@ -371,7 +363,10 @@ export default function BatteryCockpitPage() {
       }
 
       toast.success(`#${action.unitNumber} marked ${STATUS_META[action.status].label.toLowerCase()}`);
-      setData((prev) => updateUnitStatus(prev, action));
+      queryClient.setQueryData<BatteryCockpitData>(
+        BATTERY_COCKPIT_KEY,
+        (prev) => updateUnitStatus(prev ?? null, action) ?? undefined,
+      );
     } catch {
       toast.error("Network error — unit was not updated.");
     } finally {

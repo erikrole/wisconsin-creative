@@ -28,7 +28,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
 | `src/app/(app)/resources/page.tsx` | 1578 |
 | `src/lib/services/shift-trades.ts` | 1567 |
-| `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
+| `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1549 |
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1398 |
 | `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/app/(app)/budget/BudgetView.tsx` | 1350 |

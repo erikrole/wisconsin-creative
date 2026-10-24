@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Check, CopyIcon, Plane, RefreshCw, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
   SPORT_AUTO_ASSIGN_POLICIES,
   SPORT_AUTO_ASSIGN_POLICY_DESCRIPTIONS,
@@ -48,6 +49,8 @@ type SportSetupWizardProps = {
   startAtSportCode?: string | null;
   onCompleted?: () => void;
 };
+
+const SPORT_SETUP_KEY = ["schedule", "sport-setup"] as const;
 
 function areaLabel(area: string | null) {
   if (!area) return "No area";
@@ -130,44 +133,46 @@ export function SportSetupWizard({
   startAtSportCode,
   onCompleted,
 }: SportSetupWizardProps) {
-  const [setup, setSetup] = useState<SportSetupResponse | null>(null);
   const [index, setIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
   const [matchRoster, setMatchRoster] = useState(true);
   const [touchedCodes, setTouchedCodes] = useState<Set<string>>(() => new Set());
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/schedule/sport-setup");
-      if (handleAuthRedirect(response)) return;
-      if (!response.ok) {
-        setError(await parseErrorMessage(response, "Sport setup could not be loaded."));
-        return;
-      }
+  const queryClient = useQueryClient();
+  const setupQuery = useQuery({
+    queryKey: SPORT_SETUP_KEY,
+    queryFn: async ({ signal }) => {
+      const response = await fetch("/api/schedule/sport-setup", { signal });
+      if (handleAuthRedirect(response)) throw new DOMException("Auth redirect", "AbortError");
+      if (!response.ok) throw new Error(await parseErrorMessage(response, "Sport setup could not be loaded."));
       const json = await parseJsonSafely<{ data?: SportSetupResponse }>(response);
-      if (!json?.data) {
-        setError("Sport setup could not be loaded.");
-        return;
-      }
-      setSetup(json.data);
-    } catch {
-      setError("Could not reach the server.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      if (!json?.data) throw new Error("Sport setup could not be loaded.");
+      return json.data;
+    },
+    enabled: open,
+    // Rosters and policies change elsewhere; read fresh on every open.
+    staleTime: 0,
+    retry: false,
+  });
+  const setup = setupQuery.data ?? null;
+  const loading = setupQuery.isFetching;
+  const loadError = setupQuery.isError && !isAbortError(setupQuery.error) ? setupQuery.error : null;
+  const error = loadError
+    ? loadError instanceof TypeError ? "Could not reach the server." : loadError.message
+    : null;
+  const { refetch } = setupQuery;
+  const load = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+  const setSetup = (update: (current: SportSetupResponse | null) => SportSetupResponse | null) =>
+    queryClient.setQueryData<SportSetupResponse>(SPORT_SETUP_KEY, (current) => update(current ?? null) ?? undefined);
 
   useEffect(() => {
     if (!open) return;
     setTouchedCodes(new Set());
-    void load();
-  }, [open, load]);
+  }, [open]);
 
   // Seek to the requested sport once the list has arrived.
   useEffect(() => {
