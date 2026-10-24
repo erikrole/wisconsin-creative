@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { browserSupportsWebAuthn, startRegistration } from "@simplewebauthn/browser";
@@ -29,6 +29,8 @@ import {
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { isPasskeyCancellation, passkeyErrorMessage, passkeyStorageLabel } from "@/lib/passkey-client";
 import { SettingsPageShell } from "../SettingsPageShell";
+
+const noopSubscribe = () => () => {};
 
 type Session = {
   id: string;
@@ -133,7 +135,7 @@ export default function SecuritySettingsPage() {
   const [passkeyName, setPasskeyName] = useState("");
   const [passkeySaving, setPasskeySaving] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
-  const [passkeySupported, setPasskeySupported] = useState(true);
+  const passkeySupported = useSyncExternalStore(noopSubscribe, browserSupportsWebAuthn, () => true);
   const passkeySavingRef = useRef(false);
 
   // Removal reauthenticates on its own instead of borrowing the enrollment
@@ -142,10 +144,6 @@ export default function SecuritySettingsPage() {
   const [removalPassword, setRemovalPassword] = useState("");
   const [removalError, setRemovalError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
-
-  useEffect(() => {
-    setPasskeySupported(browserSupportsWebAuthn());
-  }, []);
 
   async function handleRegisterPasskey(e: React.FormEvent) {
     e.preventDefault();

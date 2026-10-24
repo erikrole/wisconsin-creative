@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -27,15 +27,15 @@ import {
   summarizeAssignmentReview,
   type ReviewFilter,
 } from "@/lib/assignment-conflict-review";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 export function AssignPageClient() {
   const router = useRouter();
   const grid = useAssignmentGrid();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
-  const [focusUserId, setFocusUserId] = useState<string | null>(null);
   // A focused person may not work the next month; start each month unfocused.
-  useEffect(() => setFocusUserId(null), [grid.month]);
+  const [focusUserId, setFocusUserId] = useSyncedDraft(grid.month, (): string | null => null);
 
   const reviewSummary = useMemo(() => summarizeAssignmentReview(grid.events), [grid.events]);
   const reviewEvents = useMemo(

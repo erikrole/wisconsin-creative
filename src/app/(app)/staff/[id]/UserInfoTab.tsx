@@ -57,6 +57,7 @@ import { formatDateFull, formatRelativeTime } from "@/lib/format";
 import Link from "next/link";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 type ApiEnvelope<T = unknown> = {
   data?: T;
   error?: string;
@@ -96,13 +97,9 @@ function TextInputField({
   type?: "text" | "email" | "tel" | "url";
   formatInput?: (value: string) => string;
 }) {
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useSyncedDraft(value);
   const { status, save } = useSaveField(onSave);
   const id = useId();
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
 
   const commit = useCallback(() => {
     const trimmed = draft.trim();
@@ -195,13 +192,9 @@ function DateInputField({
   onSave: (iso: string | null) => Promise<void>;
 }) {
   const initial = value ? value.slice(0, 10) : "";
-  const [draft, setDraft] = useState(initial);
+  const [draft, setDraft] = useSyncedDraft(initial);
   const { status, save } = useSaveField<string | null>(onSave);
   const id = useId();
-
-  useEffect(() => {
-    setDraft(initial);
-  }, [initial]);
 
   const commit = useCallback(() => {
     if (draft === initial) return;
@@ -533,13 +526,9 @@ function BirthdayField({
   onPatch: (payload: Record<string, unknown>) => Promise<void>;
 }) {
   const initial = birthdayDisplay(user);
-  const [draft, setDraft] = useState(initial);
+  const [draft, setDraft] = useSyncedDraft(initial);
   const { status, save } = useSaveField(onPatch);
   const id = useId();
-
-  useEffect(() => {
-    setDraft(initial);
-  }, [initial]);
 
   const commit = useCallback(() => {
     const formatted = formatBirthdayInput(draft);
@@ -559,7 +548,7 @@ function BirthdayField({
       setDraft(initial);
       toast.error(error instanceof Error ? error.message : "Enter birthday as MM/DD");
     }
-  }, [draft, initial, save]);
+  }, [draft, initial, save, setDraft]);
 
   return (
     <SaveableField label="Birthday" status={status} htmlFor={id}>
@@ -593,15 +582,12 @@ function WiscardFields({
   canEdit: boolean;
   onPatch: (payload: Record<string, unknown>) => Promise<void>;
 }) {
-  const [cardDraft, setCardDraft] = useState(cardNumber);
-  const [issueDraft, setIssueDraft] = useState(issueCode);
+  const [cardDraft, setCardDraft] = useSyncedDraft(cardNumber);
+  const [issueDraft, setIssueDraft] = useSyncedDraft(issueCode);
   const cardSave = useSaveField<string>((value) => onPatch({ wiscardCardNumber: value || null }));
   const issueSave = useSaveField<string>((value) => onPatch({ wiscardIssueCode: value || null }));
   const cardId = useId();
   const issueId = useId();
-
-  useEffect(() => setCardDraft(cardNumber), [cardNumber]);
-  useEffect(() => setIssueDraft(issueCode), [issueCode]);
 
   const status = cardSave.status === "saving" || issueSave.status === "saving"
     ? "saving"

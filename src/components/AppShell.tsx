@@ -12,6 +12,7 @@ import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
+import { useOnline } from "@/hooks/use-browser-state";
 import { clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { toast } from "sonner";
@@ -337,16 +338,7 @@ export default function AppShell({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isCollaborator, pathname]);
 
-  // Offline detection
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    setOnline(navigator.onLine);
-    const goOnline = () => setOnline(true);
-    const goOffline = () => setOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => { window.removeEventListener("online", goOnline); window.removeEventListener("offline", goOffline); };
-  }, []);
+  const online = useOnline();
 
   async function handleLogout() {
     setLoggingOut(true);
