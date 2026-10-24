@@ -280,7 +280,7 @@ export const PATCH = withAuth(async (req, { user }) => {
       const before = await loadProfile(tx, user.id);
       if (!before) throw new HttpError(404, "User not found");
       if (body.step === "SNOOZE" && getProfileCompletion(before).requiresSetup && !getProfileCompletion(before).requiredComplete) {
-        throw new HttpError(409, "Complete your required setup before continuing. Only your photo is optional.");
+        throw new HttpError(409, "Complete your required setup before continuing. Your photo and Wiscard are optional.");
       }
       if (body.step === "EMAIL" && !isCampusLoginEmail(before.email)) {
         throw new HttpError(409, "Your site login must be a @wisc.edu email. Ask an administrator to update it before completing your profile.");
