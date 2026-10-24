@@ -18,6 +18,7 @@ struct UserDetailView: View {
     @State private var selectedShift: MyShift?
     @State private var isLoading = true
     @State private var toast: Toast?
+    @State private var showsBarTitle = false
     @State private var error: String?
     @State private var showBadgeGallery = false
     @State private var selectedBadge: UserBadge?
@@ -77,10 +78,17 @@ struct UserDetailView: View {
                     .padding(.vertical, Brand.Space.sm)
                 }
                 .background(Color(.systemGroupedBackground))
+                // The hero already shows the name, so the bar only picks it up
+                // once the hero has scrolled away.
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.contentInsets.top > 120
+                } action: { _, scrolledPastHero in
+                    withAnimation(.easeInOut(duration: 0.2)) { showsBarTitle = scrolledPastHero }
+                }
             }
         }
         .toast($toast)
-        .navigationTitle(detail?.name ?? "Profile")
+        .navigationTitle(showsBarTitle || detail == nil ? (detail?.name ?? "Profile") : "")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .task { await loadHoursIfNeeded() }
@@ -127,15 +135,19 @@ struct UserDetailView: View {
         // Identity leads in Gotham; role/joined read as quiet metadata.
         // Inactive accounts drop the role tone to gray.
         let tone: StatusTone = detail.active ? StatusTone.forRole(detail.role) : .gray
+        // The avatar carries the person's area colour, as the Users list dot
+        // does; with no area it keeps the role tone.
+        let areaTint: Color? = detail.active && detail.primaryArea != nil
+            ? StaffPalette.areaColor(detail.primaryArea) : nil
         // Centered identity on the grouped background, no card around it: the
         // avatar and name are the screen's subject, not one more row of content.
         return VStack(spacing: Brand.Space.xs) {
             UserAvatarView(
                 name: detail.name,
                 avatarUrl: detail.avatarUrl,
-                size: 88,
-                fallbackBackground: Color.statusBackground(tone),
-                fallbackForeground: Color.statusText(tone),
+                size: 72,
+                fallbackBackground: areaTint?.opacity(0.16) ?? Color.statusBackground(tone),
+                fallbackForeground: areaTint ?? Color.statusText(tone),
                 showsBorder: false
             )
             .opacity(detail.active ? 1 : 0.6)
@@ -161,13 +173,19 @@ struct UserDetailView: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
             }
-            HStack(spacing: 6) {
-                StatusPill.role(detail.role)
-                if !detail.active {
-                    StatusPill(label: "Inactive", tone: .gray)
+            // Staff and students are the default, so a pill on every profile is
+            // noise. It stays for the roles that read differently, and Inactive.
+            if detail.role != "STAFF" && detail.role != "STUDENT" || !detail.active {
+                HStack(spacing: 6) {
+                    if detail.role != "STAFF" && detail.role != "STUDENT" {
+                        StatusPill.role(detail.role)
+                    }
+                    if !detail.active {
+                        StatusPill(label: "Inactive", tone: .gray)
+                    }
                 }
+                .padding(.top, 2)
             }
-            .padding(.top, 2)
             if let meta = metaLine(detail) {
                 Text(meta)
                     .font(.footnote)
