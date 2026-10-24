@@ -46,6 +46,40 @@
   },
   {
     "date": "2026-10-23",
+    "title": "Six new badges, three of them surprises",
+    "type": "feature",
+    "summary": "New badges to chase, plus three hidden ones tied to Badger game days.",
+    "details": [
+      "Iron Crew is for working 100 event shifts, and Centurion is for returning 100 checkouts on time.",
+      "Fifth Quarter is for working five home football games.",
+      "Three surprises stay hidden until someone earns them. Here's a hint: one is about a rivalry, one is about a homecoming, and one is about a number."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 622
+  },
+  {
+    "date": "2026-10-23",
+    "title": "A badge gallery for the whole team",
+    "type": "feature",
+    "summary": "Badges is now a gallery everyone can open. See every badge, who has it, and how your collection compares with your teammates.",
+    "details": [
+      "The Gallery shows every badge and who on the team already earned each one, with Up next at the top: the three badges you are closest to earning.",
+      "The Team view shows who earned what this week and ranks everyone by badges earned. Pick anyone to see what only they have, what you both have, and what only you have.",
+      "Surprise badges stay a surprise: you can see that someone found one, but not what it is until you earn it yourself.",
+      "Badges for damaged, missing or late gear never show who holds them and never count toward the ranking.",
+      "Badges moved into the People section of the sidebar for everyone, and a profile's Badges tab links straight to who else has a badge or to a side-by-side compare. Staff still award badges from the new Award tab.",
+      "Rarity is now measured among the people who can earn badges, so collaborator accounts no longer make every badge look rarer, and the badge report no longer ranks people who have left."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 622
+  },
+  {
+    "date": "2026-10-23",
     "title": "Roster invites are emailed",
     "type": "fixes",
     "summary": "Adding people with Paste a roster now emails each of them their setup link, and Resend sends the invite itself.",

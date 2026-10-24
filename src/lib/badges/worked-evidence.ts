@@ -47,6 +47,7 @@ const ASSIGNMENT_SELECT = {
               site: true,
               locationId: true,
               opponent: true,
+              summary: true,
             },
           },
         },
@@ -68,6 +69,7 @@ const WORKER_SELECT = {
       site: true,
       locationId: true,
       opponent: true,
+      summary: true,
     },
   },
 } satisfies Prisma.EventWorkerSelect;

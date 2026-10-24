@@ -1457,6 +1457,9 @@ private let hiddenBadgeKeys: Set<String> = [
     "midnight_oil",
     "weekend_warrior",
     "leap_day",
+    "axe_crew",
+    "homecoming",
+    "pi_day",
 ]
 
 private let legendaryBadgeKeys: Set<String> = [
