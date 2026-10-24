@@ -156,7 +156,7 @@
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 169 |
+| `src/lib/api.ts` | 188 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
