@@ -1,0 +1,67 @@
+{
+  "data": {
+    "profile": {
+      "id": "cm0000000000000000student1",
+      "name": "Bucky Badger",
+      "role": "STUDENT",
+      "email": "bucky@wisc.edu",
+      "athleticsEmail": "bbadger@athletics.wisc.edu",
+      "phone": "6085550100",
+      "personalPhone": "6085550100",
+      "workPhone": null,
+      "workPhoneNotApplicable": false,
+      "wiscardCardNumber": "1234567890",
+      "wiscardIssueCode": "2",
+      "studentYearOverride": "SOPHOMORE",
+      "gradYear": 2029,
+      "graduationTerm": "SPRING",
+      "topSizeFit": "UNISEX",
+      "topSize": "M",
+      "shoeSizeSystem": "US_MENS",
+      "shoeSize": "10",
+      "avatarUrl": null,
+      "profilePromptSnoozedUntil": "2026-10-27T15:00:00.000Z",
+      "onboardingRequired": false,
+      "onboardingCompletedAt": "2026-10-26T14:30:00.000Z"
+    },
+    "completion": {
+      "operationalReady": true,
+      "requiredComplete": true,
+      "requiresSetup": false,
+      "onboardingComplete": true,
+      "profileComplete": false,
+      "isComplete": false,
+      "isSnoozed": true,
+      "shouldPrompt": false,
+      "snoozedUntil": "2026-10-27T15:00:00.000Z",
+      "completedCount": 6,
+      "totalCount": 7,
+      "missingFields": [
+        "photo"
+      ],
+      "firstIncompleteStep": "PHOTO",
+      "completeByField": {
+        "campusEmail": true,
+        "athleticsEmail": true,
+        "personalPhone": true,
+        "workPhone": false,
+        "wiscard": true,
+        "studentYear": true,
+        "anticipatedGraduation": true,
+        "clothingSize": true,
+        "shoeSize": true,
+        "photo": false
+      }
+    },
+    "versions": {
+      "EMAIL": "51b634721132ca4b49d6b939f2b4902a7da8c4b18a4a5baf507154364bfd27b2",
+      "PERSONAL_PHONE": "1b2f13a85519ca7c06e44446df3ca6a81d0f039aa606db085dfb9427e7d44b95",
+      "WORK_PHONE": "10509e7a3a651e12a7631efe104c3cf315465e2d23b498e843e7c7110cf12235",
+      "WISCARD": "3909e0ede1f38712f064cdc9e2682c340e72f6fd90a21fef025eef34be02b41e",
+      "STUDENT": "c231f842c36c96a8c34c32ae0b4116f64d9e3a8992b43b76eb950548ba2a3bf5",
+      "GRADUATION": "4b325768231f8cafe97d54e92069a2c632bf0379c6e325420a54c952300777e6",
+      "CLOTHING": "beadbbdea41555322cd48df11a59ecd7b59cc5ce654ea2bc300527782ee18c6f",
+      "SHOES": "f9ad7d05c4ae6c1f17a89679ea9ee1aab4fdaf09500860d4d6b754f2cb5e2f00"
+    }
+  }
+}
