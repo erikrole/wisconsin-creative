@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import EmptyState from "@/components/EmptyState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import type { InsightsData, WindowKey, WindowStats } from "./types";
 
 const windowLabels: Record<WindowKey, string> = {
@@ -121,39 +122,21 @@ function RankedList({
 }
 
 export default function ItemInsightsTab({ assetId }: { assetId: string }) {
-  const [data, setData] = useState<InsightsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [window, setWindow] = useState<WindowKey>("90d");
-
-  const loadInsights = useCallback((signal?: AbortSignal) => {
-    setLoading(true);
-    setError(false);
-    fetch(`/api/assets/${assetId}/insights`, { signal })
-      .then((res) => {
-        if (handleAuthRedirect(res)) return null;
-        if (!res.ok) throw new Error();
-        return parseJsonSafely<{ data?: InsightsData }>(res);
-      })
-      .then((json) => {
-        if (signal?.aborted) return;
-        if (json?.data) setData(json.data);
-        else setError(true);
-      })
-      .catch((err) => {
-        if (isAbortError(err)) return;
-        setError(true);
-      })
-      .finally(() => {
-        if (!signal?.aborted) setLoading(false);
-      });
-  }, [assetId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    loadInsights(controller.signal);
-    return () => controller.abort();
-  }, [loadInsights]);
+  const insights = useQuery({
+    queryKey: ["item-insights", assetId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/assets/${assetId}/insights`, { signal });
+      if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+      if (!res.ok) throw new Error("Could not load insights");
+      const json = await parseJsonSafely<{ data?: InsightsData }>(res);
+      if (!json?.data) throw new Error("Could not load insights");
+      return json.data;
+    },
+  });
+  const data = insights.data ?? null;
+  const loading = insights.isPending && insights.isFetching;
+  const error = insights.isError && !data;
 
   if (loading) {
     return <div className="flex items-center justify-center py-10"><Spinner className="size-8" /></div>;
@@ -168,7 +151,7 @@ export default function ItemInsightsTab({ assetId }: { assetId: string }) {
           title="Could not load insights"
           description="Retry to refresh demand, borrower, and lifecycle signals for this item."
           actionLabel="Retry"
-          onAction={() => loadInsights()}
+          onAction={() => void insights.refetch()}
         />
       </div>
     );

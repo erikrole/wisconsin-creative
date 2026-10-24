@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   compareFootballGamedayKits,
 } from "@/lib/football-gameday-kits";
-import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 
 export type BookingKitOption = {
   id: string;
@@ -13,6 +13,41 @@ export type BookingKitOption = {
   gamedayRole: string | null;
   contents: number;
 };
+
+type KitsResult = { kits: BookingKitOption[]; suggestedKitId: string | null };
+
+const NO_KITS: BookingKitOption[] = [];
+
+async function fetchKits(locationId: string, requesterUserId: string | undefined, signal: AbortSignal): Promise<KitsResult> {
+  const params = new URLSearchParams({ location_id: locationId, limit: "100" });
+  if (requesterUserId) params.set("requester_user_id", requesterUserId);
+  const res = await fetch(`/api/kits?${params}`, { signal });
+  if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+  if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load kits"));
+  const json = await parseJsonSafely<{
+    suggestedKitId?: string | null;
+    data?: Array<{
+      id: string;
+      name: string;
+      sportCode?: string | null;
+      gamedayRole?: string | null;
+      _count?: { members?: number; bulkMembers?: number };
+    }>;
+  }>(res);
+  const mapped = (json?.data || []).map((kit) => ({
+    id: kit.id,
+    name: kit.name,
+    sportCode: kit.sportCode ?? null,
+    gamedayRole: kit.gamedayRole ?? null,
+    contents: (kit._count?.members ?? 0) + (kit._count?.bulkMembers ?? 0),
+  }));
+  return {
+    kits: mapped
+      .filter((kit) => kit.contents > 0)
+      .sort(compareFootballGamedayKits),
+    suggestedKitId: json?.suggestedKitId ?? null,
+  };
+}
 
 export function useKitFetching({
   locationId,
@@ -23,70 +58,22 @@ export function useKitFetching({
   requesterUserId?: string;
   open: boolean;
 }) {
-  const [kits, setKits] = useState<BookingKitOption[]>([]);
-  const [suggestedKitId, setSuggestedKitId] = useState<string | null>(null);
-  const [kitsLoading, setKitsLoading] = useState(false);
-  const [kitsLoadError, setKitsLoadError] = useState<false | "network" | "server">(false);
-  const [kitsReloadKey, setKitsReloadKey] = useState(0);
-  const retryKits = useCallback(() => setKitsReloadKey((value) => value + 1), []);
+  const enabled = Boolean(locationId) && open;
+  const query = useQuery({
+    queryKey: ["booking-kits", locationId, requesterUserId ?? null],
+    queryFn: ({ signal }) => fetchKits(locationId, requesterUserId, signal),
+    enabled,
+  });
 
-  useEffect(() => {
-    if (!locationId || !open) {
-      setKits([]);
-      setSuggestedKitId(null);
-      setKitsLoading(false);
-      setKitsLoadError(false);
-      return;
-    }
-    const controller = new AbortController();
-    setKits([]);
-    setSuggestedKitId(null);
-    setKitsLoading(true);
-    setKitsLoadError(false);
-    const params = new URLSearchParams({ location_id: locationId, limit: "100" });
-    if (requesterUserId) params.set("requester_user_id", requesterUserId);
-    fetch(`/api/kits?${params}`, { signal: controller.signal })
-      .then(async (res) => {
-        if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
-        if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load kits"));
-        return parseJsonSafely<{
-          suggestedKitId?: string | null;
-          data?: Array<{
-            id: string;
-            name: string;
-            sportCode?: string | null;
-            gamedayRole?: string | null;
-            _count?: { members?: number; bulkMembers?: number };
-          }>;
-        }>(res);
-      })
-      .then((json) => {
-        if (controller.signal.aborted) return;
-        const mapped = (json?.data || []).map((kit) => ({
-          id: kit.id,
-          name: kit.name,
-          sportCode: kit.sportCode ?? null,
-          gamedayRole: kit.gamedayRole ?? null,
-          contents: (kit._count?.members ?? 0) + (kit._count?.bulkMembers ?? 0),
-        }));
-        setKits(
-          mapped
-            .filter((kit) => kit.contents > 0)
-            .sort(compareFootballGamedayKits),
-        );
-        setSuggestedKitId(json?.suggestedKitId ?? null);
-        setKitsLoadError(false);
-        setKitsLoading(false);
-      })
-      .catch((err) => {
-        if (isAbortError(err)) return;
-        setKits([]);
-        setSuggestedKitId(null);
-        setKitsLoadError(err instanceof TypeError ? "network" : "server");
-        setKitsLoading(false);
-      });
-    return () => controller.abort();
-  }, [locationId, requesterUserId, open, kitsReloadKey]);
+  // A failed read stays distinct from a true no-kit result so the step can offer Retry.
+  const kitsLoadError: false | "network" | "server" = enabled && query.isError ? (query.error instanceof TypeError ? "network" : "server") : false;
+  const result = enabled && !query.isError ? query.data : undefined;
 
-  return { kits, suggestedKitId, kitsLoading, kitsLoadError, retryKits };
+  return {
+    kits: result?.kits ?? NO_KITS,
+    suggestedKitId: result?.suggestedKitId ?? null,
+    kitsLoading: enabled && query.isPending,
+    kitsLoadError,
+    retryKits: () => void query.refetch(),
+  };
 }

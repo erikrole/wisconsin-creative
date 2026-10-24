@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -13,6 +14,8 @@ import { SettingsGroup } from "./SettingsGroup";
 
 type FeedStatus = { hasToken: boolean; feedUrl?: string | null };
 
+const FEED_QUERY_KEY = ["shifts", "ics-token"] as const;
+
 /**
  * Private ICS feed of the viewer's shifts. The token is stored hashed, so the
  * URL is only visible right after it is created; afterwards the only option is
@@ -20,26 +23,23 @@ type FeedStatus = { hasToken: boolean; feedUrl?: string | null };
  */
 export function ShiftCalendarFeed() {
   const confirm = useConfirm();
-  const [status, setStatus] = useState<FeedStatus | null>(null);
-  const [failed, setFailed] = useState(false);
+  const queryClient = useQueryClient();
+  const feedQuery = useQuery({
+    queryKey: FEED_QUERY_KEY,
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/shifts/ics-token", { signal });
+      if (handleAuthRedirect(res, "/settings/profile")) throw new DOMException("Auth redirect", "AbortError");
+      const json = res.ok ? await parseJsonSafely<{ data?: FeedStatus }>(res) : null;
+      if (!json?.data) throw new Error("Calendar feed unavailable");
+      return json.data;
+    },
+    retry: false,
+    // The feed URL is shown only right after it is created; drop it on leave.
+    gcTime: 0,
+  });
+  const status = feedQuery.data ?? null;
+  const failed = feedQuery.isError;
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/shifts/ics-token");
-        if (handleAuthRedirect(res, "/settings/profile")) return;
-        const json = res.ok ? await parseJsonSafely<{ data?: FeedStatus }>(res) : null;
-        if (cancelled) return;
-        if (json?.data) setStatus(json.data);
-        else setFailed(true);
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   async function generate() {
     if (busy) return;
@@ -61,7 +61,7 @@ export function ShiftCalendarFeed() {
         return;
       }
       const json = await parseJsonSafely<{ data?: FeedStatus }>(res);
-      setStatus({ hasToken: true, feedUrl: json?.data?.feedUrl ?? null });
+      queryClient.setQueryData<FeedStatus>(FEED_QUERY_KEY, { hasToken: true, feedUrl: json?.data?.feedUrl ?? null });
     } catch {
       toast.error("Could not reach the server. Check your connection.");
     } finally {
