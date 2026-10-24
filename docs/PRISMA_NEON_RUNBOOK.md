@@ -18,10 +18,11 @@ Last updated: 2026-10-22
   fallback. A key named `DIRECT_URL` that points at a Neon `-pooler` host is
   rejected as well.
 - `prisma.config.ts` owns the Prisma CLI datasource and uses the same resolver
-  when a direct URL is present. Prisma 6 still requires a schema URL
-  syntactically, so the config supplies an internal `PRISMA_SCHEMA_URL`
-  placeholder rather than requiring runtime or direct credentials. The config's
-  datasource override remains authoritative for real CLI connections.
+  when a direct URL is present. Prisma 7 keeps URLs out of `schema.prisma`
+  entirely, so the config is the only place a CLI connection is defined, and
+  it falls back to an inert placeholder rather than requiring runtime or
+  direct credentials. `prisma migrate diff` uses `--from-schema` and
+  `--to-schema` (the `*-datamodel` flags were removed).
   Application runtime database access remains configured explicitly by the
   Neon Prisma adapter in `src/lib/db.ts`.
   Schema-only commands may use an inert localhost placeholder; deploy, health,

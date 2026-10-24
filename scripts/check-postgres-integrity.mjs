@@ -31,7 +31,7 @@ if (baseRef && !/^0+$/.test(baseRef)) {
   try {
     const schemaPath = join(directory, "schema.prisma");
     writeFileSync(schemaPath, baseSchema.stdout);
-    const baseline = spawnSync("npx", ["prisma", "migrate", "diff", "--from-empty", "--to-schema-datamodel", schemaPath, "--script"], { encoding: "utf8" });
+    const baseline = spawnSync("npx", ["prisma", "migrate", "diff", "--from-empty", "--to-schema", schemaPath, "--script"], { encoding: "utf8" });
     if (baseline.status !== 0) throw new Error(baseline.stderr);
     sql(baseline.stdout);
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -97,7 +97,8 @@ if (sql("SELECT count(*) FROM pg_constraint WHERE conname='asset_allocations_no_
 // Query every scalar field through the generated Prisma client: catches P2022
 // payload/schema mismatch at the database boundary without real user records.
 const { PrismaClient, Prisma } = await import("@prisma/client");
-const db = new PrismaClient({ datasourceUrl: connection });
+const { PrismaPg } = await import("@prisma/adapter-pg");
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: connection }) });
 try {
   for (const model of Prisma.dmmf.datamodel.models) {
     const delegate = model.name[0].toLowerCase() + model.name.slice(1);
@@ -105,8 +106,7 @@ try {
   }
   await db.$executeRawUnsafe("CREATE SCHEMA wc_preview_meta");
   await db.$executeRawUnsafe("CREATE TABLE wc_preview_meta.runtime(id boolean PRIMARY KEY, pinned boolean NOT NULL DEFAULT false, last_seen_at timestamptz NOT NULL, git_deleted_at timestamptz, cleanup_started_at timestamptz)");
-  const peerUrl = new URL(connection); peerUrl.searchParams.set("connection_limit", "1");
-  const peer = new PrismaClient({ datasourceUrl: peerUrl.toString() });
+  const peer = new PrismaClient({ adapter: new PrismaPg({ connectionString: connection, max: 1 }) });
   try {
     await peer.$executeRawUnsafe("SET application_name='wc_cleanup_race_peer'");
     for (const cleanupFirst of [false, true]) {

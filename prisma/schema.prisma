@@ -4,9 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Prisma 6 requires a schema URL syntactically. prisma.config.ts supplies an
-  // inert value for schema loading and overrides it for real CLI connections.
-  url      = env("PRISMA_SCHEMA_URL")
+  // Prisma 7 keeps connection URLs out of the schema: prisma.config.ts supplies
+  // the migration URL and the runtime client connects through a driver adapter.
 }
 
 enum Role {
