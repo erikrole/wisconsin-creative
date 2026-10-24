@@ -1,5 +1,4 @@
-export const SPORT_PROGRAMS = ["men", "women"] as const;
-type SportProgram = (typeof SPORT_PROGRAMS)[number];
+type SportProgram = "men" | "women";
 
 /** UW Athletics sport codes — all 23 varsity sports */
 export const SPORT_CODES = [

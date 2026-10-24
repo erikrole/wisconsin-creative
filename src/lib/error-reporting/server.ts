@@ -31,7 +31,7 @@ function isExpectedHttpError(error: unknown): boolean {
   return typeof status === "number" && status < 500;
 }
 
-export function deployInfo() {
+function deployInfo() {
   return {
     appBuild: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
     releaseChannel: process.env.VERCEL_ENV ?? (process.env.NODE_ENV === "production" ? "production" : "development"),

@@ -343,7 +343,7 @@ export async function submitCheckinItemReport(args: {
 }
 
 /** Battery Ops keeps its own notes on a unit; a report adds a line, never replaces them. */
-export function appendUnitNote(existing: string | null, marker: string) {
+function appendUnitNote(existing: string | null, marker: string) {
   const prior = existing?.trim();
   return prior ? `${prior}\n${marker}` : marker;
 }

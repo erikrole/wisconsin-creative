@@ -51,7 +51,7 @@
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 254 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
-| `src/lib/services/damage-cases.ts` | 364 |
+| `src/lib/services/damage-cases.ts` | 356 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
 | `src/lib/services/error-reports.ts` | 554 |
 | `src/lib/services/event-travel.ts` | 32 |
@@ -93,7 +93,7 @@
 | `src/lib/services/notification-delivery.ts` | 247 |
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
-| `src/lib/services/notifications.ts` | 28 |
+| `src/lib/services/notifications.ts` | 27 |
 | `src/lib/services/onboarding-lifecycle.ts` | 550 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
@@ -151,7 +151,7 @@
 | File | Lines |
 |---|---:|
 | `src/lib/a11y-resilience.ts` | 116 |
-| `src/lib/admin-fix-today.ts` | 407 |
+| `src/lib/admin-fix-today.ts` | 398 |
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
@@ -183,7 +183,7 @@
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
 | `src/lib/booking-display-title.ts` | 58 |
-| `src/lib/booking-status-display.ts` | 170 |
+| `src/lib/booking-status-display.ts` | 152 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 230 |
 | `src/lib/brother-chain.ts` | 71 |
@@ -209,7 +209,7 @@
 | `src/lib/collaborator-gear.ts` | 181 |
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 71 |
-| `src/lib/companion-store.ts` | 375 |
+| `src/lib/companion-store.ts` | 367 |
 | `src/lib/crew-label.ts` | 26 |
 | `src/lib/crew-pending-review.ts` | 44 |
 | `src/lib/cron.ts` | 35 |
@@ -224,7 +224,7 @@
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 155 |
-| `src/lib/errors.ts` | 83 |
+| `src/lib/errors.ts` | 96 |
 | `src/lib/event-editor.ts` | 114 |
 | `src/lib/external-url.ts` | 30 |
 | `src/lib/fetch-with-timeout.ts` | 25 |
@@ -241,13 +241,13 @@
 | `src/lib/http.ts` | 130 |
 | `src/lib/ics-token.ts` | 26 |
 | `src/lib/image-search-modal.ts` | 59 |
-| `src/lib/image-search.ts` | 240 |
+| `src/lib/image-search.ts` | 231 |
 | `src/lib/item-asset-tag-sort.ts` | 244 |
 | `src/lib/item-family-products.ts` | 14 |
 | `src/lib/item-family-state.ts` | 101 |
 | `src/lib/item-image-draft.ts` | 88 |
 | `src/lib/kiosk-activation.ts` | 8 |
-| `src/lib/kiosk-heartbeat-cache.ts` | 165 |
+| `src/lib/kiosk-heartbeat-cache.ts` | 158 |
 | `src/lib/kiosk-staff-token.ts` | 79 |
 | `src/lib/label-print-client.ts` | 20 |
 | `src/lib/label-print-controller.ts` | 199 |
@@ -282,8 +282,9 @@
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 66 |
 | `src/lib/quick-links.ts` | 66 |
-| `src/lib/rate-limit.ts` | 238 |
+| `src/lib/rate-limit.ts` | 214 |
 | `src/lib/rbac.ts` | 59 |
+| `src/lib/redis.ts` | 30 |
 | `src/lib/releases.ts` | 104 |
 | `src/lib/remark-callouts.ts` | 77 |
 | `src/lib/request-limits.ts` | 17 |
@@ -330,6 +331,7 @@
 | `src/lib/search-result-title.ts` | 13 |
 | `src/lib/secret-box.ts` | 54 |
 | `src/lib/serialization.ts` | 47 |
+| `src/lib/settled.ts` | 23 |
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 200 |
 | `src/lib/shift-claim-eligibility.ts` | 63 |
@@ -343,7 +345,7 @@
 | `src/lib/software-vault-validation.ts` | 39 |
 | `src/lib/sport-auto-assign-policy.ts` | 60 |
 | `src/lib/sport-color.ts` | 19 |
-| `src/lib/sports.ts` | 99 |
+| `src/lib/sports.ts` | 98 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 19 |
 | `src/lib/student-availability.ts` | 209 |

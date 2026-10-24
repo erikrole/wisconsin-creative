@@ -22,7 +22,7 @@ import {
   parseDollarsToCents,
   type BudgetCategoryValue,
 } from "@/lib/budget/contract";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { parseErrorMessage, readApiData } from "@/lib/errors";
 import {
   WISH_STATUS_LABELS,
   linkDomain,
@@ -36,14 +36,6 @@ import type { WishView } from "@/lib/services/wishlist";
 type BudgetOption = { id: string; name: string; fiscalYear: string };
 
 const WISH_KEY = ["wishlist"] as const;
-
-async function readJson<T>(response: Response, fallback: string): Promise<T> {
-  if (handleAuthRedirect(response, "/wishlist")) throw new Error("Signing in again");
-  if (!response.ok) throw new Error(await parseErrorMessage(response, fallback));
-  const json = await parseJsonSafely<{ data?: T }>(response);
-  if (!json?.data) throw new Error(fallback);
-  return json.data;
-}
 
 const PILL: Record<WishStatusValue, string> = {
   OPEN: "bg-muted text-muted-foreground",
@@ -72,7 +64,7 @@ export function WishlistView({ isAdmin, currentUserId }: { isAdmin: boolean; cur
 
   const wishes = useQuery<WishView[]>({
     queryKey: WISH_KEY,
-    queryFn: async ({ signal }) => readJson(await fetch("/api/wishlist", { signal }), "Could not load the wish list"),
+    queryFn: async ({ signal }) => readApiData(await fetch("/api/wishlist", { signal }), "Could not load the wish list"),
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: WISH_KEY });
 
@@ -408,7 +400,7 @@ function PromoteDialog({
 }) {
   const budgets = useQuery<BudgetOption[]>({
     queryKey: ["budget", "list"],
-    queryFn: async ({ signal }) => readJson(await fetch("/api/budget", { signal }), "Could not load budgets"),
+    queryFn: async ({ signal }) => readApiData(await fetch("/api/budget", { signal }), "Could not load budgets"),
   });
   const [budgetId, setBudgetId] = useState("");
   const [category, setCategory] = useState<BudgetCategoryValue>("EQUIPMENT");

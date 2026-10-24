@@ -1,7 +1,8 @@
-import { Redis } from "@upstash/redis";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { BH_HERO_IMAGE_SIZE, isBlockedBhImageUrl, toBhStaticImageUrl } from "@/lib/bhphoto-image";
 import { env } from "@/lib/env";
+import { cacheNamespace } from "@/lib/environment-safety";
+import { getUpstashRedis, resetUpstashRedisForTests } from "@/lib/redis";
 
 type ImageSearchProvider = "brave" | "none";
 
@@ -37,16 +38,6 @@ const MAX_RESULTS = 8;
 const MIN_LONG_EDGE = 300;
 
 const memoryCache = new Map<string, CacheEntry>();
-let redis: Redis | null | undefined;
-
-function getRedis(): Redis | null {
-  if (redis !== undefined) return redis;
-  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-  redis = url && token ? new Redis({ url, token }) : null;
-  return redis;
-}
-
 export function normalizeImageSearchQuery(query: string): string {
   return query.replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_LENGTH);
 }
@@ -65,7 +56,7 @@ function getProviderOrNone(): "brave" | null {
 }
 
 function cacheKey(provider: "brave", query: string) {
-  return `image-search:v${CACHE_VERSION}:${provider}:${query.toLowerCase()}`;
+  return cacheNamespace(`image-search:v${CACHE_VERSION}:${provider}:${query.toLowerCase()}`);
 }
 
 async function readCache(key: string): Promise<ImageSearchOutcome | null> {
@@ -76,7 +67,7 @@ async function readCache(key: string): Promise<ImageSearchOutcome | null> {
     memoryCache.delete(key);
   }
 
-  const client = getRedis();
+  const client = getUpstashRedis();
   if (!client) return null;
 
   try {
@@ -95,7 +86,7 @@ async function writeCache(key: string, outcome: ImageSearchOutcome): Promise<voi
   const entry: CacheEntry = { expiresAt: Date.now() + ttlMs, outcome };
   memoryCache.set(key, entry);
 
-  const client = getRedis();
+  const client = getUpstashRedis();
   if (!client) return;
 
   try {
@@ -235,5 +226,5 @@ export async function searchProductImages(query: string): Promise<ImageSearchOut
 
 export function __resetImageSearchCacheForTests() {
   memoryCache.clear();
-  redis = undefined;
+  resetUpstashRedisForTests();
 }

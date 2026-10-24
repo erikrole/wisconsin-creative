@@ -9,7 +9,7 @@
  * count as someone's own gear.
  */
 
-export const SHIFT_SOON_WINDOW_MS = 2 * 60 * 60 * 1000;
+const SHIFT_SOON_WINDOW_MS = 2 * 60 * 60 * 1000;
 
 type Person = { id: string; name: string; avatarUrl: string | null };
 
@@ -116,7 +116,7 @@ export function projectPickups(rows: HomePickupRow[], displayTitle: (title: stri
 }
 
 /** Serialized assets first, then bulk SKUs with quantity still to pick up; capped. */
-export function pickupGearThumbs(row: HomePickupRow): KioskGearThumb[] {
+function pickupGearThumbs(row: HomePickupRow): KioskGearThumb[] {
   const serialized = (row.serializedItems ?? []).map((si) => ({
     tagName: si.asset.assetTag,
     imageUrl: si.asset.imageUrl,

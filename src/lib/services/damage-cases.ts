@@ -9,21 +9,13 @@ import { deferPush, notifyItemReport } from "@/lib/services/notifications";
 import { deriveAssetStatus } from "@/lib/services/status";
 
 /** Outcomes staff can pick, by what was reported. */
-export const RESOLUTIONS_BY_TYPE: Record<CheckinReportType, ReportResolution[]> = {
+const RESOLUTIONS_BY_TYPE: Record<CheckinReportType, ReportResolution[]> = {
   DAMAGED: ["REPAIRED", "REPLACED", "WRITTEN_OFF", "NO_ISSUE"],
   LOST: ["FOUND", "REPLACED", "WRITTEN_OFF"],
 };
 
 /** Outcomes that take the item out of service for good. */
 const RETIRING: ReportResolution[] = ["REPLACED", "WRITTEN_OFF"];
-
-export const RESOLUTION_LABELS: Record<ReportResolution, string> = {
-  REPAIRED: "Repaired",
-  REPLACED: "Replaced",
-  WRITTEN_OFF: "Written off",
-  FOUND: "Found",
-  NO_ISSUE: "No issue found",
-};
 
 /** A report targets a serialized asset, a numbered unit, or counted stock. */
 const ANY_TARGET: Prisma.CheckinItemReportWhereInput = {

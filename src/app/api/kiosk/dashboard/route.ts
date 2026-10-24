@@ -18,18 +18,9 @@ import {
   type HomePickupRow,
 } from "@/lib/services/kiosk-dashboard-home";
 import { kioskNudgedTodaySet } from "@/lib/services/kiosk-nudge";
+import { settledReader } from "@/lib/settled";
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[kiosk/dashboard] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("kiosk/dashboard");
 
 function timeZoneOffsetMs(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {

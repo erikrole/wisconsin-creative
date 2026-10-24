@@ -78,12 +78,12 @@ function num(value: unknown): number | null {
 }
 
 /** App binaries are ours; everything else is a system framework. */
-export function isAppBinary(name: string | null): boolean {
+function isAppBinary(name: string | null): boolean {
   return !!name && /^(Wisconsin|GearOps)/.test(name);
 }
 
 /** Frames of the crashing (attributed) thread, top of stack first. */
-export function attributedFrames(callStackTree: unknown): StackFrame[] {
+function attributedFrames(callStackTree: unknown): StackFrame[] {
   const tree = record(callStackTree);
   const stacks = Array.isArray(tree.callStacks) ? (tree.callStacks as unknown[]).map(record) : [];
   const stack = stacks.find((entry) => entry.threadAttributed === true) ?? stacks[0];

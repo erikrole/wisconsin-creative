@@ -8,8 +8,8 @@ import { HttpError } from "@/lib/http";
  * issues this short-lived token bound to the staff user and this kiosk device;
  * staff-privileged kiosk routes require it in `X-Kiosk-Staff-Token`.
  */
-export const KIOSK_STAFF_TOKEN_HEADER = "x-kiosk-staff-token";
-export const KIOSK_STAFF_TOKEN_TTL_MS = 10 * 60 * 1000;
+const KIOSK_STAFF_TOKEN_HEADER = "x-kiosk-staff-token";
+const KIOSK_STAFF_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 type StaffTokenPayload = { v: 1; u: string; k: string; e: number };
 

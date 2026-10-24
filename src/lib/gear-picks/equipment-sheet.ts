@@ -13,7 +13,7 @@ import type { GearPickAdminParticipant } from "@/lib/gear-picks/types";
  * size columns, the same way the department filled earlier tabs by hand.
  */
 
-export const EQUIPMENT_SHEET_TEMPLATE_PATH = path.join(
+const EQUIPMENT_SHEET_TEMPLATE_PATH = path.join(
   process.cwd(),
   "src/lib/gear-picks/templates/equipment-sheet-brand-creative.xlsx",
 );
@@ -230,7 +230,7 @@ function writeRow(sheet: ExcelJS.Worksheet, rowNumber: number, row: EquipmentShe
 }
 
 /** Places each planned row in its section, spilling into the overflow sections when a section is full. */
-export function assignEquipmentSheetRows(plan: EquipmentSheetPlan, free: Record<EquipmentSheetSectionKey, number[]>) {
+function assignEquipmentSheetRows(plan: EquipmentSheetPlan, free: Record<EquipmentSheetSectionKey, number[]>) {
   const remaining = Object.fromEntries(
     SECTION_ORDER.map((key) => [key, [...free[key]]]),
   ) as Record<EquipmentSheetSectionKey, number[]>;

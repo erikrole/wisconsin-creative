@@ -2,18 +2,9 @@ import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { cachedOk } from "@/lib/http";
 import { requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
+import { settledReader } from "@/lib/settled";
 
-function settledValue<T>(
-  result: PromiseSettledResult<T>,
-  fallback: T,
-  label: string,
-  partialFailures: string[],
-): T {
-  if (result.status === "fulfilled") return result.value;
-  console.error(`[items-page-init] ${label} failed`, result.reason);
-  partialFailures.push(label);
-  return fallback;
-}
+const settledValue = settledReader("items-page-init");
 
 /**
  * Consolidated endpoint for the items list page.

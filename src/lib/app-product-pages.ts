@@ -84,7 +84,7 @@ export const offloadPage: ProductPage = {
 };
 
 
-export const wisconsinCreativePage: ProductPage = {
+const wisconsinCreativePage: ProductPage = {
   slug: "wisconsin-creative", name: "Wisconsin Creative", icon: "wisconsin-creative", platform: "iPhone and iPad", shotLayout: "phones",
   tagline: "Your gear and game day, together.",
   intro: "Reserve equipment, see event and shift schedules, and look up the gear you need from your iPhone or iPad.",
@@ -114,7 +114,7 @@ export const wisconsinCreativePage: ProductPage = {
   ],
 };
 
-export const radioClipPage: ProductPage = {
+const radioClipPage: ProductPage = {
   slug: "radio-clip", name: "Radio Clip", icon: "radio", platform: "macOS", status: "In development",
   tagline: "Find the call. Make the clip.",
   intro: "A local broadcast-editing workflow that brings recordings, transcripts and official plays together, so an operator can review the moments and export MP3 highlights.",
@@ -140,7 +140,7 @@ export const radioClipPage: ProductPage = {
   ],
 };
 
-export const mediaLabPage: ProductPage = {
+const mediaLabPage: ProductPage = {
   slug: "media-lab", name: "Media Lab", icon: "media-lab", platform: "Media library", status: "In development",
   tagline: "Find the footage where it already lives.",
   intro: "A media library being built around the existing media drive: searchable metadata, photo and video previews, and naming review without moving everything into a new storage system.",

@@ -146,7 +146,3 @@ export function snapshotsEqual(a: VideoSnapshot, b: VideoSnapshot): boolean {
 export function liveVideosEqual(a: LiveVideo, b: LiveVideo): boolean {
   return a.etag === b.etag && snapshotsEqual(a.snapshot, b.snapshot);
 }
-
-export function snapshot(fields: Partial<VideoSnapshot> & Pick<VideoSnapshot, "id" | "title" | "description">): VideoSnapshot {
-  return { categoryId: "17", isPublic: true, ...fields };
-}

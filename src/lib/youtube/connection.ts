@@ -25,7 +25,7 @@ const tokenBox = createSecretBox({ readKey: () => env.youtubeTokenKey, keyName: 
 
 const actorRole = (user: AuthUser) => user.preview?.actualRole ?? user.role;
 
-export function youtubeConfigured(): boolean {
+function youtubeConfigured(): boolean {
   return Boolean(env.youtubeOAuthClientId && env.youtubeOAuthClientSecret && env.youtubeTokenKey);
 }
 
