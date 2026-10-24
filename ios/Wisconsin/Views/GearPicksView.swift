@@ -302,6 +302,7 @@ struct GearPicksView: View {
     @State private var confirmLeave = false
     @State private var viewing: GearPhotoItem?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     @ViewBuilder
     var body: some View {
@@ -457,20 +458,21 @@ struct GearPicksView: View {
         let item = model.item(style: line.style)
         let price = (item?.priceCents ?? line.unitPriceCents) * line.quantity
         NavigationLink(value: GearPickStyleRoute(style: line.style)) {
-            HStack(spacing: 12) {
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+            layout {
                 let photo = item?.colors.first { $0.code == line.colorCode }?.image
                 GearPickThumbnail(path: photo, size: 56)
                     .opensPhoto(GearPhotoItem(path: photo, title: line.itemName, subtitle: line.colorLabel), $viewing)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(line.itemName)
                         .font(.gothamBold(size: 15, relativeTo: .subheadline))
-                        .lineLimit(2)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                     Text(pickDetail(line))
                         .font(.footnote)
                         .foregroundStyle(line.size == nil && item?.oneSize != true ? Color.statusText(.orange) : .secondary)
-                        .lineLimit(1)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                 }
-                Spacer(minLength: 8)
+                if !typeSize.isAccessibilitySize { Spacer(minLength: 8) }
                 Text(GearPickMoney.format(price))
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
@@ -505,6 +507,7 @@ struct GearPicksView: View {
             .padding(.horizontal, Brand.Space.md)
             .padding(.vertical, Brand.Space.sm)
             .background(.bar)
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         }
     }
 
