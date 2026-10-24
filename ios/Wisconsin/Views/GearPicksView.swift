@@ -319,6 +319,9 @@ struct GearPicksView: View {
             .toolbar { toolbar }
             .refreshable { await model.load(replacingDraft: !model.isDirty) }
             .task { await model.loadIfNeeded() }
+            .navigationDestination(for: GearCatalogRoute.self) { _ in
+                GearCatalogView(model: model)
+            }
             .navigationDestination(for: GearPickStyleRoute.self) { route in
                 GearPickItemView(style: route.style, model: model)
             }
@@ -342,15 +345,10 @@ struct GearPicksView: View {
                 Button("Back", systemImage: "chevron.backward") { confirmLeave = true }
             }
         }
-        if model.phase == .ready {
+        if model.phase == .ready, model.catalog != nil {
             ToolbarItem(placement: .topBarTrailing) {
-                if model.canEdit && model.pickCount > 0 {
-                    // The one primary action: review what you have picked.
-                    Button("Review (\(model.pickCount))") { showReview = true }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.statusText(.green))
-                } else {
-                    Button(model.canEdit ? "Review" : "Your picks") { showReview = true }
+                NavigationLink(value: GearCatalogRoute()) {
+                    Text("Catalog")
                 }
             }
         }
@@ -394,59 +392,116 @@ struct GearPicksView: View {
     }
 
     private var readyList: some View {
-        let sections = model.sections()
-        return ScrollView {
-            LazyVStack(alignment: .leading, spacing: Brand.Space.lg) {
-                summary
-                if let kit = model.kit {
-                    GroupBox { GearMyKitSection(kit: kit) }
-                }
-                if model.catalog == nil {
-                    Text("The catalog didn't load, so you can review a saved list but not add gear.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else if sections.isEmpty {
-                    ContentUnavailableView {
-                        Label("No gear matches", systemImage: "tshirt")
-                    } description: {
-                        Text("Try a different name, color, or style number.")
-                    } actions: {
-                        if !model.searchText.isEmpty {
-                            Button("Clear search") { model.searchText = "" }
-                        }
-                    }
-                } else {
-                    ForEach(sections, id: \.category) { section in
-                        VStack(alignment: .leading, spacing: Brand.Space.sm) {
-                            Text(section.category)
-                                .font(.title3.weight(.bold))
-                                .accessibilityAddTraits(.isHeader)
-                            LazyVGrid(
-                                columns: [GridItem(.flexible(), spacing: 14, alignment: .top),
-                                          GridItem(.flexible(), spacing: 14, alignment: .top)],
-                                spacing: 18
-                            ) {
-                                ForEach(section.items) { item in
-                                    NavigationLink(value: GearPickStyleRoute(style: item.style)) {
-                                        GearPickCatalogTile(item: item, picked: model.pickCount(for: item.style))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-                }
+        List {
+            Section { summary }
+            picksSection
+            if let kit = model.kit { GearMyKitSection(kit: kit) }
+            Section {} footer: {
                 Text(footerText)
-                    .font(.footnote)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .safeAreaInset(edge: .bottom) { reviewBar }
+    }
+
+    /// What the person has picked so far, front and centre. The full assortment
+    /// lives behind the Catalog button.
+    private var picksSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Your picks")
+                    .font(.gothamBold(size: 17, relativeTo: .headline))
+                Text(picksSubtitle)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, Brand.Space.md)
-            .padding(.top, Brand.Space.xs)
-            .padding(.bottom, Brand.Space.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 4)
+            .listRowSeparator(.hidden)
+            if model.lines.isEmpty {
+                emptyPicks
+            } else {
+                ForEach(model.lines) { line in
+                    pickRow(line)
+                }
+            }
         }
-        .scrollDismissesKeyboard(.interactively)
-        .background(Color(.systemGroupedBackground))
-        .searchable(text: $model.searchText, prompt: "Search gear")
+    }
+
+    private var picksSubtitle: String {
+        if model.lines.isEmpty {
+            return model.canEdit ? "Choose what you'd like from this year's catalog." : "Nothing was saved for this cycle."
+        }
+        let count = model.pickCount
+        return "\(count) \(count == 1 ? "item" : "items") · \(GearPickMoney.format(model.totalCents))"
+    }
+
+    @ViewBuilder
+    private var emptyPicks: some View {
+        if model.canEdit, model.catalog != nil {
+            NavigationLink(value: GearCatalogRoute()) {
+                Label("Browse the catalog", systemImage: "square.grid.2x2")
+                    .foregroundStyle(Color.statusText(.green))
+            }
+        } else if model.catalog == nil {
+            Text("The catalog didn't load, so you can review a saved list but not add gear.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func pickRow(_ line: GearPickDraftLine) -> some View {
+        let item = model.item(style: line.style)
+        let price = (item?.priceCents ?? line.unitPriceCents) * line.quantity
+        NavigationLink(value: GearPickStyleRoute(style: line.style)) {
+            HStack(spacing: 12) {
+                GearPickThumbnail(path: item?.colors.first { $0.code == line.colorCode }?.image, size: 56)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(line.itemName)
+                        .font(.gothamBold(size: 15, relativeTo: .subheadline))
+                        .lineLimit(2)
+                    Text(pickDetail(line))
+                        .font(.footnote)
+                        .foregroundStyle(line.size == nil && item?.oneSize != true ? Color.statusText(.orange) : .secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Text(GearPickMoney.format(price))
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .swipeActions {
+            if model.canEdit {
+                Button("Remove", role: .destructive) { model.remove(id: line.id) }
+            }
+        }
+    }
+
+    private func pickDetail(_ line: GearPickDraftLine) -> String {
+        var parts = [line.colorLabel, line.size.map { "Size \($0)" } ?? "Size needed"]
+        if line.quantity > 1 { parts.append("×\(line.quantity)") }
+        return parts.joined(separator: " · ")
+    }
+
+    /// One primary action, pinned: review and submit what you have picked.
+    @ViewBuilder
+    private var reviewBar: some View {
+        if model.canEdit && model.pickCount > 0 {
+            Button {
+                showReview = true
+            } label: {
+                Text(model.submittedAt == nil ? "Review and submit" : "Review changes")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(Color.statusText(.green))
+            .padding(.horizontal, Brand.Space.md)
+            .padding(.vertical, Brand.Space.sm)
+            .background(.bar)
+        }
     }
 
     private var summary: some View {
@@ -514,6 +569,60 @@ struct GearPicksView: View {
         } else {
             StatusPill(label: "Draft", tone: .orange)
         }
+    }
+}
+
+struct GearCatalogRoute: Hashable {}
+
+/// The full assortment, one pushed screen away from the main picks list.
+struct GearCatalogView: View {
+    var model: GearPicksModel
+
+    var body: some View {
+        let sections = model.sections()
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: Brand.Space.lg) {
+                if sections.isEmpty {
+                    ContentUnavailableView {
+                        Label("No gear matches", systemImage: "tshirt")
+                    } description: {
+                        Text("Try a different name, color, or style number.")
+                    } actions: {
+                        if !model.searchText.isEmpty {
+                            Button("Clear search") { model.searchText = "" }
+                        }
+                    }
+                } else {
+                    ForEach(sections, id: \.category) { section in
+                        VStack(alignment: .leading, spacing: Brand.Space.sm) {
+                            Text(section.category)
+                                .font(.title3.weight(.bold))
+                                .accessibilityAddTraits(.isHeader)
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: 14, alignment: .top),
+                                          GridItem(.flexible(), spacing: 14, alignment: .top)],
+                                spacing: 18
+                            ) {
+                                ForEach(section.items) { item in
+                                    NavigationLink(value: GearPickStyleRoute(style: item.style)) {
+                                        GearPickCatalogTile(item: item, picked: model.pickCount(for: item.style))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Brand.Space.md)
+            .padding(.top, Brand.Space.xs)
+            .padding(.bottom, Brand.Space.lg)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(Color(.systemGroupedBackground))
+        .searchable(text: Bindable(model).searchText, prompt: "Search gear")
+        .navigationTitle("Catalog")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

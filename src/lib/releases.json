@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-24",
+    "title": "UA gear leads with your picks",
+    "type": "improvement",
+    "summary": "The UA Gear screen on iPhone now opens on what you've picked and what's in your kit, with the full assortment one tap away under Catalog.",
+    "details": [
+      "Your picks show photo, color, size and price, with swipe to remove and a Review and submit button that stays in reach.",
+      "Catalog (top right) holds the full assortment with search; picked items keep their count badge.",
+      "Items still missing a size are flagged in orange so you can fix them before submitting."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
     "date": "2026-10-23",
     "title": "Roster invites are emailed",
     "type": "fixes",
