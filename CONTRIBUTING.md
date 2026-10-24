@@ -35,7 +35,9 @@ Database changes follow `docs/PRISMA_NEON_RUNBOOK.md`.
 
 - Titles are short and in product language: `Fix Safari export button (#123)`.
 - Squash merge. The PR title becomes the commit message.
-- Do not commit secrets, `.env*` files, or large binary captures; review
+- Do not commit secrets, `.env*` files, or large binary captures. CI rejects
+  root-level media and new files over 1 MB outside `public/`, `ios/`, `macos/`
+  and `src/` (label `allow-large-files` to override). Review
   screenshots belong on a `scratch/<topic>-shots` branch, not in `main`.
 
 ## Security

@@ -164,8 +164,15 @@ jobs:
       - run: npm ci
         if: steps.scope.outputs.heavy == 'true'
 
-      - name: Repo hygiene (no root-level media)
-        run: node scripts/check-repo-hygiene.mjs
+      - name: Repo hygiene (no root media, no large new files)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PR_LABELS="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json labels --jq '[.labels[].name]')" \
+            node scripts/check-repo-hygiene.mjs
 
       - name: Require a /releases entry
         if: github.event_name == 'pull_request'

@@ -110,19 +110,16 @@ PR previews use isolated branch resources; activation is tracked in the
 CalVer milestone records, not a second production trigger.
 
 Release versions use `YYYY.M.N`, where `N` increments within the calendar
-month. For example, the first two August 2026 releases are `2026.8.1` and
-`2026.8.2`.
-
-After a clean, verified `main` commit and explicit shipping approval:
+month (`2026.10.1`, `2026.10.2`). Notes come from `src/lib/releases.json`, the
+same entries the public /releases page shows.
 
 ```bash
 npm run release
 ```
 
-The release script updates `package.json` and `package-lock.json`, creates the
-CalVer tag, and pushes the commit and tag. The tag-triggered GitHub Action then
-creates the GitHub Release with generated notes. It is a shipping action, not
-an ordinary development command.
+This starts the `GitHub Release` workflow, which tags the current `main` and
+publishes the notes. It commits nothing, so it never triggers a deploy. It is
+a shipping action, not an ordinary development command.
 
 ## Repository map
 
