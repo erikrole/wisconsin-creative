@@ -45,7 +45,7 @@ jobs:
     steps:
       # Depth 1 and a blobless sparse checkout skip tasks/ and goldie/
       # (~400 MB of review screenshots). This job never reads them.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -84,7 +84,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci-heavy-scope.mjs
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         if: steps.scope.outputs.heavy == 'true'
         with:
           node-version: 24
@@ -114,7 +114,7 @@ jobs:
       # Same sparse checkout as postgres-integrity, plus top-level tasks/*.md.
       # npm test reads those notes (audit docs and submission copy). Screenshot
       # trees under tasks/ and goldie/ stay on the server.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -156,7 +156,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci-heavy-scope.mjs
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         if: steps.scope.outputs.heavy == 'true'
         with:
           node-version: 24
@@ -209,7 +209,7 @@ jobs:
 
       # Next's compile cache. Keyed per commit so every run saves; restores the
       # newest cache for the same lockfile, falling back to any older one.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         if: steps.scope.outputs.heavy == 'true'
         with:
           path: .next/build/cache
