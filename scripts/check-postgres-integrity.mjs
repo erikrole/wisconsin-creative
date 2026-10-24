@@ -30,7 +30,8 @@ if (baseRef && !/^0+$/.test(baseRef)) {
   const directory = mkdtempSync(join(tmpdir(), "wc-ci-schema-"));
   try {
     const schemaPath = join(directory, "schema.prisma");
-    writeFileSync(schemaPath, baseSchema.stdout);
+    // Bases from before Prisma 7 declare a datasource `url`, which Prisma 7 rejects.
+    writeFileSync(schemaPath, baseSchema.stdout.replace(/^[ \t]*url[ \t]*=.*\n?/gm, ""));
     const baseline = spawnSync("npx", ["prisma", "migrate", "diff", "--from-empty", "--to-schema", schemaPath, "--script"], { encoding: "utf8" });
     if (baseline.status !== 0) throw new Error(baseline.stderr);
     sql(baseline.stdout);
