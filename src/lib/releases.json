@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-24",
+    "title": "Creative Wrapped: more accurate hours and team totals",
+    "type": "fixes",
+    "summary": "A dry run of the fall recap fixed how hours and team numbers are counted.",
+    "details": [
+      "Shift hours now count shifts whose attendance was never logged, so hours no longer come up short.",
+      "Events without a sport are no longer ranked as an “Other” sport.",
+      "Team totals leave out collaborators, and the biggest-crew card only shows when people worked together."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-24",
     "title": "Wiscard is now optional during setup",
     "type": "improvement",
     "summary": "New teammates without a Wiscard can finish setting up their account.",

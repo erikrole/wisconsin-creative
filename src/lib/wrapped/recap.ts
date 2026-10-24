@@ -115,8 +115,9 @@ function shortDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", { timeZone: env.appTimezone, month: "short", day: "numeric" }).format(date);
 }
 
-function gameSportLabel(game: Pick<WrappedGame, "sportCode">): string {
-  return game.sportCode ? sportLabel(game.sportCode) : "Other";
+/** Events without a sport stay out of sport rankings, so nobody is an "Other Regular". */
+function gameSportLabel(game: Pick<WrappedGame, "sportCode">): string | null {
+  return game.sportCode ? sportLabel(game.sportCode) : null;
 }
 
 function record(games: WrappedGame[]): Record3 {
@@ -488,14 +489,16 @@ export function buildTeamCards(input: WrappedTeamInput): WrappedCard[] {
       sentence: "Every official game somebody from Creative worked.",
     });
   }
-  cards.push({
-    id: "team-biggest",
-    layout: "stat",
-    tone: "violet",
-    eyebrow: "Biggest crew",
-    value: plural(biggest.crew.length, "person", "people"),
-    sentence: `${biggest.title} on ${shortDate(biggest.startsAt)}.`,
-  });
+  if (biggest.crew.length >= 2) {
+    cards.push({
+      id: "team-biggest",
+      layout: "stat",
+      tone: "violet",
+      eyebrow: "Biggest crew",
+      value: plural(biggest.crew.length, "person", "people"),
+      sentence: `${biggest.title} on ${shortDate(biggest.startsAt)}.`,
+    });
+  }
   const items: WrappedCardItem[] = [];
   if (venue) items.push({ label: "Most-worked venue", value: venue.key });
   if (week) items.push({ label: "Busiest week", value: `${weekLabel(week.start)}, ${plural(week.count, "event")}` });

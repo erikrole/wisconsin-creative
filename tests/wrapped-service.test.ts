@@ -57,6 +57,21 @@ describe("loadWrappedGames", () => {
   });
 });
 
+describe("buildWrappedRecap queries", () => {
+  it("counts shift hours for unlogged attendance and keeps collaborators out of team totals", async () => {
+    await getWrappedRecap("me", { now: BEFORE, preview: true });
+    const where = db.shiftAssignment.findMany.mock.calls[0]![0].where;
+    expect(where.OR).toEqual([{ attended: null }, { attended: true }]);
+    expect(where.attended).toBeUndefined();
+    expect(db.booking.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ requester: { role: { not: "COLLABORATOR" } } }),
+    });
+    expect(db.studentBadge.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ user: { role: { not: "COLLABORATOR" } } }),
+    });
+  });
+});
+
 describe("getWrappedRecap", () => {
   it("keeps historical event totals while omitting hidden crew identities", async () => {
     const snapshot = (await db.gameSnapshot.findMany())[0];
