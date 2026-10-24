@@ -235,7 +235,7 @@ enum SignatureSaveRetry {
             return true
         case .httpError(let statusCode, _):
             return statusCode == 425 || statusCode == 429 || statusCode >= 500
-        case .unauthorized, .sessionChanged, .notFound, .conflict, nil:
+        case .unauthorized, .sessionChanged, .notFound, .conflict, .inviteLinkRequired, nil:
             return false
         }
     }
