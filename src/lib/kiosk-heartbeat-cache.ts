@@ -1,5 +1,6 @@
-import { Redis } from "@upstash/redis";
-import { cacheNamespace, isolatedIntegrationValue } from "@/lib/environment-safety";
+import type { Redis } from "@upstash/redis";
+import { cacheNamespace } from "@/lib/environment-safety";
+import { getUpstashRedis } from "@/lib/redis";
 
 /**
  * Lets an idle kiosk's heartbeat skip Neon.
@@ -41,23 +42,15 @@ export type CachedKioskHeartbeat = {
   report: KioskBuildReport;
 };
 
-let redis: Redis | null | undefined;
+let redisOverride: Redis | null | undefined;
 
 function getRedis(): Redis | null {
-  if (redis !== undefined) return redis;
-  const url = isolatedIntegrationValue("UPSTASH_REDIS_REST_URL") || isolatedIntegrationValue("KV_REST_API_URL");
-  const token = isolatedIntegrationValue("UPSTASH_REDIS_REST_TOKEN") || isolatedIntegrationValue("KV_REST_API_TOKEN");
-  try {
-    redis = url && token && new URL(url).protocol === "https:" ? new Redis({ url, token }) : null;
-  } catch {
-    redis = null;
-  }
-  return redis;
+  return redisOverride !== undefined ? redisOverride : getUpstashRedis();
 }
 
-/** Test hook: forget the memoized client so env changes take effect. */
+/** Test hook: pin a client (or null), or pass undefined to use the shared one. */
 export function resetKioskHeartbeatRedisForTests(client?: Redis | null) {
-  redis = client;
+  redisOverride = client;
 }
 
 /**

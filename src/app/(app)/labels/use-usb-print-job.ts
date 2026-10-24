@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BROTHER_USB_LOCK, BrotherUsbPrinter, brotherUsbAccess, chooseBrotherUsb, type BrotherUsbDevice } from "@/lib/brother-usb";
+import { BROTHER_USB_LOCK, BrotherUsbPrinter, brotherUsbAccess, chooseBrotherUsb, isBrotherUsb, type BrotherUsbDevice } from "@/lib/brother-usb";
 import { LabelPrintController } from "@/lib/label-print-controller";
 import { PrintApiError, printJobApi, type PrintHistory } from "@/lib/label-print-client";
 import { labelName, remainingLabels, uncertainIndices, type PrintActor, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
@@ -84,7 +84,8 @@ export function useUsbPrintJob(actor: PrintActor | null, onCompleted: (label: Pr
     void refresh();
     const storage = (event: StorageEvent) => { if ([PRINT_JOURNAL_KEY, LEGACY_PRINT_KEY, null].includes(event.key)) void refresh(); };
     const focus = () => { void refresh(); };
-    const usb = brotherUsbAccess(), disconnect = () => { setDevice(undefined); };
+    // Only the printer going away drops the connection; unplugging a scanner or keyboard must not.
+    const usb = brotherUsbAccess(), disconnect = (event: Event) => { const gone = (event as Event & { device?: BrotherUsbDevice }).device; if (!gone || isBrotherUsb(gone)) setDevice(undefined); };
     const unload = (event: BeforeUnloadEvent) => { if (guard.current || mirror.current?.pending) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("storage", storage); window.addEventListener("focus", focus); window.addEventListener("beforeunload", unload); usb?.addEventListener("disconnect", disconnect);
     return () => { stop.current = true; refreshAbort.current?.abort(); window.removeEventListener("storage", storage); window.removeEventListener("focus", focus); window.removeEventListener("beforeunload", unload); usb?.removeEventListener("disconnect", disconnect); };

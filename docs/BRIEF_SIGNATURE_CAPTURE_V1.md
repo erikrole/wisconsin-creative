@@ -11,16 +11,16 @@
 
 ## User Outcome
 
-Authenticated staff and admins can select a canonical team/season collection, choose an imported MBB, Football, Volleyball, Men’s Hockey, Women’s Hockey, Women’s Basketball, or Wrestling player/coach, open the separate Creative Staff or Administration roster, or create a one-off signer with a name and sport/category. They can capture one consistent signature with Apple Pencil on iPad Safari and manage the resulting transparent PNG/SVG files without exposing public media URLs.
+Authenticated staff and admins can select a canonical team/season collection, choose an imported MBB, Football, Volleyball, Men’s Hockey, Women’s Hockey, Women’s Basketball, or Wrestling player/coach, open the separate Creative Staff or Administration roster, or create a one-off signer with a name and sport/category. They can capture one consistent signature with Apple Pencil in the native Wisconsin iOS app on iPad (web capture retired 2026-10-07), and manage the resulting transparent PNG/SVG files without exposing public media URLs.
 
 ## V1 Contract
 
 1. The supported team collections are Men’s Basketball (`MBB`), Football (`FB`), Volleyball (`VB`), Men’s Hockey (`MHKY`), Women’s Hockey (`WHKY`), Women’s Basketball (`WBB`), and Wrestling (`WRES`), plus standalone Creative Staff (`CREATIVE`), Administration (`ADMIN`), and ad-hoc (`ADHOC`) collections for the same season. Creative Staff and Administration are never nested inside a team collection.
-2. Signature capture is available only on iPadOS. Unsupported web clients show a disabled `Capture on iPad` action with a tooltip explaining that an iPad and Apple Pencil are required; direct desktop visits to the capture surface are blocked. Drawing accepts pen-class pointer input only. Touch, palm, mouse, trackpad, and other non-pen pointers never add ink, while touch remains usable for buttons and navigation.
+2. Signature capture is available only in the Wisconsin iOS app on iPad (Browse → Signatures), for staff and admins. The web shows a non-interactive `Capture in iPad app` status on unsigned rows; the retired web capture route redirects to the roster.
 3. Each supported team roster comes from its own allowlisted UWBadgers adapter. Football and Volleyball use the source site's starting calendar year URL segment; Men’s Hockey, Women’s Hockey, Women’s Basketball, and Wrestling use the source site's full `YYYY-YY` season segment while retaining the canonical `YYYY-YY` Wisconsin Creative season. Before the Men's Hockey profile page is published, exactly `MHKY / 2026-27` may use the embedded versioned official fact-book roster through the same Preview/Apply contract; the deployed runtime never reads an operator-local PDF. Player metadata normalizes source position and academic year into one display title; wrestling weight classes remain metadata and jersey numbers remain nullable. Student-athletes always require a signature and drive the team progress bar; coaching and support staff are imported as optional secondary work, with their signed count shown separately. Mounting `/signatures` automatically invokes the versioned standalone Creative Staff reconciliation mutation; collection-list GET remains read-only. The reconciliation sources active visible full-time users identified by a Video/Photo/Graphics area or an explicit Creative/Digital Media job title into linked signature members, included by default. A same-season non-player team member links only through a unique exact normalized-name match and then shares the canonical Creative Staff capture across both rosters.
 4. Imports persist an immutable normalized snapshot. Applying a preview requires the observed collection version and never deletes members or captures. When a current `PLAYER` source ID changes, apply may transfer a safe historical capture to a blank current member on a unique exact normalized-name match while retaining the inactive historical member; jersey numbers are not part of the identity key. Ambiguous names, active saves, conflicting captures, and explicitly erased history remain review-only.
 5. The client submits normalized strokes. The server validates them, creates a sanitized path-only SVG, renders the PNG from that SVG, and stores both privately with matching crop bounds and hashes. New stroke artifacts conservatively omit tiny isolated marks outside substantive ink while preserving nearby short marks.
-6. A roster tile becomes green only after both artifacts and the database capture commit. Local drafts never count as complete.
+6. A roster tile becomes green only after both artifacts and the database capture commit. Unsaved ink on the iPad never counts as complete.
 7. Capture saves are idempotent by request ID, reject stale versions with `409`, and preserve the prior capture when an upload or finalization fails.
 8. Admins own output settings, non-player readiness inclusion, archive, and collection reset. Player readiness cannot be disabled. Staff/admin may capture, replace, remove, preview, download, import, and reconcile.
 9. Active-year selection hides archived collections by default; archived collections are read-only, and roster presentation preserves player-number order, UWBadgers source order for coaching/support staff, and last-name order for Creative staff.
@@ -37,13 +37,13 @@ Signature members are not `StudentSportAssignment` rows. Imported members are ex
 - Identical strokes/settings produce deterministic transparent cropped PNG and SVG output.
 - SVG contains only sanitized paths and no scripts, HTML, foreign objects, external references, or client-controlled metadata.
 - Unchanged imports are idempotent; source duplicates collapse by profile identity; automatic Creative Staff reconciliation is version-checked, no-op safe, and non-destructive.
-- Failed, stale, or concurrent saves preserve the committed capture and local draft.
+- Failed, stale, or concurrent saves preserve the committed capture and the unsaved ink on the iPad; replacing a signature another iPad just saved needs an explicit confirmation.
 - Reset, remove, and delete cleanup use bounded private-artifact work; an upload that loses a delete/reset race fences and removes the files it just created.
 - Collection-card Download All offers separate authenticated private ZIPs of current committed PNG or SVG revisions with deterministic collision-safe filenames.
 - Staff/admin, admin-only, student, and collaborator authorization tests pass.
 - Capture success invalidates Signatures collection, roster, and member-bootstrap caches, including shared Creative Staff consumers; unrelated application caches stay intact. Unsupported Add/Replace actions are disabled before mutation; fetch failures offer Retry; and readiness progress exposes its determinate value and accessible name.
-- A capture edit session keeps its original fresh versions across reconnects. Ambiguous or timed-out saves retain their draft and request ID; reset/delete reject a collection version observed before a new capture commit. Removed-member history remains reviewable and explicitly erasable.
-- Authenticated browser smoke and physical iPad Safari proof are recorded before production rollout.
+- A capture edit session keeps its original fresh versions across reconnects. Ambiguous or timed-out saves keep the ink and request ID; reset/delete reject a collection version observed before a new capture commit. Removed-member history remains reviewable and explicitly erasable.
+- Authenticated browser smoke and a physical iPad + Apple Pencil save in the Wisconsin app are recorded before production rollout.
 
 ## Local hardening note — 2026-08-20
 
@@ -55,4 +55,4 @@ The student-athlete website-profile follow-up is retired. Capture is artifact-on
 
 ## Deferred
 
-Box signature-file integration, native PencilKit, scheduled sync, Illustrator asset backfill/matching for newly imported sports, additional sport adapters beyond the 2026-27 target set, and pressure-sensitive width.
+Box signature-file integration, scheduled sync, Illustrator asset backfill/matching for newly imported sports, additional sport adapters beyond the 2026-27 target set, and pressure-sensitive width.

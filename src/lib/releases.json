@@ -19,6 +19,36 @@
   },
   {
     "date": "2026-10-24",
+    "title": "Contact details on profiles",
+    "type": "feature",
+    "summary": "Staff and student profiles in the iPhone app now show email and phone numbers, with quick Message, Call and Email buttons.",
+    "details": [
+      "Hold an email or phone row to copy it.",
+      "Hold a phone row to text or call from the menu.",
+      "Your own profile doesn't show the card."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 631
+  },
+  {
+    "date": "2026-10-24",
+    "title": "iPhone app: Chicago time everywhere",
+    "type": "fixes",
+    "summary": "Today, Tomorrow and every shift and game time in the iPhone app now follow Central time, even if your phone is set to another zone.",
+    "details": [
+      "Your profile no longer says nothing is coming up when it simply couldn't load; it offers Try again.",
+      "Gear picks only look tappable when you need to add your size.",
+      "The New Reservation heading now grows with your text size."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 632
+  },
+  {
+    "date": "2026-10-24",
     "title": "UA gear shows everything you'll receive",
     "type": "improvement",
     "summary": "The UA staff gear page now opens on your picks and the gear in your kit, with photos and status, and the full catalog sits below.",
@@ -64,6 +94,73 @@
   },
   {
     "date": "2026-10-23",
+    "title": "Sign with Apple Pencil on iPad",
+    "type": "feature",
+    "summary": "Signatures are now captured in the Wisconsin app on iPad, under Browse > Signatures. The web keeps rosters, imports, previews and downloads.",
+    "details": [
+      "Staff and admins on iPad get team rosters with readiness counts, search, a jersey number pad, and saved signature previews.",
+      "The signing screen shows the signer's name and number large, with Undo, Redo, Clear, Replay and Done. Ink that runs off the edge turns red so it gets redone before saving.",
+      "Saves are safe to retry, and replacing a signature another iPad just saved asks first.",
+      "On the web, unsigned rows now read Capture in iPad app, and old capture links open the roster."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 624
+  },
+  {
+    "date": "2026-10-23",
+    "title": "Football scores and six new badges",
+    "type": "feature",
+    "summary": "Football games on a profile's Scoreboard now show the final score from UW Athletics, and six new badges reward football game days.",
+    "details": [
+      "Each finished football game shows Wisconsin's score first, with links to the UW and ESPN game pages.",
+      "The score is the one UW Athletics publishes. Nothing shows until UW lists the game as final.",
+      "Games also record whether the opponent was ranked, whether they went to overtime, and the TV network. Six new football badges use them: Photo Finish, Giant Killer, Top 25 Regular, Bonus Time, Prime Time and Clean Sheet.",
+      "Scores refresh once a day during football season."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 623
+  },
+  {
+    "date": "2026-10-23",
+    "title": "Six new badges, three of them surprises",
+    "type": "feature",
+    "summary": "New badges to chase, plus three hidden ones tied to Badger game days.",
+    "details": [
+      "Iron Crew is for working 100 event shifts, and Centurion is for returning 100 checkouts on time.",
+      "Fifth Quarter is for working five home football games.",
+      "Three surprises stay hidden until someone earns them. Here's a hint: one is about a rivalry, one is about a homecoming, and one is about a number."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 622
+  },
+  {
+    "date": "2026-10-23",
+    "title": "A badge gallery for the whole team",
+    "type": "feature",
+    "summary": "Badges is now a gallery everyone can open. See every badge, who has it, and how your collection compares with your teammates.",
+    "details": [
+      "The Gallery shows every badge and who on the team already earned each one, with Up next at the top: the three badges you are closest to earning.",
+      "The Team view shows who earned what this week and ranks everyone by badges earned. Pick anyone to see what only they have, what you both have, and what only you have.",
+      "Surprise badges stay a surprise: you can see that someone found one, but not what it is until you earn it yourself.",
+      "Badges for damaged, missing or late gear never show who holds them and never count toward the ranking.",
+      "Badges moved into the People section of the sidebar for everyone, and a profile's Badges tab links straight to who else has a badge or to a side-by-side compare. Staff still award badges from the new Award tab.",
+      "Rarity is now measured among the people who can earn badges, so collaborator accounts no longer make every badge look rarer, and the badge report no longer ranks people who have left."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 622
+  },
+  {
+    "date": "2026-10-23",
     "title": "Roster invites are emailed",
     "type": "fixes",
     "summary": "Adding people with Paste a roster now emails each of them their setup link, and Resend sends the invite itself.",
@@ -106,6 +203,21 @@
   },
   {
     "date": "2026-10-23",
+    "title": "Today and Tomorrow match the real day",
+    "type": "fixes",
+    "summary": "Evening games no longer show up under Tomorrow on Staff Today or the Dashboard.",
+    "details": [
+      "Staff Today now counts events by the Madison calendar day, so a 7 PM match is listed under Later today and the Events today count includes it.",
+      "Dashboard Coming up and other Today and Tomorrow labels use the same Madison day, even late in the evening.",
+      "Report and export file names now carry the Madison date, not tomorrow's date after 7 PM, and a check keeps UTC dates out of user-facing code."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 626
+  },
+  {
+    "date": "2026-10-23",
     "title": "Safer sign-up and account protections",
     "type": "fixes",
     "summary": "Creating an account now needs the link from your invite email, and a few account details are shared only with the people who need them.",
@@ -121,6 +233,39 @@
       "iOS"
     ],
     "pr": 620
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Print labels sheet fixes",
+    "type": "fixes",
+    "summary": "The print sheet keeps its template headings in view while you scroll, and the P-touch CSV export no longer waits on the USB checks.",
+    "details": [
+      "Camera bodies, Lenses, Batteries and other headings stay visible under the Print sheet header as you scroll.",
+      "Export CSV for P-touch Editor works whenever the sheet's selections are valid, even if the USB font or QR check is still running or unavailable.",
+      "Unplugging a scanner or another USB device no longer drops the printer connection.",
+      "Importing an older browser sheet is offered once instead of on every visit, and recovering an unreadable saved sheet works on the first retry.",
+      "Batch receipt downloads work in Safari and Firefox, and the label count is announced to screen readers."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 619
+  },
+  {
+    "date": "2026-10-22",
+    "title": "A calmer Battery Ops",
+    "type": "improvement",
+    "summary": "Battery Ops is redesigned to show what is on the shelf, what is out, and what needs a look.",
+    "details": [
+      "One summary at the top shows how many batteries are ready to check out, with a bar for out and missing.",
+      "A single Needs attention list gathers low families, missing batteries, stale flags, and batteries out a week or more.",
+      "Each family is one card with its count and where low starts; the unit list stays tucked away until you open it.",
+      "Checked out batteries show who has them, with their photo or initials, and how long."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 613
   },
   {
     "date": "2026-10-22",
@@ -241,6 +386,22 @@
       "Web"
     ],
     "pr": 591
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Simpler Accountability on iOS",
+    "type": "improvement",
+    "summary": "The iOS Accountability screen now matches the web page: gear still out, your own record, and people who are repeatedly late.",
+    "details": [
+      "Overdue now sits at the top; tap a row to open the checkout.",
+      "A Your record row shows your late returns and on-time rate.",
+      "The list shows people late 2 or more times, with a button to include everyone else.",
+      "Rank numbers are gone."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 610
   },
   {
     "date": "2026-10-22",
@@ -469,22 +630,6 @@
       "Web"
     ],
     "pr": 605
-  },
-  {
-    "date": "2026-10-22",
-    "title": "Simpler Accountability on iOS",
-    "type": "improvement",
-    "summary": "The iOS Accountability screen now matches the web page: gear still out, your own record, and people who are repeatedly late.",
-    "details": [
-      "Overdue now sits at the top; tap a row to open the checkout.",
-      "A Your record row shows your late returns and on-time rate.",
-      "The list shows people late 2 or more times, with a button to include everyone else.",
-      "Rank numbers are gone."
-    ],
-    "platforms": [
-      "iOS"
-    ],
-    "pr": 610
   },
   {
     "date": "2026-10-22",

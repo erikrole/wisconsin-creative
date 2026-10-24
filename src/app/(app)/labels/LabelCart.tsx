@@ -77,12 +77,16 @@ export function useLabelCart(actorId: string | undefined) {
   const load = useCallback(() => {
     if (!actorId) return;
     const key = `labels.cart.v3:${actorId}`; keyRef.current = key;
+    let raw: string | null = null;
     try {
-      const raw = localStorage.getItem(key), next = readStoredCart(raw);
+      raw = localStorage.getItem(key); const next = readStoredCart(raw);
       expected.current = raw; current.current = next; setCart(next); setUndoCart(null);
       blocked.current = false; setConflict(false); setStorageError("");
       setHasLegacy(localStorage.getItem(STORAGE_KEY) !== null);
-    } catch (error) { blocked.current = true; setStorageError(error instanceof Error ? error.message : "The saved sheet is unavailable."); }
+    } catch (error) {
+      // Remember what was there so "Retry saving sheet" can replace an unreadable sheet instead of reporting a tab conflict.
+      expected.current = raw; blocked.current = true; setStorageError(error instanceof Error ? error.message : "The saved sheet is unavailable.");
+    }
     setHydrated(true);
   }, [actorId]);
   useEffect(() => {
@@ -135,7 +139,11 @@ export function useLabelCart(actorId: string | undefined) {
   }, [undoCart, change]);
   const retrySave = useCallback(() => persist(current.current, conflict, true), [persist, conflict]);
   const importLegacy = useCallback(() => {
-    try { add(readStoredCart(localStorage.getItem(STORAGE_KEY))); setHasLegacy(false); }
+    try {
+      add(readStoredCart(localStorage.getItem(STORAGE_KEY)));
+      // The older sheet now lives in the account sheet; leaving it would re-offer the import on every visit.
+      localStorage.removeItem(STORAGE_KEY); setHasLegacy(false);
+    }
     catch { setStorageError("The older sheet could not be read. It has been preserved."); }
   }, [add]);
   return { cart, hydrated, has, add, remove, update, clear, undo, canUndo: Boolean(undoCart), storageError, conflict, reloadSaved: load, retrySave, hasLegacy, importLegacy };

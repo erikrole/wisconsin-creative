@@ -12,7 +12,7 @@ export type ScheduleTimelineCursor = {
   id: string;
 };
 
-export function startOfLocalDay(date: Date): Date {
+function startOfLocalDay(date: Date): Date {
   const day = new Date(date);
   day.setHours(0, 0, 0, 0);
   return day;

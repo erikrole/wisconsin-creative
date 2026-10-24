@@ -105,7 +105,7 @@ function submissionDto(submission: SubmissionRow | null): GearPickSubmissionDto 
   };
 }
 
-export function gearPickSubmissionStatus(
+function gearPickSubmissionStatus(
   submission: { submittedAt: Date | string | null } | null,
 ): GearPickSubmissionStatus {
   if (!submission) return "NOT_STARTED";

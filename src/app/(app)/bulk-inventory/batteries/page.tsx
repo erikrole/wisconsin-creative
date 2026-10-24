@@ -2,15 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BatteryCharging, ChevronDown, ChevronUp, CircleAlert, Download, ExternalLink, Info, PackageOpen, Plus, QrCode, RefreshCw, SlidersHorizontal, Tag, TriangleAlert, Wrench } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Info, MoreHorizontal, Plus, RefreshCw, SlidersHorizontal, Tag, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
-import { OperationalMetricCard } from "@/components/OperationalFeedback";
-import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { PageHeader } from "@/components/PageHeader";
-import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -32,7 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -164,6 +160,8 @@ type PendingStaleRepair = {
 } | null;
 
 type UnitFilter = "ALL" | UnitStatus;
+
+type CheckedOutRow = BatteryUnit & { skuId: string; skuName: string; locationName: string };
 
 const STATUS_META: Record<UnitStatus, { label: string; className: string; dot: string }> = {
   AVAILABLE: {
@@ -590,45 +588,17 @@ export default function BatteryCockpitPage() {
   }
 
   const totals = data?.totals;
-  const railItems: OperationalStatusRailItem[] = totals ? [
-    ...(totals.lost > 0 ? [{
-      id: "missing",
-      label: "Missing",
-      value: totals.lost,
-      detail: "Battery units marked missing.",
-      icon: TriangleAlert,
-      tone: "critical" as const,
-      href: "/reports/bulk-losses",
-    }] : []),
-    ...(totals.lowSkus > 0 ? [{
-      id: "low-families",
-      label: "Low families",
-      value: totals.lowSkus,
-      detail: "Battery families below their stock threshold.",
-      icon: CircleAlert,
-      tone: "warning" as const,
-    }] : []),
-    ...((data?.integrity.staleCheckedOutCount ?? 0) > 0 ? [{
-      id: "stale-flags",
-      label: "Stale flags",
-      value: data!.integrity.staleCheckedOutCount,
-      detail: "Stored checked-out flags without active allocations.",
-      icon: Wrench,
-      tone: "warning" as const,
-    }] : []),
-    ...(totals.checkedOut > 0 ? [{
-      id: "checked-out",
-      label: "Checked out",
-      value: totals.checkedOut,
-      detail: "Battery units currently in active custody.",
-      icon: PackageOpen,
-      tone: "info" as const,
-    }] : []),
-  ] : [];
+  const ownedTotal = totals ? Math.max(0, totals.total - totals.retired) : 0;
+  const attentionCount = data
+    ? data.compatibility.length +
+      (totals && totals.lost > 0 ? 1 : 0) +
+      (data.integrity.staleCheckedOutCount > 0 ? 1 : 0) +
+      (totals && totals.agingCheckedOut > 0 ? 1 : 0)
+    : 0;
 
   return (
-    <div className="flex flex-col gap-5">
-      <PageHeader title="Battery Ops">
+    <div className="flex flex-col gap-8">
+      <PageHeader title="Battery Ops" description="What is on the shelf, what is out, and what needs a look.">
         <Button className="h-10" variant="outline" onClick={() => void load({ refresh: true })} disabled={refreshing}>
           <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
           {refreshing ? "Refreshing..." : "Refresh"}
@@ -636,59 +606,84 @@ export default function BatteryCockpitPage() {
       </PageHeader>
 
       {totals && (
-        <OperationalStatusRail
-          orientation={{
-            label: "Tracked batteries",
-            value: `${totals.total}`,
-            icon: BatteryCharging,
-          }}
-          items={railItems}
-          allClearLabel={railItems.length === 0 ? "Battery inventory is ready" : undefined}
-          details={(
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
-              <OperationalMetricCard label="Available" value={totals.available} tone="green" />
-              <OperationalMetricCard label="Checked out" value={totals.checkedOut} tone="blue" />
-              <OperationalMetricCard label="Missing" value={totals.lost} tone="red" />
-              <OperationalMetricCard label="Retired" value={totals.retired} tone="muted" />
-              <OperationalMetricCard label="Low families" value={totals.lowSkus} tone={totals.lowSkus ? "red" : "muted"} />
+        <section aria-label="Battery summary" className="-mt-2 rounded-2xl border border-border bg-card p-5 sm:p-7">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-muted-foreground">Ready to check out</div>
+              <div className="mt-1 flex items-baseline gap-3">
+                <span className="text-6xl font-black leading-none tracking-tight tabular-nums" style={{ fontFamily: "var(--font-heading)" }}>
+                  {totals.available}
+                </span>
+                <span className="text-base text-muted-foreground">of {ownedTotal} batteries</span>
+              </div>
+              <StockBar
+                className="mt-6"
+                available={totals.available}
+                checkedOut={totals.checkedOut}
+                missing={totals.lost}
+                owned={ownedTotal}
+              />
+              <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <LegendItem dot={STATUS_META.AVAILABLE.dot} label="Available" value={totals.available} />
+                <LegendItem dot={STATUS_META.CHECKED_OUT.dot} label="Checked out" value={totals.checkedOut} />
+                <LegendItem dot={STATUS_META.LOST.dot} label="Missing" value={totals.lost} />
+                {totals.retired > 0 && <LegendItem dot={STATUS_META.RETIRED.dot} label="Retired" value={totals.retired} />}
+              </dl>
             </div>
-          )}
-        />
+            <div className="flex gap-8 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+              <SummaryStat label="Running low" value={totals.lowSkus} warn={totals.lowSkus > 0} />
+              <SummaryStat label="Out 7+ days" value={totals.agingCheckedOut} warn={totals.agingCheckedOut > 0} />
+            </div>
+          </div>
+        </section>
       )}
 
-      {data && data.compatibility.length > 0 && (
-        <Card className="border-[var(--orange)]/25 bg-[var(--orange-bg)]/40 shadow-none">
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CircleAlert className="size-4 text-[var(--orange-text)]" />
-                Compatible battery lows
-              </CardTitle>
-              <Badge variant="orange">{metricLabel(data.compatibility.length, "family", "families")}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {data.compatibility.map((item) => (
-                <CompatibilityRow key={item.ruleId} item={item} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {data && data.integrity.staleCheckedOutCount > 0 && (
-        <IntegrityWarningCard
-          warnings={data.integrity.staleCheckedOutUnits}
-          repairBusy={repairBusy}
-          onRepair={() => {
-            setPendingStaleRepair({
-              count: data.integrity.staleCheckedOutCount,
-              units: data.integrity.staleCheckedOutUnits,
-            });
-            setRepairReason("Repair stale checked-out battery flags with no active allocation");
-          }}
-        />
+      {data && attentionCount > 0 && (
+        <section aria-labelledby="battery-attention" className="flex flex-col gap-3">
+          <h2 id="battery-attention" className="text-lg">Needs attention</h2>
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+            {data.compatibility.map((item) => (
+              <CompatibilityRow key={item.ruleId} item={item} />
+            ))}
+            {totals && totals.lost > 0 && (
+              <AttentionRow
+                tone="red"
+                title={`${metricLabel(totals.lost, "battery", "batteries")} marked missing`}
+                detail="Open the loss report to see who last had them."
+                action={(
+                  <Button variant="outline" className="h-10" asChild>
+                    <Link href="/reports/bulk-losses">Review</Link>
+                  </Button>
+                )}
+              />
+            )}
+            {data.integrity.staleCheckedOutCount > 0 && (
+              <IntegrityWarningRow
+                warnings={data.integrity.staleCheckedOutUnits}
+                repairBusy={repairBusy}
+                onRepair={() => {
+                  setPendingStaleRepair({
+                    count: data.integrity.staleCheckedOutCount,
+                    units: data.integrity.staleCheckedOutUnits,
+                  });
+                  setRepairReason("Repair stale checked-out battery flags with no active allocation");
+                }}
+              />
+            )}
+            {totals && totals.agingCheckedOut > 0 && (
+              <AttentionRow
+                tone="orange"
+                title={`${metricLabel(totals.agingCheckedOut, "battery", "batteries")} out a week or more`}
+                detail="Worth a nudge to whoever has them."
+                action={(
+                  <Button variant="outline" className="h-10" asChild>
+                    <a href="#battery-checked-out">See who</a>
+                  </Button>
+                )}
+              />
+            )}
+          </ul>
+        </section>
       )}
 
       {data && data.skus.length === 0 ? (
@@ -701,133 +696,61 @@ export default function BatteryCockpitPage() {
         />
       ) : (
         <>
-          <Card className="border-border/40 shadow-none">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-base">Checked-out units</CardTitle>
-                {totals && totals.agingCheckedOut > 0 && (
-                  <Badge variant="orange" className="gap-1">
-                    <CircleAlert className="size-3" />
-                    {metricLabel(totals.agingCheckedOut, "unit")} out 7d+
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {checkedOutUnits.length === 0 ? (
-                <EmptyState
-                  inline
-                  icon="check"
-                  title="No battery units checked out"
-                  description="Checked-out battery units appear here with holder, booking, due date, and age."
+          <section aria-labelledby="battery-families" className="flex flex-col gap-3">
+            <h2 id="battery-families" className="text-lg">Families</h2>
+            <div className="flex flex-col gap-4">
+              {unitSkus.map((sku) => (
+                <BatteryFamilyWorkspace
+                  key={sku.id}
+                  sku={sku}
+                  staleCheckedOutUnitIds={staleCheckedOutUnitIds}
+                  busyKey={busyKey}
+                  exporting={exportingSkuId === sku.id}
+                  onAddUnits={() => openAddUnits(sku)}
+                  onExportLabels={() => void exportBrotherLabels(sku)}
+                  onPendingAction={openStatusAction}
                 />
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Unit</TableHead>
-                        <TableHead>Battery</TableHead>
-                        <TableHead>Holder</TableHead>
-                        <TableHead>Booking</TableHead>
-                        <TableHead className="text-right">Age</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {checkedOutUnits.map((unit) => (
-                        <TableRow key={unit.id}>
-                          <TableCell className="font-mono tabular-nums">#{unit.unitNumber}</TableCell>
-                          <TableCell>
-                            <Link href={`/bulk-inventory/${unit.skuId}`} className="font-medium hover:underline">
-                              {unit.skuName}
-                            </Link>
-                            <div className="text-xs text-muted-foreground">{unit.locationName}</div>
-                          </TableCell>
-                          <TableCell>{unit.booking?.requesterName ?? "Unknown"}</TableCell>
-                          <TableCell>
-                            {unit.booking ? (
-                              <Link href={`/bookings?highlight=${unit.booking.id}`} className="inline-flex items-center gap-1 text-sm font-medium hover:underline">
-                                {unit.booking.refNumber ?? unit.booking.title}
-                                <ExternalLink className="size-3" />
-                              </Link>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">No booking context</span>
-                            )}
-                            {unit.booking && (
-                              <div className="text-xs text-muted-foreground">Due {formatDue(unit.booking.endsAt)}</div>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {unit.checkedOutDays === null ? "n/a" : `${unit.checkedOutDays}d`}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-col gap-4">
-            {unitSkus.map((sku) => (
-              <BatteryFamilyWorkspace
-                key={sku.id}
-                sku={sku}
-                staleCheckedOutUnitIds={staleCheckedOutUnitIds}
-                busyKey={busyKey}
-                exporting={exportingSkuId === sku.id}
-                onAddUnits={() => openAddUnits(sku)}
-                onExportLabels={() => void exportBrotherLabels(sku)}
-                onPendingAction={openStatusAction}
-              />
-            ))}
-          </div>
+              ))}
+            </div>
+          </section>
 
           {quantitySkus.length > 0 && (
-            <Card className="border-border/40 shadow-none">
-              <CardHeader className="pb-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <CardTitle className="text-base">Quantity-tracked batteries</CardTitle>
-                  <Badge variant="secondary">{metricLabel(quantitySkus.length, "family", "families")}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {quantitySkus.map((sku) => (
-                    <div key={sku.id} className="rounded-md border border-border/60 p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <Link href={`/bulk-inventory/${sku.id}`} className="font-medium hover:underline">
-                            {sku.name}
-                          </Link>
-                          <div className="mt-1 text-xs text-muted-foreground">{sku.location.name} / {sku.category}</div>
-                        </div>
-                        {sku.isLow && <Badge variant="orange" className="shrink-0">Low stock</Badge>}
+            <section aria-labelledby="battery-counted" className="flex flex-col gap-3">
+              <div>
+                <h2 id="battery-counted" className="text-lg">Counted by quantity</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">No numbers on these, so the live count comes from audited stock movements.</p>
+              </div>
+              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+                {quantitySkus.map((sku) => (
+                  <li key={sku.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={`/bulk-inventory/${sku.id}`} className="font-bold text-foreground no-underline hover:underline">
+                          {sku.name}
+                        </Link>
+                        {sku.isLow && <LowPill />}
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <Count label="Available" value={sku.counts.available} dot={STATUS_META.AVAILABLE.dot} />
-                        <Count label="Minimum" value={sku.threshold} dot="bg-[var(--orange)]" />
-                      </div>
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" className="h-10 flex-1" onClick={() => openQuantityAdjustment(sku)}>
-                          <SlidersHorizontal className="size-3.5" />
-                          Adjust live count
-                        </Button>
-                        <Button variant="outline" className="h-10" asChild>
-                          <Link href={`/bulk-inventory/${sku.id}?tab=info`}>
-                            <Info className="size-3.5" />
-                            Edit metadata
-                          </Link>
-                        </Button>
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">Live count comes from audited stock movements.</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        <span className="font-semibold tabular-nums text-foreground">{sku.counts.available}</span> available
+                        {" / "}low below {sku.threshold} / {sku.location.name}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="flex shrink-0 gap-2">
+                      <Button variant="outline" className="h-10" onClick={() => openQuantityAdjustment(sku)}>
+                        <SlidersHorizontal className="size-3.5" />
+                        Adjust live count
+                      </Button>
+                      <Button variant="ghost" className="h-10" asChild>
+                        <Link href={`/bulk-inventory/${sku.id}?tab=info`}>Edit</Link>
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
+
+          <CheckedOutSection units={checkedOutUnits} />
         </>
       )}
 
@@ -1118,6 +1041,102 @@ export default function BatteryCockpitPage() {
   );
 }
 
+function StockBar({
+  available,
+  checkedOut,
+  missing,
+  owned,
+  lowLine,
+  className,
+}: {
+  available: number;
+  checkedOut: number;
+  missing: number;
+  owned: number;
+  /** Where "low" starts, in units. Drawn as a tick on the bar. */
+  lowLine?: number;
+  className?: string;
+}) {
+  const pct = (value: number) => (owned > 0 ? Math.min(100, (value / owned) * 100) : 0);
+  const lowPct = lowLine !== undefined && owned > 0 ? Math.min(100, (lowLine / owned) * 100) : null;
+  return (
+    <div className={cn("relative", className)}>
+      <div
+        role="img"
+        aria-label={`${available} available, ${checkedOut} checked out, ${missing} missing of ${owned}`}
+        className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
+      >
+        {available > 0 && <span className="rounded-full bg-[var(--green)]" style={{ width: `${pct(available)}%` }} />}
+        {checkedOut > 0 && <span className="rounded-full bg-[var(--blue)]" style={{ width: `${pct(checkedOut)}%` }} />}
+        {missing > 0 && <span className="rounded-full bg-[var(--red)]" style={{ width: `${pct(missing)}%` }} />}
+      </div>
+      {lowPct !== null && (
+        <span
+          aria-hidden
+          title={`Low below ${lowLine}`}
+          className="absolute -top-1 h-[18px] w-px bg-foreground/50"
+          style={{ left: `${lowPct}%` }}
+        />
+      )}
+    </div>
+  );
+}
+
+function LegendItem({ dot, label, value }: { dot: string; label: string; value: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={cn("size-2 rounded-full", dot)} />
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-bold tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value, warn }: { label: string; value: number; warn: boolean }) {
+  return (
+    <div>
+      <div className={cn("text-3xl font-black leading-none tabular-nums", warn && "text-[var(--orange-text)]")} style={{ fontFamily: "var(--font-heading)" }}>
+        {value}
+      </div>
+      <div className="mt-1.5 text-sm text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function LowPill() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--orange-bg)] px-2 py-0.5 text-xs font-bold text-[var(--orange-text)]">
+      <span className="size-1.5 rounded-full bg-[var(--orange)]" />
+      Running low
+    </span>
+  );
+}
+
+function AttentionRow({
+  tone,
+  title,
+  detail,
+  action,
+}: {
+  tone: "orange" | "red";
+  title: string;
+  detail: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className={cn("mt-2 size-2 shrink-0 rounded-full", tone === "red" ? "bg-[var(--red)]" : "bg-[var(--orange)]")} />
+        <div className="min-w-0">
+          <div className="font-bold">{title}</div>
+          <p className="mt-0.5 text-sm text-muted-foreground">{detail}</p>
+        </div>
+      </div>
+      {action && <div className="shrink-0 pl-5 sm:pl-0">{action}</div>}
+    </li>
+  );
+}
+
 function BatteryFamilyWorkspace({
   sku,
   staleCheckedOutUnitIds,
@@ -1137,229 +1156,239 @@ function BatteryFamilyWorkspace({
 }) {
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [unitFilter, setUnitFilter] = useState<UnitFilter>("ALL");
-  const activeTotal = Math.max(0, sku.counts.total - sku.counts.retired);
+  const owned = Math.max(0, sku.counts.total - sku.counts.retired);
   const filteredUnits = unitFilter === "ALL"
     ? sku.units
     : sku.units.filter((unit) => unit.status === unitFilter);
   const productSummary = sku.products.length === 0
-    ? "No products recorded"
-    : sku.products
-        .map((product) => `${product.name} ${product.assignedUnitCount}`)
-        .join(" / ");
+    ? null
+    : sku.products.map((product) => `${product.name} ${product.assignedUnitCount}`).join(" / ");
   const unitFilters: Array<{ value: UnitFilter; label: string; count: number }> = [
     { value: "ALL", label: "All", count: sku.counts.total },
     { value: "AVAILABLE", label: "Available", count: sku.counts.available },
-    { value: "CHECKED_OUT", label: "Checked out", count: sku.counts.checkedOut },
+    { value: "CHECKED_OUT", label: "Out", count: sku.counts.checkedOut },
     { value: "LOST", label: "Missing", count: sku.counts.lost },
     { value: "RETIRED", label: "Retired", count: sku.counts.retired },
   ];
+  const quietCounts = [
+    sku.counts.checkedOut > 0 ? `${sku.counts.checkedOut} out` : null,
+    sku.counts.lost > 0 ? `${sku.counts.lost} missing` : null,
+    sku.counts.retired > 0 ? `${sku.counts.retired} retired` : null,
+  ].filter(Boolean);
 
   return (
-    <Card className="min-w-0 border-border/40 shadow-none">
-      <CardHeader className="border-b border-border/40 pb-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <article className="min-w-0 rounded-2xl border border-border bg-card">
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-                <BatteryCharging className="size-4 shrink-0 text-muted-foreground" />
-                <Link href={`/bulk-inventory/${sku.id}`} className="min-w-0 truncate hover:underline">
-                  {sku.name}
-                </Link>
-              </CardTitle>
-              <Badge variant="secondary">Units</Badge>
-              {sku.isLow && <Badge variant="orange">Low stock</Badge>}
-              {sku.labelNeededCount > 0 && (
-                <Badge variant="secondary" className="gap-1">
-                  <Tag className="size-3" />
-                  {sku.labelNeededCount} need labels
-                </Badge>
-              )}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h3 className="min-w-0 truncate text-lg">
+                <Link href={`/bulk-inventory/${sku.id}`} className="text-foreground no-underline hover:underline">{sku.name}</Link>
+              </h3>
+              {sku.isLow && <LowPill />}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">{sku.location.name} / {sku.category}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{sku.location.name}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Button className="h-10" onClick={onAddUnits}>
               <Plus className="size-3.5" />
               Add units
             </Button>
-            <Button className="h-10" variant="outline" disabled={exporting} onClick={onExportLabels}>
-              <Download className="size-3.5" />
-              {exporting ? "Exporting..." : "Export labels"}
-            </Button>
-            <Button className="h-10" variant="outline" asChild>
-              <Link href={`/bulk-inventory/${sku.id}?tab=info`}>
-                <Info className="size-3.5" />
-                Edit metadata
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-0">
-        <div className="grid gap-4 p-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-end">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black tabular-nums" style={{ fontFamily: "var(--font-heading)" }}>
-                {sku.counts.available}
-              </span>
-              <span className="text-sm font-medium text-muted-foreground">available now</span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {activeTotal} active / {sku.counts.total} numbered records
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Count label="Available" value={sku.counts.available} dot={STATUS_META.AVAILABLE.dot} />
-            <Count label="Checked out" value={sku.counts.checkedOut} dot={STATUS_META.CHECKED_OUT.dot} />
-            <Count label="Missing" value={sku.counts.lost} dot={STATUS_META.LOST.dot} />
-            <Count label="Retired" value={sku.counts.retired} dot={STATUS_META.RETIRED.dot} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-9" aria-label={`More actions for ${sku.name}`}>
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled={exporting} onClick={onExportLabels}>
+                  <Download className="size-3.5" />
+                  {exporting ? "Exporting..." : "Export labels"}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/bulk-inventory/${sku.id}?tab=info`}>
+                    <Info className="size-3.5" />
+                    Edit metadata
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        <div className="grid border-y border-border/40 bg-muted/20 sm:grid-cols-2 xl:grid-cols-4">
-          <FamilyMetadata label="Low-stock line" value={`${sku.threshold} available`} />
-          <FamilyMetadata
-            label="Labels"
-            value={`${sku.labelPrintedCount} printed / ${sku.labelNeededCount} needed`}
-            icon={<Tag className="size-3.5" />}
-          />
-          <FamilyMetadata
-            label="Family QR"
-            value={sku.binQrCodeValue}
-            icon={<QrCode className="size-3.5" />}
-            mono
-          />
-          <FamilyMetadata label="Product mix" value={productSummary} />
-        </div>
-
-        <div className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-sm font-medium">Numbered unit roster</div>
-              <p className="mt-0.5 max-w-3xl text-xs text-muted-foreground">
-                Numbered availability comes from unit status. Add units for new physical batteries; use a unit menu to correct the live count.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="h-10 shrink-0"
-              aria-expanded={unitsOpen}
-              aria-controls={`battery-units-${sku.id}`}
-              onClick={() => setUnitsOpen((open) => !open)}
-            >
-              {unitsOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-              {unitsOpen ? "Hide units" : `Show ${sku.counts.total} units`}
-            </Button>
-          </div>
-
-          {unitsOpen && (
-            <div id={`battery-units-${sku.id}`} className="mt-4 border-t border-border/40 pt-4">
-              <div className="mb-4 flex flex-wrap gap-2" aria-label={`Filter ${sku.name} units`}>
-                {unitFilters.map((filter) => (
-                  <Button
-                    key={filter.value}
-                    type="button"
-                    variant={unitFilter === filter.value ? "secondary" : "outline"}
-                    className="h-10"
-                    aria-pressed={unitFilter === filter.value}
-                    onClick={() => setUnitFilter(filter.value)}
-                  >
-                    {filter.label}
-                    <span className="tabular-nums text-muted-foreground">{filter.count}</span>
-                  </Button>
-                ))}
-              </div>
-              {filteredUnits.length === 0 ? (
-                <EmptyState
-                  inline
-                  icon="box"
-                  title={`No ${unitFilters.find((filter) => filter.value === unitFilter)?.label.toLowerCase()} units`}
-                  description="Choose another status to review this battery family."
-                />
-              ) : (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(86px,1fr))] gap-2">
-                  {filteredUnits.map((unit) => (
-                    <UnitMenu
-                      key={unit.id}
-                      sku={sku}
-                      unit={unit}
-                      dataWarning={staleCheckedOutUnitIds.has(unit.id)}
-                      busy={busyKey === `${sku.id}-${unit.unitNumber}`}
-                      onPendingAction={onPendingAction}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+        <div className="mt-5 flex items-baseline gap-2.5">
+          <span className="text-4xl font-black leading-none tabular-nums" style={{ fontFamily: "var(--font-heading)" }}>
+            {sku.counts.available}
+          </span>
+          <span className="text-sm text-muted-foreground">available of {owned}</span>
+          {quietCounts.length > 0 && (
+            <span className="ml-auto text-sm text-muted-foreground">{quietCounts.join(" / ")}</span>
           )}
         </div>
-      </CardContent>
-    </Card>
+        <StockBar
+          className="mt-4"
+          available={sku.counts.available}
+          checkedOut={sku.counts.checkedOut}
+          missing={sku.counts.lost}
+          owned={owned}
+          lowLine={sku.threshold}
+        />
+        <p className="mt-2 text-xs text-muted-foreground">Low below {sku.threshold}</p>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+          <p className="min-w-0 text-sm text-muted-foreground">
+            {sku.labelNeededCount > 0 ? (
+              <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
+                <Tag className="size-3.5 text-muted-foreground" />
+                {sku.labelNeededCount} need labels
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5">
+                <Tag className="size-3.5" />
+                All labeled
+              </span>
+            )}
+            <span className="mx-2 text-border">|</span>
+            <span className="font-mono text-xs">{sku.binQrCodeValue}</span>
+            {productSummary && <span className="hidden sm:inline"><span className="mx-2 text-border">|</span>{productSummary}</span>}
+          </p>
+          <Button
+            variant="ghost"
+            className="h-10 shrink-0 text-muted-foreground"
+            aria-expanded={unitsOpen}
+            aria-controls={`battery-units-${sku.id}`}
+            onClick={() => setUnitsOpen((open) => !open)}
+          >
+            {unitsOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            {unitsOpen ? "Hide units" : `Show ${sku.counts.total} units`}
+          </Button>
+        </div>
+      </div>
+
+      {unitsOpen && (
+        <div id={`battery-units-${sku.id}`} className="border-t border-border bg-muted/30 p-5 sm:p-6">
+          <div className="mb-4 flex flex-wrap gap-1.5" role="group" aria-label={`Filter ${sku.name} units`}>
+            {unitFilters.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                aria-pressed={unitFilter === filter.value}
+                onClick={() => setUnitFilter(filter.value)}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors",
+                  unitFilter === filter.value
+                    ? "bg-foreground text-background"
+                    : "bg-card text-muted-foreground ring-1 ring-border hover:text-foreground",
+                )}
+              >
+                {filter.label}
+                <span className="tabular-nums opacity-70">{filter.count}</span>
+              </button>
+            ))}
+          </div>
+          {filteredUnits.length === 0 ? (
+            <EmptyState
+              inline
+              icon="box"
+              title={`No ${unitFilters.find((filter) => filter.value === unitFilter)?.label.toLowerCase()} units`}
+              description="Choose another status to review this battery family."
+            />
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(86px,1fr))] gap-2">
+              {filteredUnits.map((unit) => (
+                <UnitMenu
+                  key={unit.id}
+                  sku={sku}
+                  unit={unit}
+                  dataWarning={staleCheckedOutUnitIds.has(unit.id)}
+                  busy={busyKey === `${sku.id}-${unit.unitNumber}`}
+                  onPendingAction={onPendingAction}
+                />
+              ))}
+            </div>
+          )}
+          <p className="mt-4 text-xs text-muted-foreground">
+            Availability follows unit status. Add units for new physical batteries; tap a unit to mark it missing, retired, or recovered.
+          </p>
+        </div>
+      )}
+    </article>
   );
 }
 
-function FamilyMetadata({
-  label,
-  value,
-  icon,
-  mono = false,
-}: {
-  label: string;
-  value: string;
-  icon?: React.ReactNode;
-  mono?: boolean;
-}) {
-  return (
-    <div className="min-w-0 border-b border-border/40 px-4 py-3 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0">
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className={cn("mt-1 truncate text-sm", mono && "font-mono")}>{value}</div>
-    </div>
-  );
-}
+function CheckedOutSection({ units }: { units: CheckedOutRow[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? units : units.slice(0, 8);
 
-function Count({ label, value, dot }: { label: string; value: number; dot: string }) {
   return (
-    <div className="rounded-md bg-muted/40 px-2.5 py-2">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className={cn("size-1.5 rounded-full", dot)} />
-        {label}
-      </div>
-      <div className="mt-1 font-mono text-base font-semibold tabular-nums">{value}</div>
-    </div>
+    <section id="battery-checked-out" aria-labelledby="battery-out-title" className="flex scroll-mt-24 flex-col gap-3">
+      <h2 id="battery-out-title" className="text-lg">Checked out</h2>
+      {units.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <EmptyState
+            inline
+            icon="check"
+            title="Every battery is on the shelf"
+            description="Checked-out batteries show up here with who has them and when they are due."
+          />
+        </div>
+      ) : (
+        <>
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+            {visible.map((unit) => {
+              const aging = (unit.checkedOutDays ?? 0) >= 7;
+              const holder = unit.booking?.requesterName ?? "Unknown";
+              return (
+                <li key={unit.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                  <UserAvatar name={holder} size="default" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-bold">{holder}</div>
+                    <p className="truncate text-sm text-muted-foreground">
+                      <Link href={`/bulk-inventory/${unit.skuId}`} className="text-foreground no-underline hover:underline">
+                        {unit.skuName} #{unit.unitNumber}
+                      </Link>
+                      {unit.booking && (
+                        <>
+                          {" / "}
+                          <Link href={`/bookings?highlight=${unit.booking.id}`} className="text-foreground no-underline hover:underline">
+                            {unit.booking.refNumber ?? unit.booking.title}
+                          </Link>
+                          {` / due ${formatDue(unit.booking.endsAt)}`}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className={cn("shrink-0 text-sm font-bold tabular-nums", aging ? "text-[var(--orange-text)]" : "text-muted-foreground")}>
+                    {unit.checkedOutDays === null ? "n/a" : `${unit.checkedOutDays}d`}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {units.length > 8 && (
+            <Button variant="ghost" className="self-start text-muted-foreground" onClick={() => setShowAll((open) => !open)}>
+              {showAll ? "Show fewer" : `Show all ${units.length}`}
+            </Button>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
 function CompatibilityRow({ item }: { item: BatteryCompatibility }) {
   const shortage = Math.max(0, item.threshold - item.availableQuantity);
   const models = item.cameraModels.length > 0 ? item.cameraModels.join(", ") : "Matched camera inventory";
-  const batteries = item.batterySkuNames.join(", ");
-
   return (
-    <div className="rounded-md border border-[var(--orange)]/25 bg-background/80 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-medium">{item.label}</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {models} / {metricLabel(item.cameraCount, "camera")} matched
-          </div>
-        </div>
-        <Badge variant="orange" className="shrink-0">{shortage} short</Badge>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-md bg-muted px-2 py-1 tabular-nums">
-          {item.availableQuantity} available / {item.threshold} threshold
-        </span>
-        {batteries && <span className="rounded-md bg-muted px-2 py-1">{batteries}</span>}
-      </div>
-    </div>
+    <AttentionRow
+      tone="orange"
+      title={`${item.label} are ${shortage} short`}
+      detail={`${item.availableQuantity} available, low below ${item.threshold}. Covers ${models} (${metricLabel(item.cameraCount, "camera")}).`}
+    />
   );
 }
 
-function IntegrityWarningCard({
+function IntegrityWarningRow({
   warnings,
   repairBusy,
   onRepair,
@@ -1368,49 +1397,20 @@ function IntegrityWarningCard({
   repairBusy: boolean;
   onRepair: () => void;
 }) {
-  const visibleWarnings = warnings.slice(0, 8);
-  const remaining = Math.max(0, warnings.length - visibleWarnings.length);
-
+  const names = warnings.slice(0, 4).map((warning) => `${warning.skuName} #${warning.unitNumber}`).join(", ");
+  const more = warnings.length > 4 ? ` and ${warnings.length - 4} more` : "";
   return (
-    <Card className="border-[var(--orange)]/25 bg-[var(--orange-bg)]/40 shadow-none">
-      <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CircleAlert className="size-4 text-[var(--orange-text)]" />
-            Inventory data warnings
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant="orange">{metricLabel(warnings.length, "unit")}</Badge>
-            <Button className="h-10" variant="outline" onClick={onRepair} disabled={repairBusy}>
-              <Wrench className="size-3.5" />
-              {repairBusy ? "Repairing..." : "Repair flags"}
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          These units still have a stored checked-out flag but no active checkout allocation, so Battery Ops is counting them as available.
-        </p>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-          {visibleWarnings.map((warning) => (
-            <Link
-              key={warning.id}
-              href={`/bulk-inventory/${warning.skuId}`}
-              className="rounded-md border border-[var(--orange)]/25 bg-background/80 px-3 py-2 text-sm no-underline transition-colors hover:bg-background"
-            >
-              <div className="font-medium">{warning.skuName} #{warning.unitNumber}</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">{warning.locationName}</div>
-            </Link>
-          ))}
-        </div>
-        {remaining > 0 && (
-          <div className="text-xs text-muted-foreground">
-            {metricLabel(remaining, "more unit")} needs review.
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <AttentionRow
+      tone="orange"
+      title={`${metricLabel(warnings.length, "battery", "batteries")} with a stale checked-out flag`}
+      detail={`${names}${more}. They have no active checkout, so they are counted as available.`}
+      action={(
+        <Button className="h-10" variant="outline" onClick={onRepair} disabled={repairBusy}>
+          <Wrench className="size-3.5" />
+          {repairBusy ? "Repairing..." : "Repair flags"}
+        </Button>
+      )}
+    />
   );
 }
 

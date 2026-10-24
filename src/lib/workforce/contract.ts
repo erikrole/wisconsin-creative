@@ -3,7 +3,7 @@ import { z } from "zod";
 import { isSportCode, normalizeSportCode } from "@/lib/sports";
 
 /** Chronological order within a calendar year: Winter, Spring, Summer, Fall. */
-export const TERM_ORDER: Record<GraduationTerm, number> = { WINTER: 0, SPRING: 1, SUMMER: 2, FALL: 3 };
+const TERM_ORDER: Record<GraduationTerm, number> = { WINTER: 0, SPRING: 1, SUMMER: 2, FALL: 3 };
 
 export function compareTerms(a: { term: GraduationTerm; year: number }, b: { term: GraduationTerm; year: number }): number {
   if (a.year !== b.year) return a.year - b.year;

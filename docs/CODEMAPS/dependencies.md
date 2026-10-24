@@ -44,6 +44,7 @@
 | `recharts` | `^3.10.1` |
 | `remark-gfm` | `^4.0.1` |
 | `resend` | `^6.32.1` |
+| `sharp` | `0.35.5` |
 | `sonner` | `^2.0.8` |
 | `tailwind-merge` | `^3.7.0` |
 | `tailwindcss` | `^4.2.1` |
@@ -57,15 +58,17 @@
 
 | Package | Version |
 |---|---|
+| `@eslint/eslintrc` | `^3.3.5` |
 | `@next/bundle-analyzer` | `^16.3.7` |
 | `@playwright/test` | `^1.63.0` |
-| `@types/bcryptjs` | `^2.4.6` |
 | `@types/node` | `^22.20.4` |
 | `@types/qrcode` | `^1.5.6` |
 | `@types/react` | `^19.3.0` |
 | `@types/react-dom` | `^19.3.0` |
 | `@types/web-push` | `^3.6.4` |
 | `@vitest/coverage-v8` | `^5.0.5` |
+| `dotenv` | `^16.6.1` |
+| `esbuild` | `0.28.1` |
 | `eslint` | `^9.39.4` |
 | `eslint-config-next` | `^15.5.28` |
 | `plist` | `^5.0.0` |

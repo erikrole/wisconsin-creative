@@ -21,6 +21,20 @@ describe("labels page accessibility", () => {
     expect(sheet).toContain("aria-label={`Edit printed text for ${entry.title}`}");
   });
 
+  it("announces the sheet count and keeps template headings visible under the sheet header", () => {
+    const sheet = readFileSync("src/app/(app)/labels/PrintSheet.tsx", "utf8");
+
+    expect(sheet).toContain('aria-live="polite"');
+    expect(sheet).toMatch(/<header className="sticky top-0 z-20 flex h-16 /);
+    expect(sheet).toMatch(/key=\{`heading-\$\{group\.kind\}`\} className="sticky top-16 z-10/);
+  });
+
+  it("lets the P-touch CSV download without the USB preflight", () => {
+    const sheet = readFileSync("src/app/(app)/labels/PrintSheet.tsx", "utf8");
+
+    expect(sheet).toContain("disabled={Boolean(choicesBlocked || draftIssue)}");
+  });
+
   it("pages the whole catalog and skips the catalog status counts", () => {
     const helper = readFileSync("src/app/(app)/labels/LabelsHelper.tsx", "utf8");
     const catalog = readFileSync("src/app/(app)/labels/label-catalog.ts", "utf8");

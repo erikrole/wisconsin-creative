@@ -10,7 +10,7 @@ export const PLATFORM_LABELS: Record<ClientPlatform, string> = {
   kiosk: "Kiosk",
 };
 
-export const CHANNEL_LABELS: Record<string, string> = {
+const CHANNEL_LABELS: Record<string, string> = {
   app_store: "App Store",
   testflight: "TestFlight",
   development: "Xcode",
@@ -132,7 +132,7 @@ type IosClientLike = {
 };
 
 /** Xcode builds and simulators: what's on a developer's desk, not a phone someone carries. */
-export function isTestBuild(client: Pick<IosClientLike, "releaseChannel" | "buildStatus" | "deviceModel">): boolean {
+function isTestBuild(client: Pick<IosClientLike, "releaseChannel" | "buildStatus" | "deviceModel">): boolean {
   return client.releaseChannel === "development" || client.buildStatus === "development" || deviceName(client.deviceModel) === "Simulator";
 }
 

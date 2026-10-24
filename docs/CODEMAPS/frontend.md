@@ -108,6 +108,8 @@
 | `/dev-assign-grid` | `src/app/dev-assign-grid/page.tsx` |
 | `/dev-assign-picker` | `src/app/dev-assign-picker/page.tsx` |
 | `/dev-auto-assign` | `src/app/dev-auto-assign/page.tsx` |
+| `/dev-badges` | `src/app/dev-badges/page.tsx` |
+| `/dev-batteries` | `src/app/dev-batteries/page.tsx` |
 | `/dev-crew-size` | `src/app/dev-crew-size/page.tsx` |
 | `/dev-gear` | `src/app/dev-gear/page.tsx` |
 | `/dev-home` | `src/app/dev-home/page.tsx` |
@@ -133,6 +135,7 @@
 | `/blasts` | `src/app/(app)/blasts/layout.tsx` |
 | `/bookings` | `src/app/(app)/bookings/layout.tsx` |
 | `/budget` | `src/app/(app)/budget/layout.tsx` |
+| `/bulk-inventory/batteries` | `src/app/(app)/bulk-inventory/batteries/layout.tsx` |
 | `/checkouts` | `src/app/(app)/checkouts/layout.tsx` |
 | `/damage` | `src/app/(app)/damage/layout.tsx` |
 | `/events` | `src/app/(app)/events/layout.tsx` |

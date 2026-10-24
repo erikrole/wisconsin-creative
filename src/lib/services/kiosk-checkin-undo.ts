@@ -13,7 +13,7 @@ import { isBookingAllocationConstraintError } from "@/lib/prisma-errors";
  * Undo window for a return scan: the kiosk keeps an unfinished return for 20
  * minutes, so an Undo is only offered for scans from that session.
  */
-export const CHECKIN_UNDO_WINDOW_MS = 20 * 60 * 1000;
+const CHECKIN_UNDO_WINDOW_MS = 20 * 60 * 1000;
 
 export type CheckinUndoTarget = { assetId: string } | { bulkSkuId: string; unitNumber: number };
 

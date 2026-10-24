@@ -47,7 +47,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   ldquo: "“", rdquo: "”", hellip: "…", bull: "•", copy: "©", reg: "®",
 };
 
-export function decodeEntities(text: string): string {
+function decodeEntities(text: string): string {
   return text.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (whole, key: string) => {
     if (key.startsWith("#x")) return safeCodePoint(parseInt(key.slice(2), 16)) ?? whole;
     if (key.startsWith("#")) return safeCodePoint(parseInt(key.slice(1), 10)) ?? whole;

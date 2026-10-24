@@ -88,7 +88,7 @@ export const LABEL_KINDS: Record<
 };
 
 /** Leading tokens on asset tags that name the owning program, e.g. "FB A7 IV 1". */
-export const DEPT_PREFIXES = ["FB", "MBB", "WBB", "VB", "MHKY", "WHKY", "OOS"];
+const DEPT_PREFIXES = ["FB", "MBB", "WBB", "VB", "MHKY", "WHKY", "OOS"];
 
 export function parseAssetTag(assetTag: string): { dept: string; model: string; number: string } {
   let rest = assetTag.trim().replace(/\s+/g, " ");
