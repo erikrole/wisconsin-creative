@@ -576,6 +576,29 @@ private struct ContactActions: View {
     }
 }
 
+/// One equal-width quick action: icon over title in a neutral card.
+private struct ContactActionLabel: View {
+    let systemImage: String
+    let title: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: systemImage)
+                .font(.title3)
+            Text(title)
+                .font(.footnote.weight(.medium))
+        }
+        .foregroundStyle(.primary)
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
+                .strokeBorder(Color.hairline, lineWidth: 0.5)
+        )
+        .contentShape(Rectangle())
+    }
+}
+
 enum ContactInfo {
     /// Digits and a leading plus only, which is what tel: and sms: accept.
     static func url(scheme: String, phone: String?) -> URL? {
