@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { shiftAssignment: { findMany: vi.fn() } } }));
@@ -64,6 +64,37 @@ describe("GET /api/users/today", () => {
     const body = await (await call()).json();
     expect(body.data.onNowCount).toBe(0);
     expect(body.data.events[0].when).toBe("tomorrow");
+  });
+
+  describe("Central day boundaries (server runs in UTC)", () => {
+    afterEach(() => vi.useRealTimers());
+
+    function at(startsAt: string, endsAt: string, group: string) {
+      return {
+        user: { id: "p9", name: "Pat", avatarUrl: null },
+        shift: { area: "PHOTO", startsAt: new Date(startsAt), endsAt: new Date(endsAt), shiftGroup: { id: group, event: { summary: group } } },
+      };
+    }
+
+    it("keeps a 7 PM Central event that is past UTC midnight under today, and the next day under tomorrow", async () => {
+      // Fri Oct 23, 1:45 PM CDT.
+      vi.useFakeTimers({ now: new Date("2026-10-23T18:45:00Z") });
+      vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([
+        at("2026-10-24T00:00:00Z", "2026-10-24T03:00:00Z", "Volleyball tonight"),
+        at("2026-10-24T16:00:00Z", "2026-10-24T22:00:00Z", "Football Saturday"),
+      ] as never);
+      const body = await (await call()).json();
+      const when = Object.fromEntries(body.data.events.map((e: { summary: string; when: string }) => [e.summary, e.when]));
+      expect(when).toEqual({ "Volleyball tonight": "later", "Football Saturday": "tomorrow" });
+    });
+
+    it("reads shifts up to Central midnight of the day after tomorrow", async () => {
+      vi.useFakeTimers({ now: new Date("2026-10-23T18:45:00Z") });
+      vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([] as never);
+      await call();
+      const where = vi.mocked(db.shiftAssignment.findMany).mock.calls[0]?.[0]?.where as { shift: { startsAt: { lt: Date } } };
+      expect(where.shift.startsAt.lt.toISOString()).toBe("2026-10-25T05:00:00.000Z");
+    });
   });
 
   it("is closed to collaborators", async () => {

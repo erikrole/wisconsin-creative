@@ -1,3 +1,4 @@
+import { institutionDateKey } from "@/lib/format";
 import { BUDGET_CATEGORIES, BUDGET_CATEGORY_LABELS, parseDollarsToCents, type BudgetCategoryValue, type BudgetLineStatusValue } from "@/lib/budget/contract";
 
 /**
@@ -124,7 +125,7 @@ export function parseMoney(value: string): number | null {
  * A date from a cell: ISO, "5/28/2026", "May 28", "Jun 2025", or a bare month name. Month names with no
  * year land in the fiscal year (Jul to Dec are the first calendar year, Jan to Jun the second).
  */
-export function parseSheetDate(value: string, fiscalYear: string, today = new Date().toISOString().slice(0, 10)): { date: string; guessed: boolean } | null {
+export function parseSheetDate(value: string, fiscalYear: string, today = institutionDateKey(new Date())): { date: string; guessed: boolean } | null {
   // A month dropdown that allows several picks reads "MAY, JUNE"; the first one is when it started.
   const text = value.split(",")[0]!.trim();
   if (!text) return null;

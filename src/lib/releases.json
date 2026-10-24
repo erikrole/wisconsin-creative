@@ -88,6 +88,21 @@
   },
   {
     "date": "2026-10-23",
+    "title": "Today and Tomorrow match the real day",
+    "type": "fixes",
+    "summary": "Evening games no longer show up under Tomorrow on Staff Today or the Dashboard.",
+    "details": [
+      "Staff Today now counts events by the Madison calendar day, so a 7 PM match is listed under Later today and the Events today count includes it.",
+      "Dashboard Coming up and other Today and Tomorrow labels use the same Madison day, even late in the evening.",
+      "Report and export file names now carry the Madison date, not tomorrow's date after 7 PM, and a check keeps UTC dates out of user-facing code."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 626
+  },
+  {
+    "date": "2026-10-23",
     "title": "Safer sign-up and account protections",
     "type": "fixes",
     "summary": "Creating an account now needs the link from your invite email, and a few account details are shared only with the people who need them.",

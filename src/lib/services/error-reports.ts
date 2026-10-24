@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { appTzDateKey } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
 import { HttpError } from "@/lib/http";
@@ -210,7 +211,7 @@ async function notifyAdminsOfIssue(issueId: string, input: ErrorReportInput, reg
         payload: { href: `/issues/${issueId}`, issueId },
         channel: "IN_APP" as const,
         sentAt: now,
-        dedupeKey: `error_issue:${issueId}:${regressed ? `regressed:${now.toISOString().slice(0, 10)}` : "new"}:${admin.id}`,
+        dedupeKey: `error_issue:${issueId}:${regressed ? `regressed:${appTzDateKey(now)}` : "new"}:${admin.id}`,
       })),
       skipDuplicates: true,
     });

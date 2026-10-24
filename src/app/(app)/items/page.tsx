@@ -1,5 +1,6 @@
 "use client";
 
+import { institutionDateKey } from "@/lib/format";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -400,7 +401,7 @@ export default function ItemsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `items-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `items-export-${institutionDateKey(new Date())}.csv`;
       a.click();
       URL.revokeObjectURL(url);
       if (truncated) {

@@ -1,5 +1,6 @@
 import { Role, ShiftAssignmentStatus } from "@prisma/client";
 import { withAuth } from "@/lib/api";
+import { startOfDayInAppTz } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
@@ -12,10 +13,10 @@ export const GET = withAuth(async (_req, { user }) => {
   requireRole(user.role, [Role.ADMIN, Role.STAFF, Role.STUDENT]);
 
   const now = new Date();
-  const startOfTomorrow = new Date(now);
-  startOfTomorrow.setHours(24, 0, 0, 0);
-  const endOfTomorrow = new Date(startOfTomorrow);
-  endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
+  // Day boundaries are Central midnights; server runtimes run in UTC, where
+  // setHours would file tonight's events under "tomorrow".
+  const startOfTomorrow = startOfDayInAppTz(now, 1);
+  const endOfTomorrow = startOfDayInAppTz(now, 2);
 
   const rows = await db.shiftAssignment.findMany({
     where: {
