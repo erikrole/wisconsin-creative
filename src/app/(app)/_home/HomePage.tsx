@@ -15,6 +15,7 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import { sendShiftTradeAction } from "@/lib/shift-trade-actions";
 import { formatOperationalDateTime, formatRelativeTime } from "@/lib/format";
 import type { CreateBookingContext } from "../dashboard-types";
+import { LostUnitsDialog } from "../dashboard/lost-units-dialog";
 import { FlaggedReportDialog } from "../dashboard/flagged-report-dialog";
 import { GearPicksBanner } from "../dashboard/gear-picks-banner";
 import { ProfileCompletionBanner } from "../dashboard/profile-completion-banner";
@@ -88,13 +89,15 @@ function useBookingTargets() {
   const router = useRouter();
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [reviewingReportId, setReviewingReportId] = useState<string | null>(null);
+  const [reviewingLost, setReviewingLost] = useState<Extract<AttentionTarget, { kind: "lost-units" }> | null>(null);
   const onTarget = useCallback((target: AttentionTarget) => {
     if (target.kind === "booking") setSelectedBookingId(target.bookingId);
     else if (target.kind === "report") setReviewingReportId(target.reportId);
+    else if (target.kind === "lost-units") setReviewingLost(target);
     else if (target.kind === "link") router.push(target.href);
     else router.push(reservationHref(target.context));
   }, [router]);
-  return { selectedBookingId, setSelectedBookingId, reviewingReportId, setReviewingReportId, onTarget };
+  return { selectedBookingId, setSelectedBookingId, reviewingReportId, setReviewingReportId, reviewingLost, setReviewingLost, onTarget };
 }
 
 // Remote creation is reservation-first. Checkout custody starts at kiosk pickup.
@@ -265,7 +268,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
   } = useDashboardData();
   const bookingSync = useBookingChangeSync();
   const now = useMinuteClock();
-  const { selectedBookingId, setSelectedBookingId, reviewingReportId, setReviewingReportId, onTarget } = useBookingTargets();
+  const { selectedBookingId, setSelectedBookingId, reviewingReportId, setReviewingReportId, reviewingLost, setReviewingLost, onTarget } = useBookingTargets();
   const reviewing = data?.flaggedItems.find((f) => f.id === reviewingReportId) ?? null;
 
   // Role from the full payload, falling back to cached stats so a returning
@@ -403,6 +406,13 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
           />
         </Suspense>
       )}
+      <LostUnitsDialog
+        target={reviewingLost}
+        onClose={() => {
+          setReviewingLost(null);
+          loadData();
+        }}
+      />
       <FlaggedReportDialog
         item={reviewing}
         onClose={() => {

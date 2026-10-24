@@ -14,6 +14,7 @@ import type { CurrentUser } from "@/hooks/use-current-user";
 import { GettingStartedCard } from "@/app/(app)/_home/GettingStartedCard";
 import { WrappedBannerView } from "@/components/wrapped/WrappedBanner";
 import { CantWorkDialog } from "@/components/availability/CantWorkDialog";
+import { LostUnitsDialog } from "@/app/(app)/dashboard/lost-units-dialog";
 import { HomeSkeleton, HomeView, type HomeViewProps, type Slot } from "@/app/(app)/_home/HomeView";
 import {
   TRADE_BOARD_HREF,
@@ -120,6 +121,7 @@ function Lab({ fontClass }: { fontClass: string }) {
   const at = params.get("at");
   const [now] = useState(() => (at ? new Date(at) : new Date()));
   const [cantWorkOpen, setCantWorkOpen] = useState(false);
+  const [lostTarget, setLostTarget] = useState<{ kind: "lost-units"; skuName: string; bulkSkuId: string; units: number[] } | null>(null);
   const [reminded, setReminded] = useState<ReadonlySet<string>>(() => new Set());
   const user = { id: "dev", name: NAMES[role], email: "dev@example.com", role } as CurrentUser;
 
@@ -165,7 +167,7 @@ function Lab({ fontClass }: { fontClass: string }) {
               {state === "loading" && params.get("skeleton") === "route" ? (
                 <HomeSkeleton />
               ) : (
-                <HomeView {...buildProps(role, state, now)} onAddCantWork={() => setCantWorkOpen(true)} banners={<>{params.get("firstrun") === "1" && <GettingStartedCard />}{(params.get("wrapped") === "preview" || params.get("wrapped") === "open") && <WrappedBannerView state={params.get("wrapped") as "preview" | "open"} />}</>} onTarget={() => {}} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} />
+                <><HomeView {...buildProps(role, state, now)} onAddCantWork={() => setCantWorkOpen(true)} banners={<>{params.get("firstrun") === "1" && <GettingStartedCard />}{(params.get("wrapped") === "preview" || params.get("wrapped") === "open") && <WrappedBannerView state={params.get("wrapped") as "preview" | "open"} />}</>} onTarget={(t) => { if (t.kind === "lost-units") setLostTarget(t); }} onSelectBooking={() => {}} onQuick={() => {}} onRemind={(id) => setReminded((prev) => new Set(prev).add(id))} remindedIds={reminded} /><LostUnitsDialog target={lostTarget} onClose={() => setLostTarget(null)} /></>
               )}
               <CantWorkDialog userId="dev" open={cantWorkOpen} onOpenChange={setCantWorkOpen} />
             </main>
