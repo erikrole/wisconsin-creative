@@ -1244,7 +1244,8 @@ private func gearPickSwatch(_ hex: String) -> Color {
 /// Deterministic UA Gear states for light/dark/Dynamic Type captures.
 /// `GT_GEAR_FIXTURE` = picks | empty | closed; `GT_GEAR_ROUTE=catalog` pushes the catalog.
 struct GearPicksReviewFixture: View {
-    @State private var path: [GearCatalogRoute] = []
+    @State private var path = NavigationPath()
+    @State private var viewing: GearPhotoItem?
     private let model: GearPicksModel
     private let route: String?
 
@@ -1257,7 +1258,11 @@ struct GearPicksReviewFixture: View {
         NavigationStack(path: $path) {
             GearPicksView(wrapsInNavigationStack: false, model: model)
         }
-        .onAppear { if route == "catalog" { path = [GearCatalogRoute()] } }
+        .gearPhotoViewer($viewing)
+        .onAppear {
+            if route == "catalog" { path.append(GearCatalogRoute()) }
+            if route == "viewer" { viewing = GearPhotoItem(path: model.lines.first.flatMap { model.item(style: $0.style)?.colors.first?.image }, title: "Tech 2.0 Short Sleeve", subtitle: "Cardinal") }
+        }
     }
 }
 
@@ -1271,7 +1276,7 @@ extension GearPicksView {
 extension GearPicksModel {
     static func fixture(_ scenario: String) -> GearPicksModel {
         func color(_ code: String, _ label: String, _ swatch: String) -> GearPickPhoneColor {
-            .init(code: code, label: label, swatch: swatch, image: "")
+            .init(code: code, label: label, swatch: swatch, image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwCAIAAACxN37FAAAD5ElEQVR42u3dQW6DMBRFUe9/FV1k1HE76hREwfZ7HOkuIM4/QQk4MD6fb6mm4S0Q0BLQEtAS0AJaAloCWgJaAlpAS0BLQEtAS0ALaAloCWgJaAloAS0BLQEtAS0BLaAloCWgJaAloAW0BLQEtAS0BLSAloCWgJaAvqmvMX7b+eWZEdBnHf8V8TpNDegDx1mgyQb6wHEoaLJfCvrQ8eY4ol880Gscd4B+oezBcZaGprUAvUBzGeh61oPmF4IuNj1oDhp/5aKAnj34TcZfuSig1wy+FXSf6UFzxOxb1wX0sqkvnH3ruoBeOfJVs29dF9BbaJ48++KlAb3LyKcNvnhpQO818gmDL14a0DuO/LnZt64L6ICp3z771nUBHTP1WwT0rQjo+NlfQ1C2HKCrZt8a0DRjDTTNTL8BNEZM94AGiOke0Ogw3QMaGqZ7QOPCdAloSpjuAc0H1j2gsWC6BzQQTPeARoHpHtAQMN0D2viZ7gFt8EyXgDZvpntAmzTWPaANmOke0EbLdA9oQ2W6B7Rxao7pQbOaTA+a1WR6oKwm047QcoRmWq/9Ds202s5yMK2289BM02wvh2i220522/WZ9rE56axvS/Syfxakj6rmwGmD/9amfbG5oM1fsDY17Zv6ZXD+JLsdaz89/2nOfTk2Mu1cyi3y0jWX3NvOycEb8UVrbrj7qLPdt/vL1Rx/f2iXbx46oIZq3vQO/vNHAvRDUwD67LvpAvuEH3BxmlMfGmTHyLTza1maIx/rZgvU5BPGQZrzHrxpT9+Si3kpmsMejWyT6sKr0xGaYx5eb9d1zeYhoIEGGmiggQYaaKCBBhpooIEGGmiggRbQQAMNNNBAAw000EADDTTQAhpooIEGGmiggQYaaKCBBlpAAw000EADDTTQQAMNNNBAC2iggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQaaWqCBBhpooIEGGmiggQYaaKAFNNBAAw000EADDTTQQAMNtIAGGmiggQYaaKCBBhpooIEW0EADDTTQQAMNNNBAAw000AIaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBBhpooIEGGmiggQYaaKCBFtBAAw000EADDTTQQAMNNNACGmiggQYaaKCBBhpooIEGWkADDTTQEtAS0BLQAloCWgJaAloCWkBLQEtAS0BLQAtoCWgJaAloAS0BLQEtAS0BLaAloCWgJaAloAW0BLQEtAS0BLSAloCWgJaAloAW0BLQ0qJ+AFbRz0oIcPLEAAAAAElFTkSuQmCC")
         }
         func item(_ style: String, _ name: String, _ category: String, _ cents: Int, one: Bool = false) -> GearPickPhoneItem {
             .init(style: style, name: name, fit: "MENS", category: category, priceCents: cents,
