@@ -7,7 +7,8 @@
     "details": [
       "Shift hours now count shifts whose attendance was never logged, so hours no longer come up short.",
       "Events without a sport are no longer ranked as an “Other” sport.",
-      "Team totals leave out collaborators, and the biggest-crew card only shows when people worked together."
+      "Team totals leave out collaborators, and the biggest-crew card only shows when people worked together.",
+      "Big numbers get commas, tied sports are called a tie, and long venue and sport names no longer get cut off."
     ],
     "platforms": [
       "Web",

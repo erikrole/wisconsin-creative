@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { appTzHour, startOfAppWeek, startOfDayInAppTz } from "@/lib/app-time";
 import { recordLabel } from "@/lib/scoreboard-digest";
 import { sportLabel } from "@/lib/sports";
+import { formatCount } from "@/lib/wrapped/format";
 
 /**
  * Creative Wrapped: a tap-through story about one person's fall, built only
@@ -104,7 +105,7 @@ const AREA_LABELS: Record<ShiftArea, string> = {
 };
 
 function plural(count: number, one: string, many = `${one}s`): string {
-  return `${count} ${count === 1 ? one : many}`;
+  return `${formatCount(count)} ${count === 1 ? one : many}`;
 }
 
 function firstName(name: string): string {
@@ -116,6 +117,12 @@ function shortDate(date: Date): string {
 }
 
 /** Events without a sport stay out of sport rankings, so nobody is an "Other Regular". */
+/** A venue's first line only, so an address never becomes a card headline. */
+function shortVenue(venue: string | null): string | null {
+  const first = venue?.split(",")[0]?.trim();
+  return first ? first : null;
+}
+
 function gameSportLabel(game: Pick<WrappedGame, "sportCode">): string | null {
   return game.sportCode ? sportLabel(game.sportCode) : null;
 }
@@ -251,7 +258,7 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
       layout: "stat",
       tone: "blue",
       eyebrow: "Events worked",
-      value: String(mine.length),
+      value: formatCount(mine.length),
       countTo: mine.length,
       sentence: `It started with ${first.title} on ${shortDate(first.startsAt)}.`,
     });
@@ -264,9 +271,11 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
       layout: "stat",
       tone: "gold",
       eyebrow: "Hours on the clock",
-      value: String(hours),
+      value: formatCount(hours),
       countTo: hours,
-      sentence: hours >= 24 ? `That's more than ${plural(Math.floor(hours / 24), "full day")} of call time.` : "Every one of them counted.",
+      sentence: hours >= 24
+        ? `That's more than ${plural(Math.floor(hours / 24), "full day")} of call time.`
+        : hours === 1 ? "Every minute of it counted." : "Every one of them counted.",
     });
   }
 
@@ -279,9 +288,11 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
       tone: "green",
       eyebrow: "Your sport",
       value: topSport.label,
-      sentence: sports.length > 1
-        ? `${plural(topSport.count, "event")}, more than any other sport you worked.`
-        : `All ${plural(topSport.count, "event")} of yours.`,
+      sentence: sports.length === 1
+        ? `All ${plural(topSport.count, "event")} of yours.`
+        : sports[1]!.count === topSport.count
+          ? `${plural(topSport.count, "event")}, tied with ${sports[1]!.key} for most.`
+          : `${plural(topSport.count, "event")}, more than any other sport you worked.`,
       items: sports.slice(0, 3).map((sport) => ({
         label: sport.key,
         value: plural(sport.count, "event"),
@@ -326,7 +337,7 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
         .filter((mate) => mate.count >= 2)
         .map((mate) => ({
           label: mateNames.get(mate.key) ?? "Teammate",
-          value: `${mate.count} together`,
+          value: `${formatCount(mate.count)} together`,
           userId: mate.key,
           avatarUrl: input.avatars.get(mate.key) ?? null,
         })),
@@ -334,13 +345,13 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
   }
 
   const awayGames = mine.filter((game) => game.site === "AWAY").length;
-  const venues = countBy(mine, (game) => game.venue);
+  const venues = countBy(mine, (game) => shortVenue(game.venue));
   const topVenue = venues[0];
   if (awayGames > 0 || input.travelTrips > 0 || (topVenue && topVenue.count >= 2)) {
     const items: WrappedCardItem[] = [];
-    if (awayGames > 0) items.push({ label: "Away games", value: String(awayGames) });
-    if (input.travelTrips > 0) items.push({ label: "Trips", value: String(input.travelTrips) });
-    if (topVenue && topVenue.count >= 2) items.push({ label: "Most-worked venue", value: topVenue.key });
+    if (awayGames > 0) items.push({ label: "Away games", value: formatCount(awayGames) });
+    if (input.travelTrips > 0) items.push({ label: "Trips", value: formatCount(input.travelTrips) });
+    if (topVenue && topVenue.count >= 2) items.push({ label: "Top venue", value: topVenue.key });
     const onTheRoad = awayGames > 0 || input.travelTrips > 0;
     cards.push({
       id: "road",
@@ -384,7 +395,7 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
       items: [
         ...(topItem ? [{ label: "Most borrowed", value: topItem.key }] : []),
         ...(topCategory ? [{ label: "Top category", value: topCategory.key }] : []),
-        { label: "Items handled", value: String(items.length) },
+        { label: "Items handled", value: formatCount(items.length) },
       ],
     });
   }
@@ -397,7 +408,7 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
       layout: "stat",
       tone: "green",
       eyebrow: "Clean handoffs",
-      value: String(onTime),
+      value: formatCount(onTime),
       countTo: onTime,
       sentence: streak >= 3 ? `On-time returns, with a best streak of ${streak} in a row.` : "On-time returns. The next person thanks you.",
     });
@@ -440,12 +451,12 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
   });
 
   const summary: WrappedCardItem[] = [];
-  if (mine.length > 0) summary.push({ label: "Events", value: String(mine.length) });
+  if (mine.length > 0) summary.push({ label: "Events", value: formatCount(mine.length) });
   if (topSport) summary.push({ label: "Top sport", value: topSport.label });
-  if (hours >= 1) summary.push({ label: "Hours", value: String(hours) });
-  if (checkouts.length > 0) summary.push({ label: "Checkouts", value: String(checkouts.length) });
+  if (hours >= 1) summary.push({ label: "Hours", value: formatCount(hours) });
+  if (checkouts.length > 0) summary.push({ label: "Checkouts", value: formatCount(checkouts.length) });
   if (summary.length < 4 && topMate && topMate.count >= 2) summary.push({ label: "Top crewmate", value: firstName(mateNames.get(topMate.key) ?? ""), userId: topMate.key });
-  if (summary.length < 4 && onTime > 0) summary.push({ label: "On-time returns", value: String(onTime) });
+  if (summary.length < 4 && onTime > 0) summary.push({ label: "On-time returns", value: formatCount(onTime) });
   cards.push({
     id: "summary",
     layout: "summary",
@@ -465,7 +476,7 @@ export function buildTeamCards(input: WrappedTeamInput): WrappedCard[] {
   const rec = record(covered);
   const people = new Set(covered.flatMap((game) => game.crew.map((member) => member.userId)));
   const biggest = [...covered].sort((a, b) => b.crew.length - a.crew.length || a.startsAt.getTime() - b.startsAt.getTime())[0]!;
-  const venue = countBy(covered, (game) => game.venue)[0];
+  const venue = countBy(covered, (game) => shortVenue(game.venue))[0];
   const week = busiestWeek(covered);
 
   const cards: WrappedCard[] = [
@@ -473,10 +484,10 @@ export function buildTeamCards(input: WrappedTeamInput): WrappedCard[] {
       id: "team-events",
       layout: "stat",
       tone: "red",
-      eyebrow: "The team's fall",
-      value: String(covered.length),
+      eyebrow: "Events covered",
+      value: formatCount(covered.length),
       countTo: covered.length,
-      sentence: `Events covered by ${plural(people.size, "person", "people")}.`,
+      sentence: `${covered.length === 1 ? "Event" : "Events"} covered by ${plural(people.size, "person", "people")}.`,
     },
   ];
   if (decided(rec) > 0) {
@@ -500,10 +511,10 @@ export function buildTeamCards(input: WrappedTeamInput): WrappedCard[] {
     });
   }
   const items: WrappedCardItem[] = [];
-  if (venue) items.push({ label: "Most-worked venue", value: venue.key });
+  if (venue) items.push({ label: "Top venue", value: venue.key });
   if (week) items.push({ label: "Busiest week", value: `${weekLabel(week.start)}, ${plural(week.count, "event")}` });
-  if (input.checkouts > 0) items.push({ label: "Checkouts", value: String(input.checkouts) });
-  if (input.badgesAwarded > 0) items.push({ label: "Badges earned", value: String(input.badgesAwarded) });
+  if (input.checkouts > 0) items.push({ label: "Checkouts", value: formatCount(input.checkouts) });
+  if (input.badgesAwarded > 0) items.push({ label: "Badges earned", value: formatCount(input.badgesAwarded) });
   if (items.length > 0) {
     cards.push({
       id: "team-numbers",
