@@ -395,7 +395,7 @@ struct GearPicksView: View {
         List {
             Section { summary }
             picksSection
-            if let kit = model.kit { GearMyKitSection(kit: kit) }
+            if let kit = model.kit { GearMyKitSection(kit: kit, catalog: model.catalog, collapses: false) }
             Section {} footer: {
                 Text(footerText)
             }
@@ -634,6 +634,9 @@ struct GearCatalogView: View {
 /// detail line each and status as plain secondary text beside a small glyph.
 struct GearMyKitSection: View {
     let kit: GearMyKit
+    /// With a catalog the rows get photos; with `collapses` off every piece shows.
+    var catalog: GearPickPhoneCatalog? = nil
+    var collapses = true
     @Environment(\.openURL) private var openURL
 
     /// Four rows at a glance; the rest sit behind the disclosure.
@@ -641,7 +644,7 @@ struct GearMyKitSection: View {
     @State private var showsAll = false
 
     private var shown: [GearMyKitPiece] {
-        showsAll ? kit.pieces : Array(kit.pieces.prefix(glance))
+        showsAll || !collapses ? kit.pieces : Array(kit.pieces.prefix(glance))
     }
 
     var body: some View {
@@ -663,7 +666,7 @@ struct GearMyKitSection: View {
                 row(piece)
                     .listRowSeparator(.hidden)
             }
-            if kit.pieces.count > glance {
+            if collapses, kit.pieces.count > glance {
                 Button(showsAll ? "Show fewer" : "Show all \(kit.pieces.count)") {
                     withAnimation { showsAll.toggle() }
                 }
@@ -677,6 +680,9 @@ struct GearMyKitSection: View {
     private func row(_ piece: GearMyKitPiece) -> some View {
         let status = piece.status(order: kit.order)
         HStack(alignment: .center, spacing: 12) {
+            if let catalog {
+                GearPickThumbnail(path: image(for: piece, in: catalog), size: 56)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(piece.itemName)
                     .font(.gothamBold(size: 15, relativeTo: .subheadline))
@@ -696,6 +702,13 @@ struct GearMyKitSection: View {
             // A missing size is the one thing a person can fix from here.
             if status == .needsSize { openProfile() }
         }
+    }
+
+    private func image(for piece: GearMyKitPiece, in catalog: GearPickPhoneCatalog) -> String? {
+        for item in catalog.items {
+            if let color = item.colors.first(where: { "\(item.style)-\($0.code)" == piece.sku }) { return color.image }
+        }
+        return nil
     }
 
     @ViewBuilder
