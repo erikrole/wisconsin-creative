@@ -67,7 +67,11 @@ final class WebContractFixtureTests: XCTestCase {
         XCTAssertEqual(response.unreadCount, 1)
         let unread = try XCTUnwrap(response.data.first)
         XCTAssertTrue(unread.isUnread)
-        XCTAssertEqual(unread.sentAt, date("2026-10-26T14:55:00.123Z"))
+        // The web sends milliseconds; the app's decoder keeps the second, which
+        // is all any notification time shows.
+        let sentAt = try XCTUnwrap(unread.sentAt)
+        let expected = try XCTUnwrap(date("2026-10-26T14:55:00.123Z"))
+        XCTAssertEqual(sentAt.timeIntervalSince1970, expected.timeIntervalSince1970, accuracy: 1)
         XCTAssertEqual(unread.payload?.assignmentId, "cm00000000000000000assign1")
         let read = try XCTUnwrap(response.data.last)
         XCTAssertFalse(read.isUnread)
