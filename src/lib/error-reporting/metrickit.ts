@@ -56,7 +56,7 @@ const KIND_LABELS: Record<string, string> = {
   app_launch: "Slow launch",
 };
 
-export type StackFrame = {
+type StackFrame = {
   binaryName: string | null;
   binaryUUID: string | null;
   offset: number | null;

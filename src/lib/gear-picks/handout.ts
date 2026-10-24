@@ -1,7 +1,7 @@
 import { SIZE_NEEDED, participantPieces, studentPieces, type OrderSource, type Piece } from "./order";
 import type { GearPickAdminParticipant, GearPickAdminStudent, GearPickHandoutDto } from "./types";
 
-export type HandoutPiece = Piece & {
+type HandoutPiece = Piece & {
   /** Person, SKU, size and source, the same key the handout record uses. */
   key: string;
   handed: boolean;

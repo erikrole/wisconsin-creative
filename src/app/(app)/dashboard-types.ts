@@ -22,7 +22,7 @@ export type DashboardStats = {
   myShiftsTodayCount: number;
 };
 
-export type DashboardStatsPartialFailure =
+type DashboardStatsPartialFailure =
   | "counts"
   | "myShiftsCount"
   | "myShiftsTodayCount";
@@ -71,24 +71,6 @@ export type BookingSummary = {
   items: ItemThumb[];
 };
 
-export type MyReservation = {
-  id: string;
-  eventId?: string | null;
-  eventIds?: string[];
-  linkedEventId?: string | null;
-  title: string;
-  refNumber: string | null;
-  sportCode: string | null;
-  requesterName: string;
-  requesterInitials: string;
-  requesterAvatarUrl: string | null;
-  startsAt: string;
-  endsAt: string;
-  itemCount: number;
-  locationName: string | null;
-  items: ItemThumb[];
-};
-
 export type EventSummary = {
   id: string;
   title: string;
@@ -108,7 +90,7 @@ export type EventSummary = {
   assignedUsers: Array<{ id: string; name: string; avatarUrl: string | null; area: string | null }>;
 };
 
-export type OverdueItem = {
+type OverdueItem = {
   bookingId: string;
   bookingTitle: string;
   requesterName: string;
@@ -121,7 +103,7 @@ export type OverdueItem = {
   items: ItemThumb[];
 };
 
-export type DraftSummary = {
+type DraftSummary = {
   id: string;
   kind: string;
   title: string;
@@ -213,7 +195,7 @@ export type FlaggedItem = {
   createdAt: string;
 };
 
-export type LostBulkUnitSummary = {
+type LostBulkUnitSummary = {
   skuName: string;
   count: number;
   bulkSkuId?: string;

@@ -43,7 +43,7 @@ export type AuditEntry = {
 };
 
 import type { Location } from "@/types/common";
-export type LocationInfo = Location;
+type LocationInfo = Location;
 
 export type BookingDetail = {
   id: string;

@@ -18,17 +18,6 @@ export type FilterState = {
   hasActiveFilters: boolean;
 };
 
-export type FilterActions = {
-  setSearch: (value: string) => void;
-  setStatusFilter: (value: Set<string>) => void;
-  setLocationFilter: (value: Set<string>) => void;
-  setCategoryFilter: (value: Set<string>) => void;
-  setBrandFilter: (value: Set<string>) => void;
-  setDepartmentFilter: (value: Set<string>) => void;
-  setSorting: (value: SortingState) => void;
-  clearAllFilters: () => void;
-};
-
 function readSet(params: URLSearchParams, key: string): Set<string> {
   return new Set(params.getAll(key).filter(Boolean));
 }

@@ -14,10 +14,10 @@ import { MAX_BULK_UNIT_NUMBER } from "@/lib/request-limits";
 export const MAX_COPIES = 500;
 
 /** Most copies one USB batch sends; matches the print job schema cap. */
-export const MAX_USB_LABELS = 500;
+const MAX_USB_LABELS = 500;
 
 /** How an item family prints. Serialized items never carry this. */
-export type FamilySource = {
+type FamilySource = {
   skuId: string;
   binQrCodeValue: string;
   trackByNumber: boolean;
@@ -37,7 +37,7 @@ export type UnitKind = "battery" | "numberTag";
 export const UNIT_KINDS: UnitKind[] = ["battery", "numberTag"];
 
 /** Text the label had when it was added, so edits can be undone. */
-export type LabelText = { dept: string; model: string; number: string };
+type LabelText = { dept: string; model: string; number: string };
 
 /** One line on the print sheet, editable before export. */
 export type CartEntry = LabelRow & {
@@ -58,7 +58,7 @@ export type SheetUnit = {
 export const KIND_ORDER = Object.keys(LABEL_KINDS) as LabelKind[];
 
 /** Lenses and SD cards get their own templates; everything else prints as a body label. */
-export function kindForCategory(category: string | null | undefined): LabelKind {
+function kindForCategory(category: string | null | undefined): LabelKind {
   const name = (category ?? "").toLowerCase();
   if (name.includes("lens")) return "lens";
   if (name.includes("sd card")) return "sd";

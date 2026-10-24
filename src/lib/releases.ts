@@ -18,7 +18,7 @@ export type Release = {
   version?: string;
 };
 
-export type ReleaseDay = {
+type ReleaseDay = {
   date: string;
   releases: Release[];
 };
