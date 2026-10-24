@@ -51,3 +51,11 @@ describe("new event-derived booking titles", () => {
     );
   });
 });
+
+describe("leftover promo text", () => {
+  it("drops Stuff the Fieldhouse from a booking title", async () => {
+    const { displayBookingTitle } = await import("@/lib/booking-display-title");
+    expect(displayBookingTitle("Football vs USC - Stuff the Field House")).toBe("Football vs USC");
+    expect(displayBookingTitle("Volleyball vs Iowa (Stuff the Fieldhouse)")).toBe("Volleyball vs Iowa");
+  });
+});

@@ -104,3 +104,50 @@ describe("GET /api/users/today", () => {
     expect(db.shiftAssignment.findMany).not.toHaveBeenCalled();
   });
 });
+
+describe("working window", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("does not call a game live at 8:24 AM when the Student call time is 3:15 PM", async () => {
+    // Sat Oct 24, 8:24 AM CDT.
+    vi.useFakeTimers({ now: new Date("2026-10-24T13:24:00Z") });
+    const event = (summary: string, startsAt: string, endsAt: string) => ({
+      summary, rawSummary: summary, startsAt: new Date(startsAt), endsAt: new Date(endsAt),
+      allDay: false, isHome: true, site: "HOME", opponent: null,
+    });
+    vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([
+      {
+        callStartsAt: new Date("2026-10-24T20:15:00Z"),
+        user: { id: "s1", name: "Student", avatarUrl: null },
+        shift: {
+          area: "PHOTO", workerType: "ST", startsAt: new Date("2026-10-24T05:00:00Z"), endsAt: new Date("2026-10-25T02:30:00Z"),
+          callStartsAt: null,
+          shiftGroup: { id: "game", event: event("Football vs USC", "2026-10-24T23:30:00Z", "2026-10-25T02:30:00Z") },
+        },
+      },
+      {
+        callStartsAt: null,
+        user: { id: "f1", name: "Staff", avatarUrl: null },
+        shift: {
+          area: "VIDEO", workerType: "FT", startsAt: new Date("2026-10-24T05:00:00Z"), endsAt: new Date("2026-10-25T02:30:00Z"),
+          callStartsAt: null,
+          shiftGroup: { id: "game", event: event("Football vs USC", "2026-10-24T23:30:00Z", "2026-10-25T02:30:00Z") },
+        },
+      },
+      {
+        callStartsAt: null,
+        user: { id: "f1", name: "Staff", avatarUrl: null },
+        shift: {
+          area: "VIDEO", workerType: "FT", startsAt: new Date("2026-10-24T15:00:00Z"), endsAt: new Date("2026-10-24T21:00:00Z"),
+          callStartsAt: null,
+          shiftGroup: { id: "visit", event: event("Football Official Visit Shoot", "2026-10-24T15:00:00Z", "2026-10-24T21:00:00Z") },
+        },
+      },
+    ] as never);
+    const body = await (await call()).json();
+    expect(body.data.onNowCount).toBe(0);
+    const [first, second] = body.data.events;
+    expect(first.summary).toBe("Football Official Visit Shoot");
+    expect(second).toMatchObject({ summary: "Football vs USC", when: "later", startsAt: "2026-10-24T20:15:00.000Z" });
+  });
+});

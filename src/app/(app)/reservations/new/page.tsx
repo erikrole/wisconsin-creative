@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { BookingWizard } from "@/components/booking-wizard/BookingWizard";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function WizardSkeleton() {
@@ -27,9 +28,11 @@ function WizardSkeleton() {
 }
 
 export default function NewReservationPage() {
+  // The wizard seeds start and end from the device clock, which differs from the server (UTC).
+  const hydrated = useHydrated();
   return (
     <Suspense fallback={<WizardSkeleton />}>
-      <BookingWizard />
+      {hydrated ? <BookingWizard /> : <WizardSkeleton />}
     </Suspense>
   );
 }
