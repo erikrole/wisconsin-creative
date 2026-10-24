@@ -22,6 +22,12 @@ private extension Color {
 
 @main
 struct WisconsinLiveActivitiesBundle: WidgetBundle {
+    /// This extension is its own process, so the app's launch-time default
+    /// does not reach it. Due times and weekdays here are America/Chicago too.
+    init() {
+        NSTimeZone.default = TimeZone(identifier: "America/Chicago") ?? .current
+    }
+
     var body: some Widget {
         CheckoutReturnLiveActivityWidget()
         NextShiftWidget()

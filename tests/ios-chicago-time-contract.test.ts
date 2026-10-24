@@ -12,6 +12,12 @@ describe("iOS app time zone", () => {
     );
   });
 
+  it("installs the same default zone in the widget and Live Activity extension", () => {
+    expect(read("ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift")).toContain(
+      'NSTimeZone.default = TimeZone(identifier: "America/Chicago")',
+    );
+  });
+
   it("does not show Next Up as empty when its requests failed", () => {
     const profile = read("ios/Wisconsin/Views/ProfileView.swift");
     expect(profile).toContain("nextUpLoadFailed");
