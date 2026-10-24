@@ -15,6 +15,7 @@ import {
 import type { Location } from "./types";
 import { AREA_LABELS, STUDENT_YEAR_OPTIONS } from "./types";
 import { SPORT_CODES, sportLabel } from "@/lib/sports";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 export default function UserFilters({
   search,
@@ -67,7 +68,7 @@ export default function UserFilters({
   roleFilter?: string;
 }) {
   const studentFiltersApply = !roleFilter || roleFilter === "STUDENT";
-  const [draftSearch, setDraftSearch] = useState(search);
+  const [draftSearch, setDraftSearch] = useSyncedDraft(search);
   const [filtersOpen, setFiltersOpen] = useState(
     !!locationFilter ||
       !!yearFilter ||
@@ -137,10 +138,6 @@ export default function UserFilters({
     }
     previousFilterCountRef.current = activeFilterCount;
   }, [activeFilterCount]);
-
-  useEffect(() => {
-    setDraftSearch(search);
-  }, [search]);
 
   useEffect(() => {
     if (draftSearch === search) return;

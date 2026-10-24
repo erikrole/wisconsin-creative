@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { CalendarEvent, ShiftGroup } from "@/app/(app)/schedule/_components/types";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { AREAS } from "@/types/areas";
+import { useHydrated } from "@/hooks/use-browser-state";
 
 /* ───── Types ───── */
 
@@ -152,7 +153,7 @@ function deriveColumns(events: GridEvent[], areaFilter: string): GridColumn[] {
 /* ───── Hook ───── */
 
 export function useAssignmentGrid(): UseAssignmentGridResult {
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydrated();
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -190,10 +191,6 @@ export function useAssignmentGrid(): UseAssignmentGridResult {
   });
   const visibleEvents = useMemo(() => hydrated ? allEvents : [], [allEvents, hydrated]);
   const loading = !hydrated || isLoading;
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
 
   const events = useMemo(() => {
     if (!areaFilter) return visibleEvents;

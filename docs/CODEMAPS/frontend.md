@@ -177,7 +177,7 @@
 | `src/components/schedule/AutoAssignDialog.tsx` | 1057 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1045 |
 | `src/components/TradeBoard.tsx` | 974 |
-| `src/components/BookingListPage.tsx` | 921 |
+| `src/components/BookingListPage.tsx` | 918 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/Sidebar.tsx` | 798 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
@@ -189,11 +189,11 @@
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
-| `src/components/AppShell.tsx` | 441 |
 | `src/components/ui/heatmap.tsx` | 434 |
+| `src/components/AppShell.tsx` | 433 |
 | `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 378 |
-| `src/components/booking-details/BookingInfoCard.tsx` | 358 |
+| `src/components/booking-details/BookingInfoCard.tsx` | 355 |
 | `src/components/FormCombobox.tsx` | 352 |
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 349 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
@@ -206,8 +206,9 @@
 | File | Lines |
 |---|---:|
 | `src/hooks/booking-action-copy.ts` | 22 |
-| `src/hooks/use-assignment-grid.ts` | 226 |
+| `src/hooks/use-assignment-grid.ts` | 223 |
 | `src/hooks/use-booking-change-sync.ts` | 174 |
+| `src/hooks/use-browser-state.ts` | 23 |
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 58 |
 | `src/hooks/use-dashboard-data.ts` | 244 |
@@ -216,15 +217,17 @@
 | `src/hooks/use-form-submit.ts` | 188 |
 | `src/hooks/use-gear-picks.ts` | 47 |
 | `src/hooks/use-getting-started.ts` | 108 |
+| `src/hooks/use-hydrated.ts` | 13 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
 | `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 69 |
-| `src/hooks/use-mobile.ts` | 20 |
+| `src/hooks/use-mobile.ts` | 19 |
 | `src/hooks/use-onboarding-save.ts` | 249 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 83 |
 | `src/hooks/use-schedule-data.ts` | 1272 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
+| `src/hooks/use-synced-draft.ts` | 20 |
 | `src/hooks/use-url-state.ts` | 129 |
 | `src/hooks/useBookingActions.ts` | 297 |
 | `src/hooks/useBookingDetail.ts` | 70 |
