@@ -20,6 +20,13 @@ extension Color {
     /// it does not adapt: use it where the brand red must read as the brand red
     /// on any surface (the announcement splash).
     static let wisconsinRed = Color(red: 200.0 / 255.0, green: 0, blue: 0)
+    /// Jersey numerals in the Wisconsin face: Badger Red (#A00000) in light
+    /// mode, white in dark mode (Erik, 2026-10-07).
+    static let jerseyNumber = Color(UIColor(dynamicProvider: { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor.white
+            : UIColor(red: 0.627, green: 0, blue: 0, alpha: 1)
+    }))
 
     /// Top stop of the sign-in splash scene — `#140B10`.
     static let brandSplashTop = Color(red: 0.078, green: 0.043, blue: 0.063)
@@ -58,6 +65,16 @@ extension Font {
             return Font.custom("Gotham-Bold", size: size, relativeTo: style)
         }
         return Font.system(style).weight(.bold)
+    }
+
+    /// Wisconsin Athletics numeral face, used only for jersey numbers (the web
+    /// `--font-jersey`). The file's PostScript name is spelled "WIsconsin".
+    static func wisconsinJersey(size: CGFloat, relativeTo textStyle: Font.TextStyle? = nil) -> Font {
+        let style = textStyle ?? scalableTextStyle(for: size)
+        if UIFont(name: "WIsconsin-Regular", size: size) != nil {
+            return Font.custom("WIsconsin-Regular", size: size, relativeTo: style)
+        }
+        return gothamBold(size: size, relativeTo: style)
     }
 
     private static func scalableTextStyle(for size: CGFloat) -> Font.TextStyle {

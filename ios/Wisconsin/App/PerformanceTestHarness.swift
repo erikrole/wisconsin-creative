@@ -137,6 +137,8 @@ struct PerformanceTestRootView: View {
              .announcementStress, .announcementNone, .announcementError,
              .announcementLong, .announcementQueue, .announcementBrokenImage, .announcementCtaRoute:
             AnnouncementHarnessView()
+        case .signatureCollections, .signatureRoster, .signatureCapture:
+            SignatureHarnessView(scenario: scenario)
         }
     }
 }

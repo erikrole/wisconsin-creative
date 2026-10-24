@@ -25,6 +25,11 @@ struct BrowseView: View {
                 rows.append(.reports)
                 rows.insert(.damage, at: 6)
             }
+            // Signature capture needs an Apple Pencil, so it is offered on iPad
+            // only, and to the staff/admin roles the capture endpoints accept.
+            if SignatureCaptureAvailability.isAvailable(role: session.currentUser?.role) {
+                rows.append(.signatures)
+            }
             return rows
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
@@ -162,6 +167,8 @@ struct BrowseView: View {
             WhatsNewView(wrapsInNavigationStack: false)
         case .gearPicks:
             GearPicksView(wrapsInNavigationStack: false)
+        case .signatures:
+            SignaturesView(wrapsInNavigationStack: false)
         }
     }
 }
@@ -191,6 +198,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
     case badges
     case reports
     case damage
+    case signatures
 
     var id: String { rawValue }
 
@@ -199,7 +207,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .blasts, .whatsNew: .work
         case .items, .kits, .batteries, .accountability, .reports, .damage: .equipment
         case .guides, .brandAssets, .licenses, .sharedLogins: .resources
-        case .scoreboard, .users, .gearPicks, .badges: .team
+        case .scoreboard, .users, .gearPicks, .badges, .signatures: .team
         }
     }
 
@@ -221,6 +229,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .badges: "Badges"
         case .reports: "Reports"
         case .damage: "Damage and loss"
+        case .signatures: "Signatures"
         }
     }
 
@@ -258,6 +267,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
             "Usage, activity, and inventory"
         case .damage:
             "Close out damaged and missing gear"
+        case .signatures:
+            "Capture team signatures with Apple Pencil"
         }
     }
 
@@ -279,6 +290,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .badges: "medal"
         case .reports: "chart.bar.xaxis"
         case .damage: "exclamationmark.triangle"
+        case .signatures: "signature"
         }
     }
 
@@ -300,6 +312,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
         case .badges: Color.statusText(.purple)
         case .reports: Color.statusText(.red)
         case .damage: Color.statusText(.orange)
+        case .signatures: Color.statusText(.blue)
         }
     }
 }

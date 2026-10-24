@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,7 +37,6 @@ import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { SignaturePenPreview } from "@/components/signatures/SignaturePenPreview";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
-import { isCurrentDeviceIpad } from "@/lib/signatures/capture";
 import { invalidateSignatureCollectionCaches, signatureCollectionQueryKey } from "@/lib/signatures/client-cache";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
 import {
@@ -99,27 +97,18 @@ const GROUP_META: Record<Member["roleGroup"], { label: string; icon: typeof User
   SUPPORT_STAFF: { label: "Support Staff", icon: UsersRound },
 };
 
-const CAPTURE_ON_IPAD_TOOLTIP = "Capture can only be done on an iPad with an Apple Pencil.";
+const CAPTURE_IN_APP_TOOLTIP = "Signatures are captured with Apple Pencil in the Wisconsin app on iPad (Browse → Signatures).";
 
-function CaptureAction({ collectionId, member, isIpad, primaryCapture }: { collectionId: string; member: Member; isIpad: boolean; primaryCapture: boolean }) {
-  if (isIpad) {
-    return (
-      <Button size="sm" variant={primaryCapture ? "brand" : "outline"} className="h-11 w-40" asChild>
-        <Link href={`/signatures/${collectionId}/capture/${member.id}`}><FilePenLine data-icon="inline-start" />Capture</Link>
-      </Button>
-    );
-  }
-
+/** Web capture is retired; an unsigned row says where capture happens instead of linking to it. */
+function CaptureInAppStatus({ primaryCapture }: { primaryCapture: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} aria-label="Capture on iPad" className="inline-flex">
-          <Button type="button" size="sm" variant={primaryCapture ? "brand" : "outline"} className="h-11 w-40" disabled>
-            <FilePenLine data-icon="inline-start" />Capture on iPad
-          </Button>
+        <span tabIndex={0} className={cn("inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium", primaryCapture ? "text-foreground" : "text-muted-foreground")}>
+          <FilePenLine className="size-4" aria-hidden="true" />Capture in iPad app
         </span>
       </TooltipTrigger>
-      <TooltipContent>{CAPTURE_ON_IPAD_TOOLTIP}</TooltipContent>
+      <TooltipContent>{CAPTURE_IN_APP_TOOLTIP}</TooltipContent>
     </Tooltip>
   );
 }
@@ -153,7 +142,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: "", jerseyNumber: "" });
   const [collapsedGroups, setCollapsedGroups] = useState<Set<Member["roleGroup"]>>(new Set());
-  const [isIpad, setIsIpad] = useState(false);
   const isCreativeStaffRoster = collection?.sportCode === SIGNATURE_CREATIVE_STAFF_SPORT_CODE;
   const isAdministrationRoster = collection?.sportCode === SIGNATURE_ADMINISTRATION_SPORT_CODE;
   const isStandaloneStaffRoster = collection ? isStandaloneStaffSignatureCollection(collection.sportCode) : false;
@@ -173,9 +161,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     setSettingsOpen(false);
   }, [collection?.id]);
 
-  useEffect(() => {
-    setIsIpad(isCurrentDeviceIpad());
-  }, []);
 
   useEffect(() => {
     // Reveal fresh matches, while keeping disclosure controls usable afterward.
@@ -208,6 +193,8 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     .filter((section) => (group === "ALL" || section.roleGroup === group) && section.members.length > 0), [collection?.members, group, rosterGroupOrder, search, signatureFilter]);
   const effectiveSettings = settings?.values ?? collection?.penSettings;
   const hasCapturedSignatures = collection?.members.some((member) => Boolean(member.artifact)) ?? false;
+  // Follow the server lock (first capture until reset), not current artifacts:
+  // removing every signature one by one keeps the settings locked.
   const settingsLocked = collection?.settingsLocked ?? hasCapturedSignatures;
   const settingsValidation = penSettingsSchema.safeParse(effectiveSettings);
   const actionDisabled = Boolean(pendingAction) || Boolean(error) || refreshing;
@@ -471,20 +458,13 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                                  />
                                </button>
                              ) : member.active && collection.status === "OPEN" ? (
-                               <CaptureAction collectionId={collection.id} member={member} isIpad={isIpad} primaryCapture={member.roleGroup === "PLAYER" || member.roleGroup === "CREATIVE_STAFF" || isAdministrationRoster} />
+                               <CaptureInAppStatus primaryCapture={member.roleGroup === "PLAYER" || member.roleGroup === "CREATIVE_STAFF" || isAdministrationRoster} />
                              ) : null}
                            </div>
 
                            <div className="flex items-center justify-center">
                              {showRowActions && (
                                <OperationalRowActions label={`Actions for ${member.name}'s signature`} triggerClassName="size-11">
-                                 {member.artifact && member.active && collection.status === "OPEN" && (isIpad ? (
-                                   <DropdownMenuItem asChild>
-                                     <Link href={`/signatures/${collection.id}/capture/${member.id}`}><FilePenLine />Replace signature</Link>
-                                   </DropdownMenuItem>
-                                 ) : (
-                                   <DropdownMenuItem disabled title={CAPTURE_ON_IPAD_TOOLTIP}><FilePenLine />Replace on iPad</DropdownMenuItem>
-                                 ))}
                                  {member.artifact && (
                                    <>
                                      <DropdownMenuItem asChild>
