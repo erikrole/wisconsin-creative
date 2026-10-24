@@ -16,8 +16,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    // Worker threads start faster than forked processes for this many small files.
-    pool: "threads",
+    // Forked processes, not worker threads: Prisma's native query engine can
+    // panic ("Failed to deserialize constructor options") when a thread that
+    // loaded it is torn down, which aborted CI runs intermittently. Forks cost
+    // about 6 s on the full suite.
+    pool: "forks",
     include: ["tests/**/*.test.ts", "tests/**/*.test.mjs"],
     setupFiles: ["tests/_setup.ts"],
     coverage: {
