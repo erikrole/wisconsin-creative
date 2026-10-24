@@ -93,14 +93,43 @@ enum GearBackgroundRefresh {
     /// usage, so this asks for roughly hourly and lets the system throttle.
     static func schedule(after interval: TimeInterval = 60 * 60) {
         let request = BGAppRefreshTaskRequest(identifier: identifier)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: interval)
+        request.earliestBeginDate = earliestBegin(after: Date(timeIntervalSinceNow: interval))
         try? BGTaskScheduler.shared.submit(request)
     }
 
     static func run() async {
         schedule()
+        // A request submitted before this rule existed can still fire overnight.
+        guard !isQuietHours(Date()) else { return }
         guard let dashboard = try? await APIClient.shared.dashboard() else { return }
         GearWidgetPublisher.publish(from: dashboard)
         SpotlightIndexer.index(from: dashboard)
+    }
+
+    /// Phones charging overnight run app refresh freely, and every run wakes the
+    /// database. Like web polling, background refresh pauses 10 PM to 6 AM in
+    /// the app timezone; the widgets catch up at 6.
+    static let quietHoursStart = 22
+    static let quietHoursEnd = 6
+
+    static func isQuietHours(_ date: Date, calendar: Calendar = appCalendar) -> Bool {
+        let hour = calendar.component(.hour, from: date)
+        return hour >= quietHoursStart || hour < quietHoursEnd
+    }
+
+    /// `date`, or the next 6 AM when `date` falls in quiet hours.
+    static func earliestBegin(after date: Date, calendar: Calendar = appCalendar) -> Date {
+        guard isQuietHours(date, calendar: calendar) else { return date }
+        return calendar.nextDate(
+            after: date,
+            matching: DateComponents(hour: quietHoursEnd, minute: 0),
+            matchingPolicy: .nextTime
+        ) ?? date
+    }
+
+    static var appCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = NotificationPrefsViewModel.appTimeZone
+        return calendar
     }
 }

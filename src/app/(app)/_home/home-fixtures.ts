@@ -143,7 +143,7 @@ export function sampleDashboard(role: "STUDENT" | "STAFF" | "ADMIN", now: Date):
     flaggedItems: team ? [
       { id: "f-1", assetId: "a-1", assetTag: "LENS-022", assetName: "Sony 70-200mm GM", type: "DAMAGED", bookingTitle: "Hockey vs Minnesota", reportedBy: "Ava Patel", description: "Front element scratched", imageUrl: null, assetStatus: "AVAILABLE", createdAt: at(now, -4 * H) },
     ] : [],
-    lostBulkUnits: role === "ADMIN" ? [{ skuName: "NP-FZ100 battery", count: 2 }] : [],
+    lostBulkUnits: role === "ADMIN" ? [{ skuName: "NP-FZ100 battery", count: 2, bulkSkuId: "sku-np", units: [4, 7] }] : [],
   };
 }
 

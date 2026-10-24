@@ -27,7 +27,23 @@ function expandLeadingSportCode(title: string): string {
  * games keep their dashes ("Media Day - Kohl Center"), and nothing here
  * rewrites stored or audit values.
  */
+/**
+ * Crew position and kit tags ride on the end of a title in parentheses: "(ROAM2)",
+ * "(SLOW1)", "(PHOTO3)", "(GC)". Titles saved before those were protected hold them
+ * title-cased ("Roam2", "Gc"), so a trailing tag that is short or ends in a number
+ * is shown in caps again.
+ */
+const TRAILING_TAG = /\(\s*([A-Za-z]{1,3}|[A-Za-z]+\s?\d+|bench)\s*\)\s*$/i;
+
+function restoreTrailingTag(title: string): string {
+  return title.replace(TRAILING_TAG, (_m, tag: string) => `(${tag.toUpperCase()})`);
+}
+
 export function displayBookingTitle(title: string): string {
+  return restoreTrailingTag(plainDisplayBookingTitle(title));
+}
+
+function plainDisplayBookingTitle(title: string): string {
   const cleaned = cleanSourceSummary(title.replace(LEFTOVER_PROMO, " ")).replace(/\s*[-–—:]\s*$/, "") || cleanSourceSummary(title);
   const game = cleaned.match(/^(.+?)\s+(vs\.?|at)\s+(.+)$/i);
   if (game) {

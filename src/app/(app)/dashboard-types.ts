@@ -216,6 +216,9 @@ export type FlaggedItem = {
 export type LostBulkUnitSummary = {
   skuName: string;
   count: number;
+  bulkSkuId?: string;
+  /** Unit numbers currently marked lost, for settling them from the dashboard. */
+  units?: number[];
 };
 
 export type DashboardData = {
