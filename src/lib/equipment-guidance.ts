@@ -1,6 +1,6 @@
 import type { EquipmentSectionKey } from "./equipment-sections";
 
-export type GuidanceContext = {
+type GuidanceContext = {
   selectedSectionKeys: EquipmentSectionKey[];
   activeSection: EquipmentSectionKey;
 };

@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-export type OperationalStatusTone = "critical" | "warning" | "info" | "neutral";
+type OperationalStatusTone = "critical" | "warning" | "info" | "neutral";
 
 export type OperationalStatusRailItem = {
   id: string;

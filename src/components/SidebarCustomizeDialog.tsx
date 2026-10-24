@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export type CustomizableNavItem = { label: string; href: string; icon: React.ElementType };
-export type CustomizableNavGroup = { label?: string; items: CustomizableNavItem[] };
+type CustomizableNavGroup = { label?: string; items: CustomizableNavItem[] };
 
 type SidebarCustomizeDialogProps = {
   open: boolean;

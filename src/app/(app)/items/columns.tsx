@@ -32,7 +32,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isBulkRowId } from "./lib/item-href";
 
-export type ActiveBooking = {
+type ActiveBooking = {
   id: string;
   kind: string;
   status?: string;

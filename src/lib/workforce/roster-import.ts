@@ -15,7 +15,7 @@ const ALIASES: Record<string, string[]> = {
   spring: ["spring"],
 };
 
-export type RosterPlacement = { term: GraduationTerm; year: number; sportCodes: string[] };
+type RosterPlacement = { term: GraduationTerm; year: number; sportCodes: string[] };
 
 export type RosterRecord = {
   line: number;
@@ -92,7 +92,7 @@ export type RosterUser = {
   staffingType: "FT" | "ST";
 };
 
-export type RosterAction = "update" | "no_change" | "unmatched";
+type RosterAction = "update" | "no_change" | "unmatched";
 
 export type RosterPlanItem = {
   record: RosterRecord;

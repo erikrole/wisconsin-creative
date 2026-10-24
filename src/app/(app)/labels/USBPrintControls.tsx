@@ -4,7 +4,6 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { labelName, printedLabels, remainingLabels, uncertainIndices, type PrintJob, type PrintLabel } from "@/lib/label-print-job";
 import { useUsbPrintJob } from "./use-usb-print-job";
-export type UsbPrintLabel = PrintLabel;
 const time = (value: string) => new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 function BatchDetails({ job }: { job: PrintJob }) {
   const download = () => {

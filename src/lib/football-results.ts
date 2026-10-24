@@ -4,7 +4,7 @@ import { normalizeOpponentName } from "@/lib/schedule-event-identity";
 const score = z.number().int().min(0).max(200);
 // Only ESPN reports these; UW rows carry the empty defaults. Older stored snapshots parse unchanged.
 const poll = z.number().int().min(1).max(25).nullable().default(null);
-export const footballObservationSchema = z.object({
+const footballObservationSchema = z.object({
   version: z.literal(1),
   provider: z.enum(["UW", "ESPN"]),
   externalId: z.string().regex(/^\d+$/),
@@ -56,7 +56,7 @@ function outcome(us: number | null, them: number | null): FootballObservation["o
   return us > them ? "WIN" : us < them ? "LOSS" : "TIE";
 }
 
-export function footballOpponentKey(name: string | null): string {
+function footballOpponentKey(name: string | null): string {
   const normalized = normalizeOpponentName(name)?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
   // Explicit spelling aliases, never fuzzy or date-only matching.
   return ({ pennst: "pennstate", michiganst: "michiganstate", ohiost: "ohiostate" } as Record<string, string>)[normalized] ?? normalized;

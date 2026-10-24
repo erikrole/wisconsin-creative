@@ -11,8 +11,6 @@ const PERIOD_STORAGE_KEY = "reports:period-days";
 /** 0 means "all time" — reports that support it list it in their own values. */
 export const ALL_TIME_PERIOD = 0;
 
-export type ReportPeriodOption = { label: string; value: number };
-
 export function periodLabel(days: number) {
   return days === ALL_TIME_PERIOD ? "All time" : `${days}d`;
 }

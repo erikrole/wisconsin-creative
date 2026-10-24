@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 
-export type ClaimViewerRequest = {
+type ClaimViewerRequest = {
   id: string;
   status: string;
   hasConflict?: boolean;

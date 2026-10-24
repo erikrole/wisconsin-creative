@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
  * late it ran and whether it worked. Best-effort; never fails the job itself.
  */
 
-export const JOB_RUN_RETENTION_DAYS = 90;
+const JOB_RUN_RETENTION_DAYS = 90;
 
 export type JobName =
   | "checkout_escalation"

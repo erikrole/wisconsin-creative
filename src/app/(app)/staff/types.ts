@@ -43,13 +43,13 @@ export type UserRow = {
   lastActiveAt: string | null;
 };
 
-export type SportAssignment = {
+type SportAssignment = {
   id: string;
   sportCode: string;
   createdAt: string;
 };
 
-export type AreaAssignment = {
+type AreaAssignment = {
   id: string;
   area: string;
   isPrimary: boolean;
