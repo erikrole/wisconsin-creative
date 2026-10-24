@@ -300,6 +300,7 @@ struct GearPicksView: View {
     @State private var model = GearPicksModel()
     @State private var showReview = false
     @State private var confirmLeave = false
+    @State private var viewing: GearPhotoItem?
     @Environment(\.dismiss) private var dismiss
 
     @ViewBuilder
@@ -325,6 +326,7 @@ struct GearPicksView: View {
             .navigationDestination(for: GearPickStyleRoute.self) { route in
                 GearPickItemView(style: route.style, model: model)
             }
+            .gearPhotoViewer($viewing)
             .sheet(isPresented: $showReview) {
                 NavigationStack {
                     GearPicksReviewView(model: model)
@@ -395,7 +397,7 @@ struct GearPicksView: View {
         List {
             Section { summary }
             picksSection
-            if let kit = model.kit { GearMyKitSection(kit: kit, catalog: model.catalog, collapses: false) }
+            if let kit = model.kit { GearMyKitSection(kit: kit, catalog: model.catalog, collapses: false) { viewing = $0 } }
             Section {} footer: {
                 Text(footerText)
             }
@@ -456,7 +458,9 @@ struct GearPicksView: View {
         let price = (item?.priceCents ?? line.unitPriceCents) * line.quantity
         NavigationLink(value: GearPickStyleRoute(style: line.style)) {
             HStack(spacing: 12) {
-                GearPickThumbnail(path: item?.colors.first { $0.code == line.colorCode }?.image, size: 56)
+                let photo = item?.colors.first { $0.code == line.colorCode }?.image
+                GearPickThumbnail(path: photo, size: 56)
+                    .opensPhoto(GearPhotoItem(path: photo, title: line.itemName, subtitle: line.colorLabel), $viewing)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(line.itemName)
                         .font(.gothamBold(size: 15, relativeTo: .subheadline))
@@ -572,6 +576,78 @@ struct GearPicksView: View {
     }
 }
 
+/// A photo someone tapped, shown larger with its name.
+struct GearPhotoItem: Identifiable {
+    let id = UUID()
+    let path: String?
+    let title: String
+    let subtitle: String
+}
+
+/// Native full-size look at a gear photo: pinch or double-tap to zoom.
+private struct GearPhotoViewer: View {
+    let item: GearPhotoItem
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+    @State private var baseScale: CGFloat = 1
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: Brand.Space.md) {
+                AsyncImage(url: item.path.flatMap(GearPickImage.url(for:))) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFit()
+                    } else if phase.error != nil {
+                        Image(systemName: "photo").font(.largeTitle).foregroundStyle(.tertiary)
+                    } else {
+                        ProgressView()
+                    }
+                }
+                .scaleEffect(scale)
+                .gesture(
+                    MagnifyGesture()
+                        .onChanged { scale = min(max(baseScale * $0.magnification, 1), 5) }
+                        .onEnded { _ in baseScale = scale }
+                )
+                .onTapGesture(count: 2) {
+                    withAnimation(.spring) {
+                        scale = scale > 1 ? 1 : 2.5
+                        baseScale = scale
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+                .accessibilityLabel("\(item.title), \(item.subtitle)")
+                Text(item.subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, Brand.Space.md)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(item.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private extension View {
+    func gearPhotoViewer(_ item: Binding<GearPhotoItem?>) -> some View {
+        sheet(item: item) { GearPhotoViewer(item: $0) }
+    }
+
+    /// Makes a thumbnail open the larger photo without stealing the row's own tap.
+    func opensPhoto(_ item: GearPhotoItem, _ viewing: Binding<GearPhotoItem?>) -> some View {
+        onTapGesture { viewing.wrappedValue = item }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Shows a larger photo")
+    }
+}
+
 struct GearCatalogRoute: Hashable {}
 
 /// The full assortment, one pushed screen away from the main picks list.
@@ -637,6 +713,8 @@ struct GearMyKitSection: View {
     /// With a catalog the rows get photos; with `collapses` off every piece shows.
     var catalog: GearPickPhoneCatalog? = nil
     var collapses = true
+    /// Called when a piece's photo is tapped; the parent presents the viewer.
+    var onPhoto: ((GearPhotoItem) -> Void)? = nil
     @Environment(\.openURL) private var openURL
 
     /// Four rows at a glance; the rest sit behind the disclosure.
@@ -681,7 +759,11 @@ struct GearMyKitSection: View {
         let status = piece.status(order: kit.order)
         HStack(alignment: .center, spacing: 12) {
             if let catalog {
-                GearPickThumbnail(path: image(for: piece, in: catalog), size: 56)
+                let photo = image(for: piece, in: catalog)
+                GearPickThumbnail(path: photo, size: 56)
+                    .onTapGesture { onPhoto?(GearPhotoItem(path: photo, title: piece.itemName, subtitle: piece.colorLabel)) }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint("Shows a larger photo")
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(piece.itemName)
@@ -819,6 +901,7 @@ struct GearPickItemView: View {
     @State private var size: String
     @State private var quantity: Int
     @State private var kitPrompt: KitPrompt?
+    @State private var viewing: GearPhotoItem?
 
     init(style: String, model: GearPicksModel) {
         self.style = style
@@ -848,6 +931,7 @@ struct GearPickItemView: View {
         }
         .navigationTitle(model.item(style: style)?.name ?? "Gear")
         .navigationBarTitleDisplayMode(.inline)
+        .gearPhotoViewer($viewing)
         .alert(kitPrompt?.title ?? "Included in your standard issue", isPresented: kitPresented) {
             Button("Add to picks") { confirmKitAdd() }
             Button("Cancel", role: .cancel) { kitPrompt = nil }
@@ -871,6 +955,7 @@ struct GearPickItemView: View {
             if let color {
                 Section {
                     GearPickThumbnail(path: color.image, size: 220)
+                        .opensPhoto(GearPhotoItem(path: color.image, title: item.name, subtitle: color.label), $viewing)
                         .frame(maxWidth: .infinity)
                         .listRowBackground(Color.clear)
                     Text(GearPickMoney.format(item.priceCents))

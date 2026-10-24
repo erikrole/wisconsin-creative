@@ -7,7 +7,8 @@
     "details": [
       "Your picks and your kit pieces both show a photo, color, size and status, and picks swipe to remove with a Review and submit button that stays in reach.",
       "Catalog (top right) holds the full assortment with search; picked items keep their count badge.",
-      "Items still missing a size are flagged in orange so you can fix them before submitting."
+      "Items still missing a size are flagged in orange so you can fix them before submitting.",
+      "Tap any item photo to see it full size, and pinch or double-tap to zoom."
     ],
     "platforms": [
       "iOS"
