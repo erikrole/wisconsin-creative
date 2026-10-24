@@ -4,9 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Prisma 6 requires a schema URL syntactically. prisma.config.ts supplies an
-  // inert value for schema loading and overrides it for real CLI connections.
-  url      = env("PRISMA_SCHEMA_URL")
+  // Prisma 7 keeps connection URLs out of the schema: prisma.config.ts supplies
+  // the migration URL and the runtime client connects through a driver adapter.
 }
 
 enum Role {
@@ -1325,6 +1324,7 @@ model CalendarEvent {
   workers         EventWorker[]
   combinedInto    CalendarEvent?        @relation("CalendarEventCombination", fields: [combinedIntoId], references: [id], onDelete: SetNull)
   combinedEvents  CalendarEvent[]       @relation("CalendarEventCombination")
+  resultObservations GameResultObservation[]
 
   @@unique([sourceId, externalId])
   @@index([startsAt, endsAt])
@@ -1333,6 +1333,29 @@ model CalendarEvent {
   @@index([combinedIntoId])
   @@index([archivedAt])
   @@map("calendar_events")
+}
+
+enum GameResultProvider {
+  UW
+  ESPN
+}
+
+/// Latest valid provider observation. Refresh failures never erase its snapshot.
+/// Scoreboard derives agreement at read time; this never writes CalendarEvent.result.
+model GameResultObservation {
+  id            String             @id @default(cuid())
+  eventId       String             @map("event_id")
+  provider      GameResultProvider
+  externalId    String             @map("external_id")
+  snapshot      Json
+  observedAt    DateTime           @map("observed_at")
+  lastAttemptAt DateTime           @map("last_attempt_at")
+  lastError     String?            @map("last_error")
+  event         CalendarEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, provider])
+  @@unique([provider, externalId])
+  @@map("game_result_observations")
 }
 
 enum ScheduleFollowSource {

@@ -37,7 +37,7 @@ export function AccountUsernameField({ email, id = "account-username" }: { email
  * satisfies the server's rule instead of being rejected after the fact. The
  * only server rule is a minimum of 8 characters.
  */
-export const PASSWORD_RULES = "minlength: 8;";
+const PASSWORD_RULES = "minlength: 8;";
 
 /**
  * Spread onto a new-password input. React's DOM typings predate the

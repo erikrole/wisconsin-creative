@@ -20,6 +20,10 @@ struct WisconsinApp: App {
     @AppStorage("WisconsinThemeChoice") private var themeChoice: ThemeChoice = .system
 
     init() {
+        // Every Today/Tomorrow label, day grouping and clock time in the app
+        // is America/Chicago, wherever the phone is. `Calendar.current` and
+        // `.formatted(...)` both read this default.
+        NSTimeZone.default = NotificationPrefsViewModel.appTimeZone
         AppMetricMonitor.shared.start()
         DiagnosticBreadcrumbs.shared.record(.lifecycle, "App launched")
         LegacyGearCache.purgeIfNeeded()

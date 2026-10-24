@@ -16,7 +16,7 @@ export function kioskNudgeDedupeKey(bookingId: string, now: Date = new Date()) {
   return `kiosk-nudge-${bookingId}-${appTzDateKey(now)}`;
 }
 
-export function overdueForLabel(endsAt: Date, now: Date) {
+function overdueForLabel(endsAt: Date, now: Date) {
   const hours = Math.max(1, Math.floor((now.getTime() - endsAt.getTime()) / 3_600_000));
   if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"}`;
   const days = Math.floor(hours / 24);

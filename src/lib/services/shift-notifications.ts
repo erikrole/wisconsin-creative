@@ -1040,7 +1040,7 @@ async function loadShiftReminderAssignment(assignmentId: string): Promise<ShiftR
 }
 
 /** When the worker actually needs to be there: their call time, else the shift start. */
-export function effectiveShiftCallStart(assignment: {
+function effectiveShiftCallStart(assignment: {
   callStartsAt: Date | null;
   shift: { callStartsAt: Date | null; startsAt: Date };
 }): Date {

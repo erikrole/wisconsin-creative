@@ -4,7 +4,7 @@ import type { PrintJobApi } from "./label-print-client";
 import type { LabelBitmap } from "./brother-label-render";
 import type { BrotherUsbPrinter } from "./brother-usb";
 
-export class PrintPersistenceError extends Error {}
+class PrintPersistenceError extends Error {}
 /** Coordinates the local write-ahead journal with authenticated server checkpoints.
  * Device bytes are never replayed by log reconciliation. The caller holds the Web Lock. */
 export class LabelPrintController {

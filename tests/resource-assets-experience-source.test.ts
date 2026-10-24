@@ -57,7 +57,7 @@ describe("Brand asset experience source contracts", () => {
   it("exposes previews, recents, links, resilient uploads, and conflict choices in the UI", () => {
     const component = source("src/components/resources/BrandAssetLibrary.tsx");
     const downloadRoute = source("src/app/api/resources/assets/[id]/download/route.ts");
-    const middleware = source("src/middleware.ts");
+    const middleware = source("src/proxy.ts");
 
     expect(component).toContain("FontSpecimen");
     expect(component).toContain("AssetPreviewDialog");

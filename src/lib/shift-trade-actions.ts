@@ -14,7 +14,7 @@ const METHOD: Record<ShiftTradeAction, "POST" | "PATCH"> = {
 
 const LOST = "The response was lost. Check the refreshed work before trying again.";
 
-export const SHIFT_TRADE_ACTION_COPY: Record<ShiftTradeAction, { success: string; server: string; network: string }> = {
+const SHIFT_TRADE_ACTION_COPY: Record<ShiftTradeAction, { success: string; server: string; network: string }> = {
   claim: {
     success: "Claim sent for Admin approval",
     server: "Could not claim the trade. Refresh the Trade Board and try again.",

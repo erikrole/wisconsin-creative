@@ -30,7 +30,7 @@ export type MatchResult = {
   reasons: string[];
 };
 
-export const MIN_SUGGESTION_SCORE = 45;
+const MIN_SUGGESTION_SCORE = 45;
 
 const STOP_WORDS = new Set([
   "the", "and", "for", "with", "kit", "set", "pack", "body", "new", "black", "white", "silver", "gray", "grey",

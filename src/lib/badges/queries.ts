@@ -1,4 +1,4 @@
-import { BadgeCategory, BadgeKind, BadgeStreakType, BookingKind, BookingStatus, Prisma } from "@prisma/client";
+import { BadgeCategory, BadgeKind, BadgeStreakType, BookingKind, BookingStatus, Prisma, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import type { AuthUser } from "@/lib/auth";
@@ -67,6 +67,20 @@ export type EarnedBadge = {
   awardedAt: string;
 };
 
+/**
+ * The people a badge can belong to: active accounts other than collaborators.
+ *
+ * Collaborators (Big Ten Network, Learfield) cannot open a badge surface --
+ * every badge route refuses the role -- but they used to be counted in the
+ * rarity denominator, so each one made every badge look a little rarer than
+ * it is among the people who can actually earn it. Holders, the eligible
+ * count, the gallery, and the report all read this one population.
+ */
+export const badgeEligibleUserWhere = {
+  active: true,
+  role: { not: Role.COLLABORATOR },
+} satisfies Prisma.UserWhereInput;
+
 export async function listActiveBadgeDefinitions(where?: { trigger?: string }) {
   return db.badgeDefinition.findMany({
     where: { active: true, ...where },
@@ -129,10 +143,10 @@ export async function listEarnedBadgesSince(args: {
   const [holderCounts, eligibleUsers] = await Promise.all([
     db.studentBadge.groupBy({
       by: ["definitionId"],
-      where: { definitionId: { in: definitionIds }, user: { active: true } },
+      where: { definitionId: { in: definitionIds }, user: badgeEligibleUserWhere },
       _count: { userId: true },
     }),
-    db.user.count({ where: { active: true } }),
+    db.user.count({ where: badgeEligibleUserWhere }),
   ]);
   const holdersByDefinition = new Map(
     holderCounts.map((row) => [row.definitionId, row._count.userId]),
@@ -245,7 +259,7 @@ export async function ensureManualBadgeDefinition(customDefinition: CustomBadgeD
   return definition;
 }
 
-async function getBadgePeerVisibility() {
+export async function getBadgePeerVisibility() {
   const config = await db.systemConfig.findUnique({
     where: { key: "badges.peerVisible" },
     select: { value: true },
@@ -545,7 +559,7 @@ export async function getUserBadgeProfile(viewer: AuthUser, userId: string) {
   // are cheap aggregates and neither depends on the viewer.
   const [progressByKey, eligibleUsers, streakRows] = await Promise.all([
     getProgressByBadgeKey(userId, definitions),
-    db.user.count({ where: { active: true } }),
+    db.user.count({ where: badgeEligibleUserWhere }),
     db.badgeStreak.findMany({
       where: { userId },
       select: { streakType: true, current: true, longest: true, lastEventAt: true },
@@ -598,7 +612,7 @@ export async function getUserBadgeProfile(viewer: AuthUser, userId: string) {
   // mostly by departed students report a share above 1.0 and read as Common.
   const holderCounts = await db.studentBadge.groupBy({
     by: ["definitionId"],
-    where: { user: { active: true } },
+    where: { user: badgeEligibleUserWhere },
     _count: { userId: true },
   });
   const holdersByDefinition = new Map(holderCounts.map((row) => [row.definitionId, row._count.userId]));

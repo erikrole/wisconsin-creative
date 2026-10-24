@@ -14,7 +14,7 @@ direction.
    ```bash
    npm test
    npx tsc --noEmit --pretty false
-   npm run lint
+   npm run lint      # CI runs lint:ci, a warning budget that only goes down
    npm run verify:docs
    npm run build:app
    ```

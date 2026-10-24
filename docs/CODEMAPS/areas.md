@@ -14,10 +14,10 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 ## badges
 
 - Doc: `docs/AREA_BADGES.md`
-- Pages: `/badges`, `/reports/badges`
-- APIs: `/api/badges/award/[id]`, `/api/badges/award/bulk`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
+- Pages: `/badges`, `/reports/badges`, `/dev-badges`
+- APIs: `/api/badges/award/[id]`, `/api/badges/award/bulk`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/gallery`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
 - Services: _none matched_
-- Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-claim.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-mvp-polish.test.ts`, `tests/badges-operations-page.test.ts`
+- Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-claim.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-gallery.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-mvp-polish.test.ts`
 
 ## budget
 
@@ -30,7 +30,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 ## bulk-inventory
 
 - Doc: `docs/AREA_BULK_INVENTORY.md`
-- Pages: `/bulk-inventory/[id]`, `/bulk-inventory/batteries`, `/bulk-inventory`
+- Pages: `/bulk-inventory/[id]`, `/bulk-inventory/batteries`, `/bulk-inventory`, `/dev-batteries`
 - APIs: `/api/bulk-skus/[id]/activity`, `/api/bulk-skus/[id]/adjust`, `/api/bulk-skus/[id]/convert-to-numbered`, `/api/bulk-skus/[id]/favorite`, `/api/bulk-skus/[id]/image`, `/api/bulk-skus/[id]/products/[productId]`, `/api/bulk-skus/[id]/products`, `/api/bulk-skus/[id]/qr-code`, `/api/bulk-skus/[id]`, `/api/bulk-skus/[id]/units/[unitNumber]/product`
 - Services: _none matched_
 - Tests: `tests/admin-fix-today-batteries.test.ts`

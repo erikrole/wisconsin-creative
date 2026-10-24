@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 118 |
-| App layouts | 34 |
-| API route handlers | 436 |
-| Service files | 140 |
-| Component files | 189 |
-| Test files | 872 |
+| App pages | 120 |
+| App layouts | 35 |
+| API route handlers | 439 |
+| Service files | 141 |
+| Component files | 191 |
+| Test files | 883 |
 
 ## Oversized Source Watchlist
 
@@ -31,7 +31,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1398 |
 | `src/components/ActivityTimeline.tsx` | 1388 |
-| `src/app/(app)/budget/BudgetView.tsx` | 1358 |
+| `src/app/(app)/budget/BudgetView.tsx` | 1350 |
 | `src/app/api/assets/route.ts` | 1318 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/hooks/use-schedule-data.ts` | 1270 |
@@ -40,7 +40,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/schedule-working-copy.ts` | 1208 |
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
-| `src/app/(app)/staff/[id]/page.tsx` | 1159 |
+| `src/app/(app)/staff/[id]/page.tsx` | 1160 |
 | `src/lib/services/shift-notifications.ts` | 1144 |
 
 ## High-Level Data Flow

@@ -1,3 +1,4 @@
+import { appTzDateKey } from "@/lib/app-time";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -191,7 +192,7 @@ export const GET = withAuth(async (req, { user }) => {
     headers: {
       "Cache-Control": "private, no-store",
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="items-export-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="items-export-${appTzDateKey(new Date())}.csv"`,
       ...(truncated ? {
         "X-Total-Count": String(totalCount),
         "X-Truncated": "true",

@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
 import type { Role } from "@prisma/client";
-import { Redis } from "@upstash/redis";
+import type { Redis } from "@upstash/redis";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import type { CompanionRole } from "@/lib/companion-projection-contract";
-import { cacheNamespace, isolatedIntegrationValue } from "@/lib/environment-safety";
+import { cacheNamespace } from "@/lib/environment-safety";
+import { getUpstashRedis, resetUpstashRedisForTests } from "@/lib/redis";
 
 const SESSION_TTL_SECONDS = 90 * 24 * 60 * 60;
 const SESSION_PREFIX = cacheNamespace("gear-tracker:companion:session:v1:");
@@ -38,17 +39,8 @@ type CompanionDeviceRecord = CompanionSessionRecord & {
   token: string;
 };
 
-let redis: Redis | null | undefined;
-
 function getCompanionRedis(): Redis {
-  if (redis !== undefined) {
-    if (!redis) throw new HttpError(503, "Companion updates are not configured.");
-    return redis;
-  }
-
-  const url = isolatedIntegrationValue("UPSTASH_REDIS_REST_URL") || isolatedIntegrationValue("KV_REST_API_URL");
-  const token = isolatedIntegrationValue("UPSTASH_REDIS_REST_TOKEN") || isolatedIntegrationValue("KV_REST_API_TOKEN");
-  redis = url && token ? new Redis({ url, token }) : null;
+  const redis = getUpstashRedis();
   if (!redis) throw new HttpError(503, "Companion updates are not configured.");
   return redis;
 }
@@ -370,5 +362,5 @@ export async function readCompanionPresence(): Promise<Map<string, CompanionPres
 }
 
 export function resetCompanionRedisForTests(): void {
-  redis = undefined;
+  resetUpstashRedisForTests();
 }

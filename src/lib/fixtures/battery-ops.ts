@@ -1,145 +1,184 @@
-type FixtureUnitOptions = {
-  prefix: string;
-  productId?: string;
-  checkedOut?: number[];
+type UnitStatus = "AVAILABLE" | "CHECKED_OUT" | "LOST" | "RETIRED";
+
+type FamilySpec = {
+  id: string;
+  name: string;
+  locationName?: string;
+  binQr: string;
+  total: number;
+  /** Unit number to the days it has been out. */
+  out?: Record<number, number>;
+  lost?: number[];
+  retired?: number[];
+  labeled?: number;
+  product?: { id: string; name: string; brand: string; model: string };
+  minThreshold?: number;
 };
 
-function makeUnits(count: number, options: FixtureUnitOptions) {
-  return Array.from({ length: count }, (_, index) => {
-    const unitNumber = index + 1;
-    const checkedOut = options.checkedOut?.includes(unitNumber) ?? false;
+const HOLDERS = ["Maddy Pehler", "Usman Syed", "Jordan Ruiz", "Maya Chen", "Alex Romero"];
 
+// Same rule as src/lib/bulk-batteries.ts, restated so the fixture stays DB-free.
+const lowLine = (owned: number, min: number) => Math.max(min, Math.ceil(owned * 0.2));
+
+function buildFamily(spec: FamilySpec) {
+  const out = spec.out ?? {};
+  const units = Array.from({ length: spec.total }, (_, index) => {
+    const unitNumber = index + 1;
+    const days = out[unitNumber];
+    const status: UnitStatus = days !== undefined
+      ? "CHECKED_OUT"
+      : spec.lost?.includes(unitNumber)
+        ? "LOST"
+        : spec.retired?.includes(unitNumber)
+          ? "RETIRED"
+          : "AVAILABLE";
+    const holder = HOLDERS[unitNumber % HOLDERS.length];
     return {
-      id: `${options.prefix}-${unitNumber}`,
-      productId: options.productId ?? null,
+      id: `${spec.id}-unit-${unitNumber}`,
+      productId: spec.product?.id ?? null,
       unitNumber,
-      status: checkedOut ? "CHECKED_OUT" as const : "AVAILABLE" as const,
+      status,
       notes: null,
-      labelPrintedAt: null,
+      labelPrintedAt: unitNumber <= (spec.labeled ?? 0) ? "2026-10-01T00:00:00.000Z" : null,
       labelPrintedById: null,
       labelPrintBatchId: null,
-      checkedOutAt: checkedOut ? "2026-08-27T12:00:00.000Z" : null,
-      checkedOutDays: checkedOut ? 3 : null,
-      booking: checkedOut
+      checkedOutAt: days !== undefined ? "2026-10-15T12:00:00.000Z" : null,
+      checkedOutDays: days ?? null,
+      booking: days !== undefined
         ? {
             id: `fixture-booking-${unitNumber}`,
-            title: "Football practice",
-            refNumber: `CO-${String(unitNumber).padStart(4, "0")}`,
-            endsAt: "2026-09-03T18:00:00.000Z",
-            requesterName: unitNumber === 44 ? "Usman Syed" : "Maddy Pehler",
+            title: days >= 7 ? "Football road trip" : "Football practice",
+            refNumber: `CO-${String(1000 + unitNumber).padStart(4, "0")}`,
+            endsAt: "2026-10-26T18:00:00.000Z",
+            requesterName: holder,
           }
         : null,
     };
   });
+  const count = (status: UnitStatus) => units.filter((unit) => unit.status === status).length;
+  const counts = {
+    total: units.length,
+    available: count("AVAILABLE"),
+    checkedOut: count("CHECKED_OUT"),
+    lost: count("LOST"),
+    retired: count("RETIRED"),
+  };
+  const threshold = lowLine(counts.total - counts.retired, spec.minThreshold ?? 0);
+  return {
+    id: spec.id,
+    name: spec.name,
+    category: "Batteries",
+    trackByNumber: true,
+    location: { id: "fixture-location", name: spec.locationName ?? "Camp Randall" },
+    minThreshold: spec.minThreshold ?? 0,
+    threshold,
+    binQrCodeValue: spec.binQr,
+    products: spec.product
+      ? [{ ...spec.product, assignedUnitCount: spec.total }]
+      : [],
+    counts,
+    labelPrintedCount: spec.labeled ?? 0,
+    labelNeededCount: units.filter((unit) => unit.labelPrintedAt === null && unit.status !== "RETIRED").length,
+    isLow: counts.available < threshold,
+    units,
+  };
 }
 
 export function getBatteryOpsFixture() {
   const skus = [
-    {
-      id: "fixture-fx6",
-      name: "FX6 Battery",
-      category: "Batteries",
-      trackByNumber: true,
-      location: { id: "fixture-location", name: "Camp Randall" },
-      minThreshold: 10,
-      threshold: 10,
-      binQrCodeValue: "fx6-battery",
-      products: [
-        { id: "fixture-fx6-product", name: "Sony BP-U70", brand: "Sony", model: "BP-U70", assignedUnitCount: 12 },
-      ],
-      counts: { total: 12, available: 12, checkedOut: 0, lost: 0, retired: 0 },
-      labelPrintedCount: 0,
-      labelNeededCount: 12,
-      isLow: false,
-      units: makeUnits(12, { prefix: "fixture-fx6-unit", productId: "fixture-fx6-product" }),
-    },
-    {
-      id: "fixture-gold",
-      name: "Gold Mount Battery",
-      category: "Batteries",
-      trackByNumber: true,
-      location: { id: "fixture-location", name: "Camp Randall" },
-      minThreshold: 10,
-      threshold: 10,
-      binQrCodeValue: "gold-mount",
-      products: [
-        { id: "fixture-gold-product", name: "Dionic XT 150Wh", brand: "Anton/Bauer", model: "Dionic XT 150Wh", assignedUnitCount: 8 },
-      ],
-      counts: { total: 8, available: 8, checkedOut: 0, lost: 0, retired: 0 },
-      labelPrintedCount: 0,
-      labelNeededCount: 8,
-      isLow: true,
-      units: makeUnits(8, { prefix: "fixture-gold-unit", productId: "fixture-gold-product" }),
-    },
-    {
-      id: "fixture-monitor",
-      name: "Monitor Battery",
-      category: "Batteries",
-      trackByNumber: true,
-      location: { id: "fixture-location", name: "Camp Randall" },
-      minThreshold: 10,
-      threshold: 10,
-      binQrCodeValue: "monitor-battery",
-      products: [
-        { id: "fixture-monitor-product", name: "Watson NP-F550", brand: "Watson", model: "NP-F550", assignedUnitCount: 4 },
-      ],
-      counts: { total: 18, available: 18, checkedOut: 0, lost: 0, retired: 0 },
-      labelPrintedCount: 0,
-      labelNeededCount: 18,
-      isLow: false,
-      units: makeUnits(18, { prefix: "fixture-monitor-unit" }).map((unit) => ({
-        ...unit,
-        productId: unit.unitNumber >= 15 ? "fixture-monitor-product" : null,
-      })),
-    },
-    {
+    buildFamily({
       id: "fixture-sony",
       name: "Sony Battery",
-      category: "Batteries",
-      trackByNumber: true,
-      location: { id: "fixture-location", name: "Camp Randall" },
-      minThreshold: 10,
-      threshold: 10,
-      binQrCodeValue: "sony-battery",
-      products: [
-        { id: "fixture-sony-product", name: "Sony NP-FZ100", brand: "Sony", model: "NP-FZ100", assignedUnitCount: 52 },
-      ],
-      counts: { total: 52, available: 48, checkedOut: 4, lost: 0, retired: 0 },
-      labelPrintedCount: 0,
-      labelNeededCount: 52,
-      isLow: false,
-      units: makeUnits(52, {
-        prefix: "fixture-sony-unit",
-        productId: "fixture-sony-product",
-        checkedOut: [9, 14, 23, 44],
-      }),
-    },
+      binQr: "sony-battery",
+      total: 53,
+      out: Object.fromEntries(Array.from({ length: 40 }, (_, i) => [i + 3, i % 9 === 0 ? 9 : (i % 5) + 1])),
+      lost: [1],
+      retired: [2, 53],
+      labeled: 40,
+      product: { id: "fixture-sony-product", name: "Sony NP-FZ100", brand: "Sony", model: "NP-FZ100" },
+    }),
+    buildFamily({
+      id: "fixture-fx6",
+      name: "FX6 Battery",
+      binQr: "fx6-battery",
+      total: 12,
+      out: { 4: 2 },
+      labeled: 12,
+      product: { id: "fixture-fx6-product", name: "Sony BP-U70", brand: "Sony", model: "BP-U70" },
+    }),
+    buildFamily({
+      id: "fixture-gold",
+      name: "Gold Mount Battery",
+      binQr: "gold-mount",
+      total: 8,
+      lost: [6],
+      labeled: 5,
+      product: { id: "fixture-gold-product", name: "Dionic XT 150Wh", brand: "Anton/Bauer", model: "Dionic XT 150Wh" },
+    }),
+    buildFamily({
+      id: "fixture-monitor",
+      name: "Monitor Battery",
+      binQr: "monitor-battery",
+      total: 18,
+      labeled: 18,
+    }),
   ];
+
+  const sum = (key: "total" | "available" | "checkedOut" | "lost" | "retired") =>
+    skus.reduce((acc, sku) => acc + sku.counts[key], 0);
+  const sony = skus[0]!;
+  const agingCheckedOut = skus.reduce(
+    (acc, sku) => acc + sku.units.filter((unit) => unit.status === "CHECKED_OUT" && (unit.checkedOutDays ?? 0) >= 7).length,
+    0,
+  );
 
   return {
     totals: {
-      total: 90,
-      available: 86,
-      checkedOut: 4,
-      lost: 0,
-      retired: 0,
-      lowSkus: 1,
-      agingCheckedOut: 0,
+      total: sum("total"),
+      available: sum("available"),
+      checkedOut: sum("checkedOut"),
+      lost: sum("lost"),
+      retired: sum("retired"),
+      lowSkus: skus.filter((sku) => sku.isLow).length,
+      agingCheckedOut,
     },
-    skus,
+    skus: [
+      ...skus,
+      {
+        id: "fixture-aa",
+        name: "AA Batteries",
+        category: "Batteries",
+        trackByNumber: false,
+        location: { id: "fixture-location", name: "Camp Randall" },
+        minThreshold: 12,
+        threshold: 12,
+        binQrCodeValue: "aa-batteries",
+        products: [],
+        counts: { total: 9, available: 9, checkedOut: 0, lost: 0, retired: 0 },
+        labelPrintedCount: 0,
+        labelNeededCount: 0,
+        isLow: true,
+        units: [],
+      },
+    ],
     compatibility: [
       {
-        ruleId: "fixture-gold-mount",
-        label: "V-mount batteries",
-        cameraModels: ["ILME-FX6V"],
-        cameraCount: 4,
-        batterySkuIds: ["fixture-gold"],
-        batterySkuNames: ["Gold Mount Battery"],
-        availableQuantity: 8,
-        threshold: 10,
+        ruleId: "sony-np-fz100",
+        label: "Sony NP-FZ100 batteries",
+        cameraModels: ["FX3", "A7 IV"],
+        cameraCount: 6,
+        batterySkuIds: [sony.id],
+        batterySkuNames: [sony.name],
+        availableQuantity: sony.counts.available,
+        threshold: sony.threshold,
         isLow: true,
       },
     ],
-    integrity: { staleCheckedOutCount: 0, staleCheckedOutUnits: [] },
+    integrity: {
+      staleCheckedOutCount: 1,
+      staleCheckedOutUnits: [
+        { id: "fixture-fx6-unit-9", skuId: "fixture-fx6", skuName: "FX6 Battery", locationName: "Camp Randall", unitNumber: 9 },
+      ],
+    },
   };
 }

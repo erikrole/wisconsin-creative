@@ -46,7 +46,7 @@ import { ImportDialog } from "./ImportDialog";
 import { InsightsPanel } from "./InsightsPanel";
 import { linesToCsv } from "@/lib/budget/insights";
 import { LINE_SORT_LABELS, LINE_SORTS, filterAndSortLines, type LineSort } from "@/lib/budget/table";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { parseErrorMessage, parseJsonSafely, readApiData } from "@/lib/errors";
 
 type BudgetListItem = { id: string; name: string; fiscalYear: string; allocationCents: number | null; lineCount: number };
 type LineView = {
@@ -152,16 +152,8 @@ function formatShortDate(value: string | null): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-async function readJson<T>(response: Response, fallback: string): Promise<T> {
-  if (handleAuthRedirect(response, "/budget")) throw new Error("Signing in again");
-  if (!response.ok) throw new Error(await parseErrorMessage(response, fallback));
-  const json = await parseJsonSafely<{ data?: T }>(response);
-  if (!json?.data) throw new Error(fallback);
-  return json.data;
-}
-
 /** Units still unlinked on a bought line: what was bought minus the units already tied to items. */
-export function unlinkedUnits(line: Pick<LineView, "status" | "quantity" | "quantityBought" | "links">): number {
+function unlinkedUnits(line: Pick<LineView, "status" | "quantity" | "quantityBought" | "links">): number {
   if (line.status !== "PURCHASED") return 0;
   const linked = line.links.reduce((sum, link) => sum + link.quantity, 0);
   return Math.max(0, (line.quantityBought ?? line.quantity) - linked);
@@ -178,14 +170,14 @@ export function BudgetView({ initialBudgetId = null, focusLineId = null }: { ini
 
   const list = useQuery<BudgetListItem[]>({
     queryKey: LIST_KEY,
-    queryFn: async ({ signal }) => readJson(await fetch("/api/budget", { signal }), "Could not load budgets"),
+    queryFn: async ({ signal }) => readApiData(await fetch("/api/budget", { signal }), "Could not load budgets"),
   });
   const activeId = selectedId ?? initialBudgetId ?? list.data?.[0]?.id ?? null;
   const detail = useQuery<Detail>({
     queryKey: detailKey(activeId ?? ""),
     enabled: activeId !== null,
     queryFn: async ({ signal }) =>
-      readJson(await fetch(`/api/budget/${activeId}`, { signal }), "Could not load this budget"),
+      readApiData(await fetch(`/api/budget/${activeId}`, { signal }), "Could not load this budget"),
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["budget"] });
@@ -840,7 +832,7 @@ function BudgetBody({
 function HistoryDialog({ line, onClose }: { line: LineView; onClose: () => void }) {
   const history = useQuery<LineHistoryEntry[]>({
     queryKey: ["budget", "history", line.id],
-    queryFn: async ({ signal }) => readJson(await fetch(`/api/budget/lines/${line.id}/history`, { signal }), "Could not load the history"),
+    queryFn: async ({ signal }) => readApiData(await fetch(`/api/budget/lines/${line.id}/history`, { signal }), "Could not load the history"),
   });
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -1192,13 +1184,13 @@ function LinksDialog({ line, onClose, onChanged }: { line: LineView; onClose: ()
   const suggestions = useQuery<Suggestion[]>({
     queryKey: ["budget", "suggestions", line.id, line.links.length],
     queryFn: async ({ signal }) =>
-      readJson(await fetch(`/api/budget/lines/${line.id}/suggestions`, { signal }), "Could not load suggestions"),
+      readApiData(await fetch(`/api/budget/lines/${line.id}/suggestions`, { signal }), "Could not load suggestions"),
   });
   const results = useQuery<SearchResult[]>({
     queryKey: ["budget", "item-search", search],
     enabled: search.trim().length >= 2,
     queryFn: async ({ signal }) =>
-      readJson(await fetch(`/api/budget/item-search?q=${encodeURIComponent(search.trim())}`, { signal }), "Search failed"),
+      readApiData(await fetch(`/api/budget/item-search?q=${encodeURIComponent(search.trim())}`, { signal }), "Search failed"),
   });
 
   async function link(target: { kind: "asset" | "bulk"; targetId: string; quantity?: number }) {

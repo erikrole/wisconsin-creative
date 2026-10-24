@@ -1313,7 +1313,7 @@ Indexes and constraints:
 
 ## Model `CalendarEvent`
 
-Fields: 42
+Fields: 43
 
 - `id              String                @id @default(cuid())`
 - `sourceId        String?               @map("source_id")`
@@ -1357,6 +1357,7 @@ Fields: 42
 - `workers         EventWorker[]`
 - `combinedInto    CalendarEvent?        @relation("CalendarEventCombination", fields: [combinedIntoId], references: [id], onDelete: SetNull)`
 - `combinedEvents  CalendarEvent[]       @relation("CalendarEventCombination")`
+- `resultObservations GameResultObservation[]`
 
 Indexes and constraints:
 
@@ -1367,6 +1368,30 @@ Indexes and constraints:
 - `@@index([combinedIntoId])`
 - `@@index([archivedAt])`
 - `@@map("calendar_events")`
+
+## Enum `GameResultProvider`
+
+Values: `UW`, `ESPN`
+
+## Model `GameResultObservation`
+
+Fields: 9
+
+- `id            String             @id @default(cuid())`
+- `eventId       String             @map("event_id")`
+- `provider      GameResultProvider`
+- `externalId    String             @map("external_id")`
+- `snapshot      Json`
+- `observedAt    DateTime           @map("observed_at")`
+- `lastAttemptAt DateTime           @map("last_attempt_at")`
+- `lastError     String?            @map("last_error")`
+- `event         CalendarEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([eventId, provider])`
+- `@@unique([provider, externalId])`
+- `@@map("game_result_observations")`
 
 ## Enum `ScheduleFollowSource`
 

@@ -51,7 +51,7 @@ function buildQrSuffix(qrCodeValue: string): string {
   return compact ? compact.slice(-8) : "UNLABELED";
 }
 
-export function buildAttachmentInternalAssetTag(input: SerializedSubmitInput): string {
+function buildAttachmentInternalAssetTag(input: SerializedSubmitInput): string {
   const parentLabel = cleanTagPart(input.parentAsset?.assetTag) || "PARENT";
   const attachmentLabel =
     cleanTagPart(input.itemName) ||
