@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 // Own disposable cluster, Unix socket only. Never accepts an app database URL.
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { generateBaselineSql } from "./bootstrap-empty-database.mjs";
 
 const require = createRequire(import.meta.url);
-const configured = spawnSync("pg_config", ["--bindir"], { encoding: "utf8" });
-if (configured.status !== 0) throw new Error("PostgreSQL server tools are required.");
-const binaries = configured.stdout.trim();
+// pg_config can be missing where only the server package is installed (the
+// GitHub Ubuntu runner ships PostgreSQL without libpq-dev), so fall back to
+// the newest Debian-layout server directory.
+function serverBinaries() {
+  const configured = spawnSync("pg_config", ["--bindir"], { encoding: "utf8" });
+  if (configured.status === 0 && existsSync(join(configured.stdout.trim(), "initdb"))) return configured.stdout.trim();
+  const versions = existsSync("/usr/lib/postgresql") ? readdirSync("/usr/lib/postgresql").sort((a, b) => Number(b) - Number(a)) : [];
+  const found = versions.map((version) => join("/usr/lib/postgresql", version, "bin")).find((dir) => existsSync(join(dir, "initdb")));
+  if (!found) throw new Error("PostgreSQL server tools are required.");
+  return found;
+}
+const binaries = serverBinaries();
 const root = mkdtempSync(join(realpathSync("/tmp"), "wc-onboarding-pg-"));
 const data = join(root, "data");
 const socket = join(root, "socket");
@@ -20,7 +29,7 @@ const environment = {
   ...process.env, DATABASE_URL: connection.href, DIRECT_URL: connection.href,
   DATABASE_URL_UNPOOLED: connection.href, PRISMA_SCHEMA_URL: connection.href,
   WC_ONBOARDING_POSTGRES_ROOT: root, WC_ONBOARDING_POSTGRES_URL: connection.href,
-  SESSION_SECRET: "disposable-onboarding-session-secret-only",
+  SESSION_SECRET: "disposable-onboarding-session-secret-only", SESSION_COOKIE_NAME: "wc_session",
   RESEND_API_KEY: "", SENTRY_DSN: "", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "",
   KV_REST_API_URL: "", KV_REST_API_TOKEN: "",
 };

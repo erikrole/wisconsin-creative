@@ -75,7 +75,8 @@ describe("onboarding account persistence and concurrency against PostgreSQL", ()
     expect(snapshot.completion).toMatchObject({ requiredComplete: true, onboardingComplete: false, firstIncompleteStep: "PHOTO" });
     expect((await finish()).status).toBe(200);
     const completed = await read();
-    expect(completed.completion).toMatchObject({ requiresSetup: false, onboardingComplete: true, shouldPrompt: false });
+    // Setup is done; the skipped photo stays a snoozable profile prompt (#627).
+    expect(completed.completion).toMatchObject({ requiresSetup: false, onboardingComplete: true, shouldPrompt: true });
     expect(completed.profile.avatarUrl).toBeNull();
     const receipt = completed.profile.onboardingCompletedAt;
     expect((await finish()).status).toBe(200);

@@ -116,6 +116,7 @@
     "consolidate:battery-families": "node --env-file=.env scripts/consolidate-battery-families.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:postgres": "node scripts/test-onboarding-postgres.mjs",
     "test:watch": "vitest",
     "test:e2e:smoke": "playwright test",
     "test:performance:web": "node scripts/check-web-performance.mjs",
