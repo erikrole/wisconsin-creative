@@ -21,7 +21,7 @@ const SOURCE_LABEL: Record<GearMyKitPieceDto["source"], string> = {
 };
 
 /** The signed-in person's own kit, null when they are not on this year's list. */
-function useMyGearKit() {
+export function useMyGearKit() {
   return useQuery<GearMyKitDto | null>({
     queryKey: GEAR_MY_KIT_QUERY_KEY,
     queryFn: async ({ signal }) => {
