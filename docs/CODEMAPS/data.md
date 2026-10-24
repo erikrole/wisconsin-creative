@@ -74,7 +74,7 @@
 | `BlastRecipient` | 12 | 4 |
 | `FavoriteItem` | 6 | 3 |
 | `FavoriteItemFamily` | 6 | 4 |
-| `AllowedEmail` | 18 | 4 |
+| `AllowedEmail` | 20 | 4 |
 | `CollaboratorAffiliation` | 8 | 2 |
 | `CollaboratorPolicy` | 11 | 2 |
 | `CollaboratorPolicyGrant` | 5 | 3 |

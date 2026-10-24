@@ -5,6 +5,7 @@ enum APIError: LocalizedError {
     case sessionChanged
     case notFound
     case conflict(String)
+    case inviteLinkRequired(String)
     case httpError(statusCode: Int, message: String)
     case serverError(String)
     case decodingError(Error)
@@ -16,6 +17,7 @@ enum APIError: LocalizedError {
         case .sessionChanged: "This request belonged to a previous sign-in and was cancelled."
         case .notFound: "The requested item could not be found."
         case .conflict(let msg): msg
+        case .inviteLinkRequired(let message): message
         case .httpError(_, let message): message
         case .serverError(let msg): msg
         case .decodingError: "Unexpected response from server."
@@ -155,10 +157,35 @@ enum AuthDiscoveryFlow: String, Decodable {
     }
 }
 
+enum InviteLinkStatus: String, Decodable {
+    case valid
+    case required
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = InviteLinkStatus(rawValue: value) ?? .required
+    }
+}
+
+struct InviteResendResult: Decodable {
+    let message: String
+    let inviteEmailConfigured: Bool
+}
+
 struct AuthDiscoveryResult: Decodable {
     let flow: AuthDiscoveryFlow
+    let inviteLink: InviteLinkStatus?
 
     var isOnboarding: Bool { flow == .onboarding }
+
+    func needsInviteLink(token: String?) -> Bool {
+        guard isOnboarding else { return false }
+        switch inviteLink {
+        case .required: return true
+        case .valid: return token?.isEmpty != false
+        case nil: return false // Older servers do not require inbox proof yet.
+        }
+    }
 }
 
 enum AssetTextMutation {
@@ -512,8 +539,11 @@ final class APIClient {
             if request.url?.path != "/api/me" {
                 NotificationCenter.default.post(name: .collaboratorPolicyMayHaveChanged, object: nil)
             }
-            let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
-                ?? "You do not have access to this feature."
+            let body = try? JSONDecoder().decode(ServerErrorBody.self, from: data)
+            let message = body?.error ?? "You do not have access to this feature."
+            if request.url?.path == "/api/auth/register", body?.code == "INVITE_LINK_REQUIRED" {
+                throw APIError.inviteLinkRequired(message)
+            }
             throw APIError.httpError(statusCode: http.statusCode, message: message)
         case 409:
             if let body = try? decoder.decode(ServerErrorBody.self, from: data), body.code == "ONBOARDING_CONFLICT" {

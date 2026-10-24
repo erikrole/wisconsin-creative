@@ -1910,6 +1910,10 @@ model AllowedEmail {
   preloadedPrimaryArea ShiftArea?           @map("preloaded_primary_area")
   preloadedAreas       ShiftArea[]          @default([]) @map("preloaded_areas")
   preloadedSportCodes  String[]             @default([]) @map("preloaded_sport_codes")
+  // HMAC of the one-time sign-up link token carried by the invite email. Null
+  // until an invite is emailed; rotated on every send; cleared on claim.
+  inviteTokenHash      String?              @unique @map("invite_token_hash")
+  inviteTokenIssuedAt  DateTime?            @map("invite_token_issued_at")
   createdById          String               @map("created_by_id")
   claimedAt            DateTime?            @map("claimed_at")
   claimedById          String?              @map("claimed_by_id")

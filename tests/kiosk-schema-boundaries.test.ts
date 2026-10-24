@@ -37,7 +37,7 @@ describe("kiosk request resource boundaries", () => {
     expect(() => schema.parse({
       ...base,
       items: items(MAX_EQUIPMENT_SELECTIONS_PER_REQUEST + 1),
-    })).toThrow(`Array must contain at most ${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} element(s)`);
+    })).toThrow(`Too big: expected array to have <=${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} items`);
   });
 
   it("caps the distinct bulk-SKU fan-out while allowing many units of one SKU", () => {
@@ -73,7 +73,7 @@ describe("kiosk request resource boundaries", () => {
     expect(() => schema.parse({
       ...base,
       items: [{ bulkSkuId: "sku-1", unitNumber: MAX_BULK_UNIT_NUMBER + 1 }],
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_UNIT_NUMBER}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_UNIT_NUMBER}`);
   });
 
   it("caps active-checkout removal unit numbers at the PostgreSQL Int maximum", () => {
@@ -86,7 +86,7 @@ describe("kiosk request resource boundaries", () => {
       actorId: "user-1",
       bulkSkuId: "sku-1",
       unitNumber: MAX_BULK_UNIT_NUMBER + 1,
-    })).toThrow(`Number must be less than or equal to ${MAX_BULK_UNIT_NUMBER}`);
+    })).toThrow(`Too big: expected number to be <=${MAX_BULK_UNIT_NUMBER}`);
   });
 
   it("caps legacy parsed unit IDs at the PostgreSQL Int maximum", () => {

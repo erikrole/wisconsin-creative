@@ -124,33 +124,3 @@ export type CommandCenterData = {
   }>;
   recentChanges: ScheduleChangeItem[];
 };
-
-export { AREA_LABELS } from "@/types/areas";
-
-export const WORKER_LABELS: Record<string, string> = {
-  FT: "Staff",
-  ST: "Student",
-};
-
-export function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-}
-
-export function formatDate(iso: string, allDay = false) {
-  const d = allDay
-    ? (() => { const u = new Date(iso); return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate()); })()
-    : new Date(iso);
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  });
-}

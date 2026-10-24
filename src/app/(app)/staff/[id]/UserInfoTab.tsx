@@ -955,12 +955,14 @@ export default function UserInfoTab({
             type="tel"
             formatInput={formatPhoneInput}
           />
-          <WiscardFields
-            cardNumber={user.wiscardCardNumber || ""}
-            issueCode={user.wiscardIssueCode || ""}
-            canEdit={canEditProfile || canEditSelf}
-            onPatch={patchUser}
-          />
+          {(canEditProfile || canEditSelf) && (
+            <WiscardFields
+              cardNumber={user.wiscardCardNumber || ""}
+              issueCode={user.wiscardIssueCode || ""}
+              canEdit
+              onPatch={patchUser}
+            />
+          )}
         </CardContent>
       </Card>
 

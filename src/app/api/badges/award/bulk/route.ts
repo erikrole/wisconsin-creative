@@ -36,7 +36,7 @@ const bulkFiltersSchema = z.object({
 });
 
 const bulkAwardSchema = z.object({
-  filters: bulkFiltersSchema.optional().default({}),
+  filters: bulkFiltersSchema.prefault({}),
   userIds: z.array(z.string().trim().min(1).max(100)).min(1).max(MAX_BULK_BADGE_TARGETS).optional(),
   definitionId: z.string().cuid().optional(),
   customDefinition: customBadgeDefinitionSchema.optional(),
@@ -46,7 +46,7 @@ const bulkAwardSchema = z.object({
   const hasCustomDefinition = Boolean(value.customDefinition);
   if (hasDefinition === hasCustomDefinition) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       path: ["definitionId"],
       message: "Choose an existing badge or define one custom badge",
     });

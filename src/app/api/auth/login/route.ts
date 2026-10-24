@@ -22,6 +22,9 @@ import { refreshCompanionProjection } from "@/lib/services/companion-projection"
 // public IP) does not lock out legitimate logins at peak.
 const LOGIN_EMAIL_LIMIT = { max: 10, windowMs: 15 * 60 * 1000 }; // per account
 const LOGIN_IP_LIMIT = { max: 150, windowMs: 15 * 60 * 1000 }; // per shared IP
+// A bcrypt hash of random bytes (cost 10) that matches no password. Compared
+// against when the email is unknown so both failure paths cost the same.
+const UNKNOWN_ACCOUNT_HASH = "$2b$10$oUzFeWuGFqS6.xERgjlHuuLEvyjQh7BUiD4sKqTPQ/0dDhq70OP6S";
 
 export const POST = withHandler(async (req) => {
   const ip = getClientIp(req);
@@ -41,18 +44,15 @@ export const POST = withHandler(async (req) => {
     include: { collaboratorPolicy: { select: collaboratorPolicyActorSelect } },
   });
 
-  if (!user) {
-    throw new HttpError(401, "Invalid credentials");
-  }
-
   // Verify the password before revealing anything account-specific. Checking
   // `active` first would let an unauthenticated caller enumerate which emails
   // map to deactivated accounts (403) versus valid-but-wrong-password (401).
-  const valid = await verifyPassword(user.passwordHash, body.password);
-  if (!valid) {
-    throw new HttpError(401, "Invalid credentials");
+  // An unknown address still pays for one bcrypt comparison so response time
+  // does not separate "no such account" from "wrong password".
+  const valid = await verifyPassword(user?.passwordHash ?? UNKNOWN_ACCOUNT_HASH, body.password);
+  if (!user || !valid) {
+    throw new HttpError(401, "Wrong email or password.");
   }
-
   if (!user.active) {
     throw new HttpError(403, "Your account has been deactivated. Contact Erik Role.");
   }

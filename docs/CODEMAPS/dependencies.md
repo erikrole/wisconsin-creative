@@ -51,7 +51,7 @@
 | `vaul` | `^1.1.2` |
 | `web-push` | `^3.6.7` |
 | `workflow` | `4.8.13` |
-| `zod` | `^3.24.2` |
+| `zod` | `^4.6.7` |
 
 ## Dev Dependencies
 
@@ -65,13 +65,13 @@
 | `@types/react` | `^19.3.0` |
 | `@types/react-dom` | `^19.3.0` |
 | `@types/web-push` | `^3.6.4` |
-| `@vitest/coverage-v8` | `^3.2.6` |
+| `@vitest/coverage-v8` | `^5.0.5` |
 | `eslint` | `^9.39.4` |
 | `eslint-config-next` | `^15.5.28` |
 | `plist` | `^5.0.0` |
 | `prisma` | `^6.19.3` |
 | `typescript` | `5.9.3` |
-| `vitest` | `^3.0.6` |
+| `vitest` | `^5.0.5` |
 
 ## Scripts
 

@@ -40,7 +40,6 @@
   var formats = core.formats;
   var currentFormat = core.currentFormat;
   var settingsList = core.settingsList;
-  var usableSettings = core.usableSettings;
   var nearestSetting = core.nearestSetting;
   var currentInterval = core.currentInterval;
   var setIntervalValue = core.setIntervalValue;
@@ -173,7 +172,6 @@
   function renderChips() {
     el.chips.textContent = '';
     var shown = {};
-    var list = usableSettings();
     PRESETS.forEach(function (preset) {
       var target, reason = limitReason(preset.interval);
       if (reason) target = { value: null, interval: preset.interval, usable: false };

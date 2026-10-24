@@ -161,7 +161,7 @@ function quantityLabel(name: string, quantity: number) {
 }
 
 /** Kiosk idle screen data: stats, nearby events, active items, and active checkouts. */
-export const GET = withKiosk(async (_req, { kiosk }) => {
+export const GET = withKiosk(async () => {
   const now = new Date();
   const nearPast = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const nearFuture = new Date(now.getTime() + 90 * 60 * 1000);

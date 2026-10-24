@@ -219,6 +219,6 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   }
 
   // The invite is already committed and audited; delivery is best-effort and reported, never fatal.
-  const emailStatus = await sendInviteEmail({ email, name: application.applicant.name });
+  const emailStatus = await sendInviteEmail({ email, name: application.applicant.name, allowedEmailId: inviteId });
   return ok({ data: { status: "invited", allowedEmailId: inviteId, emailStatus } }, 201);
 });

@@ -1,0 +1,31 @@
+{
+  "title": "Invite email recovery",
+  "eyebrow": "PR #620 \u00b7 Wisconsin Creative",
+  "lede": "When invite email is unavailable, the recovery screen must say so without claiming a link was sent.",
+  "sections": [
+    {
+      "heading": "Same response, corrected confirmation",
+      "note": "Matched 390 \u00d7 844 Chromium captures. Both use the same mocked unconfigured-email response, account, route, clock, scroll position and appearance. This is DB-free UI evidence.",
+      "pairs": [
+        {
+          "title": "Email is not configured",
+          "before": "invite-unconfigured-before.png",
+          "after": "invite-unconfigured-after.png",
+          "beforeEvidence": "before-evidence.json",
+          "afterEvidence": "after-evidence.json",
+          "beforeCap": "The message says email is unavailable, but the button claims Link sent.",
+          "afterCap": "The button now says Email unavailable. The explanatory message and page layout are unchanged."
+        }
+      ]
+    }
+  ],
+  "verification": [
+    "Both captures have no horizontal overflow at 390px and no page errors.",
+    "Capture receipts bind image hashes to the recorded source revision, local source patch and matching settings."
+  ],
+  "notes": [
+    "No database, inbox delivery or native app behavior is proved by these fixtures.",
+    "PR #620 still requires a coordinated native onboarding rollout: the released iOS client cannot forward the new invite token.",
+    "Local review fixes are uncommitted and have not been deployed."
+  ]
+}

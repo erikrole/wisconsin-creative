@@ -19,6 +19,12 @@ vi.mock("@/lib/db", () => ({
     session: {
       deleteMany: vi.fn(),
     },
+    passkeyCredential: {
+      deleteMany: vi.fn(),
+    },
+    passwordResetToken: {
+      deleteMany: vi.fn(),
+    },
   },
 }));
 
@@ -73,6 +79,12 @@ beforeEach(() => {
   vi.mocked(db.session.deleteMany).mockResolvedValue(
     { count: 2 } as unknown as Awaited<ReturnType<typeof db.session.deleteMany>>,
   );
+  vi.mocked(db.passkeyCredential.deleteMany).mockResolvedValue(
+    { count: 1 } as unknown as Awaited<ReturnType<typeof db.passkeyCredential.deleteMany>>,
+  );
+  vi.mocked(db.passwordResetToken.deleteMany).mockResolvedValue(
+    { count: 0 } as unknown as Awaited<ReturnType<typeof db.passwordResetToken.deleteMany>>,
+  );
 });
 
 describe("admin password reset route", () => {
@@ -95,9 +107,24 @@ describe("admin password reset route", () => {
     expect(createAuditEntry).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "password_reset",
-        after: expect.objectContaining({ forcePasswordChange: true }),
+        after: expect.objectContaining({
+          forcePasswordChange: true,
+          revoked: { sessions: 2, passkeys: 1, resetLinks: 0 },
+        }),
       }),
     );
+  });
+
+  it("removes passkeys and pending reset links with the sessions, so a prior holder's credentials die with the password", async () => {
+    const res = await adminResetPassword(
+      authedPost("/api/users/user-1/reset-password"),
+      { params: Promise.resolve({ id: "user-1" }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.passkeyCredential.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(db.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(db.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
   });
 
   it("reports when a reset cannot revoke existing companion access", async () => {

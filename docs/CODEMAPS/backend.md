@@ -24,12 +24,12 @@
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |
-| `src/lib/services/bookings-checkin.ts` | 743 |
+| `src/lib/services/bookings-checkin.ts` | 742 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
 | `src/lib/services/bookings-lifecycle-shared.ts` | 295 |
 | `src/lib/services/bookings-lifecycle.ts` | 19 |
-| `src/lib/services/bookings-queries.ts` | 322 |
-| `src/lib/services/bookings.ts` | 9 |
+| `src/lib/services/bookings-queries.ts` | 304 |
+| `src/lib/services/bookings.ts` | 7 |
 | `src/lib/services/budget.ts` | 950 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 973 |
@@ -63,13 +63,14 @@
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/inventory-loss-reports.ts` | 618 |
-| `src/lib/services/invite-email.ts` | 82 |
+| `src/lib/services/invite-email.ts` | 133 |
+| `src/lib/services/invite-token.ts` | 34 |
 | `src/lib/services/item-cleanup-wizard.ts` | 762 |
 | `src/lib/services/job-runs.ts` | 52 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
 | `src/lib/services/kiosk-checkin-undo.ts` | 176 |
-| `src/lib/services/kiosk-checkout-allowance.ts` | 86 |
+| `src/lib/services/kiosk-checkout-allowance.ts` | 85 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 267 |
 | `src/lib/services/kiosk-extend-window.ts` | 168 |
@@ -93,7 +94,7 @@
 | `src/lib/services/notification-prefs.ts` | 350 |
 | `src/lib/services/notification-resolution.ts` | 143 |
 | `src/lib/services/notifications.ts` | 28 |
-| `src/lib/services/onboarding-lifecycle.ts` | 546 |
+| `src/lib/services/onboarding-lifecycle.ts` | 550 |
 | `src/lib/services/onboarding-readiness.ts` | 24 |
 | `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
@@ -178,7 +179,7 @@
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 168 |
 | `src/lib/booking-action-policy.ts` | 216 |
-| `src/lib/booking-actions.ts` | 14 |
+| `src/lib/booking-actions.ts` | 11 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
 | `src/lib/booking-display-title.ts` | 58 |
@@ -216,7 +217,7 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
-| `src/lib/email-template.ts` | 202 |
+| `src/lib/email-template.ts` | 207 |
 | `src/lib/email.ts` | 147 |
 | `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
@@ -274,7 +275,7 @@
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 236 |
+| `src/lib/profile-completion.ts` | 237 |
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 454 |
@@ -290,7 +291,7 @@
 | `src/lib/reservation-reuse.ts` | 95 |
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 71 |
-| `src/lib/resource-assets.ts` | 848 |
+| `src/lib/resource-assets.ts` | 847 |
 | `src/lib/resource-import-images.ts` | 104 |
 | `src/lib/resource-import.ts` | 186 |
 | `src/lib/resource-search.ts` | 124 |
@@ -357,7 +358,7 @@
 | `src/lib/user-list-cache.ts` | 91 |
 | `src/lib/user-visibility.ts` | 86 |
 | `src/lib/utils.ts` | 22 |
-| `src/lib/validation.ts` | 883 |
+| `src/lib/validation.ts` | 895 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |
@@ -436,6 +437,7 @@
 
 - `/api/auth/discover`
 - `/api/auth/forgot-password`
+- `/api/auth/invite/resend`
 - `/api/auth/login`
 - `/api/auth/logout`
 - `/api/auth/passkey/login/options`

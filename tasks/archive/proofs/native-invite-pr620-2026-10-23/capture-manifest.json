@@ -1,0 +1,74 @@
+[
+  {
+    "file": "native-signup-welcome.png",
+    "test": "NativeInviteSignupUITests/testColdInviteCreatesAccountAndEntersNativeWelcome()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui7.xcresult",
+    "sourcePatchSha256": "00e65a5b33ae1332ad360e2615130993a2e40d56cdc70cd5685696b5a674466f",
+    "imageSha256": "610fabe52877fe978b22bbd40fd7ea9fc835bc7b6e9e49a26f079f43c8b5e19b"
+  },
+  {
+    "file": "native-valid-invite.png",
+    "test": "NativeInviteSignupUITests/testColdInviteCreatesAccountAndEntersNativeWelcome()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui7.xcresult",
+    "sourcePatchSha256": "00e65a5b33ae1332ad360e2615130993a2e40d56cdc70cd5685696b5a674466f",
+    "imageSha256": "2d49217a8641c52fcc3756e1b906e4e7c5001a29b26e12eec114e7e9573b0e3e"
+  },
+  {
+    "file": "native-link-sent.png",
+    "test": "NativeInviteSignupUITests/testMissingLinkResendsOnceAndChangeResetsRecovery()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui7.xcresult",
+    "sourcePatchSha256": "00e65a5b33ae1332ad360e2615130993a2e40d56cdc70cd5685696b5a674466f",
+    "imageSha256": "28811ed74eac50182505b70f18b627e95f31b837d0caef4e35998694a10d2099"
+  },
+  {
+    "file": "native-missing-link.png",
+    "test": "NativeInviteSignupUITests/testMissingLinkResendsOnceAndChangeResetsRecovery()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui7.xcresult",
+    "sourcePatchSha256": "00e65a5b33ae1332ad360e2615130993a2e40d56cdc70cd5685696b5a674466f",
+    "imageSha256": "97a918d18790ab081072363860f9b6fde15729c00f9830767cc11958b7b47f38"
+  },
+  {
+    "file": "native-resend-rate-limited.png",
+    "test": "NativeInviteSignupUITests/testUnavailableAndRateLimitedEmailRemainHonest()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui7.xcresult",
+    "sourcePatchSha256": "00e65a5b33ae1332ad360e2615130993a2e40d56cdc70cd5685696b5a674466f",
+    "imageSha256": "f446db29f7e73d81df150ad972836b0ba093442e04736d453d76e99d42c3f7d2"
+  },
+  {
+    "file": "native-email-unavailable.png",
+    "test": "NativeInviteSignupUITests/testUnavailableAndRateLimitedEmailRemainHonest()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui7.xcresult",
+    "sourcePatchSha256": "00e65a5b33ae1332ad360e2615130993a2e40d56cdc70cd5685696b5a674466f",
+    "imageSha256": "4307e4d152250bb45f649d6c075b97c55a9f509a4908b007b420cbde797572c3"
+  },
+  {
+    "file": "native-refreshed-link-preserves-input.png",
+    "test": "NativeInviteSignupUITests/testExpiredSubmitPreservesInputAndAcceptsTheRefreshedLink()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui8.xcresult",
+    "sourcePatchSha256": "c5d6a6cb46b12a935e33781a8c4fb69758064758e950b1fc7d191b3662ed70f8",
+    "imageSha256": "2438dc14836756bede375df347599181f9b90efd6756ea10e9c4e5da714a1bde"
+  },
+  {
+    "file": "native-expired-link.png",
+    "test": "NativeInviteSignupUITests/testExpiredSubmitPreservesInputAndAcceptsTheRefreshedLink()",
+    "deviceId": "1F91A66C-D544-4E9F-BFB9-2CAD19E08815",
+    "deviceName": "Wisconsin PR620 Native Signup",
+    "resultBundle": "/private/tmp/wc-pr620-native-ui8.xcresult",
+    "sourcePatchSha256": "c5d6a6cb46b12a935e33781a8c4fb69758064758e950b1fc7d191b3662ed70f8",
+    "imageSha256": "1bbacd63e7de5338ecbf469883a78574641e3870b29cd68b01215e7f0d9d2c2d"
+  }
+]

@@ -200,6 +200,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   const targetIsCollaborator = target.role === "COLLABORATOR";
   const isSelf = user.id === id;
   const isSelfOrAdmin = isSelf || user.role === "ADMIN";
+  // Wiscard identifiers are campus credentials (door access, card swipes), not
+  // directory data. Only the person and the staff who manage profiles read them.
+  const canReadWiscard = isSelfOrAdmin || user.role === "STAFF";
   if (targetIsCollaborator && !isSelfOrAdmin) {
     return ok({
       data: {
@@ -246,9 +249,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       personalPhone: target.personalPhone ?? null,
       workPhone: target.workPhone ?? null,
       workPhoneNotApplicable: target.workPhoneNotApplicable,
-      wiscardNumber: target.wiscardNumber ?? null,
-      wiscardCardNumber: target.wiscardCardNumber ?? null,
-      wiscardIssueCode: target.wiscardIssueCode ?? null,
+      wiscardNumber: canReadWiscard ? (target.wiscardNumber ?? null) : undefined,
+      wiscardCardNumber: canReadWiscard ? (target.wiscardCardNumber ?? null) : undefined,
+      wiscardIssueCode: canReadWiscard ? (target.wiscardIssueCode ?? null) : undefined,
       slackHandle: target.slackHandle ?? null,
       slackProfileUrl: target.slackProfileUrl ?? null,
       primaryArea: target.primaryArea,

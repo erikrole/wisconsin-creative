@@ -1,6 +1,6 @@
 [
   {
-    "date": "2026-10-23",
+    "date": "2026-10-24",
     "title": "A calmer Dashboard and sidebar",
     "type": "improvement",
     "summary": "The Dashboard is quieter and easier to scan, and the sidebar is shorter, with our apps and everyday sites one click away.",
@@ -16,6 +16,111 @@
       "Web"
     ],
     "pr": 621
+  },
+  {
+    "date": "2026-10-24",
+    "title": "UA gear shows everything you'll receive",
+    "type": "improvement",
+    "summary": "The UA staff gear page now opens on your picks and the gear in your kit, with photos and status, and the full catalog sits below.",
+    "details": [
+      "Your gear lists your picks first, then your standard-issue kit, each with a photo you can tap to enlarge.",
+      "Pieces that still need a size are flagged so you can fix them before the order goes in.",
+      "The Catalog button jumps to the full assortment."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 636
+  },
+  {
+    "date": "2026-10-24",
+    "title": "UA gear leads with your picks",
+    "type": "improvement",
+    "summary": "The UA Gear screen on iPhone now opens on everything you can expect to receive: your picks, then the gear in your kit, with the full assortment one tap away under Catalog.",
+    "details": [
+      "Your picks and your kit pieces both show a photo, color, size and status, and picks swipe to remove with a Review and submit button that stays in reach.",
+      "Catalog (top right) holds the full assortment with search; picked items keep their count badge.",
+      "Items still missing a size are flagged in orange so you can fix them before submitting.",
+      "Tap any item photo to see it full size, and pinch or double-tap to zoom."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 633
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Clearer validation messages",
+    "type": "improvement",
+    "summary": "Form and request validation moved to a newer checker, so a few default messages read differently, such as \"Too big: expected array to have <=5 items\" where a limit is exceeded.",
+    "details": [
+      "Fields with their own wording are unchanged; only the generic limit and type messages changed.",
+      "Error responses keep the same shape, so the iPhone app and web pages behave as before."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 634
+  },
+  {
+    "date": "2026-10-23",
+    "title": "Roster invites are emailed",
+    "type": "fixes",
+    "summary": "Adding people with Paste a roster now emails each of them their setup link, and Resend sends the invite itself.",
+    "details": [
+      "Email the invite now applies to both Add one person and Paste a roster, and the result shows how many were emailed.",
+      "Resend on someone who hasn't signed up sends the normal invite instead of a reminder."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 628
+  },
+  {
+    "date": "2026-10-23",
+    "title": "Skip the photo during setup",
+    "type": "fixes",
+    "summary": "The last setup step now says Skip for now when you haven't added a photo, and your profile reminds you to add one later.",
+    "details": [
+      "If an earlier detail is still missing, the photo step tells you which one to go back and add.",
+      "A skipped photo shows up as a gentle profile reminder that you can snooze."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 627
+  },
+  {
+    "date": "2026-10-23",
+    "title": "Clearer invite emails",
+    "type": "fixes",
+    "summary": "Invite emails are shorter, with one setup button and a link to download the iPhone app.",
+    "details": [
+      "Create your account in the browser from the invite email, then sign in to the iPhone app.",
+      "Adding people now says Nothing new to add when every address was already invited or already has an account, and points to Resend."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 625
+  },
+  {
+    "date": "2026-10-23",
+    "title": "Safer sign-up and account protections",
+    "type": "fixes",
+    "summary": "Creating an account now needs the link from your invite email, and a few account details are shared only with the people who need them.",
+    "details": [
+      "New accounts are created from the link in the invite email. Typed the sign-in page by hand or lost the email? Enter your address and choose Email me my invite link.",
+      "Invite links work for 30 days; a resend sends a fresh one and retires the old link. Set up in the browser, then sign in to the iPhone app.",
+      "Wiscard card details on a teammate's profile are visible only to that person, staff and admins.",
+      "When an admin resets someone's password, any passkeys on the account are cleared too, so the person sets everything up fresh after signing in with the temporary password.",
+      "Sign-in responds in the same time whether or not an address has an account."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 620
   },
   {
     "date": "2026-10-22",

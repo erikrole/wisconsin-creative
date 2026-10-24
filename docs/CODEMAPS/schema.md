@@ -1910,7 +1910,7 @@ Indexes and constraints:
 
 ## Model `AllowedEmail`
 
-Fields: 18
+Fields: 20
 
 - `id                   String               @id @default(cuid())`
 - `email                String               @unique`
@@ -1922,6 +1922,8 @@ Fields: 18
 - `preloadedPrimaryArea ShiftArea?           @map("preloaded_primary_area")`
 - `preloadedAreas       ShiftArea[]          @default([]) @map("preloaded_areas")`
 - `preloadedSportCodes  String[]             @default([]) @map("preloaded_sport_codes")`
+- `inviteTokenHash      String?              @unique @map("invite_token_hash")`
+- `inviteTokenIssuedAt  DateTime?            @map("invite_token_issued_at")`
 - `createdById          String               @map("created_by_id")`
 - `claimedAt            DateTime?            @map("claimed_at")`
 - `claimedById          String?              @map("claimed_by_id")`

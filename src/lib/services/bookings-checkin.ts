@@ -3,7 +3,6 @@ import {
   BookingKind,
   BookingStatus,
   CheckinReportType,
-  BulkMovementKind,
   BulkUnitStatus,
   Prisma,
   ScanPhase,

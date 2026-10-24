@@ -109,6 +109,7 @@
 | `/dev-assign-picker` | `src/app/dev-assign-picker/page.tsx` |
 | `/dev-auto-assign` | `src/app/dev-auto-assign/page.tsx` |
 | `/dev-crew-size` | `src/app/dev-crew-size/page.tsx` |
+| `/dev-gear` | `src/app/dev-gear/page.tsx` |
 | `/dev-home` | `src/app/dev-home/page.tsx` |
 | `/dev-labels` | `src/app/dev-labels/page.tsx` |
 | `/dev-settings` | `src/app/dev-settings/page.tsx` |
@@ -169,9 +170,9 @@
 | `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
-| `src/components/onboarding/OnboardingDialog.tsx` | 1069 |
+| `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1057 |
-| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1033 |
+| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1045 |
 | `src/components/TradeBoard.tsx` | 974 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
