@@ -11,7 +11,7 @@ type Department = { id: string; name: string };
 type Kit = { id: string; name: string };
 type ItemsPageRole = "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR";
 
-export type ItemsPageInitData = {
+type ItemsPageInitData = {
   user: { role: ItemsPageRole };
   locations: Location[];
   departments: Department[];

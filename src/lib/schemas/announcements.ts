@@ -62,5 +62,3 @@ export const announcementPatchBody = z
       ctx.addIssue({ code: "custom", path: ["showOnWeb"], message: "Show it on web, iOS, or both" });
     }
   });
-
-export type AnnouncementCreateInput = z.infer<typeof announcementCreateBody>;

@@ -4,7 +4,7 @@ import { checkpointSchema, createPrintJobSchema, printJobSchema } from "./label-
 export const PRINT_JOURNAL_KEY = "wc-qr-usb-journal-v2";
 export const LEGACY_PRINT_KEY = "wc-qr-usb-last-batch-v1";
 const BROWSER_KEY = "wc-qr-printer-browser-v1";
-export const envelopeSchema = z.object({
+const envelopeSchema = z.object({
   job: printJobSchema,
   pending: z.discriminatedUnion("type", [
     z.object({ type: z.literal("create"), input: createPrintJobSchema }).strict(),

@@ -232,7 +232,7 @@
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
 | `src/lib/football-results.ts` | 233 |
-| `src/lib/format.ts` | 328 |
+| `src/lib/format.ts` | 321 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |

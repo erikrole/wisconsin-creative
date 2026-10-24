@@ -263,7 +263,7 @@ export interface QueueItem {
   playlistOpen: string | null;
 }
 
-export interface PublishSummary {
+interface PublishSummary {
   id: string;
   phase: "pending" | "verified" | "uncertain" | "conflict" | "notApplied";
   message: string | null;

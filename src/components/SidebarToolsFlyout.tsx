@@ -8,8 +8,8 @@ import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
 import { isExternal } from "@/lib/sidebar-links";
 
-export type FlyoutItem = { label: string; href: string; icon: React.ElementType; detail?: string };
-export type FlyoutSection = { title: string; items: FlyoutItem[] };
+type FlyoutItem = { label: string; href: string; icon: React.ElementType; detail?: string };
+type FlyoutSection = { title: string; items: FlyoutItem[] };
 
 const HOVER_CLOSE_DELAY_MS = 140;
 

@@ -1,12 +1,12 @@
 import type { FootballGameDetails, FootballScore } from "@/lib/football-results";
 
 /** "OT", "2OT" and so on; null in regulation. */
-export function overtimeLabel(overtimes: number): string | null {
+function overtimeLabel(overtimes: number): string | null {
   return overtimes <= 0 ? null : overtimes === 1 ? "OT" : `${overtimes}OT`;
 }
 
 /** Short facts line: ranked opponent and TV (overtime shows beside Final). Empty when ESPN had nothing. */
-export function footballDetailLabels(details: FootballGameDetails | null | undefined): string[] {
+function footballDetailLabels(details: FootballGameDetails | null | undefined): string[] {
   if (!details) return [];
   return [
     details.opponentRank ? `Opponent ranked No. ${details.opponentRank}` : null,

@@ -33,7 +33,7 @@ export type GearPickSubmissionDto = {
   lines: GearPickLineDto[];
 };
 
-export type GearPickParticipantDto = {
+type GearPickParticipantDto = {
   id: string;
   fit: GearPickFitKey;
   allowanceCents: number;

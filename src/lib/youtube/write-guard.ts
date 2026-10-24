@@ -5,7 +5,7 @@
 import { descriptionProblems, titleProblems } from "./rules";
 import { snapshotsEqual, YouTubeToolError, type VideoSnapshot, type VideoStatus } from "./types";
 
-export type GuardFailure = "conflict" | "excluded" | "unapproved" | "invalid" | "verificationMismatch";
+type GuardFailure = "conflict" | "excluded" | "unapproved" | "invalid" | "verificationMismatch";
 
 class GuardError extends YouTubeToolError {
   constructor(readonly reason: GuardFailure) {
