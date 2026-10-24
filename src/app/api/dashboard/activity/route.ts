@@ -1,13 +1,14 @@
 import { Role } from "@prisma/client";
 import { withAuth } from "@/lib/api";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
 
 /** Custody moves only: gear leaving at the kiosk and checkouts fully returned. */
 const HOME_ACTIVITY_ACTIONS = {
-  kiosk_checkout: "out",
-  kiosk_pickup: "out",
+  kiosk_checkout: "checkout",
+  kiosk_pickup: "pickup",
   checkin_completed: "returned",
 } as const;
 
@@ -16,7 +17,7 @@ const LIMIT = 8;
 
 type HomeActivityRow = {
   id: string;
-  kind: "out" | "returned";
+  kind: "checkout" | "pickup" | "returned";
   bookingId: string;
   title: string;
   person: { id: string; name: string; avatarUrl: string | null } | null;
@@ -58,7 +59,7 @@ export const GET = withAuth(async (_req, { user }) => {
       id: log.id,
       kind: HOME_ACTIVITY_ACTIONS[log.action as keyof typeof HOME_ACTIVITY_ACTIONS],
       bookingId: booking.id,
-      title: booking.title,
+      title: displayBookingTitle(booking.title),
       person: booking.requester
         ? { id: booking.requester.id, name: booking.requester.name, avatarUrl: booking.requester.avatarUrl ?? null }
         : null,

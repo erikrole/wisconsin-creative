@@ -180,6 +180,42 @@ async function downloadMissingUnitsCsv(query: string) {
   }
 }
 
+/** Settle a missing unit right from the report: it turned up, or the loss is confirmed. */
+function MissingUnitActions({ skuId, unitNumber, label, onDone }: { skuId: string; unitNumber: number; label: string; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  async function settle(status: "AVAILABLE" | "RETIRED") {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/bulk-skus/${skuId}/units/${unitNumber}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          reason: status === "AVAILABLE" ? `${label} found` : `${label} loss confirmed`,
+        }),
+      });
+      if (handleAuthRedirect(res, "/reports/bulk-losses")) return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { error?: string } | null;
+        toast.error(body?.error ?? "Could not update this unit. Try again.");
+        return;
+      }
+      toast.success(status === "AVAILABLE" ? `${label} is back in stock` : `${label} written off`);
+      onDone();
+    } catch {
+      toast.error("Could not update this unit. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex justify-end gap-2">
+      <Button className="h-10" variant="outline" disabled={busy} onClick={() => settle("AVAILABLE")}>Found it</Button>
+      <Button className="h-10" variant="ghost" disabled={busy} onClick={() => settle("RETIRED")}>Write off</Button>
+    </div>
+  );
+}
+
 export default function BulkLossesReportPage() {
   const searchParams = useSearchParams();
   const [now, setNow] = useState(() => new Date());
@@ -373,12 +409,13 @@ export default function BulkLossesReportPage() {
                     <TableHead>Missing unit</TableHead>
                     <TableHead>Last Holder</TableHead>
                     <TableHead className="text-right">Detected</TableHead>
+                    <TableHead className="text-right">Resolve</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.batteryAudit.missingUnits.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">
                         No missing battery units.
                       </TableCell>
                     </TableRow>
@@ -403,7 +440,15 @@ export default function BulkLossesReportPage() {
                           ) : null}
                         </TableCell>
                         <TableCell className="text-right text-xs text-muted-foreground">
-                          {new Date(unit.markedMissingAt).toLocaleDateString()}
+                          {new Date(unit.markedMissingAt).toLocaleDateString("en-US", { timeZone: "America/Chicago" })}
+                        </TableCell>
+                        <TableCell>
+                          <MissingUnitActions
+                            skuId={unit.bulkSkuId}
+                            unitNumber={unit.unitNumber}
+                            label={`${unit.skuName} #${unit.unitNumber}`}
+                            onDone={reload}
+                          />
                         </TableCell>
                       </TableRow>
                     ))

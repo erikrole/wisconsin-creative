@@ -196,6 +196,7 @@ describe("client-safe Wrapped dates", () => {
     const { WRAPPED_UNLOCK_ISO, wrappedPromoState } = await import("@/lib/wrapped/dates");
     expect(WRAPPED_UNLOCK_ISO).toBe(WRAPPED_UNLOCK_AT.toISOString());
     expect(wrappedPromoState(new Date("2026-11-20T12:00:00Z"), "STUDENT")).toBe("hidden");
+    expect(wrappedPromoState(new Date("2026-10-24T12:00:00Z"), "ADMIN")).toBe("hidden");
     expect(wrappedPromoState(new Date("2026-11-20T12:00:00Z"), "ADMIN")).toBe("preview");
     expect(wrappedPromoState(new Date("2026-12-01T06:00:00Z"), "STUDENT")).toBe("open");
     expect(wrappedPromoState(new Date("2026-12-05T12:00:00Z"), "COLLABORATOR")).toBe("hidden");

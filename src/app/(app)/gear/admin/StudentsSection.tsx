@@ -106,7 +106,7 @@ export function StudentsSection({ students, candidates, studentKitCents, pending
                 <div key={student.id} className={ROW}>
                   <span className="font-bold">
                     {student.user.name}
-                    {!student.user.active && <span className="ml-2 text-xs font-normal text-[#8B8D98]">Inactive</span>}
+                    {!student.user.active && <span className="ml-2 text-xs font-normal text-[#6B6F7A] dark:text-muted-foreground">Inactive</span>}
                   </span>
                   {editing ? (
                     <>
@@ -183,7 +183,7 @@ export function StudentsSection({ students, candidates, studentKitCents, pending
           </div>
         </div>
       )}
-      <p className="mt-2 text-xs text-[#8B8D98]">Sizes are saved to each student’s profile, so a change here shows there too.</p>
+      <p className="mt-2 text-xs text-[#6B6F7A] dark:text-muted-foreground">Sizes are saved to each student’s profile, so a change here shows there too.</p>
     </section>
   );
 }
