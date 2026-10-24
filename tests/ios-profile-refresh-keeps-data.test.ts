@@ -20,4 +20,12 @@ describe("iOS Profile refresh", () => {
     expect(profile).toContain("@State private var ownLoadedFor: String?");
     expect(profile).toContain("if ownLoadedFor != id {");
   });
+
+  it("pins the Guides skeleton placeholder decode with a unit test", () => {
+    const guides = source("ios/Wisconsin/Views/GuidesView.swift");
+    const test = source("ios/WisconsinTests/GuideSkeletonPlaceholderTests.swift");
+    expect(guides).toContain("\nextension GuideListItem {");
+    expect(guides).toContain("private static func placeholder(index: Int)");
+    expect(test).toContain("GuideListItem.placeholders");
+  });
 });
