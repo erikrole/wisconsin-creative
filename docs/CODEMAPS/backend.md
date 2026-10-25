@@ -87,7 +87,7 @@
 | `src/lib/services/kits.ts` | 836 |
 | `src/lib/services/label-print-jobs.ts` | 102 |
 | `src/lib/services/licenses.ts` | 687 |
-| `src/lib/services/live-activities.ts` | 630 |
+| `src/lib/services/live-activities.ts` | 551 |
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-deliveries.ts` | 59 |
@@ -140,7 +140,7 @@
 | `src/lib/services/signatures.ts` | 31 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
-| `src/lib/services/sport-configs.ts` | 263 |
+| `src/lib/services/sport-configs.ts` | 264 |
 | `src/lib/services/sport-roster-preview.ts` | 108 |
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
@@ -231,8 +231,8 @@
 | `src/lib/env.ts` | 144 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
-| `src/lib/equipment-section-filters.ts` | 87 |
-| `src/lib/equipment-sections.ts` | 155 |
+| `src/lib/equipment-section-filters.ts` | 64 |
+| `src/lib/equipment-sections.ts` | 159 |
 | `src/lib/errors.ts` | 96 |
 | `src/lib/event-editor.ts` | 114 |
 | `src/lib/external-url.ts` | 30 |
