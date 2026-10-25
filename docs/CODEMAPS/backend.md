@@ -40,7 +40,7 @@
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 645 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
-| `src/lib/services/checkout-escalation-notifications.ts` | 507 |
+| `src/lib/services/checkout-escalation-notifications.ts` | 504 |
 | `src/lib/services/checkout-lifecycle.ts` | 664 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/checkout-reports.ts` | 375 |
@@ -123,7 +123,7 @@
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
-| `src/lib/services/shift-notifications.ts` | 1144 |
+| `src/lib/services/shift-notifications.ts` | 1131 |
 | `src/lib/services/shift-trade-emails.ts` | 70 |
 | `src/lib/services/shift-trades-board.ts` | 485 |
 | `src/lib/services/shift-trades-close.ts` | 229 |
@@ -136,7 +136,7 @@
 | `src/lib/services/signature-captures.ts` | 278 |
 | `src/lib/services/signature-collections.ts` | 494 |
 | `src/lib/services/signature-roster.ts` | 1090 |
-| `src/lib/services/signatures-shared.ts` | 418 |
+| `src/lib/services/signatures-shared.ts` | 414 |
 | `src/lib/services/signatures.ts` | 31 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
@@ -281,7 +281,7 @@
 | `src/lib/password-rules.ts` | 16 |
 | `src/lib/permissions.ts` | 286 |
 | `src/lib/preview-activity.ts` | 23 |
-| `src/lib/prisma-errors.ts` | 38 |
+| `src/lib/prisma-errors.ts` | 43 |
 | `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 240 |

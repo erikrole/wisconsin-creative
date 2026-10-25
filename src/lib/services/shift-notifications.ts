@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildNotificationEmail } from "@/lib/email";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
@@ -12,6 +13,7 @@ import {
   shouldNotifyWorkerForScheduleEvent,
   type GearPrepNotificationSource,
 } from "@/lib/services/schedule-notification-policy";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { unique } from "@/lib/utils";
 import { deferPush, sendPushToUser, sendEmailToUser } from "./notification-delivery";
@@ -530,6 +532,66 @@ export async function notifyPickupRequestReviewers(assignmentId: string): Promis
   }
 }
 
+type PublishedShiftGroup = {
+  event: Parameters<typeof studentCallTimeAppliesToEvent>[0] & { allDay: boolean };
+  shifts: Array<{
+    workerType: string;
+    startsAt: Date;
+    callStartsAt: Date | null;
+    assignments: Array<{ id: string; userId: string; callStartsAt: Date | null }>;
+  }>;
+};
+
+/** When an assignment's worker needs to be there: their call, the shift's call, else the start. */
+function assignmentCallStart(
+  shift: PublishedShiftGroup["shifts"][number],
+  assignment: PublishedShiftGroup["shifts"][number]["assignments"][number],
+): Date {
+  return assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt;
+}
+
+function shiftReminderRows(shifts: PublishedShiftGroup["shifts"]) {
+  return shifts.flatMap((shift) => shift.assignments.map((assignment) => ({
+    assignmentId: assignment.id,
+    callStartsAt: assignmentCallStart(shift, assignment),
+  })));
+}
+
+/**
+ * Each worker's shift count in a published group, plus their earliest call
+ * time when it is a student shift at a non-all-day home or non-game event.
+ */
+function summarizeWorkerShifts(group: PublishedShiftGroup): Map<string, { count: number; studentCallStartsAt: Date | null }> {
+  const showsStudentCall = !group.event.allDay && studentCallTimeAppliesToEvent(group.event);
+  const byUser = new Map<string, { count: number; studentCallStartsAt: Date | null }>();
+  for (const shift of group.shifts) for (const assignment of shift.assignments) {
+    const current = byUser.get(assignment.userId);
+    let studentCallStartsAt = current?.studentCallStartsAt ?? null;
+    if (shift.workerType === "ST" && showsStudentCall) {
+      const callStart = assignmentCallStart(shift, assignment);
+      if (!studentCallStartsAt || callStart < studentCallStartsAt) studentCallStartsAt = callStart;
+    }
+    byUser.set(assignment.userId, { count: (current?.count ?? 0) + 1, studentCallStartsAt });
+  }
+  return byUser;
+}
+
+/** Creates an in-app row, or returns null when this dedupe key already has one. */
+async function createNotificationOnce(
+  data: Omit<Prisma.NotificationUncheckedCreateInput, "channel" | "sentAt">,
+): Promise<string | null> {
+  try {
+    const row = await db.notification.create({
+      data: { ...data, channel: "IN_APP", sentAt: new Date() },
+      select: { id: true },
+    });
+    return row.id;
+  } catch (error) {
+    if (isUniqueConstraintError(error)) return null;
+    throw error;
+  }
+}
+
 export async function createPublishedShiftGroupNotifications(shiftGroupId: string): Promise<void> {
   const group = await db.shiftGroup.findUnique({
     where: { id: shiftGroupId },
@@ -572,25 +634,9 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
   });
 
   if (!group?.publishedAt) return;
-  await enqueueShiftReminders(group.shifts.flatMap((shift) => shift.assignments.map((assignment) => ({
-    assignmentId: assignment.id,
-    callStartsAt: assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
-  }))));
-  const assignmentsByUser = new Map<string, { count: number; email: string | null; studentCallStartsAt: Date | null }>();
-  for (const shift of group.shifts) for (const assignment of shift.assignments) {
-    const current = assignmentsByUser.get(assignment.userId);
-    assignmentsByUser.set(assignment.userId, {
-      count: (current?.count ?? 0) + 1,
-      email: assignment.user.email,
-      studentCallStartsAt: shift.workerType === "ST"
-        && !group.event.allDay
-        && studentCallTimeAppliesToEvent(group.event)
-        ? [current?.studentCallStartsAt, assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt]
-            .filter((value): value is Date => Boolean(value))
-            .sort((a, b) => a.getTime() - b.getTime())[0] ?? null
-        : current?.studentCallStartsAt ?? null,
-    });
-  }
+  await enqueueShiftReminders(shiftReminderRows(group.shifts));
+  const emailByUser = new Map(group.shifts.flatMap((shift) => shift.assignments.map((assignment) => [assignment.userId, assignment.user.email] as const)));
+  const assignmentsByUser = summarizeWorkerShifts(group);
 
   const title = "Schedule ready";
   const payload = scheduleNotificationPayload({ eventId: group.event.id });
@@ -604,26 +650,15 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
       const body = `You're on ${assignment.count} ${shiftLabel} at ${group.event.summary}.${callCopy}`;
       const pushBody = `You're on ${assignment.count} ${shiftLabel}.${callCopy}`;
       const dedupeKey = `shift_group_publish:${shiftGroupId}:v${group.publishedVersion}:${userId}`;
-      let notificationId: string;
-      try {
-        const row = await db.notification.create({
-          data: {
-            userId,
-            type: "shift_schedule_published",
-            title,
-            body,
-            payload,
-            channel: "IN_APP",
-            sentAt: new Date(),
-            dedupeKey,
-          },
-          select: { id: true },
-        });
-        notificationId = row.id;
-      } catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
-        throw error;
-      }
+      const notificationId = await createNotificationOnce({
+        userId,
+        type: "shift_schedule_published",
+        title,
+        body,
+        payload,
+        dedupeKey,
+      });
+      if (!notificationId) return;
 
       deferPush(sendPushToUser(userId, {
         title,
@@ -633,9 +668,10 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
         category: "schedule",
         notificationId,
       }));
-      if (assignment.email) {
+      const email = emailByUser.get(userId);
+      if (email) {
         await sendEmailToUser(userId, {
-          to: assignment.email,
+          to: email,
           subject: title,
           ...buildNotificationEmail({
             kind: "schedule",
@@ -731,26 +767,15 @@ export async function createBulkScheduleAssignmentNotifications(batchId: string)
       },
     });
     const dedupeKey = `schedule_bulk_assignment:${batch.id}:${userId}`;
-    let notificationId: string;
-    try {
-      const row = await db.notification.create({
-        data: {
-          userId,
-          type: "shift_schedule_bulk_assigned",
-          title,
-          body,
-          payload,
-          channel: "IN_APP",
-          sentAt: new Date(),
-          dedupeKey,
-        },
-        select: { id: true },
-      });
-      notificationId = row.id;
-    } catch (error) {
-      if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
-      throw error;
-    }
+    const notificationId = await createNotificationOnce({
+      userId,
+      type: "shift_schedule_bulk_assigned",
+      title,
+      body,
+      payload,
+      dedupeKey,
+    });
+    if (!notificationId) return;
 
     deferPush(sendPushToUser(userId, { title, body, payload, category: "schedule", notificationId }));
     if (assignment.email) {
@@ -818,25 +843,9 @@ export async function notifyPublishedShiftGroupWorkers(
   if (!group?.publishedAt) return;
   // A changed schedule re-keys each affected worker's reminder to the new
   // call time; the run for the old time finds itself superseded.
-  await enqueueShiftReminders(group.shifts.flatMap((shift) => shift.assignments.map((assignment) => ({
-    assignmentId: assignment.id,
-    callStartsAt: assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
-  }))));
+  await enqueueShiftReminders(shiftReminderRows(group.shifts));
 
-  const assignmentsByUser = new Map<string, { count: number; studentCallStartsAt: Date | null }>();
-  for (const shift of group.shifts) for (const assignment of shift.assignments) {
-    const current = assignmentsByUser.get(assignment.userId);
-    assignmentsByUser.set(assignment.userId, {
-      count: (current?.count ?? 0) + 1,
-      studentCallStartsAt: shift.workerType === "ST"
-        && !group.event.allDay
-        && studentCallTimeAppliesToEvent(group.event)
-        ? [current?.studentCallStartsAt, assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt]
-            .filter((value): value is Date => Boolean(value))
-            .sort((a, b) => a.getTime() - b.getTime())[0] ?? null
-        : current?.studentCallStartsAt ?? null,
-    });
-  }
+  const assignmentsByUser = summarizeWorkerShifts(group);
   const title = "Schedule updated";
   const payload = scheduleNotificationPayload({ eventId: group.event.id });
 
@@ -854,26 +863,15 @@ export async function notifyPublishedShiftGroupWorkers(
       ? "You're no longer on the schedule."
       : `You now have ${shiftCount}.${callCopy}`;
     const dedupeKey = `shift_group_update:${shiftGroupId}:v${group.publishedVersion}:${user.id}`;
-    let notificationId: string;
-    try {
-      const row = await db.notification.create({
-        data: {
-          userId: user.id,
-          type: "shift_schedule_updated",
-          title,
-          body,
-          payload,
-          channel: "IN_APP",
-          sentAt: new Date(),
-          dedupeKey,
-        },
-        select: { id: true },
-      });
-      notificationId = row.id;
-    } catch (error) {
-      if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
-      throw error;
-    }
+    const notificationId = await createNotificationOnce({
+      userId: user.id,
+      type: "shift_schedule_updated",
+      title,
+      body,
+      payload,
+      dedupeKey,
+    });
+    if (!notificationId) return;
 
     deferPush(sendPushToUser(user.id, {
       title,
@@ -942,26 +940,15 @@ export async function notifyPublishedScheduleFollowers(shiftGroupId: string): Pr
 
   await Promise.allSettled(group.event.follows.map(async ({ user }) => {
     const dedupeKey = `published_schedule:${group.event.id}:v${group.publishedVersion}:${user.id}`;
-    let notificationId: string;
-    try {
-      const row = await db.notification.create({
-        data: {
-          userId: user.id,
-          type: "published_schedule_updated",
-          title,
-          body,
-          payload,
-          channel: "IN_APP",
-          sentAt: new Date(),
-          dedupeKey,
-        },
-        select: { id: true },
-      });
-      notificationId = row.id;
-    } catch (error) {
-      if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
-      throw error;
-    }
+    const notificationId = await createNotificationOnce({
+      userId: user.id,
+      type: "published_schedule_updated",
+      title,
+      body,
+      payload,
+      dedupeKey,
+    });
+    if (!notificationId) return;
 
     deferPush(sendPushToUser(user.id, {
       title,

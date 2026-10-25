@@ -313,10 +313,6 @@ export function isStaleSignatureSave(operation: Pick<SignatureSaveOperationWithR
   return operation.updatedAt.getTime() <= now - SIGNATURE_SAVE_STALE_MS;
 }
 
-export function isPrismaUniqueConflict(error: unknown) {
-  return Boolean(error && typeof error === "object" && (error as { code?: unknown }).code === "P2002");
-}
-
 export function defaultImportedMemberRequired(sportCode: string, roleGroup: SignatureMemberGroup) {
   const source = getSignatureRosterSourceConfig(sportCode || SIGNATURE_MBB_SPORT_CODE);
   return source.requiredByDefault === true || isRequiredSignatureGroup(roleGroup);

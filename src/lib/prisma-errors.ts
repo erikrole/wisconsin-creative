@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client";
 
-/* Server-side Prisma error classification shared by booking mutations. */
+/* Server-side Prisma error classification. */
+
+/** True when a write lost a unique-constraint race (Prisma P2002). */
+export function isUniqueConstraintError(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && (error as { code?: unknown }).code === "P2002");
+}
 
 function prismaErrorText(error: unknown) {
   const message = error instanceof Error ? error.message : "";
