@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { splitSource } from "./_helpers/source";
 
-const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 
 describe("Schedule list row grid", () => {
   it("renders every desktop row, header, and skeleton through the one-cell-per-column EventGrid", () => {

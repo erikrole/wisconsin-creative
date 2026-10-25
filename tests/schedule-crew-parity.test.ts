@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
 const crewSheet = source("src/app/(app)/schedule/_components/ScheduleCrewSheet.tsx");
-const list = source("src/app/(app)/schedule/_components/ListView.tsx");
+const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 const page = source("src/app/(app)/schedule/page.tsx");
 const week = source("src/app/(app)/schedule/_components/WeekView.tsx");
 const workingEditor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");

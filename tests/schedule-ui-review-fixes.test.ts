@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx");
 const readiness = source("src/app/(app)/schedule/_components/ScheduleReadiness.tsx");
 const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
-const list = source("src/app/(app)/schedule/_components/ListView.tsx");
+const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 const week = source("src/app/(app)/schedule/_components/WeekView.tsx");
 const page = source("src/app/(app)/schedule/page.tsx");
 

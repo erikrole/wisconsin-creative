@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 describe("Schedule interaction-detail contracts", () => {
   it("keeps primary and secondary Schedule commands on the 40px baseline", () => {
     const page = source("src/app/(app)/schedule/page.tsx");
     const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
-    const list = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const periodNavigator = source("src/app/(app)/schedule/_components/SchedulePeriodNavigator.tsx");
     const sourceSignal = source("src/app/(app)/schedule/_components/ScheduleSourceSignal.tsx");
 
@@ -36,7 +36,7 @@ describe("Schedule interaction-detail contracts", () => {
   });
 
   it("keeps crew avatars beside coverage and routes crew ownership through row actions", () => {
-    const list = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 
     expect(list).toContain("<span>Coverage</span>");
     expect(list).toContain('<span className="block text-right">Crew</span>');

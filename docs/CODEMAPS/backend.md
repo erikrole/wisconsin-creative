@@ -152,6 +152,7 @@
 | File | Lines |
 |---|---:|
 | `src/lib/a11y-resilience.ts` | 116 |
+| `src/lib/activity-timeline.ts` | 825 |
 | `src/lib/admin-fix-today.ts` | 398 |
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
