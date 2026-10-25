@@ -75,7 +75,7 @@
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 267 |
 | `src/lib/services/kiosk-extend-window.ts` | 168 |
-| `src/lib/services/kiosk-item-transfer.ts` | 136 |
+| `src/lib/services/kiosk-item-transfer.ts` | 137 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-nudge.ts` | 118 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 128 |
@@ -184,7 +184,7 @@
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 175 |
 | `src/lib/bhphoto-image.ts` | 67 |
-| `src/lib/blob.ts` | 168 |
+| `src/lib/blob.ts` | 175 |
 | `src/lib/booking-action-policy.ts` | 216 |
 | `src/lib/booking-actions.ts` | 11 |
 | `src/lib/booking-availability-window.ts` | 31 |

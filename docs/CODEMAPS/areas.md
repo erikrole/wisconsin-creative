@@ -97,7 +97,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`
 - APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/report`, `/api/assets/[id]/retire`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
-- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/bulk-assets-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`
+- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-list-route-extras.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/bulk-assets-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`
 
 ## kiosk
 
@@ -113,7 +113,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/kits/[id]`, `/kits`
 - APIs: `/api/kiosk/kits/[id]`, `/api/kiosk/kits`, `/api/kits/[id]/bulk-members`, `/api/kits/[id]/clone`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
 - Services: `src/lib/services/kits.ts`
-- Tests: `tests/football-gameday-kits.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`, `tests/kiosk-kits-and-heartbeat-report.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service.test.ts`
+- Tests: `tests/football-gameday-kits.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`, `tests/kiosk-kits-and-heartbeat-report.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list-route.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service-writes.test.ts`
 
 ## licenses
 
@@ -177,7 +177,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/reports/scans`
 - APIs: `/api/checkouts/[id]/checkin-scan`, `/api/checkouts/[id]/scan-status`, `/api/checkouts/[id]/scan`, `/api/checkouts/[id]/start-scan-session`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/scan`, `/api/kiosk/pickup/[id]/scan`, `/api/kiosk/resolve-scan`, `/api/kiosk/scan-lookup`, `/api/reports/scans`
 - Services: `src/lib/services/bulk-unit-scans.ts`, `src/lib/services/kiosk-scan.ts`, `src/lib/services/scan-audit-reports.ts`, `src/lib/services/scans.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/checkout-scan-status-access.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`, `tests/kiosk-pickup-scan-bulk-add.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/bulk-unit-scan-edges.test.ts`, `tests/checkout-scan-status-access.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`
 
 ## search
 
@@ -233,4 +233,4 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/youtube`
 - APIs: `/api/cron/youtube-sweep`, `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/check-playlists`, `/api/youtube/drafts/[videoId]/check-send`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/make-public`, `/api/youtube/drafts/[videoId]/playlists`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]/publish`, `/api/youtube/drafts/[videoId]`
 - Services: _none matched_
-- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-refresh.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue-ui-source.test.ts`
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service-checks.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-refresh.test.ts`, `tests/youtube-queue-service.test.ts`
