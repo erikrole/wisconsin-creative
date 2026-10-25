@@ -8,7 +8,7 @@
       "The day chip and the \"Checkouts on\" title used to show the day before the one you clicked.",
       "Auto-fill previews now name the sport on hold, like \"Volleyball\", instead of a short code.",
       "Gear availability checks for consumables now run one shared query, so both checks always agree.",
-      "Database health in Settings now checks every migration this version ships, and flags failed or unknown ones, instead of a list that stopped in the spring."
+      "Database health in Settings now checks every migration this version ships, and flags failed or unknown ones, instead of an old fixed list."
     ],
     "platforms": [
       "Web"
