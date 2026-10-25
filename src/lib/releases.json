@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-25",
+    "title": "Kiosk times in Chicago time",
+    "type": "fixes",
+    "summary": "When the kiosk says an item is booked for a shared travel case, the booking times now show in Chicago time.",
+    "details": [
+      "Before, those times showed in UTC, five or six hours ahead.",
+      "Other booking messages already used Chicago time and are unchanged."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 702
+  },
+  {
+    "date": "2026-10-25",
     "title": "Clearer profile history",
     "type": "fixes",
     "summary": "Saving your profile in Settings now records only the fields you changed.",
