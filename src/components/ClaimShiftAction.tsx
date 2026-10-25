@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
+import { useNow } from "@/hooks/use-now";
 
 type ClaimViewerRequest = {
   id: string;
@@ -52,10 +53,11 @@ export function ClaimShiftAction({
   className,
   onChanged,
 }: Props) {
+  const now = useNow();
   const [acting, setActing] = useState<"claim" | "withdraw" | null>(null);
   const actingRef = useRef<"claim" | "withdraw" | null>(null);
   const isPending = viewerRequest?.status === "REQUESTED";
-  const isFuture = Number.isFinite(Date.parse(startsAt)) && Date.parse(startsAt) > Date.now();
+  const isFuture = Number.isFinite(Date.parse(startsAt)) && Date.parse(startsAt) > now;
   const canRequest = canClaim
     && workerType === "ST"
     && !isAssigned

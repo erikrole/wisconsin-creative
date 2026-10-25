@@ -59,6 +59,7 @@ import {
   CrewTypeLabel,
 } from "@/components/shift-detail/crew-row";
 import { AREA_LABELS } from "@/types/areas";
+import { useNow } from "@/hooks/use-now";
 
 function formatNotificationCountdown(iso: string, now = Date.now()) {
   return formatScheduleReleaseCountdown(iso, now, "Assignees");
@@ -363,6 +364,7 @@ export function WorkingCrewEditor({
   studentCallOpen,
   onStudentCallOpenChange,
 }: Props) {
+  const now = useNow();
   const shiftGroupId = entry.shiftGroupId;
   const { data: currentUser } = useCurrentUser();
   const canManageSchedule = currentUser?.role === "ADMIN" || currentUser?.role === "STAFF";
@@ -826,7 +828,7 @@ export function WorkingCrewEditor({
   const replacementUsers = replacementTarget
     ? availableUsersForSlot(replacementTarget.workerType)
     : [];
-  const eventHasEnded = new Date(data.eventEndsAt).getTime() <= Date.now();
+  const eventHasEnded = new Date(data.eventEndsAt).getTime() <= now;
 
   return (
     <div className="flex flex-col gap-2">

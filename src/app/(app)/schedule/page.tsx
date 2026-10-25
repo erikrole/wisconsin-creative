@@ -161,7 +161,7 @@ function InternalSchedulePage() {
     setCombineEventsOpen(true);
   }, []);
 
-  const handleSetEventVisibility = useCallback(async (eventId: string, isHidden: boolean) => {
+  const handleSetEventVisibility = useCallback(async function setEventVisibility(eventId: string, isHidden: boolean) {
     if (hidingRef.current.has(eventId)) return;
     hidingRef.current.add(eventId);
     setHidingEventIds((prev) => new Set(prev).add(eventId));
@@ -178,7 +178,7 @@ function InternalSchedulePage() {
             action: {
               label: "Undo",
               onClick: () => {
-                void handleSetEventVisibility(eventId, false);
+                void setEventVisibility(eventId, false);
               },
             },
           });
