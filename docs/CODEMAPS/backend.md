@@ -26,7 +26,7 @@
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 742 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle-shared.ts` | 295 |
+| `src/lib/services/bookings-lifecycle-shared.ts` | 274 |
 | `src/lib/services/bookings-lifecycle.ts` | 19 |
 | `src/lib/services/bookings-queries.ts` | 304 |
 | `src/lib/services/bookings.ts` | 7 |
@@ -41,7 +41,7 @@
 | `src/lib/services/checkin-item-reports.ts` | 645 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-escalation-notifications.ts` | 507 |
-| `src/lib/services/checkout-lifecycle.ts` | 811 |
+| `src/lib/services/checkout-lifecycle.ts` | 664 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/checkout-reports.ts` | 375 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -291,7 +291,7 @@
 | `src/lib/redis.ts` | 30 |
 | `src/lib/releases.ts` | 104 |
 | `src/lib/remark-callouts.ts` | 77 |
-| `src/lib/request-limits.ts` | 17 |
+| `src/lib/request-limits.ts` | 16 |
 | `src/lib/reservation-pickup-locations.ts` | 68 |
 | `src/lib/reservation-reuse.ts` | 95 |
 | `src/lib/resource-assets-client.ts` | 20 |
