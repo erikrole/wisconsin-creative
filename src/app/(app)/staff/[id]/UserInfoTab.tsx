@@ -58,6 +58,7 @@ import Link from "next/link";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSyncedDraft } from "@/hooks/use-synced-draft";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 type ApiEnvelope<T = unknown> = {
   data?: T;
   error?: string;
@@ -700,10 +701,10 @@ export default function UserInfoTab({
     staleTime: 60_000,
   });
 
-  useEffect(() => {
+  useAdjustState([user.collaboratorPolicy?.id, user.role], () => {
     setSelectedCollaboratorPolicyId(user.collaboratorPolicy?.id ?? "");
     if (user.role === "COLLABORATOR") setRevealedCollaboratorAffiliation(true);
-  }, [user.collaboratorPolicy?.id, user.role]);
+  });
 
   // Fields a user can edit on their own profile (mirrors updateProfileSchema).
   const SELF_EDITABLE_FIELDS = new Set([

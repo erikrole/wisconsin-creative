@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ImageOff, Package, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import { buildCategoryPathOptions } from "@/lib/category-options";
 import { gapCountCaption } from "@/lib/a11y-resilience";
 import type { CategoryOption } from "@/types/category";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type GapField = "category" | "department";
 type Stage = "pick" | "wizard" | "done";
@@ -114,7 +115,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
     [queryClient],
   );
 
-  useEffect(() => {
+  useAdjustState([open], () => {
     if (!open) {
       setStage("pick");
       setField(null);
@@ -130,7 +131,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
       setSessionTotal(null);
       setSuggestionsLimited(false);
     }
-  }, [open]);
+  });
 
   const loadQueue = useCallback(async (gap: GapField, offset: number) => {
     setLoading(true);

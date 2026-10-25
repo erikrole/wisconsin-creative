@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useFormSubmit } from "@/hooks/use-form-submit";
@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type Location = { id: string; name: string };
 
@@ -74,11 +75,11 @@ export function NewKitSheet({
   const hasLocations = locations.length > 0;
   const locationsUnavailable = locationsLoading || locationsError || !hasLocations;
 
-  useEffect(() => {
+  useAdjustState([defaultLocationId, locationId, open], () => {
     if (open && !locationId && defaultLocationId) {
       setLocationId(defaultLocationId);
     }
-  }, [defaultLocationId, locationId, open]);
+  });
 
   function reset() {
     setName("");

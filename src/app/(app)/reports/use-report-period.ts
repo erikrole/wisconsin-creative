@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { syncUrl } from "@/lib/url-sync";
 import type { OperationalActiveFilter } from "@/components/OperationalToolbar";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 /** Shared across report tabs so a chosen window survives navigation. */
 const PERIOD_STORAGE_KEY = "reports:period-days";
@@ -89,11 +90,11 @@ export function useReportPeriod({
   }, [defaultValue, paramName, parse, searchParams, values]);
 
   // Track back/forward and in-app links that change the param.
-  useEffect(() => {
+  useAdjustState([paramName, parse, searchParams], () => {
     const fromUrl = parse(searchParams.get(paramName));
     if (fromUrl === null) return;
     setDaysState((current) => (current === fromUrl ? current : fromUrl));
-  }, [paramName, parse, searchParams]);
+  });
 
   const activeFilters: OperationalActiveFilter[] =
     days === defaultValue

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ClockIcon, RotateCcwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/shift-call-windows";
 import { cn } from "@/lib/utils";
 import { CREW_CALL_TRIGGER_CLASS } from "./crew-row";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type EditableTarget = {
   type: "slot" | "assignment";
@@ -93,12 +94,12 @@ export function CallWindowEditor({
     };
   }, [effectiveWindow.endsAt, effectiveWindow.startsAt, overrideWindow?.endsAt, overrideWindow?.startsAt]);
 
-  useEffect(() => {
+  useAdjustState([open, resetDraft], () => {
     if (!open) return;
     setStartDraft(resetDraft.start);
     setEndDraft(resetDraft.end);
     setError("");
-  }, [open, resetDraft]);
+  });
 
   async function patchWindow(callStartsAt: string | null, callEndsAt: string | null) {
     if (!target || savingRef.current) return;

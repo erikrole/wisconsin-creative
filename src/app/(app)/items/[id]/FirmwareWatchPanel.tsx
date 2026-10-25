@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import type { AssetDetail } from "./types";
 import { useSaveField } from "@/components/SaveableField";
 import { firmwareBadgeStatus, firmwareBadgeVariant, firmwareSupportLabel, firmwareSupportVariant, formatFirmwareDate, normalizeFirmwareVersion } from "./item-info-format";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 export function FirmwareWatchPanel({
   asset,
@@ -44,9 +45,9 @@ export function FirmwareWatchPanel({
     normalizeFirmwareVersion(installedVersion) !==
       normalizeFirmwareVersion(firmwareWatch.latestVersion);
 
-  useEffect(() => {
+  useAdjustState([installedVersion, open], () => {
     if (open) setDraftVersion(installedVersion);
-  }, [installedVersion, open]);
+  });
 
   async function saveVersion(value: string) {
     if (!canEdit || saveInstalledVersion.isSaving) return;
