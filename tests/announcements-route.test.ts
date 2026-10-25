@@ -88,14 +88,14 @@ describe("POST /api/announcements", () => {
         imageUrls: [], publishedAt: null, createdById: admin.id,
       }),
     });
-    expect(mocks.db.announcement.create.mock.calls[0][0].data).not.toHaveProperty("publish");
+    expect(mocks.db.announcement.create.mock.calls[0]![0].data).not.toHaveProperty("publish");
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "create", entityId: "new-1" }));
   });
 
   it("publishes straight away when asked", async () => {
     await POST(jsonRequest("/api/announcements", "POST", { ...draft, publish: true }), routeCtx({}));
 
-    expect(mocks.db.announcement.create.mock.calls[0][0].data.publishedAt).toEqual(now);
+    expect(mocks.db.announcement.create.mock.calls[0]![0].data.publishedAt).toEqual(now);
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "publish", after: expect.objectContaining({ publishedAt: now }) }));
   });
 
