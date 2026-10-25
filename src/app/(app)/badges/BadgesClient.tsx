@@ -26,6 +26,7 @@ import type { BadgeGallery, BadgeGalleryBadge, BadgeGalleryPerson } from "@/lib/
 import { formatDateFull, formatDateShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import BadgeAwardPanel from "./BadgeAwardPanel";
+import { useNow } from "@/hooks/use-now";
 
 type GalleryResponse = BadgeGallery & { disabled?: boolean };
 type GalleryTab = "gallery" | "team" | "award";
@@ -875,10 +876,11 @@ function EarnedThisWeek({
   onSelectBadge: (id: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const now = useNow();
   const peopleById = useMemo(() => new Map(data.people.map((person) => [person.id, person])), [data.people]);
 
   const recent = useMemo(() => {
-    const since = Date.now() - WEEK_MS;
+    const since = now - WEEK_MS;
     const rows: { badge: BadgeGalleryBadge; person: BadgeGalleryPerson; awardedAt: string }[] = [];
     for (const badge of data.badges) {
       for (const holder of badge.holders) {
@@ -889,7 +891,7 @@ function EarnedThisWeek({
       }
     }
     return rows.sort((a, b) => b.awardedAt.localeCompare(a.awardedAt));
-  }, [data.badges, peopleById, filter]);
+  }, [data.badges, peopleById, filter, now]);
 
   if (recent.length === 0) return null;
   const shown = showAll ? recent : recent.slice(0, RECENT_PREVIEW_COUNT);

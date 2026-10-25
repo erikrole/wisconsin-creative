@@ -237,17 +237,17 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   }, [lines]);
 
   const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  let hiddenForBudget = 0;
-  const visible = items.filter((item) => {
+  const matches = items.filter((item) => {
     const text = searchIndex.get(item.style) ?? "";
     const matchesSearch = words.every((word) => text.includes(word));
     const matchesCollection =
       (collection === "all" || item.collection === collection) && (category === "all" || item.category === category);
-    const picked = linesByStyle.has(item.style);
-    const fitsBudget = !fitsOnly || picked || dollarsToCents(item.price) <= Math.max(0, remainingCents);
-    if (matchesSearch && matchesCollection && !fitsBudget) hiddenForBudget += 1;
-    return matchesSearch && matchesCollection && fitsBudget;
+    return matchesSearch && matchesCollection;
   });
+  const fitsBudget = (item: (typeof items)[number]) =>
+    !fitsOnly || linesByStyle.has(item.style) || dollarsToCents(item.price) <= Math.max(0, remainingCents);
+  const visible = matches.filter(fitsBudget);
+  const hiddenForBudget = matches.length - visible.length;
   const sections = GEAR_CATALOG.categories
     .map((category) => ({ category, items: visible.filter((item) => item.category === category) }))
     .filter((section) => section.items.length > 0);

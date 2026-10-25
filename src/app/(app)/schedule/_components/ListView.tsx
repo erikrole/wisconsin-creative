@@ -58,6 +58,7 @@ import {
   userShiftStatus,
 } from "./types";
 import { CoverageBadge } from "./Coverage";
+import { useNow } from "@/hooks/use-now";
 
 type CrewTemplateSide = "HOME" | "AWAY" | "EMPTY";
 
@@ -356,6 +357,7 @@ function ShiftRowList({
   onClaimed?: () => void | Promise<void>;
   compact?: boolean;
 }) {
+  const now = useNow();
   const commonCall = commonCallWindow(entry);
 
   return (
@@ -392,7 +394,7 @@ function ShiftRowList({
           && !activeTrade
           && !entry.archivedAt
           && Number.isFinite(new Date(effectiveStart).getTime())
-          && new Date(effectiveStart).getTime() > Date.now(),
+          && new Date(effectiveStart).getTime() > now,
         );
         const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
         const workerType = workerKindForShift(shift);
