@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 describe("User profile overhaul contracts", () => {
   it("keeps identity in the header and Scoreboard as a jump, not a duplicate hero", () => {
@@ -16,19 +16,9 @@ describe("User profile overhaul contracts", () => {
     expect(page).not.toContain("data-[state=active]:shadow-[inset_0_-2px_0_0_var(--wisconsin-red)]");
   });
 
-  it("groups Info into Contact, Work, and Assignments without jump chips or Slack", () => {
-    const info = source("src/app/(app)/staff/[id]/UserInfoTab.tsx");
-
-    expect(info).toContain('id="contact"');
-    expect(info).toContain('id="work"');
-    expect(info).toContain('id="assignments"');
-    expect(info).not.toContain("ProfileJumpNav");
-    expect(info).not.toContain('label="Slack handle"');
-    expect(info).toContain("showCollaboratorAffiliation");
-    expect(info).toContain('label="Schedule as"');
-    expect(info).not.toContain('label="Scheduling class"');
-    expect(info).toContain('user.role === "COLLABORATOR"');
-    expect(info).not.toContain('className="hidden"');
+  it("groups Info without jump chips", () => {
+    // Sections, labels and the collaborator field render in tests/user-info-tab.test.ts.
+    expect(splitSource("src/app/(app)/staff/[id]/UserInfoTab.tsx")).not.toContain("ProfileJumpNav");
   });
 
   it("keeps activity, availability, and badge filters on the 40px baseline", () => {

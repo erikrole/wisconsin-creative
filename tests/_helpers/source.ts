@@ -84,6 +84,11 @@ const SPLIT_COMPONENT_FILES: Record<string, string[]> = {
     "src/app/(app)/schedule/_components/ListViewTimeline.tsx",
     "src/app/(app)/schedule/_components/list-view-helpers.ts",
   ],
+  "src/app/(app)/staff/[id]/UserInfoTab.tsx": [
+    "src/app/(app)/staff/[id]/UserInfoFields.tsx",
+    "src/app/(app)/staff/[id]/UserInfoCards.tsx",
+    "src/app/(app)/staff/[id]/user-info-helpers.ts",
+  ],
   "src/app/(app)/items/[id]/ItemInfoTab.tsx": [
     "src/app/(app)/items/[id]/ItemInfoFields.tsx",
     "src/app/(app)/items/[id]/ItemQrModal.tsx",
