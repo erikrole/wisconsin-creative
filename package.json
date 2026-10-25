@@ -118,7 +118,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:postgres": "node scripts/test-onboarding-postgres.mjs",
-    "test:browser": "playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts && playwright test -c playwright.schedule.config.ts",
+    "test:browser": "playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts && playwright test -c playwright.schedule.config.ts && playwright test -c playwright.labels.config.ts",
     "test:watch": "vitest",
     "test:e2e:smoke": "playwright test",
     "test:performance:web": "node scripts/check-web-performance.mjs",

@@ -53,7 +53,7 @@
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/damage-cases.ts` | 356 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
-| `src/lib/services/error-reports.ts` | 555 |
+| `src/lib/services/error-reports.ts` | 558 |
 | `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |

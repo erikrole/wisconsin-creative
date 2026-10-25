@@ -2,7 +2,7 @@ name: Browser
 
 # Fixture-backed browser tests (tests/browser): the real gear picker, setup
 # wizard and Schedule list bundled with esbuild, every API answered by fixtures, plus an axe-core
-# accessibility scan. No database, credentials or deploy. Path filters keep it
+# accessibility scan, and the Brother label renderer drawn with the real font and QR decoder. No database, credentials or deploy. Path filters keep it
 # off docs-only and iOS-only pushes; it is not a required check.
 
 on:
