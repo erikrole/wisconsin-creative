@@ -34,7 +34,7 @@ Badges are lightweight recognition for every active user inside the existing ops
 | `onCheckoutOpened` | `src/app/api/kiosk/checkout/complete/route.ts` after an `OPEN` checkout is created | Complete |
 | `onCheckoutOpened` | `src/app/api/kiosk/pickup/[id]/confirm/route.ts` after `PENDING_PICKUP -> OPEN` | Complete |
 | `onCheckoutReturned` | `src/lib/services/bookings-checkin.ts:markCheckoutCompleted` and `maybeAutoComplete` only when status flips into `COMPLETED` | Complete |
-| `onTradeCompleted` | `src/lib/services/shift-trades.ts:claimTrade` immediate-complete branch and `approveTrade`, through one transition helper | Complete |
+| `onTradeCompleted` | `src/lib/services/shift-trades-review.ts:approveTrade`, through `queueTradeCompletedIfTransitioned` (claims complete nothing) | Complete |
 | `onShiftsWorked` | `src/app/api/cron/morning-refresh/route.ts`, nightly, for anyone whose assignment sat on an event that ended in the last two days | Complete |
 | `onAppOpened` | `POST /api/badges/events/app-open`, called when the signed-in web or iOS app becomes active; server time evaluates every matching hidden rule, each claiming its own receipt | Complete |
 

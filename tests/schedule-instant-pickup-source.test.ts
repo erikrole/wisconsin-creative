@@ -40,23 +40,6 @@ describe("Schedule claim-approval contract", () => {
     expect(openWork).toContain("You already have a request waiting on this shift");
   });
 
-  it("holds a trade claim for review instead of swapping on the spot", () => {
-    const trades = source("src/lib/services/shift-trades.ts");
-    const claim = trades.slice(
-      trades.indexOf("export async function claimTrade"),
-      trades.indexOf("export async function approveTrade"),
-    );
-
-    expect(claim).toContain('status: "CLAIMED"');
-    // The swap belongs to approveTrade. Claiming must not run it, or the gate
-    // is decorative.
-    expect(claim).not.toContain("executeSwap(");
-    expect(claim).not.toContain("badges.onTradeCompleted");
-    // The guards executeSwap used to carry have to survive at claim time.
-    expect(claim).toContain("no longer held by the poster");
-    expect(claim).toContain("already has an active assignment");
-  });
-
   it("keeps the Admin review routes permission-gated for both queues", () => {
     const tradeApprove = source("src/app/api/shift-trades/[id]/approve/route.ts");
     const tradeDecline = source("src/app/api/shift-trades/[id]/decline/route.ts");
@@ -74,14 +57,12 @@ describe("Schedule claim-approval contract", () => {
   it("keeps approval audit and worker notification ownership in services", () => {
     const tradeApprove = source("src/app/api/shift-trades/[id]/approve/route.ts");
     const assignApprove = source("src/app/api/shift-assignments/[id]/approve/route.ts");
-    const trades = source("src/lib/services/shift-trades.ts");
     const assignments = source("src/lib/services/shift-assignments.ts");
 
     expect(tradeApprove).toContain("approveTrade(id, { id: user.id, role: user.role })");
     expect(assignApprove).toContain("approveRequest(id, { id: user.id, role: user.role })");
     expect(tradeApprove).not.toContain("createAuditEntry");
     expect(assignApprove).not.toContain("createAuditEntry");
-    expect(trades).toContain('action: actor ? "trade_approved" : "trade_auto_approved"');
     expect(assignments).toContain('action: actor ? "shift_request_approved" : "shift_request_auto_approved"');
     expect(assignments).toContain('dispatchScheduleAssignmentNotifications(result.id, "approved")');
   });

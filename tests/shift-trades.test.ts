@@ -799,6 +799,35 @@ describe("claimTrade", () => {
     expect(mockTx.user.findUnique).toHaveBeenCalled();
     expect(mockDb.user.findMany).toHaveBeenCalled();
   });
+
+  it("asks only visible, active Admins to review the claim", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
+
+    await claimTrade(trade.id, "claimer-1");
+
+    // Every human approval surface is Admin-only; Staff are not reviewers.
+    expect(mockDb.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { role: "ADMIN", active: true, hiddenFromRoster: false },
+    }));
+  });
+
+  it("returns the relations the iOS ShiftTrade model requires", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
+
+    await claimTrade(trade.id, "claimer-1");
+
+    expect(mockTx.shiftTrade.update).toHaveBeenCalledWith(
+      expect.objectContaining({ include: tradeResponseIncludeMatcher }),
+    );
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1337,6 +1366,7 @@ describe("cancelTrade", () => {
     expect(mockTx.shiftTrade.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "CANCELLED" }),
+        include: tradeResponseIncludeMatcher,
       })
     );
   });
@@ -1453,6 +1483,7 @@ describe("withdrawTradeClaim", () => {
     expect(result.status).toBe("OPEN");
     expect(mockTx.shiftTrade.update).toHaveBeenCalledWith(expect.objectContaining({
       data: { claimedByUserId: null, claimedAt: null, status: "OPEN" },
+      include: tradeResponseIncludeMatcher,
     }));
     expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ action: "trade_claim_withdrawn" }),
@@ -1491,6 +1522,64 @@ describe("withdrawTradeClaim", () => {
 // listTrades
 // ═════════════════════════════════════════════════════════════════════════════
 describe("listTrades", () => {
+  it("selects the venue flag the Trade Board colours rows by", async () => {
+    mockDb.shiftTrade.findMany.mockResolvedValue([]);
+    mockDb.shiftTrade.count.mockResolvedValue(0);
+
+    await listTrades({ limit: 100, offset: 0 });
+
+    // The payload carries no site, so iOS falls back to venueTone(isHome:).
+    const [call] = mockDb.shiftTrade.findMany.mock.calls[0] as [
+      { include: { shiftAssignment: { include: { shift: { include: { shiftGroup: { include: { event: { select: Record<string, boolean> } } } } } } } } },
+    ];
+    expect(call.include.shiftAssignment.include.shift.include.shiftGroup.include.event.select).toMatchObject({ isHome: true });
+  });
+
+  it("dates the review deadlines on a claim, and only on a claim", async () => {
+    const row = (id: string, status: string) => ({
+      ...makeShiftTrade({
+        id,
+        status,
+        postedByUserId: "poster-1",
+        claimedByUserId: status === "CLAIMED" ? "claimer-1" : null,
+        claimedAt: status === "CLAIMED" ? new Date("2026-03-01T10:00:00.000Z") : null,
+      }),
+      shiftAssignment: {
+        ...makeShiftAssignment(),
+        callStartsAt: null,
+        callEndsAt: null,
+        shift: {
+          ...makeShift({
+            area: "VIDEO",
+            startsAt: new Date("2026-04-01T08:00:00.000Z"),
+            endsAt: new Date("2026-04-01T16:00:00.000Z"),
+          }),
+          callStartsAt: null,
+          callEndsAt: null,
+          shiftGroup: { event: { summary: "Wisconsin vs Iowa" } },
+        },
+        user: { id: "poster-1", name: "Poster", primaryArea: "VIDEO" },
+      },
+      postedBy: { id: "poster-1", name: "Poster" },
+      claimedBy: status === "CLAIMED" ? { id: "claimer-1", name: "Claimer" } : null,
+    });
+    mockDb.shiftTrade.findMany.mockResolvedValue([row("claimed-1", "CLAIMED"), row("open-1", "OPEN")]);
+    mockDb.shiftTrade.count.mockResolvedValue(2);
+
+    const result = await listTrades({ limit: 100, offset: 0 });
+
+    // Two days and one day ahead of the shift: the auto-approval *check*, which
+    // re-runs every guard, not a promise that the claim will be approved.
+    expect(result.data[0]).toEqual(expect.objectContaining({
+      reviewEscalatesAt: "2026-03-30T08:00:00.000Z",
+      reviewAutoApprovesAt: "2026-03-31T08:00:00.000Z",
+    }));
+    expect(result.data[1]).toEqual(expect.objectContaining({
+      reviewEscalatesAt: null,
+      reviewAutoApprovesAt: null,
+    }));
+  });
+
   it("keeps actionable trades ahead of resolved history in the page window", async () => {
     mockDb.shiftTrade.findMany.mockResolvedValue([]);
     mockDb.shiftTrade.count.mockResolvedValue(0);

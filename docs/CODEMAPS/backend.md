@@ -125,7 +125,12 @@
 | `src/lib/services/shift-generation.ts` | 629 |
 | `src/lib/services/shift-notifications.ts` | 1144 |
 | `src/lib/services/shift-trade-emails.ts` | 70 |
-| `src/lib/services/shift-trades.ts` | 1567 |
+| `src/lib/services/shift-trades-board.ts` | 485 |
+| `src/lib/services/shift-trades-close.ts` | 229 |
+| `src/lib/services/shift-trades-list.ts` | 244 |
+| `src/lib/services/shift-trades-review.ts` | 405 |
+| `src/lib/services/shift-trades-shared.ts` | 284 |
+| `src/lib/services/shift-trades.ts` | 7 |
 | `src/lib/services/sidebar-prefs.ts` | 36 |
 | `src/lib/services/signature-artifacts.ts` | 212 |
 | `src/lib/services/signature-captures.ts` | 278 |
