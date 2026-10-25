@@ -121,7 +121,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/licenses`
 - APIs: `/api/licenses/[id]/claim`, `/api/licenses/[id]/history`, `/api/licenses/[id]/occupy`, `/api/licenses/[id]/release`, `/api/licenses/[id]/report-broken`, `/api/licenses/[id]`, `/api/licenses/bulk`, `/api/licenses/export`, `/api/licenses/my/history`, `/api/licenses/my`
 - Services: `src/lib/services/licenses.ts`
-- Tests: `tests/ios-licenses-native-page.test.ts`, `tests/licenses-export-route.test.ts`, `tests/licenses-history-route.test.ts`, `tests/licenses-release-concurrency.test.ts`, `tests/licenses-report-broken.test.ts`, `tests/licenses-ui-privacy-contract.test.ts`
+- Tests: `tests/ios-licenses-native-page.test.ts`, `tests/licenses-export-route.test.ts`, `tests/licenses-history-route.test.ts`, `tests/licenses-release-concurrency.test.ts`, `tests/licenses-report-broken.test.ts`, `tests/licenses-service.test.ts`, `tests/licenses-ui-privacy-contract.test.ts`
 
 ## mobile
 
@@ -233,4 +233,4 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/youtube`
 - APIs: `/api/cron/youtube-sweep`, `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/check-playlists`, `/api/youtube/drafts/[videoId]/check-send`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/make-public`, `/api/youtube/drafts/[videoId]/playlists`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]/publish`, `/api/youtube/drafts/[videoId]`
 - Services: _none matched_
-- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue-ui-source.test.ts`, `tests/youtube-review-queue.test.ts`
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-refresh.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue-ui-source.test.ts`

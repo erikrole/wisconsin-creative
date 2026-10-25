@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-25",
+    "title": "Issues page day counts fixed",
+    "type": "fixes",
+    "summary": "The daily counts on the Issues page now follow Madison days, so evening reports land on the right day.",
+    "details": [
+      "Before, a report from the evening counted toward the next day, and the last two weeks ended on the wrong day.",
+      "Photo Mechanic license reminders and replacements also follow Madison dates now."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 694
+  },
+  {
+    "date": "2026-10-25",
     "title": "Audit report comparison fixed",
     "type": "fixes",
     "summary": "The audit report's comparison with the previous period now respects the record type you filtered by.",

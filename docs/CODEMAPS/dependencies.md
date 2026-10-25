@@ -137,7 +137,7 @@
 - `smoke:deploy`: `node scripts/deploy-smoke.mjs`
 - `start`: `node scripts/run-next.mjs start`
 - `test`: `vitest run`
-- `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts && playwright test -c playwright.schedule.config.ts`
+- `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts && playwright test -c playwright.schedule.config.ts && playwright test -c playwright.labels.config.ts`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`
