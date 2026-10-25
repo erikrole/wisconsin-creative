@@ -89,7 +89,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/import`
 - APIs: `/api/assets/import`, `/api/budget/[id]/import`, `/api/hiring/import`, `/api/resources/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`, `/api/workforce/import`
 - Services: _none matched_
-- Tests: `tests/budget-import.test.ts`, `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
+- Tests: `tests/asset-import-rows.test.ts`, `tests/budget-import.test.ts`, `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
 
 ## items
 
