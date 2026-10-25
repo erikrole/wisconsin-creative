@@ -76,8 +76,6 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     }
 
     expect(hook).toContain('searchParams.get("queue")');
-    expect(hook).toContain('params.set("queue", queue)');
-    expect(hook).toContain("filterEntriesForScheduleQueue");
     expect(page).toContain('initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}');
     expect(readiness).toContain("<ScheduleChangePreview");
     expect(readiness).toContain('setPreviewFilter("assignee")');

@@ -29,7 +29,6 @@ describe("schedule automation source contract", () => {
     const readiness = source("src/app/(app)/schedule/_components/ScheduleReadiness.tsx");
     const component = source("src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx");
 
-    expect(hook).toContain("/api/schedule/automation?");
     expect(hook).toContain("scheduleAutomation");
     expect(page).toContain("ScheduleReadiness");
     expect(page).toContain("digest={data.scheduleAutomation}");

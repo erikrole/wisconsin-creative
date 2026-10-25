@@ -4,26 +4,16 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import type {
-  CalendarEvent,
-  CalendarEntry,
-  ShiftGroup,
-} from "@/app/(app)/schedule/_components/types";
-import { getMonday, userHasShift, LS_VIEW_MODE, LS_MY_SHIFTS } from "@/app/(app)/schedule/_components/types";
-import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { calendarDate } from "@/lib/format";
-import { sortCalendarEventsForDisplay } from "@/lib/calendar-event-dates";
+import type { CalendarEntry } from "@/app/(app)/schedule/_components/types";
+import { getMonday, LS_VIEW_MODE, LS_MY_SHIFTS } from "@/app/(app)/schedule/_components/types";
 import {
   buildScheduleSourceSignal,
   getCalendarSourceFreshness,
-  type CalendarSourceFreshnessInput,
   type ScheduleSourceSignal,
 } from "@/lib/calendar-source-freshness";
-import { venueToneFromEvent, type VenueFilter } from "@/lib/venue-tone";
 import type { ScheduleHealthSnapshot } from "@/lib/schedule-health-types";
 import type { ScheduleAutomationDigest } from "@/lib/schedule-automation-types";
 import {
-  filterEntriesForScheduleQueue,
   parseScheduleQueue,
   SCHEDULE_QUEUE_META,
   type ScheduleQueue,
@@ -42,82 +32,45 @@ import {
   type ScheduleQueryScope,
 } from "@/lib/schedule-timeline-position";
 import {
-  SCHEDULE_TIMELINE_SLICE_SIZE,
   createInitialScheduleTimelineWindow,
-  eventBoundsForGroups,
   mergeRowsById,
   newestScheduleCursor,
   oldestScheduleCursor,
-  sliceHasMore,
   type ScheduleTimelineCursor,
-  type ScheduleTimelineWindow,
 } from "@/lib/schedule-timeline-window";
+import {
+  defaultScheduleMonth,
+  defaultScheduleWeek,
+  parseScheduleDeepLink,
+  parseScheduleMonth,
+  parseScheduleViewMode,
+  parseScheduleWeek,
+  readScheduleUrlFilters,
+  scheduleHref,
+  withoutScheduleDateRange,
+  withoutScheduleFilters,
+  withScheduleQueue,
+  writeScheduleUrlState,
+  type HomeAwayFilter,
+  type ScheduleDeepLink,
+  type ViewMode,
+} from "@/lib/schedule-url-state";
+import {
+  SCHEDULE_FRESH_QUERY_OPTIONS,
+  buildScheduleUrls,
+  fetchCalendarSources,
+  fetchKeysetEvents,
+  fetchSchedule,
+  fetchScheduleAutomation,
+  fetchScheduleHealth,
+  fetchScheduleSlice,
+  fetchTradeCount,
+  isScheduleAbort,
+  listKeysetEventsUrl,
+} from "@/lib/schedule-read";
+import { filterScheduleEntries, groupScheduleEntriesByDay } from "@/lib/schedule-entry-view";
 
-export type ViewMode = "list" | "calendar" | "week";
-
-export type HomeAwayFilter = VenueFilter;
-
-function parseScheduleViewMode(raw: string | null): ViewMode | null {
-  return raw === "list" || raw === "calendar" || raw === "week" ? raw : null;
-}
-
-function defaultScheduleMonth() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1);
-}
-
-function defaultScheduleWeek() {
-  return getMonday(new Date());
-}
-
-function parseScheduleMonth(raw: string | null): Date | null {
-  const match = raw?.match(/^(\d{4})-(\d{2})$/);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
-  return new Date(year, month - 1, 1);
-}
-
-function parseScheduleWeek(raw: string | null): Date | null {
-  const match = raw?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(year, month - 1, day);
-  if (
-    !Number.isInteger(year)
-    || !Number.isInteger(month)
-    || !Number.isInteger(day)
-    || parsed.getFullYear() !== year
-    || parsed.getMonth() !== month - 1
-    || parsed.getDate() !== day
-  ) return null;
-  return getMonday(parsed);
-}
-
-function formatScheduleMonth(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function formatScheduleDate(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function parseScheduleCoverage(raw: string | null) {
-  return raw === "unfilled" || raw === "filled" ? raw : "";
-}
-
-function parseScheduleVenue(raw: string | null): HomeAwayFilter {
-  return raw === "home" || raw === "away" || raw === "neutral" || raw === "non-game" ? raw : "all";
-}
-
-type ScheduleDeepLink = {
-  myShiftsOnly: boolean;
-  sportCode: string;
-  dateRange: { startDate: string; endDate: string } | null;
-};
+export type { HomeAwayFilter, ViewMode } from "@/lib/schedule-url-state";
 
 export type ScheduleFilters = {
   viewMode: ViewMode;
@@ -193,372 +146,6 @@ type UseScheduleDataResult = {
   setExpandedDay: (d: number | null) => void;
 };
 
-const SCHEDULE_READ_FETCH_INIT: RequestInit = { cache: "no-store" };
-const SCHEDULE_FRESH_QUERY_OPTIONS = {
-  staleTime: 0,
-  refetchOnMount: "always" as const,
-  refetchOnWindowFocus: true,
-};
-
-/** Merge events + shift groups into unified entries */
-export function mergeScheduleData(events: CalendarEvent[], groups: ShiftGroup[]): CalendarEntry[] {
-  const groupByEventId = new Map<string, ShiftGroup>();
-  for (const g of groups) groupByEventId.set(g.eventId, g);
-
-  const secondaryIds = new Set(events.flatMap((event) => (event.combinedEvents ?? []).map((member) => member.id)));
-  return events.filter((event) => !secondaryIds.has(event.id) && !event.combinedIntoId).map((ev) => {
-    const g = groupByEventId.get(ev.id);
-    const members = [ev, ...(ev.combinedEvents ?? [])];
-    return {
-      ...ev,
-      startsAt: new Date(Math.min(...members.map((member) => new Date(member.startsAt).getTime()))).toISOString(),
-      endsAt: new Date(Math.max(...members.map((member) => new Date(member.endsAt).getTime()))).toISOString(),
-      allDay: members.every((member) => member.allDay),
-      eventArchivedAt: ev.archivedAt ?? null,
-      shiftGroupId: g?.id ?? null,
-      coverage: g?.coverage ?? null,
-      shifts: g?.shifts ?? [],
-      archivedAt: g?.archivedAt ?? null,
-      publication: g?.publication ?? null,
-      hasWorkingCopy: g?.hasWorkingCopy ?? false,
-      claimsPaused: g?.claimsPaused ?? false,
-      autoReleaseAt: g?.autoReleaseAt ?? null,
-      autoReleaseError: g?.autoReleaseError ?? null,
-      combinedEventCount: members.length,
-    };
-  });
-}
-
-/** Build schedule fetch URL based on current view params */
-function buildScheduleUrls(
-  viewMode: string,
-  calMonth: Date,
-  weekStart: Date,
-  includeArchived: boolean,
-  sportFilter: string,
-  dateRange: ScheduleDeepLink["dateRange"],
-  timelineWindow?: ScheduleTimelineWindow | null,
-) {
-  const evParams = new URLSearchParams({ limit: "200" });
-  const sgParams = new URLSearchParams({ limit: "200" });
-  const healthParams = new URLSearchParams();
-  const automationParams = new URLSearchParams();
-
-  if (viewMode === "calendar") {
-    const startDate = calMonth.toISOString();
-    const endDate = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0, 23, 59, 59).toISOString();
-    evParams.set("startDate", startDate);
-    evParams.set("endDate", endDate);
-    evParams.set("includePast", "true");
-    sgParams.set("startDate", startDate);
-    sgParams.set("endDate", endDate);
-    healthParams.set("startDate", startDate);
-    healthParams.set("endDate", endDate);
-    healthParams.set("includePast", "true");
-    automationParams.set("startDate", startDate);
-    automationParams.set("endDate", endDate);
-    automationParams.set("includePast", "true");
-  } else if (viewMode === "week") {
-    const startDate = weekStart.toISOString();
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
-    const endDate = weekEnd.toISOString();
-    evParams.set("startDate", startDate);
-    evParams.set("endDate", endDate);
-    evParams.set("includePast", "true");
-    sgParams.set("startDate", startDate);
-    sgParams.set("endDate", endDate);
-    healthParams.set("startDate", startDate);
-    healthParams.set("endDate", endDate);
-    healthParams.set("includePast", "true");
-    automationParams.set("startDate", startDate);
-    automationParams.set("endDate", endDate);
-    automationParams.set("includePast", "true");
-  } else {
-    if (dateRange) {
-      evParams.set("startDate", dateRange.startDate);
-      evParams.set("endDate", dateRange.endDate);
-      sgParams.set("startDate", dateRange.startDate);
-      sgParams.set("endDate", dateRange.endDate);
-      healthParams.set("startDate", dateRange.startDate);
-      healthParams.set("endDate", dateRange.endDate);
-      automationParams.set("startDate", dateRange.startDate);
-      automationParams.set("endDate", dateRange.endDate);
-    } else if (timelineWindow) {
-      // First paint is a today-centered window. Infinite scroll then walks
-      // older and newer events with keyset pages instead of loading the whole
-      // archive before the list can appear.
-      evParams.set("startDate", timelineWindow.start.toISOString());
-      evParams.set("endDate", timelineWindow.end.toISOString());
-      evParams.set("includePast", "true");
-      sgParams.set("startDate", timelineWindow.start.toISOString());
-      sgParams.set("endDate", timelineWindow.end.toISOString());
-      healthParams.set("includePast", "true");
-      automationParams.set("includePast", "true");
-    } else {
-      evParams.set("includePast", "true");
-      healthParams.set("includePast", "true");
-      automationParams.set("includePast", "true");
-    }
-  }
-
-  if (sportFilter) {
-    evParams.set("sportCode", sportFilter);
-    sgParams.set("sportCode", sportFilter);
-    healthParams.set("sportCode", sportFilter);
-    automationParams.set("sportCode", sportFilter);
-  }
-
-  // Archived events are always in the past — also pass includePast so the
-  // startsAt >= now default doesn't filter them out.
-  if (includeArchived) {
-    evParams.set("includeArchived", "true");
-    evParams.set("includePast", "true");
-    healthParams.set("includeArchived", "true");
-    healthParams.set("includePast", "true");
-    automationParams.set("includeArchived", "true");
-    automationParams.set("includePast", "true");
-  }
-
-  return {
-    eventsUrl: `/api/calendar-events?${evParams}`,
-    groupsUrl: `/api/shift-groups?${sgParams}`,
-    healthUrl: `/api/schedule/health?${healthParams}`,
-    automationUrl: `/api/schedule/automation?${automationParams}`,
-  };
-}
-
-/**
- * Calendar and week views still load their dated window up front. The list
- * timeline uses a today-centered first window, then keyset pages as the reader
- * scrolls. `PAGE_SIZE` is the server's own cap. `MAX_PAGES` keeps a runaway
- * dated window from hanging the browser.
- */
-const PAGE_SIZE = 200;
-const MAX_PAGES = 15;
-
-type PagedResult<T> = { rows: T[]; truncated: boolean };
-
-function pagedUrl(url: string, offset: number): string {
-  const paged = new URL(url, window.location.origin);
-  paged.searchParams.set("limit", String(PAGE_SIZE));
-  paged.searchParams.set("offset", String(offset));
-  return paged.toString();
-}
-
-async function fetchPage<T>(
-  url: string,
-  offset: number,
-  signal?: AbortSignal,
-): Promise<{ rows: T[]; total: number | null }> {
-  const res = await fetch(pagedUrl(url, offset), { ...SCHEDULE_READ_FETCH_INIT, signal });
-  if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
-  if (!res.ok) throw new Error("schedule page fetch failed");
-
-  const json = await parseJsonSafely<{ data?: T[]; total?: number }>(res);
-  if (!json?.data) throw new Error("schedule page response malformed");
-  return { rows: json.data, total: typeof json.total === "number" ? json.total : null };
-}
-
-/**
- * Read a whole window.
- *
- * The first page reports `total`, so every remaining page is requested at once
- * rather than walking offsets one round trip at a time -- the difference
- * between the list appearing in one step and unfolding in three.
- *
- * Offset paging can hand back the same row twice if an event is added between
- * requests, so ids are deduplicated on the way in; a duplicate would otherwise
- * reach React as a repeated key and render the event twice.
- */
-async function fetchAllPages<T extends { id: string }>(
-  url: string,
-  signal?: AbortSignal,
-): Promise<PagedResult<T>> {
-  const first = await fetchPage<T>(url, 0, signal);
-  if (first.rows.length < PAGE_SIZE) return { rows: first.rows, truncated: false };
-
-  const pages = [first];
-  let truncated = false;
-
-  if (first.total === null) {
-    // No count to plan against. Walk one page at a time rather than guessing a
-    // page count and firing a burst of requests that mostly come back empty.
-    let offset = PAGE_SIZE;
-    for (let page = 1; page < MAX_PAGES; page += 1, offset += PAGE_SIZE) {
-      const next = await fetchPage<T>(url, offset, signal);
-      pages.push(next);
-      if (next.rows.length < PAGE_SIZE) break;
-      if (page === MAX_PAGES - 1) truncated = true;
-    }
-  } else {
-    const pagesNeeded = Math.min(Math.ceil(first.total / PAGE_SIZE), MAX_PAGES);
-    pages.push(...await Promise.all(
-      Array.from({ length: Math.max(0, pagesNeeded - 1) }, (_unused, index) =>
-        fetchPage<T>(url, (index + 1) * PAGE_SIZE, signal)),
-    ));
-    truncated = first.total > PAGE_SIZE * MAX_PAGES;
-  }
-
-  const seen = new Set<string>();
-  const rows: T[] = [];
-  for (const row of pages.flatMap((page) => page.rows)) {
-    if (seen.has(row.id)) continue;
-    seen.add(row.id);
-    rows.push(row);
-  }
-
-  return { rows, truncated };
-}
-
-export async function fetchSchedule(
-  eventsUrl: string,
-  groupsUrl: string,
-  signal?: AbortSignal,
-): Promise<{ entries: CalendarEntry[]; truncated: boolean }> {
-  const [events, groups] = await Promise.all([
-    fetchAllPages<CalendarEvent>(eventsUrl, signal),
-    // Crew data determines personal assignments and whether setup is offered.
-    // Reject incomplete snapshots so Query retains the last complete result.
-    fetchAllPages<ShiftGroup>(groupsUrl, signal),
-  ]);
-  if (groups.truncated) throw new Error("Crew information is incomplete. Narrow the schedule window and retry.");
-
-  return {
-    entries: mergeScheduleData(events.rows, groups.rows),
-    truncated: events.truncated,
-  };
-}
-
-function isScheduleAbort(error: unknown) {
-  return error instanceof DOMException && error.name === "AbortError";
-}
-
-function listKeysetEventsUrl(
-  includeArchived: boolean,
-  sportFilter: string,
-  cursor: ScheduleTimelineCursor,
-  direction: "before" | "after",
-  limit = SCHEDULE_TIMELINE_SLICE_SIZE,
-) {
-  const params = new URLSearchParams({
-    limit: String(limit),
-    includePast: "true",
-  });
-  if (sportFilter) params.set("sportCode", sportFilter);
-  if (includeArchived) {
-    params.set("includeArchived", "true");
-    params.set("includePast", "true");
-  }
-  if (direction === "before") {
-    params.set("beforeStartsAt", cursor.startsAt);
-    if (cursor.id) params.set("beforeId", cursor.id);
-  } else {
-    params.set("afterStartsAt", cursor.startsAt);
-    if (cursor.id) params.set("afterId", cursor.id);
-  }
-  return `/api/calendar-events?${params}`;
-}
-
-function listGroupsUrl(sportFilter: string) {
-  const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-  if (sportFilter) params.set("sportCode", sportFilter);
-  return `/api/shift-groups?${params}`;
-}
-
-async function fetchKeysetEvents(
-  url: string,
-  signal?: AbortSignal,
-): Promise<{ rows: CalendarEvent[]; hasMore: boolean }> {
-  const res = await fetch(url, { ...SCHEDULE_READ_FETCH_INIT, signal });
-  if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
-  if (!res.ok) throw new Error("schedule page fetch failed");
-  const json = await parseJsonSafely<{ data?: CalendarEvent[] }>(res);
-  if (!json?.data) throw new Error("schedule page response malformed");
-  return { rows: json.data, hasMore: sliceHasMore(json.data.length) };
-}
-
-async function fetchGroupsForEvents(
-  groupsUrl: string,
-  events: CalendarEvent[],
-  signal?: AbortSignal,
-): Promise<ShiftGroup[]> {
-  const bounds = eventBoundsForGroups(events);
-  if (!bounds) return [];
-  const url = new URL(groupsUrl, window.location.origin);
-  url.searchParams.set("startDate", bounds.startDate);
-  url.searchParams.set("endDate", bounds.endDate);
-  const groups = await fetchAllPages<ShiftGroup>(url.toString(), signal);
-  if (groups.truncated) throw new Error("Crew information is incomplete. Narrow the schedule window and retry.");
-  return groups.rows;
-}
-
-async function fetchScheduleSlice(
-  includeArchived: boolean,
-  sportFilter: string,
-  cursor: ScheduleTimelineCursor,
-  direction: "before" | "after",
-  signal?: AbortSignal,
-): Promise<{ entries: CalendarEntry[]; hasMore: boolean }> {
-  const events = await fetchKeysetEvents(
-    listKeysetEventsUrl(includeArchived, sportFilter, cursor, direction),
-    signal,
-  );
-  if (events.rows.length === 0) return { entries: [], hasMore: false };
-  const groups = await fetchGroupsForEvents(listGroupsUrl(sportFilter), events.rows, signal);
-  return {
-    entries: mergeScheduleData(events.rows, groups),
-    hasMore: events.hasMore,
-  };
-}
-
-async function fetchTradeCount(): Promise<number> {
-  const r = await fetch("/api/shift-trades?status=OPEN&limit=1", SCHEDULE_READ_FETCH_INIT);
-  if (handleAuthRedirect(r, "/schedule")) {
-    throw new DOMException("Auth redirect", "AbortError");
-  }
-  if (!r.ok) throw new Error("trade count fetch failed");
-  const j = await parseJsonSafely<{ total?: number; data?: unknown[] }>(r);
-  return typeof j?.total === "number" ? j.total : j?.data?.length ?? 0;
-}
-
-async function fetchCalendarSources(signal?: AbortSignal): Promise<CalendarSourceFreshnessInput[]> {
-  const res = await fetch("/api/calendar-sources", { ...SCHEDULE_READ_FETCH_INIT, signal });
-  if (handleAuthRedirect(res, "/schedule")) {
-    throw new DOMException("Auth redirect", "AbortError");
-  }
-  if (!res.ok) throw new Error("calendar sources fetch failed");
-
-  const json = await parseJsonSafely<{ data?: CalendarSourceFreshnessInput[] }>(res);
-  if (!json?.data) throw new Error("calendar sources response malformed");
-  return json.data;
-}
-
-async function fetchScheduleHealth(url: string, signal?: AbortSignal): Promise<ScheduleHealthSnapshot> {
-  const res = await fetch(url, { ...SCHEDULE_READ_FETCH_INIT, signal });
-  if (handleAuthRedirect(res, "/schedule")) {
-    throw new DOMException("Auth redirect", "AbortError");
-  }
-  if (!res.ok) throw new Error("schedule health fetch failed");
-
-  const json = await parseJsonSafely<{ data?: ScheduleHealthSnapshot }>(res);
-  if (!json?.data) throw new Error("schedule health response malformed");
-  return json.data;
-}
-
-async function fetchScheduleAutomation(url: string, signal?: AbortSignal): Promise<ScheduleAutomationDigest> {
-  const res = await fetch(url, { ...SCHEDULE_READ_FETCH_INIT, signal });
-  if (handleAuthRedirect(res, "/schedule")) {
-    throw new DOMException("Auth redirect", "AbortError");
-  }
-  if (!res.ok) throw new Error("schedule automation fetch failed");
-
-  const json = await parseJsonSafely<{ data?: ScheduleAutomationDigest }>(res);
-  if (!json?.data) throw new Error("schedule automation response malformed");
-  return json.data;
-}
-
 export function useScheduleData(): UseScheduleDataResult {
   const router = useRouter();
   const pathname = usePathname();
@@ -570,12 +157,13 @@ export function useScheduleData(): UseScheduleDataResult {
   const [weekStart, setWeekStart] = useState(() => parseScheduleWeek(searchParams.get("week")) ?? defaultScheduleWeek());
 
   // Filters
-  const [sportFilter, setSportFilterRaw] = useState(() => searchParams.get("sportCode") ?? "");
-  const [areaFilter, setAreaFilterRaw] = useState(() => searchParams.get("area") ?? "");
-  const [coverageFilter, setCoverageFilterRaw] = useState(() => parseScheduleCoverage(searchParams.get("coverage")));
-  const [homeAwayFilter, setHomeAwayFilterRaw] = useState<HomeAwayFilter>(() => parseScheduleVenue(searchParams.get("venue")));
-  const [includeArchived, setIncludeArchivedRaw] = useState(() => searchParams.get("includeArchived") === "true");
-  const [myShiftsOnly, setMyShiftsOnlyRaw] = useState(() => searchParams.get("myShifts") === "true");
+  const [initialFilters] = useState(() => readScheduleUrlFilters(new URLSearchParams(searchParams.toString())));
+  const [sportFilter, setSportFilterRaw] = useState(initialFilters.sportFilter);
+  const [areaFilter, setAreaFilterRaw] = useState(initialFilters.areaFilter);
+  const [coverageFilter, setCoverageFilterRaw] = useState(initialFilters.coverageFilter);
+  const [homeAwayFilter, setHomeAwayFilterRaw] = useState<HomeAwayFilter>(initialFilters.homeAwayFilter);
+  const [includeArchived, setIncludeArchivedRaw] = useState(initialFilters.includeArchived);
+  const [myShiftsOnly, setMyShiftsOnlyRaw] = useState(initialFilters.myShiftsOnly);
 
   // UI state
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -589,21 +177,10 @@ export function useScheduleData(): UseScheduleDataResult {
   const listViewRoundTripRef = useRef(false);
   const periodContextDateRef = useRef<Date | null>(null);
   const pendingArchivedLoadRef = useRef(false);
-  const deepLink = useMemo<ScheduleDeepLink>(() => {
-    const query = new URLSearchParams(searchParamsString);
-    const start = query.get("startDate");
-    const end = query.get("endDate");
-    const startDate = start ? new Date(start) : null;
-    const endDate = end ? new Date(end) : null;
-    const dateRange = startDate && endDate && !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime()) && endDate > startDate
-      ? { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
-      : null;
-    return {
-      myShiftsOnly: query.get("myShifts") === "true",
-      sportCode: query.get("sportCode") ?? "",
-      dateRange,
-    };
-  }, [searchParamsString]);
+  const deepLink = useMemo<ScheduleDeepLink>(
+    () => parseScheduleDeepLink(new URLSearchParams(searchParamsString)),
+    [searchParamsString],
+  );
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
   const activeQueue = parseScheduleQueue(searchParams.get("queue"));
   const activeQueueMeta = activeQueue ? SCHEDULE_QUEUE_META[activeQueue] : null;
@@ -637,12 +214,13 @@ export function useScheduleData(): UseScheduleDataResult {
         periodContextDateRef.current = requestedWeek;
       }
     }
-    setSportFilterRaw(query.get("sportCode") ?? "");
-    setAreaFilterRaw(query.get("area") ?? "");
-    setCoverageFilterRaw(parseScheduleCoverage(query.get("coverage")));
-    setHomeAwayFilterRaw(parseScheduleVenue(query.get("venue")));
-    setIncludeArchivedRaw(query.get("includeArchived") === "true");
-    setMyShiftsOnlyRaw(query.get("myShifts") === "true");
+    const filters = readScheduleUrlFilters(query);
+    setSportFilterRaw(filters.sportFilter);
+    setAreaFilterRaw(filters.areaFilter);
+    setCoverageFilterRaw(filters.coverageFilter);
+    setHomeAwayFilterRaw(filters.homeAwayFilter);
+    setIncludeArchivedRaw(filters.includeArchived);
+    setMyShiftsOnlyRaw(filters.myShiftsOnly);
   }, [searchParamsString]);
 
   const captureTimelineContext = useCallback(() => {
@@ -726,25 +304,16 @@ export function useScheduleData(): UseScheduleDataResult {
 
   const setQueue = useCallback((queue: ScheduleQueue | null) => {
     captureTimelineContext();
-    const params = new URLSearchParams(searchParams.toString());
-    if (queue) {
-      params.set("queue", queue);
-      setViewModeRaw("list");
-    } else {
-      params.delete("queue");
-    }
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    if (queue) setViewModeRaw("list");
+    const params = withScheduleQueue(new URLSearchParams(searchParams.toString()), queue);
+    router.replace(scheduleHref(pathname, params), { scroll: false });
   }, [captureTimelineContext, pathname, router, searchParams]);
 
   const clearDateRange = useCallback(() => {
     captureTimelineContext();
     skipNextScheduleUrlWriteRef.current = true;
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("startDate");
-    params.delete("endDate");
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    const params = withoutScheduleDateRange(new URLSearchParams(searchParams.toString()));
+    router.replace(scheduleHref(pathname, params), { scroll: false });
   }, [captureTimelineContext, pathname, router, searchParams]);
 
   useEffect(() => {
@@ -788,30 +357,20 @@ export function useScheduleData(): UseScheduleDataResult {
       return;
     }
 
-    const params = new URLSearchParams(searchParamsString);
-    if (viewMode === "list") params.delete("view");
-    else params.set("view", viewMode);
-    if (viewMode === "calendar") params.set("month", formatScheduleMonth(calMonth));
-    else params.delete("month");
-    if (viewMode === "week") params.set("week", formatScheduleDate(weekStart));
-    else params.delete("week");
-
-    if (sportFilter) params.set("sportCode", sportFilter);
-    else params.delete("sportCode");
-    if (areaFilter) params.set("area", areaFilter);
-    else params.delete("area");
-    if (coverageFilter) params.set("coverage", coverageFilter);
-    else params.delete("coverage");
-    if (homeAwayFilter !== "all") params.set("venue", homeAwayFilter);
-    else params.delete("venue");
-    if (includeArchived) params.set("includeArchived", "true");
-    else params.delete("includeArchived");
-    if (myShiftsOnly) params.set("myShifts", "true");
-    else params.delete("myShifts");
-
+    const params = writeScheduleUrlState(new URLSearchParams(searchParamsString), {
+      viewMode,
+      calMonth,
+      weekStart,
+      sportFilter,
+      areaFilter,
+      coverageFilter,
+      homeAwayFilter,
+      includeArchived,
+      myShiftsOnly,
+    });
     const query = params.toString();
-    const nextUrl = query ? `${pathname}?${query}` : pathname;
-    const currentUrl = searchParamsString ? `${pathname}?${searchParamsString}` : pathname;
+    const nextUrl = scheduleHref(pathname, params);
+    const currentUrl = scheduleHref(pathname, new URLSearchParams(searchParamsString));
     if (nextUrl !== currentUrl) {
       // Mark our own URL before App Router publishes it. Otherwise a fast
       // Week -> Calendar -> Week sequence can receive the first replace after
@@ -983,64 +542,22 @@ export function useScheduleData(): UseScheduleDataResult {
   const refreshError = Boolean(preferencesLoaded && scheduleError && visibleEntries.length > 0);
 
   // Client-side filtering
-  const filteredEntries = useMemo(() => {
-    let result = visibleEntries;
-    if (myShiftsOnly && currentUserId) {
-      result = result.filter((e) => userHasShift(e, currentUserId));
-    }
-    if (homeAwayFilter !== "all") {
-      result = result.filter((e) => venueToneFromEvent(e) === homeAwayFilter);
-    }
-    if (areaFilter) {
-      result = result.filter((e) => e.shifts.some((s) => s.area === areaFilter));
-    }
-    if (coverageFilter === "unfilled") {
-      result = result.filter((e) => !e.coverage || e.coverage.percentage < 100);
-    } else if (coverageFilter === "filled") {
-      result = result.filter((e) => e.coverage && e.coverage.percentage >= 100);
-    }
-    result = filterEntriesForScheduleQueue({
-      entries: result,
-      queue: activeQueue,
-      health: scheduleHealth,
-      currentUserId,
-      staleSourceIds,
-    });
-    return sortCalendarEventsForDisplay(result);
-  }, [visibleEntries, homeAwayFilter, areaFilter, coverageFilter, myShiftsOnly, currentUserId, activeQueue, scheduleHealth, staleSourceIds]);
+  const filteredEntries = useMemo(() => filterScheduleEntries(visibleEntries, {
+    myShiftsOnly,
+    currentUserId,
+    homeAwayFilter,
+    areaFilter,
+    coverageFilter,
+    queue: activeQueue,
+    health: scheduleHealth,
+    staleSourceIds,
+  }), [visibleEntries, homeAwayFilter, areaFilter, coverageFilter, myShiftsOnly, currentUserId, activeQueue, scheduleHealth, staleSourceIds]);
 
   // Group entries by date for list view
-  const groupedEntries = useMemo(() => {
-    const groups: [string, CalendarEntry[]][] = [];
-    let lastKey = "";
-    for (const entry of filteredEntries) {
-      const key = calendarDate(entry.startsAt, entry.allDay).toDateString();
-      if (key !== lastKey) {
-        groups.push([key, []]);
-        lastKey = key;
-      }
-      groups[groups.length - 1]![1]!.push(entry); // at least one group pushed above in this iteration
-    }
-
-    // The timeline scrolls to today on open, so today has to exist as a row
-    // even when nothing is scheduled -- otherwise a quiet day has no anchor and
-    // the list opens wherever the nearest event happens to be.
-    //
-    // A deep link to an explicit date range is the exception: that reader asked
-    // for a window, and dropping today into it would both invent a row outside
-    // the range and drag the view away from what they followed the link to see.
-    if (isTimeline) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayKey = today.toDateString();
-      if (!groups.some(([key]) => key === todayKey)) {
-        const index = groups.findIndex(([key]) => new Date(key).getTime() > today.getTime());
-        groups.splice(index === -1 ? groups.length : index, 0, [todayKey, []]);
-      }
-    }
-
-    return groups;
-  }, [filteredEntries, isTimeline]);
+  const groupedEntries = useMemo(
+    () => groupScheduleEntriesByDay(filteredEntries, { isTimeline }),
+    [filteredEntries, isTimeline],
+  );
 
   const hasFilters = !!(sportFilter || areaFilter || coverageFilter || homeAwayFilter !== "all" || includeArchived || activeQueue || deepLink.dateRange);
   /**
@@ -1235,17 +752,8 @@ export function useScheduleData(): UseScheduleDataResult {
         setHomeAwayFilterRaw("all");
         setIncludeArchivedRaw(false);
         skipNextScheduleUrlWriteRef.current = true;
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete("queue");
-        params.delete("sportCode");
-        params.delete("area");
-        params.delete("coverage");
-        params.delete("venue");
-        params.delete("includeArchived");
-        params.delete("startDate");
-        params.delete("endDate");
-        const query = params.toString();
-        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        const params = withoutScheduleFilters(new URLSearchParams(searchParams.toString()));
+        router.replace(scheduleHref(pathname, params), { scroll: false });
       },
     },
     calMonth,

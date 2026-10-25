@@ -11,7 +11,7 @@ const timelinePosition = source("src/lib/schedule-timeline-position.ts");
 // tests/browser/schedule-list.spec.ts; these cover the data hook and page frame.
 describe("schedule timeline", () => {
   it("reads one continuous window instead of an upcoming-only page", () => {
-    expect(hook).toContain('evParams.set("includePast", "true")');
+    // tests/schedule-read.test.ts proves the timeline asks for past events.
     // The scope toggle is gone: past is a direction you scroll, not a mode.
     expect(hook).not.toContain("timeScope");
     expect(filters).not.toContain("timeScope");
@@ -21,34 +21,12 @@ describe("schedule timeline", () => {
     // Area, coverage, venue, my shifts, and queues still fill remaining pages
     // in the background so a filtered list cannot look empty while matches exist later.
     expect(hook).toContain("const hasClientContentFilters = !!(areaFilter || coverageFilter || homeAwayFilter !== \"all\" || myShiftsOnly || activeQueue);");
-    expect(hook).toContain("async function fetchAllPages");
-    expect(hook).toContain("const PAGE_SIZE = 200");
-    expect(hook).toContain("const MAX_PAGES =");
     expect(hook).toContain("createInitialScheduleTimelineWindow");
     expect(hook).toContain("fetchScheduleSlice");
-    expect(hook).toContain("beforeStartsAt");
-    expect(hook).toContain("afterStartsAt");
-  });
-
-  it("requests the remaining pages together instead of walking offsets", () => {
-    // The first page reports `total`, so the rest go out at once.
-    expect(hook).toContain("if (first.rows.length < PAGE_SIZE) return { rows: first.rows, truncated: false };");
-    expect(hook).toContain("const pagesNeeded = Math.min(Math.ceil(first.total / PAGE_SIZE), MAX_PAGES);");
-    expect(hook).toContain("await Promise.all(");
-  });
-
-  it("walks one page at a time when the server reports no total", () => {
-    // Planning against a guessed page count would fire a burst of requests that
-    // mostly come back empty.
-    expect(hook).toContain("if (first.total === null) {");
-  });
-
-  it("deduplicates rows so offset drift cannot render an event twice", () => {
-    expect(hook).toContain("if (seen.has(row.id)) continue;");
+    // tests/schedule-read.test.ts covers the before/after keyset reads.
   });
 
   it("reports hitting the page cap instead of silently truncating", () => {
-    expect(hook).toContain("truncated = first.total > PAGE_SIZE * MAX_PAGES;");
     expect(hook).toContain("timelineTruncated");
   });
 
@@ -106,17 +84,7 @@ describe("schedule timeline", () => {
     expect(hook).toContain("const hasContentFilters =");
   });
 
-  it("keeps a Today row even when nothing is scheduled", () => {
-    // The timeline scrolls to today on open, so the anchor has to exist.
-    expect(hook).toContain("if (!groups.some(([key]) => key === todayKey))");
-  });
-
   it("separates ordinary past crew history from older archived records", () => {
-    expect(hook).toContain("eventArchivedAt: ev.archivedAt ?? null");
     expect(filters).toContain("Past events are already in List view.");
-  });
-
-  it("does not replace unavailable coverage with an empty crew", () => {
-    expect(hook).not.toContain(".catch(() => ({ rows: [], truncated: false }))");
   });
 });
