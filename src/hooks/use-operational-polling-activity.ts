@@ -55,12 +55,13 @@ export function useOperationalPollingActivity(
   enabled = true,
   idleMs = OPERATIONAL_POLLING_IDLE_MS,
 ): OperationalPollingState {
-  const lastActivityAtRef = useRef(Date.now());
+  // The effect stamps this on mount; 0 keeps render pure.
+  const lastActivityAtRef = useRef(0);
   const lastRecordedAtRef = useRef(0);
-  const stateRef = useRef<OperationalPollingState>(
-    !enabled ? "disabled" : isOvernightQuietHours() ? "quiet" : "active",
+  const [state, setState] = useState<OperationalPollingState>(
+    () => (!enabled ? "disabled" : isOvernightQuietHours() ? "quiet" : "active"),
   );
-  const [state, setState] = useState<OperationalPollingState>(stateRef.current);
+  const stateRef = useRef(state);
 
   useEffect(() => {
     let idleTimer: ReturnType<typeof setTimeout> | null = null;

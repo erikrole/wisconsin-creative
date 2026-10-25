@@ -224,7 +224,7 @@
 | `src/hooks/use-mobile.ts` | 19 |
 | `src/hooks/use-now.ts` | 31 |
 | `src/hooks/use-onboarding-save.ts` | 249 |
-| `src/hooks/use-operational-polling-activity.ts` | 155 |
+| `src/hooks/use-operational-polling-activity.ts` | 156 |
 | `src/hooks/use-profile-completion.ts` | 83 |
 | `src/hooks/use-schedule-data.ts` | 1272 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
