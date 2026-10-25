@@ -137,7 +137,12 @@ describe("working schedule editor read model", () => {
       workingCopy: null,
     });
     mocks.findUsers.mockResolvedValue([]);
-    mocks.findSportConfig.mockResolvedValue({ shiftStartOffset: 90, shiftEndOffset: 30 });
+    // The default window and the sport template read the same settings row.
+    mocks.findSportConfig.mockImplementation(async ({ select }: { select: Record<string, unknown> }) => (
+      select.shiftConfigs
+        ? { shiftConfigs: [{ area: "VIDEO", homeCount: 3, awayCount: 1, homeStaffCount: 1, homeStudentCount: 2, awayStaffCount: 0, awayStudentCount: 1 }] }
+        : { shiftStartOffset: 90, shiftEndOffset: 30 }
+    ));
 
     const result = await getWorkingScheduleEditor("group-2");
 
@@ -150,6 +155,12 @@ describe("working schedule editor read model", () => {
       endsAt: "2026-08-08T20:30:00.000Z",
     });
     expect(result.allDay).toBe(false);
+    // isHome is unset here, so the away counts apply, as in shift generation.
+    expect(result.sportTemplate).toEqual({
+      sportCode: "VB",
+      venue: "away",
+      rows: [{ area: "VIDEO", home: { FT: 1, ST: 2 }, away: { FT: 0, ST: 1 } }],
+    });
   });
 
   it("includes live open-slot claims and claimed trades for crew review", async () => {
