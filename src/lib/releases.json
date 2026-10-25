@@ -3,7 +3,7 @@
     "date": "2026-10-25",
     "title": "Import and override fixes",
     "type": "fixes",
-    "summary": "Item imports no longer turn a price like \"n/a\" into $0, and checkout overrides show up once in the audit log.",
+    "summary": "Item imports no longer turn a price like \"n/a\" into a zero price, and checkout overrides show up once in the audit log.",
     "details": [
       "A price or value cell with no number in it now imports as blank.",
       "Each admin override on a checkout records one audit entry, with the items it skipped."
