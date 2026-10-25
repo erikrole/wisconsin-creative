@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
@@ -87,51 +89,25 @@ const KEY_COLUMNS: Record<string, string[]> = {
   bulk_sku_units: ["bulk_sku_id", "unit_number", "status"],
 };
 
-const EXPECTED_MIGRATIONS = [
-  "0001_manual_constraints",
-  "0002_source_reservation_id",
-  "0003_phase1_models",
-  "0004_event_booking_linkage",
-  "0005_add_categories",
-  "0006_asset_policy_toggles",
-  "0007_numbered_bulk_unit_tracking",
-  "0008_escalation_config",
-  "0009_item_bundling",
-  "0009_shift_calendar",
-  "0010_favorite_items",
-  "0011_booking_ref_number",
-  "0012_add_password_reset_token",
-  "0013_shift_assignment_booking_link",
-  "0014_add_user_avatar_url",
-  "0015_make_serial_number_optional",
-  "0016_add_user_active_field",
-  "0017_add_source_payload",
-  "0018_add_booking_kit_id",
-  "0019_add_location_is_home_venue",
-  "0020_add_performance_indexes",
-  "0021_add_trigram_search_indexes",
-  "0022_add_booking_photos",
-  "0023_add_checkin_item_reports",
-  "0024_add_calendar_event_is_hidden",
-  "0025_consolidate_departments",
-  "0026_add_allowed_emails",
-  "0027_seed_allowed_emails",
-  "0028_add_bulk_sku_images_and_kit_bulk_members",
-  "0029_add_kiosk_devices",
-  "0030_add_sport_call_times",
-];
+/** Every migration folder the deploy ships, the same truth `db:migrate:health` compares against. */
+function localMigrationNames() {
+  return readdirSync(join(process.cwd(), "prisma", "migrations"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
 
 // ── Diagnostic queries (batched into one round-trip where Neon allows) ─
 
 async function checkMigrationTable() {
   try {
-    const rows: { migration_name: string; finished_at: Date | null }[] =
+    const rows: { migration_name: string; finished_at: Date | null; rolled_back_at: Date | null }[] =
       await db.$queryRawUnsafe(
-        `SELECT migration_name::text, finished_at FROM "_prisma_migrations" ORDER BY migration_name`,
+        `SELECT migration_name::text, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY migration_name`,
       );
     return {
       exists: true,
-      migrations: rows.map((r) => ({
+      migrations: rows.filter((r) => !r.rolled_back_at).map((r) => ({
         name: r.migration_name,
         appliedAt: r.finished_at ? new Date(String(r.finished_at)).toISOString() : null,
       })),
@@ -224,13 +200,27 @@ function buildRemediation(checks: {
       'The _prisma_migrations table does not exist. Run "npx prisma migrate deploy" or create it manually (see docs).',
     );
   } else {
+    const local = localMigrationNames();
+    const localSet = new Set(local);
     const applied = new Set(
-      checks.migrationTable.migrations.map((m) => m.name),
+      checks.migrationTable.migrations.filter((m) => m.appliedAt).map((m) => m.name),
     );
-    const missing = EXPECTED_MIGRATIONS.filter((m) => !applied.has(m));
-    if (missing.length > 0) {
+    const pending = local.filter((m) => !applied.has(m));
+    const failed = checks.migrationTable.migrations.filter((m) => !m.appliedAt && !applied.has(m.name)).map((m) => m.name);
+    const dbOnly = [...applied].filter((m) => !localSet.has(m));
+    if (pending.length > 0) {
       steps.push(
-        `Migrations not yet applied: ${missing.join(", ")}. Run "npx prisma migrate deploy".`,
+        `Migrations not yet applied: ${pending.join(", ")}. Run "npx prisma migrate deploy".`,
+      );
+    }
+    if (failed.length > 0) {
+      steps.push(
+        `Migrations that failed partway: ${failed.join(", ")}. Resolve them with "npx prisma migrate resolve" (see the Prisma Neon runbook).`,
+      );
+    }
+    if (dbOnly.length > 0) {
+      steps.push(
+        `Migrations applied to the database but missing from this deploy: ${dbOnly.join(", ")}. Deploy the branch that added them.`,
       );
     }
   }
