@@ -5,7 +5,8 @@
     "type": "fixes",
     "summary": "When the kiosk says an item is booked for a shared travel case, the booking times now show in Chicago time.",
     "details": [
-      "Before, those times showed in UTC, five or six hours ahead."
+      "Before, those times showed in UTC, five or six hours ahead.",
+      "Other booking messages already used Chicago time and are unchanged."
     ],
     "platforms": [
       "Web"
