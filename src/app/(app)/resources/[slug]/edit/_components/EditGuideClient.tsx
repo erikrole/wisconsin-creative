@@ -45,6 +45,7 @@ import { GuideTargetingControls } from "@/components/resources/GuideTargetingCon
 import { MarkdownEditor } from "@/components/resources/MarkdownEditor";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type Guide = {
   id: string;
@@ -128,9 +129,9 @@ export function EditGuideClient({ slug, userRole, userId }: Props) {
     [],
   );
 
-  useEffect(() => {
+  useAdjustState([guide, ready, populate], () => {
     if (guide && !ready) populate(guide);
-  }, [guide, ready, populate]);
+  });
 
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {

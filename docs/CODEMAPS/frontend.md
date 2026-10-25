@@ -174,7 +174,7 @@
 | `src/components/ActivityTimeline.tsx` | 1388 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
-| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1045 |
+| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1046 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1041 |
 | `src/components/TradeBoard.tsx` | 940 |
 | `src/components/BookingListPage.tsx` | 919 |
@@ -184,7 +184,7 @@
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 708 |
-| `src/components/schedule/SportSetupWizard.tsx` | 681 |
+| `src/components/schedule/SportSetupWizard.tsx` | 682 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
@@ -228,7 +228,7 @@
 | `src/hooks/use-profile-completion.ts` | 83 |
 | `src/hooks/use-schedule-data.ts` | 1272 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
-| `src/hooks/use-synced-draft.ts` | 20 |
+| `src/hooks/use-synced-draft.ts` | 37 |
 | `src/hooks/use-url-state.ts` | 129 |
 | `src/hooks/useBookingActions.ts` | 297 |
 | `src/hooks/useBookingDetail.ts` | 70 |

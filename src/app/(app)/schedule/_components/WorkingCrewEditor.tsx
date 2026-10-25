@@ -60,6 +60,7 @@ import {
 } from "@/components/shift-detail/crew-row";
 import { AREA_LABELS } from "@/types/areas";
 import { useNow } from "@/hooks/use-now";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 function formatNotificationCountdown(iso: string, now = Date.now()) {
   return formatScheduleReleaseCountdown(iso, now, "Assignees");
@@ -162,12 +163,12 @@ function CallWindowEditor({
   const [endsAt, setEndsAt] = useState(() => toLocalDateTimeValue(defaultEndsAt));
   const inputId = slot.key.replace(/[^a-zA-Z0-9_-]/g, "-");
 
-  useEffect(() => {
+  useAdjustState([defaultEndsAt, defaultStartsAt, open], () => {
     if (open) return;
     setSaveError(false);
     setStartsAt(toLocalDateTimeValue(defaultStartsAt));
     setEndsAt(toLocalDateTimeValue(defaultEndsAt));
-  }, [defaultEndsAt, defaultStartsAt, open]);
+  });
 
   async function save() {
     if (disabled) return;
@@ -272,12 +273,12 @@ function SetAllCallTimesEditor({
   const [startsAt, setStartsAt] = useState(() => toLocalDateTimeValue(data.defaultWindow.startsAt));
   const [endsAt, setEndsAt] = useState(() => toLocalDateTimeValue(data.defaultWindow.endsAt));
 
-  useEffect(() => {
+  useAdjustState([data.defaultWindow.endsAt, data.defaultWindow.startsAt, dialogOpen], () => {
     if (dialogOpen) return;
     setSaveError(false);
     setStartsAt(toLocalDateTimeValue(data.defaultWindow.startsAt));
     setEndsAt(toLocalDateTimeValue(data.defaultWindow.endsAt));
-  }, [data.defaultWindow.endsAt, data.defaultWindow.startsAt, dialogOpen]);
+  });
 
   async function save() {
     if (disabled) return;

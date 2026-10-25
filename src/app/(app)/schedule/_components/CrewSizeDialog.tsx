@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import { FRESH_SCOPE_CLASS } from "@/lib/fonts/fresh";
 import { MAX_SLOTS_PER_AREA_CLASS, type WorkingSchedulePayload } from "@/lib/schedule-working-copy";
 import { AREA_LABELS } from "@/types/areas";
 import { cn } from "@/lib/utils";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 const AREA_ORDER = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"] as const;
 const WORKER_TYPES = ["FT", "ST"] as const;
@@ -56,11 +57,10 @@ export function CrewSizeDialog({ open, onOpenChange, slots, saving, onSave }: Pr
   }, [slots]);
 
   const [draft, setDraft] = useState<Map<CountKey, number>>(new Map());
-  useEffect(() => {
+  useAdjustState([open], () => {
     if (open) setDraft(new Map(current));
     // Reseed only when the dialog opens; a save refreshes `slots` underneath.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  });
 
   const changes = useMemo(() => {
     const targets: CrewSizeTarget[] = [];

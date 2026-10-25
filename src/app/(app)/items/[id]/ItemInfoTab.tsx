@@ -43,6 +43,7 @@ import { CategoryCombobox } from "@/components/FormCombobox";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { externalUrlHost, normalizeExternalUrl } from "@/lib/external-url";
 import { useSyncedDraft } from "@/hooks/use-synced-draft";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 /* ── Text Input Field ──────────────────────────────────── */
 
@@ -660,9 +661,9 @@ function FirmwareWatchPanel({
     normalizeFirmwareVersion(installedVersion) !==
       normalizeFirmwareVersion(firmwareWatch.latestVersion);
 
-  useEffect(() => {
+  useAdjustState([installedVersion, open], () => {
     if (open) setDraftVersion(installedVersion);
-  }, [installedVersion, open]);
+  });
 
   async function saveVersion(value: string) {
     if (!canEdit || saveInstalledVersion.isSaving) return;

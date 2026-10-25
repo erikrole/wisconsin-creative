@@ -61,6 +61,7 @@ import { YourGear } from "./YourGear";
 import { GearPicksSheet, type GearPicksSheetMode } from "./GearPicksSheet";
 import { GearPreviewDialog, type GearPreview } from "./GearPreviewDialog";
 import { gearIntroSeen, GearPicksIntro } from "./GearPicksIntro";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 const KIT_LABELS = { STANDARD_ISSUE: "Standard issue", CORE_KIT: "Core kit" } as const;
 
@@ -202,12 +203,12 @@ function GearPickerForm({ data }: { data: GearPicksMeResponse }) {
   }, []);
 
   // Refresh clean lists, but never rebase unsaved edits onto another tab's version.
-  useEffect(() => {
+  useAdjustState([data, dirty, saving, reloading, serverVersion], () => {
     if (!dirty && !saving && !reloading) {
       setLines(draftLinesFromServer(data));
       setBaseVersion(serverVersion);
     }
-  }, [data, dirty, saving, reloading, serverVersion]);
+  });
 
   useEffect(() => {
     if (!dirty) return;
