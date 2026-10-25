@@ -1,6 +1,6 @@
 export type ColumnMapping = Record<string, string>;
 
-export type PreviewRow = {
+type PreviewRow = {
   line: number;
   assetTag: string;
   assetTagDeduped: boolean;
@@ -20,7 +20,7 @@ export type PreviewRow = {
   action?: string;
 };
 
-export type PreviewSummary = {
+type PreviewSummary = {
   totalItems: number;
   willCreate: number;
   willUpdate: number;

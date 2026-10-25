@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { isHiddenUntilEarnedBadge, isPrivateHolderBadge } from "./display";
 import { badgeEligibleUserWhere, getUserBadgeProfile } from "./queries";
 
-export type BadgeGalleryHolder = {
+type BadgeGalleryHolder = {
   userId: string;
   awardedAt: string;
 };

@@ -205,7 +205,7 @@ export function BookingWizard() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // ── Form state ──
-  const [form, dispatch] = useReducer(formReducer, {
+  const [form, dispatch] = useReducer(formReducer, undefined, (): FormState => ({
     custodyScope: "PERSON",
     tieToEvent: config.defaultTieToEvent || !!initialSportCode,
     sport: initialSportCode || "",
@@ -216,7 +216,7 @@ export function BookingWizard() {
     startsAt: initialStartsAt || toLocalDateTimeValue(roundTo15Min(new Date())),
     endsAt: initialEndsAt || toLocalDateTimeValue(roundTo15Min(new Date(Date.now() + 24 * 60 * 60 * 1000))),
     notes: "",
-  });
+  }));
 
   useEffect(() => {
     if (initialRequester && !form.requester) {
@@ -618,7 +618,7 @@ export function BookingWizard() {
   const step1Dispatch = useCallback((action: FormAction) => {
     setCreateError("");
     dispatch(action);
-  }, []);
+  }, [setCreateError]);
 
   // ── Equipment requirement check ──
   const unsatisfiedRequirements = useMemo(() => {

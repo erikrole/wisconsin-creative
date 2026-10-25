@@ -201,7 +201,7 @@ function mapIcsStatus(status: string): CalendarEventStatus {
   return "CONFIRMED";
 }
 
-export type SyncEventError = {
+type SyncEventError = {
   uid: string;
   summary: string;
   operation: "create" | "update" | "validate";
@@ -214,7 +214,7 @@ type SyncEventSample = {
   dtstart: string;
 };
 
-export type SyncDiagnostics = {
+type SyncDiagnostics = {
   fetchUrl: string;
   httpStatus: number;
   responseSizeBytes: number;

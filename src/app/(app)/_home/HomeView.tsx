@@ -52,9 +52,9 @@ export type Slot<T> =
 
 /** Students' upcoming dated "can't work" entries, plus the names of weekly ones. */
 export type CantWorkSlot = Slot<{ away: CantWorkRow[]; weekly: string[] }>;
-export type CantWorkRow = { id: string; title: string; when: string };
+type CantWorkRow = { id: string; title: string; when: string };
 
-export type HomeSync = { label: string; live: boolean; description?: string };
+type HomeSync = { label: string; live: boolean; description?: string };
 
 export type HomeViewProps = {
   role: HomeRole | null;

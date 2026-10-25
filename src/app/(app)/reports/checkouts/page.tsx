@@ -299,8 +299,8 @@ export default function CheckoutsReportPage() {
         >
             <LazyHeatmap
               data={data.heatmap}
-              startDate={new Date(Date.now() - 365 * 86_400_000)}
-              endDate={new Date()}
+              startDate={new Date(now.getTime() - 365 * 86_400_000)}
+              endDate={now}
               colorMode="interpolate"
               cellSize={12}
               gap={2}

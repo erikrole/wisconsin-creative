@@ -5,7 +5,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/accountability.ts` | 656 |
+| `src/lib/services/accountability.ts` | 654 |
 | `src/lib/services/app-activity-report.ts` | 508 |
 | `src/lib/services/app-diagnostics.ts` | 56 |
 | `src/lib/services/auto-assign.ts` | 92 |
@@ -20,13 +20,13 @@
 | `src/lib/services/booking-custody.ts` | 82 |
 | `src/lib/services/booking-event-links.ts` | 273 |
 | `src/lib/services/booking-item-holder.ts` | 194 |
-| `src/lib/services/booking-notifications.ts` | 191 |
+| `src/lib/services/booking-notifications.ts` | 192 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 742 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
-| `src/lib/services/bookings-lifecycle-shared.ts` | 295 |
+| `src/lib/services/bookings-lifecycle-shared.ts` | 274 |
 | `src/lib/services/bookings-lifecycle.ts` | 19 |
 | `src/lib/services/bookings-queries.ts` | 304 |
 | `src/lib/services/bookings.ts` | 7 |
@@ -41,7 +41,7 @@
 | `src/lib/services/checkin-item-reports.ts` | 645 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-escalation-notifications.ts` | 507 |
-| `src/lib/services/checkout-lifecycle.ts` | 811 |
+| `src/lib/services/checkout-lifecycle.ts` | 664 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/checkout-reports.ts` | 375 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -145,18 +145,19 @@
 | `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/utilization-report.ts` | 444 |
 | `src/lib/services/wishlist.ts` | 193 |
-| `src/lib/services/wrapped.ts` | 278 |
+| `src/lib/services/wrapped.ts` | 286 |
 
 ## Key Library Files
 
 | File | Lines |
 |---|---:|
 | `src/lib/a11y-resilience.ts` | 116 |
+| `src/lib/activity-timeline.ts` | 825 |
 | `src/lib/admin-fix-today.ts` | 398 |
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 169 |
+| `src/lib/api.ts` | 188 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -183,7 +184,7 @@
 | `src/lib/booking-actions.ts` | 11 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
-| `src/lib/booking-display-title.ts` | 61 |
+| `src/lib/booking-display-title.ts` | 77 |
 | `src/lib/booking-status-display.ts` | 152 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 230 |
@@ -233,7 +234,7 @@
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
 | `src/lib/football-results.ts` | 233 |
-| `src/lib/format.ts` | 328 |
+| `src/lib/format.ts` | 321 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
@@ -266,6 +267,7 @@
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/notification-meta.ts` | 121 |
 | `src/lib/observability.ts` | 19 |
+| `src/lib/on-time-rate.ts` | 36 |
 | `src/lib/onboarding-save.ts` | 48 |
 | `src/lib/onboarding-versions.ts` | 12 |
 | `src/lib/operational-health.ts` | 2 |
@@ -290,7 +292,7 @@
 | `src/lib/redis.ts` | 30 |
 | `src/lib/releases.ts` | 104 |
 | `src/lib/remark-callouts.ts` | 77 |
-| `src/lib/request-limits.ts` | 17 |
+| `src/lib/request-limits.ts` | 16 |
 | `src/lib/reservation-pickup-locations.ts` | 68 |
 | `src/lib/reservation-reuse.ts` | 95 |
 | `src/lib/resource-assets-client.ts` | 20 |
@@ -355,7 +357,7 @@
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 43 |
-| `src/lib/title-normalization.ts` | 115 |
+| `src/lib/title-normalization.ts` | 117 |
 | `src/lib/unavailable-times.ts` | 185 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |

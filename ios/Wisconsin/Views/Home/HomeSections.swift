@@ -28,6 +28,7 @@ struct HomeDashboardList<Top: View>: View {
     @ViewBuilder let top: Top
 
     @Environment(\.today) private var today
+    @Environment(SessionStore.self) private var session: SessionStore?
     @State private var showAllAttention = false
     @State private var expanded: Set<String> = HomeDashboardList.initiallyExpanded
 
@@ -44,6 +45,11 @@ struct HomeDashboardList<Top: View>: View {
 
     private var now: Date { .now }
     private var isTeam: Bool { dash.isStaff }
+    /// A student inside the first-weeks window has nothing to "catch up" on yet.
+    private var isNewStudent: Bool {
+        guard let user = session?.currentUser else { return false }
+        return GettingStartedProgress.isInWindow(role: user.role, accountCreatedAt: user.accountCreatedAt) && user.role == "STUDENT"
+    }
 
     var body: some View {
         let attention = HomeModel.attention(dash: dash, claimedTrades: feeds.claimedTrades.value ?? [], now: now)
@@ -64,7 +70,7 @@ struct HomeDashboardList<Top: View>: View {
 
             if everythingQuiet {
                 Section {
-                    AllClearEmptyState(next: HomeModel.nextUp(dash: dash, now: now), openSearch: actions.openSearch)
+                    AllClearEmptyState(next: HomeModel.nextUp(dash: dash, now: now), firstWeek: isNewStudent, openSearch: actions.openSearch)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -717,16 +723,18 @@ private struct ActivityRow: View {
 /// answers "what now", and keeps Search one tap away.
 struct AllClearEmptyState: View {
     let next: String
+    /// A brand-new student: welcome them rather than say they are caught up.
+    var firstWeek = false
     let openSearch: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "checkmark.circle")
+            Image(systemName: firstWeek ? "hand.wave" : "checkmark.circle")
                 .font(.system(size: 30, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             VStack(spacing: 4) {
-                Text("You\u{2019}re all caught up")
+                Text(firstWeek ? "You\u{2019}re all set up" : "You\u{2019}re all caught up")
                     .font(.system(size: 20, weight: .heavy))
                 Text(next)
                     .font(.subheadline)

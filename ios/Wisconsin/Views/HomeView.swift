@@ -658,16 +658,31 @@ private struct DashboardHero: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: Brand.Space.sm) {
-            VStack(alignment: .leading, spacing: 5) {
+        // The avatar sits beside the date only, so the greeting and summary get
+        // the full width. Beside a 32pt heavy title it left about 300pt, and
+        // "Good to see you, Rowan" wrapped even on a 440pt Max.
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .center, spacing: Brand.Space.sm) {
                 Text(displayDate)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .tracking(0.6)
+                    .accessibilityHidden(true)
+                Spacer(minLength: 0)
+                // Your photo (or role-colored initials) lives with your name, not
+                // inside a toolbar button that flattens it to a solid disc.
+                Button(action: openProfile) {
+                    AccountAvatar(size: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Profile")
+            }
+            VStack(alignment: .leading, spacing: 5) {
                 Text(accessibilityGreeting)
                     .font(.system(size: 32, weight: .heavy))
                     .foregroundStyle(.primary)
+                    .minimumScaleFactor(0.85)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(summary)
                     .font(.subheadline)
@@ -677,14 +692,6 @@ private struct DashboardHero: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(displayDate), \(accessibilityGreeting). \(summary)")
-            Spacer(minLength: 0)
-            // Your photo (or role-colored initials) lives with your name, not
-            // inside a toolbar button that flattens it to a solid disc.
-            Button(action: openProfile) {
-                AccountAvatar(size: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Profile")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, Brand.Space.xs)

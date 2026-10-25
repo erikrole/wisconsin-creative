@@ -1,5 +1,125 @@
 [
   {
+    "date": "2026-10-25",
+    "title": "Damage report emails fixed",
+    "type": "fixes",
+    "summary": "Emails about an item reported from its own page now open the Damage page instead of a broken link.",
+    "details": [
+      "Reports filed during a return still open that checkout.",
+      "The in-app alert and the email now always link to the same place."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 686
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Battery pickup counts fixed",
+    "type": "fixes",
+    "summary": "A battery scanned twice at the kiosk now counts once when a reservation is picked up.",
+    "details": [
+      "A full pickup waits until every battery the reservation needs has actually been scanned.",
+      "Each numbered battery goes on the new checkout only once."
+    ],
+    "platforms": [
+      "Kiosk"
+    ],
+    "pr": 685
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Wrapped hours and team totals fixed",
+    "type": "fixes",
+    "summary": "A dry run of the fall recap fixed how hours and team numbers are counted.",
+    "details": [
+      "Shift hours now count shifts whose attendance was never logged, so hours no longer come up short.",
+      "Events without a sport are no longer ranked as an “Other” sport.",
+      "Team totals leave out collaborators, and the biggest-crew card only shows when people worked together.",
+      "Big numbers get commas, tied sports are called a tie, and long venue and sport names no longer get cut off."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 668
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Schedule list keeps your place",
+    "type": "fixes",
+    "summary": "Day headers on the Schedule list now stay pinned while you scroll, and loading older events no longer jumps you to a different spot.",
+    "details": [
+      "The date header for the day you are reading stays visible under the Schedule bar.",
+      "Scrolling up into older events keeps the event you were looking at in the same place on screen."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 681
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Position tags and lost units fixed",
+    "type": "fixes",
+    "summary": "Position tags like ROAM2 and GC show in capitals again, and a lost unit can be settled right from the Dashboard.",
+    "details": [
+      "Titles such as Football vs USC (ROAM2) keep their capitals in Recent activity and other lists, including ones saved earlier.",
+      "The lost-unit row on the Dashboard now opens a short list where each unit can be marked Found it or Write off."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 672
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Quieter background refresh at night",
+    "type": "improvement",
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 659,
+    "summary": "The iPhone app no longer refreshes its widgets in the background between 10 PM and 6 AM, which lets the server rest overnight.",
+    "details": [
+      "Widgets and Spotlight catch up with the first background refresh after 6 AM.",
+      "Opening the app still loads everything right away, at any hour."
+    ]
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Clearer first-week guidance",
+    "type": "improvement",
+    "summary": "New students are told how to sign in to the app, where checkouts start, and why Home has no shifts yet.",
+    "details": [
+      "The setup finish screen now says to sign in to the iPhone app with the same email and password.",
+      "An empty Checkouts list explains that gear is checked out at the kiosk or in the iPhone app, and shows up here with its return time.",
+      "A new student's Home says nothing is scheduled yet and shifts appear once the team schedules them, instead of sending them to hunt for trades.",
+      "In the next iPhone app update, a new student's Home welcomes them instead of saying they are caught up, the setup fields stay clear of the Continue bar when the keyboard opens, and long empty stretches on the Schedule show their end year."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 670
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Tidier layouts across the iPhone app",
+    "type": "improvement",
+    "summary": "Home, Schedule, Items and Profile fit better on every iPhone size we support.",
+    "details": [
+      "The Home greeting now uses the full width instead of wrapping beside your photo.",
+      "Schedule's Non-game filter is the same size as the others.",
+      "Profile's Next Up and the Items list show longer names on two lines instead of cutting them off.",
+      "Report a Problem uses the app's standard red and green."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 671
+  },
+  {
     "date": "2026-10-24",
     "title": "Wiscard is now optional during setup",
     "type": "improvement",
@@ -492,6 +612,22 @@
       "Web"
     ],
     "pr": 611
+  },
+  {
+    "date": "2026-10-22",
+    "title": "One on-time rule across the app",
+    "type": "improvement",
+    "summary": "The on-time rate on staff profiles now matches the Accountability report.",
+    "details": [
+      "A return counts as on time unless it came back after the due time plus the grace period.",
+      "A checkout still out past that point counts against the rate.",
+      "The rate only shows once someone has 3 or more completed or overdue checkouts."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 609
   },
   {
     "date": "2026-10-22",

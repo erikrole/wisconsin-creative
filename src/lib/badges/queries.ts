@@ -259,7 +259,7 @@ export async function ensureManualBadgeDefinition(customDefinition: CustomBadgeD
   return definition;
 }
 
-export async function getBadgePeerVisibility() {
+async function getBadgePeerVisibility() {
   const config = await db.systemConfig.findUnique({
     where: { key: "badges.peerVisible" },
     select: { value: true },

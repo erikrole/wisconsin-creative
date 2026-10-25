@@ -41,6 +41,7 @@ export type AttentionTarget =
   | { kind: "link"; href: string }
   | { kind: "booking"; bookingId: string }
   | { kind: "report"; reportId: string }
+  | { kind: "lost-units"; skuName: string; bulkSkuId: string; units: number[] }
   | { kind: "create"; context: CreateBookingContext };
 
 /** A one-tap decision a row can offer, confirmed before it is sent. */
@@ -120,7 +121,7 @@ export type TradeRow = {
 
 export const PENDING_PICKUP_HREF = "/bookings?tab=checkouts&status=PENDING_PICKUP";
 export const TRADE_BOARD_HREF = "/schedule?trades=open";
-export const TRADE_APPROVAL_HREF = "/schedule?queue=trade-approval";
+const TRADE_APPROVAL_HREF = "/schedule?queue=trade-approval";
 
 export function homeRole(role: string | null | undefined): HomeRole | null {
   if (role === "STUDENT" || role === "STAFF" || role === "ADMIN" || role === "COLLABORATOR") return role;
@@ -341,8 +342,10 @@ export function buildAttention(input: {
         icon: "lost",
         title: `${plural(l.count, `${l.skuName} unit`)} marked lost`,
         detail: "Mark each one found or written off",
-        action: "Review",
-        target: { kind: "link", href: "/reports/bulk-losses" },
+        action: "Resolve",
+        target: l.bulkSkuId && l.units?.length
+          ? { kind: "lost-units", skuName: l.skuName, bulkSkuId: l.bulkSkuId, units: l.units }
+          : { kind: "link", href: "/reports/bulk-losses" },
       });
     }
   }
@@ -662,7 +665,7 @@ const ACTIVITY_VERBS: Record<HomeActivity["kind"], string> = {
 };
 
 /** "Fri, Oct 23, 8:14 PM CT": the moment of a custody move, always in Chicago time. */
-export function exactTimeLabel(iso: string) {
+function exactTimeLabel(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
     timeZone: "America/Chicago", timeZoneName: "short",

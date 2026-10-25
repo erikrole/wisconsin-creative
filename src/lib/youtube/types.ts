@@ -9,8 +9,6 @@ export class YouTubeToolError extends Error {
   }
 }
 
-export type PrivacyStatus = "private" | "unlisted" | "public";
-
 export interface VideoStatus {
   privacyStatus: string;
   license?: string | null;

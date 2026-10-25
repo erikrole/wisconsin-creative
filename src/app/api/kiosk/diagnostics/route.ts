@@ -22,4 +22,4 @@ export const POST = withKiosk(async (req, { kiosk }) => {
     location: kiosk.locationName,
   });
   return ok({ data: { stored } });
-});
+}, { maxBodyBytes: MAX_BODY_BYTES });

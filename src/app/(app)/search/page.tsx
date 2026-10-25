@@ -123,6 +123,8 @@ export default function SearchPage() {
   // useFetch is single-URL and doesn't support coordinated multi-endpoint abort/merge.
   // Caching is also undesirable here — search results should always be fresh for the
   // current query string.
+  const userRole = user?.role;
+  const canViewUsageAnalytics = user?.canViewUsageAnalytics === true;
   const runSearch = useCallback(async (q: string) => {
     const trimmed = q.trim();
     if (!trimmed) {
@@ -152,10 +154,10 @@ export default function SearchPage() {
       ]);
 
       const merged: SearchResult[] = getVisiblePageSearchResults(
-        user?.role,
+        userRole,
         trimmed,
         12,
-        user?.canViewUsageAnalytics === true,
+        canViewUsageAnalytics,
       );
       const failures: string[] = [];
 
@@ -305,7 +307,7 @@ export default function SearchPage() {
         setLoading(false);
       }
     }
-  }, [resetSearchState, user?.canViewUsageAnalytics, user?.role]);
+  }, [resetSearchState, canViewUsageAnalytics, userRole]);
 
   // Auto-search on committed query change (typing pause, Enter, clear, or
   // browser navigation rehydrating the q param).

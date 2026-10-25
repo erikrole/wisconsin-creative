@@ -53,7 +53,7 @@ const lineSelect = {
 
 type LineRow = Prisma.BudgetLineGetPayload<{ select: typeof lineSelect }>;
 
-export type BudgetLineLinkView = {
+type BudgetLineLinkView = {
   id: string;
   quantity: number;
   kind: "asset" | "bulk";

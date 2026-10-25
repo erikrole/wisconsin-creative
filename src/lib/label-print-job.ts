@@ -9,7 +9,7 @@ const labelRowSchema = z.object({
 }).strict().superRefine((row, ctx) => {
   if (LABEL_KINDS[row.kind].needsQr && !fitsBrotherQr(row.qrCodeValue)) ctx.addIssue({ code: "custom", message: "This QR does not fit the approved layout." });
 });
-export const printLabelSchema = z.object({
+const printLabelSchema = z.object({
   copyId: z.string().min(1).max(400),
   row: labelRowSchema,
   entryId: z.string().min(1).max(200).optional(),
@@ -77,7 +77,7 @@ const ordinaryCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("review") }).strict(),
 ]);
 const originalCheckpointSchema = z.object({ requestId: z.string().uuid(), revision: z.number().int().nonnegative(), command: ordinaryCommandSchema }).strict();
-export const printCommandSchema = z.union([ordinaryCommandSchema, z.object({
+const printCommandSchema = z.union([ordinaryCommandSchema, z.object({
   type: z.literal("reconcile"), original: originalCheckpointSchema, printed: z.boolean(),
 }).strict(), z.object({ type: z.literal("recover-chain"), original: originalCheckpointSchema }).strict()]);
 export const checkpointSchema = z.object({

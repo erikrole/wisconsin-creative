@@ -1,6 +1,6 @@
 type SchedulePublicationStatus = "draft" | "published" | "changed";
 
-export type SchedulePublicationSnapshotItem = {
+type SchedulePublicationSnapshotItem = {
   shiftId: string;
   area: string;
   workerType: string;

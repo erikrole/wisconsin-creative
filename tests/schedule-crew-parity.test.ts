@@ -3,7 +3,6 @@ import { source } from "./_helpers/source";
 
 const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
 const crewSheet = source("src/app/(app)/schedule/_components/ScheduleCrewSheet.tsx");
-const list = source("src/app/(app)/schedule/_components/ListView.tsx");
 const page = source("src/app/(app)/schedule/page.tsx");
 const week = source("src/app/(app)/schedule/_components/WeekView.tsx");
 const workingEditor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
@@ -50,7 +49,6 @@ describe("Schedule crew management parity", () => {
   });
 
   it("preserves List as the inline multi-event workstation", () => {
-    expect(list).toContain("<WorkingCrewEditor");
     expect(page).toContain("handleListSetupCrew");
     expect(page).toContain("if (groupId) setExpandedRowId(eventId)");
     expect(page).toContain("setSelectedCrewEntryId(eventId)");

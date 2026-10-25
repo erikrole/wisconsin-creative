@@ -353,7 +353,7 @@ export default function BookingDetailPage({
             value={extendDate ? new Date(extendDate) : undefined}
             onChange={(d) => setExtendDate(toLocalDateTimeValue(d))}
             minDate={nextQuarterHourAfter(
-              new Date(Math.max(new Date(booking.endsAt).getTime(), Date.now())),
+              new Date(Math.max(new Date(booking.endsAt).getTime(), now.getTime())),
             )}
             placeholder="Select new end date"
           />

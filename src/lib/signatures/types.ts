@@ -186,7 +186,7 @@ const signatureStrokeSchema = z.object({
     .max(SIGNATURE_MAX_POINTS_PER_STROKE, "One continuous pen stroke is too long; lift the Pencil and continue"),
 });
 
-export const signatureSaveRequestIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,100}$/);
+const signatureSaveRequestIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,100}$/);
 
 export const captureSaveRequestSchema = z.object({
   requestId: signatureSaveRequestIdSchema,

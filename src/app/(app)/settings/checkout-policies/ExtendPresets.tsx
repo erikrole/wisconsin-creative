@@ -12,6 +12,7 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
 import { SettingsGroup } from "../_components/SettingsGroup";
 import { SettingsSaveBar } from "../_components/SettingsSaveBar";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type Preset = { label: string; minutes: number };
 
@@ -43,12 +44,10 @@ export function ExtendPresetsSection() {
     refetchOnFocus: false,
   });
 
-  // Sync fetched presets into local state (only on initial load)
-  useEffect(() => {
-    if (settingsData?.presets && !dirty) {
-      setPresets(settingsData.presets);
-    }
-  }, [settingsData, dirty]);
+  // Sync fetched presets into local state while there are no unsaved edits.
+  useAdjustState([settingsData, dirty], () => {
+    if (settingsData?.presets && !dirty) setPresets(settingsData.presets);
+  });
 
   // Warn before leaving with unsaved changes
   useEffect(() => {

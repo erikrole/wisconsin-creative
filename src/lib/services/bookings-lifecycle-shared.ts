@@ -5,7 +5,6 @@ import { isSerializationConflict } from "@/lib/serialization";
 import { type BulkRequest } from "@/lib/services/availability";
 import { hasCollaboratorCapability, type CollaboratorActor } from "@/lib/collaborator-access";
 import {
-  MAX_CHECKOUT_BULK_LINE_CHANGES_PER_REQUEST,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
   MAX_LINKED_EVENTS_PER_BOOKING,
 } from "@/lib/request-limits";
@@ -201,26 +200,6 @@ export async function assertNumberedPickupPlanLimit(
     throw new HttpError(
       400,
       `Numbered pickup plans support at most ${MAX_EQUIPMENT_SELECTIONS_PER_REQUEST} units total`,
-    );
-  }
-}
-
-export function assertCheckoutBulkLineChangeLimit(
-  existingItems: Array<{ bulkSkuId: string; plannedQuantity: number }>,
-  nextItems: BulkRequest[],
-) {
-  const nextBySku = new Map(nextItems.map((item) => [item.bulkSkuId, item.quantity]));
-  const existingSkuIds = new Set(existingItems.map((item) => item.bulkSkuId));
-  const changedExistingCount = existingItems.filter(
-    (item) => nextBySku.get(item.bulkSkuId) !== item.plannedQuantity,
-  ).length;
-  const addedCount = nextItems.filter((item) => !existingSkuIds.has(item.bulkSkuId)).length;
-  const changeCount = changedExistingCount + addedCount;
-
-  if (changeCount > MAX_CHECKOUT_BULK_LINE_CHANGES_PER_REQUEST) {
-    throw new HttpError(
-      400,
-      `Change at most ${MAX_CHECKOUT_BULK_LINE_CHANGES_PER_REQUEST} bulk lines per checkout update`,
     );
   }
 }

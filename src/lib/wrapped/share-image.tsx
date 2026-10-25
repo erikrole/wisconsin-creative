@@ -50,14 +50,14 @@ export async function renderWrappedShareImage(person: { name: string }, summary:
           <div style={{ display: "flex", marginTop: 52, fontSize: 28, fontWeight: 700, letterSpacing: "0.14em", color: "#5b616e", textTransform: "uppercase" }}>
             My style
           </div>
-          <div style={{ display: "flex", fontSize: 84, fontWeight: 900, color: "#c5050c", letterSpacing: "-0.02em" }}>{summary.value}</div>
+          <div style={{ display: "flex", fontSize: summary.value.length > 16 ? 56 : 84, lineHeight: 1.1, fontWeight: 900, color: "#c5050c", letterSpacing: "-0.02em" }}>{summary.value}</div>
           <div style={{ display: "flex", flexWrap: "wrap", marginTop: 40, justifyContent: "space-between" }}>
             {(summary.items ?? []).map((item) => (
               <div
                 key={item.label}
                 style={{ display: "flex", flexDirection: "column", width: "48.5%", marginBottom: 22, padding: "30px 34px", borderRadius: 32, backgroundColor: "#f3f4f6" }}
               >
-                <div style={{ display: "flex", fontSize: 56, fontWeight: 900 }}>{item.value}</div>
+                <div style={{ display: "flex", fontSize: item.value.length > 12 ? 36 : 56, lineHeight: 1.15, fontWeight: 900 }}>{item.value}</div>
                 <div style={{ display: "flex", fontSize: 28, color: "#5b616e" }}>{item.label}</div>
               </div>
             ))}

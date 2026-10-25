@@ -8,7 +8,7 @@ import catalogJson from "./catalog-2027-28.json";
  */
 
 export type GearPickFitKey = "MEN" | "WOMEN";
-export type GearItemFit = GearPickFitKey | "UNISEX";
+type GearItemFit = GearPickFitKey | "UNISEX";
 
 export type GearCatalogColor = {
   code: string;

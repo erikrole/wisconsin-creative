@@ -1,4 +1,4 @@
-export type BulkSkuProductIdentity = {
+type BulkSkuProductIdentity = {
   id: string;
   name: string;
   brand: string;

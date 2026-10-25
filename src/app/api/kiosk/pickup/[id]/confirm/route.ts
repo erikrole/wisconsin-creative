@@ -307,13 +307,13 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
         sourceReservation.scanEvents
         .filter((event) => event.scanType === "BULK_BIN" && event.bulkSkuId === item.bulkSkuId)
         .map((event) => parseDerivedBulkUnitQr(event.scanValue, [item.bulkSku]))
-        .filter((match): match is NonNullable<typeof match> => !!match),
+        .filter((match): match is NonNullable<typeof match> => !!match)
+        .map((unit) => unit.unitNumber),
       );
       // Dedupe by unit number and remove units already transferred by an
       // earlier partial pickup. Both the scan event and the linked checkout
       // are durable, so reopening this reservation cannot reset or rebind it.
       const currentStagedUnitNumbers = [...stagedUnitNumbers]
-        .map((unit) => unit.unitNumber)
         .filter((unitNumber) => !pickedUnitNumbers.has(unitNumber));
       if (!partial && currentStagedUnitNumbers.length < remainingQuantity) {
         throw new HttpError(409, `Scan all ${item.bulkSku.name} units before confirming pickup`);

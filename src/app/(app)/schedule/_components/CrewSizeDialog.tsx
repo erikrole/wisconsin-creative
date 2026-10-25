@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { LayoutTemplateIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import {
   type CountKey,
   type WorkerType,
 } from "@/lib/crew-size-template";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 
 export type CrewSizeTarget = { area: Area; workerType: WorkerType; count: number };
@@ -93,11 +94,10 @@ export function CrewSizeDialog({
   }, [slots]);
 
   const [draft, setDraft] = useState<Map<CountKey, number>>(new Map());
-  useEffect(() => {
+  useAdjustState([open], () => {
     if (open) setDraft(new Map(current));
     // Reseed only when the dialog opens; a save refreshes `slots` underneath.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  });
 
   const changes = useMemo(() => {
     const targets: CrewSizeTarget[] = [];
@@ -121,9 +121,9 @@ export function CrewSizeDialog({
 
   const [savedTemplateCounts, setSavedTemplateCounts] = useState<Map<CountKey, number> | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
-  useEffect(() => {
+  useAdjustState([open], () => {
     if (open) setSavedTemplateCounts(null);
-  }, [open]);
+  });
   const templateCounts = useMemo(
     () => savedTemplateCounts ?? (template ? templateCountsFor(template) : null),
     [savedTemplateCounts, template],

@@ -75,7 +75,7 @@ export type AutoAssignCustomWindow = {
 };
 
 /** Event detail's Auto assign: the scope is pinned to this one event. */
-export type AutoAssignEvent = {
+type AutoAssignEvent = {
   id: string;
   summary: string;
   startsAt: string;

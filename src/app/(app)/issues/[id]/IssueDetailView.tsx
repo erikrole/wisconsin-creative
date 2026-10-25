@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EyeOffIcon, RotateCcwIcon } from "lucide-react";
@@ -121,9 +121,8 @@ export function IssueDetailView({ id }: { id: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const now = useMemo(() => new Date(), [detail.dataUpdatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (detail.data && note === null) setNote(detail.data.issue.note ?? "");
-  }, [detail.data, note]);
+  // Seed the note once, from the first loaded issue.
+  if (detail.data && note === null) setNote(detail.data.issue.note ?? "");
 
   async function update(body: { status?: string; note?: string | null }, success: string) {
     setSaving(body.status ?? "note");

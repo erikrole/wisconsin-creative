@@ -116,7 +116,7 @@
 - `ios:xcode:verify`: `bash scripts/ios-xcode-verify.sh`
 - `ios:xcode:verify:kiosk`: `IOS_SCHEME=WisconsinKiosk bash scripts/ios-xcode-verify.sh`
 - `lint`: `eslint .`
-- `lint:ci`: `eslint . --max-warnings=194`
+- `lint:ci`: `eslint . --max-warnings=121`
 - `lint:summary`: `node scripts/lint-summary.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
@@ -137,7 +137,7 @@
 - `smoke:deploy`: `node scripts/deploy-smoke.mjs`
 - `start`: `node scripts/run-next.mjs start`
 - `test`: `vitest run`
-- `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts`
+- `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts && playwright test -c playwright.schedule.config.ts`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`
