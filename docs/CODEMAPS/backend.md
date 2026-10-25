@@ -178,7 +178,7 @@
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 460 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
-| `src/lib/availability-copy.ts` | 345 |
+| `src/lib/availability-copy.ts` | 348 |
 | `src/lib/avatar-image.ts` | 17 |
 | `src/lib/avatar-upload.ts` | 46 |
 | `src/lib/avatar.ts` | 44 |

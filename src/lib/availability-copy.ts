@@ -32,8 +32,11 @@ type AvailabilityRiskLike = {
   bookingTitle?: string | null;
 };
 
+// Kiosk and checkout errors build these on the server, which runs in UTC, so
+// pin the app's timezone rather than the runtime's.
 function dateTimeFormatter() {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: env.appTimezone,
     month: "short",
     day: "numeric",
     hour: "numeric",
