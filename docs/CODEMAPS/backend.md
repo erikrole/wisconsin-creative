@@ -107,7 +107,7 @@
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
 | `src/lib/services/reservation-rules.ts` | 46 |
 | `src/lib/services/reservation-schedule.ts` | 461 |
-| `src/lib/services/scan-audit-reports.ts` | 350 |
+| `src/lib/services/scan-audit-reports.ts` | 351 |
 | `src/lib/services/scans.ts` | 168 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 470 |

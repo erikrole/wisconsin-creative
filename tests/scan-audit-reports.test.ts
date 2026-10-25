@@ -202,6 +202,15 @@ describe("getAuditReport", () => {
     });
   });
 
+  it("compares a filtered report with the same filters in the earlier window", async () => {
+    await getAuditReport(20, 0, "2026-10-08T05:00:00.000Z", "2026-10-15T05:00:00.000Z", null, "booking");
+
+    expect(db.auditLog.count.mock.calls[1]?.[0]?.where).toEqual({
+      createdAt: { gte: new Date("2026-10-01T05:00:00.000Z"), lte: new Date("2026-10-08T04:59:59.999Z") },
+      entityType: "booking",
+    });
+  });
+
   it("still answers when the breakdowns fail", async () => {
     db.auditLog.groupBy.mockRejectedValue(new Error("timeout"));
     db.auditLog.count.mockResolvedValue(4);
