@@ -37,6 +37,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { db } from "@/lib/db";
+import { parseCheckoutFocusDate } from "@/lib/services/checkout-reports";
 import {
   getBulkLossReport,
   getBulkLossReportExport,
@@ -236,6 +237,32 @@ describe("reports service", () => {
     vi.mocked(db.$queryRaw).mockResolvedValue([]);
     const fall = await getCheckoutReport(1);
     expect(fall.dailyTrend.map((point) => point.date)).toEqual(["2026-11-01"]);
+  });
+
+  it("lists a clicked day's checkouts from Central midnight to midnight, with names and the prior period", async () => {
+    vi.mocked(db.booking.count).mockResolvedValue(0);
+    vi.mocked(db.booking.findMany).mockResolvedValue([]);
+    vi.mocked(db.booking.groupBy).mockResolvedValue([{ requesterUserId: "u1", _count: 3 }, { requesterUserId: "gone", _count: 1 }] as never);
+    vi.mocked(db.user.findMany).mockResolvedValue([{ id: "u1", name: "Ada" }] as never);
+    // For a 7-day report on May 10 the previous period is Apr 26 to May 2.
+    vi.mocked(db.$queryRaw).mockResolvedValue([{ date: "2026-04-20", count: 5n }, { date: "2026-04-28", count: 2n }, { date: "2026-05-05", count: 4n }]);
+
+    const report = await getCheckoutReport(7, "2026-05-01");
+
+    expect(db.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      take: 50,
+      where: expect.objectContaining({ createdAt: { gte: new Date("2026-05-01T05:00:00.000Z"), lt: new Date("2026-05-02T05:00:00.000Z") } }),
+    }));
+    expect(report.focusDate).toBe("2026-05-01");
+    expect(report.previousTotalCheckouts).toBe(2);
+    expect(report.topRequesters).toEqual([{ name: "Ada", count: 3 }, { name: "Unknown", count: 1 }]);
+  });
+
+  it("accepts only a real YYYY-MM-DD focus day", () => {
+    expect(parseCheckoutFocusDate("2026-05-01")).toBe("2026-05-01");
+    expect(parseCheckoutFocusDate("2026-13-01")).toBeNull();
+    expect(parseCheckoutFocusDate("May 1")).toBeNull();
+    expect(parseCheckoutFocusDate(null)).toBeNull();
   });
 
   it("counts only outstanding gear in the overdue report", async () => {

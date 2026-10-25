@@ -21,6 +21,7 @@ import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { shiftWorkerLabel, shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { pluralWord } from "@/lib/format";
+import { sportLabel } from "@/lib/sports";
 
 type PreviewShift = {
   id: string;
@@ -191,7 +192,7 @@ export function buildAutoFillPreview({
         workerType: shift.workerType,
         reasonCode: policy === SportAutoAssignPolicy.HOLD ? "sport_policy_hold" : "sport_policy_staff_only",
         reason: policy === SportAutoAssignPolicy.HOLD
-          ? `${eventSportCode} is on hold for auto assignment.`
+          ? `${sportLabel(eventSportCode ?? "")} is on hold for auto assignment.`
           : "Student slots stay open for students to request on this sport.",
         reasonDetails: [SPORT_AUTO_ASSIGN_POLICY_DESCRIPTIONS[policy]],
         candidateCount: 0,

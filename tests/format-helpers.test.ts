@@ -129,6 +129,9 @@ describe("display dates", () => {
   it("formats full dates, date-times and chips", () => {
     expect(formatDateFull(iso)).toBe("Mar 11, 2026");
     expect(formatDateFull(null)).toBe("—");
+    // A calendar day stored as UTC midnight keeps its day instead of sliding to the evening before.
+    expect(formatDateFull("2026-10-25T00:00:00.000Z")).toBe("Oct 24, 2026");
+    expect(formatDateFull("2026-10-25T00:00:00.000Z", true)).toBe("Oct 25, 2026");
     expect(formatDateTime(iso)).toBe("Mar 11, 2026, 3:00 PM");
     expect(formatChipTime(iso)).toBe("Wed 3:00 pm");
     expect(formatDateWithDayTime(iso)).toEqual({ date: "Mar 11, 2026", dayTime: "Wednesday 3:00 PM" });

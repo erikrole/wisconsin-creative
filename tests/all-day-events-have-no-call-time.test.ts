@@ -92,6 +92,6 @@ describe("server-rendered dates state their timezone", () => {
     expect(reports).toContain("const sinceKey = appTzDateKey(since);");
     expect(reports).toContain("const key = appTzDateKey(cursor);");
     // A clicked heatmap cell opens the Central day, not the UTC one.
-    expect(reports).toContain("return appTzDayRange(focusDate);");
+    expect(reports).toContain("createdAt: appTzDayRange(focusDate)");
   });
 });

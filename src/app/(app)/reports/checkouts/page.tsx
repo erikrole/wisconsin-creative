@@ -206,7 +206,7 @@ export default function CheckoutsReportPage() {
     ...(focusDate
       ? [{
           key: "date",
-          label: `Day: ${formatDateFull(`${focusDate}T00:00:00.000Z`)}`,
+          label: `Day: ${formatDateFull(`${focusDate}T00:00:00.000Z`, true)}`,
           onRemove: () => setFocusDate(null),
         }]
       : []),
@@ -314,7 +314,7 @@ export default function CheckoutsReportPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Recent checkouts */}
         <ReportSectionCard
-          title={focusDate ? `Checkouts on ${formatDateFull(`${focusDate}T00:00:00.000Z`)}` : "Recent checkouts"}
+          title={focusDate ? `Checkouts on ${formatDateFull(`${focusDate}T00:00:00.000Z`, true)}` : "Recent checkouts"}
           contentClassName="p-0"
         >
           {(data.recentCheckouts ?? []).length === 0 ? (
