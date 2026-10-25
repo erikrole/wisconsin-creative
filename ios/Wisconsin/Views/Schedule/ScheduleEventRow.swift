@@ -514,14 +514,22 @@ struct ScheduleWeekHeader: View {
 
     @Environment(\.today) private var today
 
+    /// A run longer than this reads "From Oct 18", not a range ending years out.
+    private static let openEndedWeeks = 26
+
     private var rangeLabel: String {
         let cal = Calendar.current
         let end = cal.date(byAdding: .day, value: 7 * weekCount - 1, to: weekStart) ?? weekStart
-        let sameYear = cal.component(.year, from: weekStart) == cal.component(.year, from: today)
-        let style: Date.FormatStyle = sameYear
-            ? .dateTime.month(.abbreviated).day()
-            : .dateTime.month(.abbreviated).day().year()
-        return weekStart.formatted(style) + " – " + end.formatted(style)
+        // Each end names its year unless it is this year, so a long empty run
+        // reads "Oct 18 – Oct 14, 2028" instead of looking reversed.
+        func style(for date: Date) -> Date.FormatStyle {
+            cal.component(.year, from: date) == cal.component(.year, from: today)
+                ? .dateTime.month(.abbreviated).day()
+                : .dateTime.month(.abbreviated).day().year()
+        }
+        // An empty run that fills the whole loaded horizon is "from here on".
+        if weekCount > Self.openEndedWeeks { return "From " + weekStart.formatted(style(for: weekStart)) }
+        return weekStart.formatted(style(for: weekStart)) + " – " + end.formatted(style(for: end))
     }
 
     var body: some View {
@@ -547,6 +555,7 @@ struct ScheduleWeekHeader: View {
     private var accessibilityRangeLabel: String {
         let start = weekStart.formatted(.dateTime.month(.wide).day())
         guard weekCount > 1 else { return "Week of " + start }
+        if weekCount > Self.openEndedWeeks { return "From " + start }
         let end = Calendar.current.date(byAdding: .day, value: 7 * weekCount - 1, to: weekStart) ?? weekStart
         return start + " to " + end.formatted(.dateTime.month(.wide).day())
     }

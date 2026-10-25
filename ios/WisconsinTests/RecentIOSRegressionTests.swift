@@ -61,3 +61,29 @@ private extension Data {
         Data(String(decoding: self, as: UTF8.self).replacingOccurrences(of: text, with: replacement).utf8)
     }
 }
+
+/// Background refresh wakes the production database on every run, and phones
+/// charging overnight run it freely. It pauses 10 PM to 6 AM Central.
+struct BackgroundRefreshQuietHoursTests {
+    private var central: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Chicago")!
+        return calendar
+    }
+
+    private func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+        central.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
+    }
+
+    @Test func daytimeRequestsKeepTheirTime() {
+        let noon = at(23, 12)
+        #expect(GearBackgroundRefresh.earliestBegin(after: noon, calendar: central) == noon)
+        #expect(!GearBackgroundRefresh.isQuietHours(at(23, 21, 59), calendar: central))
+    }
+
+    @Test func overnightRequestsMoveToSixAM() {
+        #expect(GearBackgroundRefresh.earliestBegin(after: at(23, 22, 30), calendar: central) == at(24, 6))
+        #expect(GearBackgroundRefresh.earliestBegin(after: at(24, 2), calendar: central) == at(24, 6))
+        #expect(GearBackgroundRefresh.earliestBegin(after: at(24, 6), calendar: central) == at(24, 6))
+    }
+}

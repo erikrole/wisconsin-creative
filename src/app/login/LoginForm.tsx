@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   browserSupportsWebAuthn,
@@ -24,6 +24,8 @@ import { isPasskeyCancellation, passkeyErrorMessage, upgradeToPasskeyAfterSignIn
 import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
 import { validatePassword, validatePasswordConfirmation } from "@/lib/password-rules";
 import { safeReturnTo } from "@/lib/return-to";
+
+const noopSubscribe = () => () => {};
 
 type LoginResponse = {
   user?: {
@@ -86,7 +88,7 @@ export default function LoginForm() {
   const [identityError, setIdentityError] = useState("");
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
-  const [passkeySupported, setPasskeySupported] = useState(true);
+  const passkeySupported = useSyncExternalStore(noopSubscribe, browserSupportsWebAuthn, () => true);
   const [autofillEpoch, setAutofillEpoch] = useState(0);
   // Only the newest ceremony may touch state or navigate. Conditional UI runs
   // for as long as the email step is on screen, so a stale resolution or the
@@ -389,10 +391,6 @@ export default function LoginForm() {
       }
     });
   }
-
-  useEffect(() => {
-    setPasskeySupported(browserSupportsWebAuthn());
-  }, []);
 
   // Arm browser autofill while the email step is on screen so a saved passkey
   // is offered from the email field itself. Re-arms after a button ceremony

@@ -41,9 +41,11 @@ const SCORES: Record<string, CandidateRecommendation> = {
 function Lab() {
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
+  const [picks, setPicks] = useState<string[]>([]);
   const params = useSearchParams();
   const theme = params.get("theme");
   const state = params.get("state");
+  const multi = params.get("mode") === "multi";
   useEffect(() => {
     document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light";
   }, [theme]);
@@ -51,7 +53,7 @@ function Lab() {
     <div className="flex min-h-screen justify-center bg-background p-6 text-foreground">
       <div className="w-[25rem] max-w-full self-start overflow-hidden rounded-xl border bg-popover shadow-lg">
         <UserAvatarPicker
-          heading="Student slot · Video"
+          heading={multi ? "3 open Student slots · Video" : "Student slot · Video"}
           users={PEOPLE}
           loading={state === "loading"}
           search={search}
@@ -60,6 +62,12 @@ function Lab() {
           disabled={false}
           candidateScores={SCORES}
           slotWorkerType="ST"
+          multiple={multi ? {
+            max: 3,
+            selected: picks,
+            onToggle: (id) => setPicks((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]),
+            onConfirm: () => {},
+          } : undefined}
         />
       </div>
       {picked && <p className="sr-only">Picked {PEOPLE.find((p) => p.id === picked)?.name}</p>}

@@ -144,6 +144,7 @@ struct ProfileCompletionWelcomeView: View {
                     .accessibilityIdentifier("onboarding-save-status")
             }
 
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if isStudent && !data.profile.email.lowercased().hasSuffix("@wisc.edu") {
@@ -226,6 +227,20 @@ struct ProfileCompletionWelcomeView: View {
                 .animation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.22), value: currentStep)
             }
             .scrollDismissesKeyboard(.interactively)
+            // With the keyboard up the footer rides above it, so the focused
+            // field can sit half behind that bar. Bring the step body's bottom
+            // edge (where the input is) clear of the footer once the keyboard
+            // has finished opening.
+            .onChange(of: focusedField) { _, field in
+                guard field != nil else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+                        proxy.scrollTo("body-\(currentStep.rawValue)", anchor: .bottom)
+                    }
+                }
+            }
+            }
 
             footer
         }
@@ -319,7 +334,7 @@ struct ProfileCompletionWelcomeView: View {
         case .email: "Your campus email is your site login. Add your required Athletics email."
         case .phones where hasSimplePhoneStep: "Add the personal phone number we should use to reach you."
         case .phones: "Identify any number already on your account, then add the other contact number."
-        case .wiscard: "Type the card number and issue code printed on your card. This is used for kiosk identification."
+        case .wiscard: "Type the card number and issue code printed on your card. This is used for kiosk identification. No Wiscard? You can skip this."
         case .student: "Tell us your current year and when you expect to graduate."
         case .apparel: "For team apparel orders. Choose the sizes you normally buy."
         case .photo: "A clear photo helps teammates recognize you. This step is optional — Finish saves setup with or without a photo."
@@ -336,7 +351,7 @@ struct ProfileCompletionWelcomeView: View {
     }
 
     private var requiresSetup: Bool { data?.completion.requiresSetup == true || (user?.onboardingRequired == true && data?.completion.onboardingComplete != true) }
-    private var isOptionalStep: Bool { currentStep == .photo || (currentStep == .apparel && !requiresSetup) }
+    private var isOptionalStep: Bool { currentStep == .photo || currentStep == .wiscard || (currentStep == .apparel && !requiresSetup) }
 
     private var canContinue: Bool {
         guard let profile else { return false }

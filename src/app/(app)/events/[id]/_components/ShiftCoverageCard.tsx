@@ -26,6 +26,7 @@ import {
   areaLabel,
   crewSlotState,
 } from "@/components/shift-detail/crew-row";
+import { useNow } from "@/hooks/use-now";
 
 const AREAS = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"] as const;
 
@@ -61,10 +62,11 @@ export function ShiftCoverageCard({
   onStudentCallOpenChange,
   onUpdated,
 }: Props) {
+  const now = useNow();
   const isStaffOrAdmin = currentUserRole === "STAFF" || currentUserRole === "ADMIN";
   const isAdmin = currentUserRole === "ADMIN";
   const groupId = shiftGroup.id;
-  const eventHasEnded = new Date(eventEndsAt).getTime() <= Date.now();
+  const eventHasEnded = new Date(eventEndsAt).getTime() <= now;
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
 
   const shiftsByArea = useMemo(() => {

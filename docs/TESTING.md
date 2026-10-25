@@ -128,6 +128,10 @@ A test that reads a web source file and asserts a string appears in it breaks on
 - **Still allowed:** Swift and iOS contract reads (cross-language, no other way to check them from the web suite), and a genuine architecture contract such as every route using its wrapper. Mark such a web-source test with a `// source-contract: <why>` line.
 - **Guard:** `tests/source-text-guard.test.ts` fails when a new test file reads web source text without that marker. Existing files are listed in `tests/_helpers/source-text-tests.json`. When you touch one, convert it and remove it from the list; the list only shrinks.
 
+## iOS Contract Fixtures
+
+`tests/ios-contract-fixtures.test.ts` runs real route handlers (session lookup, wrappers, serialization) with only the database mocked and compares their JSON to `tests/fixtures/ios-contract/*.json`. `ios/WisconsinTests/WebContractFixtureTests.swift` decodes the same files with the app's decoder. Change a response on purpose, then rewrite the files with `UPDATE_IOS_FIXTURES=1 npx vitest run tests/ios-contract-fixtures.test.ts` and run the Swift tests on the Mac. Add an endpoint here when the app starts depending on it.
+
 ## Mock Pattern: `vi.mock("@/lib/db")` + `_mockTx`
 
 Most service functions use `db.$transaction()`. The standard mock pattern intercepts transactions and provides a mock transaction client:

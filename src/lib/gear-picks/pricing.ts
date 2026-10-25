@@ -18,7 +18,7 @@ export type GearPickLineInput = {
   quantity: number;
 };
 
-export type PricedGearPickLine = {
+type PricedGearPickLine = {
   sku: string;
   style: string;
   colorCode: string;

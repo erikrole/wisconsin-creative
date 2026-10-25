@@ -114,4 +114,18 @@ describe("reportBrokenCode", () => {
       data: expect.objectContaining({ claimedById: "u2" }),
     });
   });
+
+  it("still offers a code that expires today on a Madison evening", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-31T01:30:00.000Z") }); // Oct 30, 8:30 PM in Madison
+    try {
+      const tx = makeTx({});
+      await run(tx);
+      expect(tx.licenseCode.findMany.mock.calls[0]?.[0]?.where?.OR).toEqual([
+        { expiresAt: null },
+        { expiresAt: { gte: new Date("2026-10-30T00:00:00.000Z") } },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

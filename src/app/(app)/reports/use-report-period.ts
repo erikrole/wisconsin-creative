@@ -4,14 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { syncUrl } from "@/lib/url-sync";
 import type { OperationalActiveFilter } from "@/components/OperationalToolbar";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 /** Shared across report tabs so a chosen window survives navigation. */
 const PERIOD_STORAGE_KEY = "reports:period-days";
 
 /** 0 means "all time" — reports that support it list it in their own values. */
 export const ALL_TIME_PERIOD = 0;
-
-export type ReportPeriodOption = { label: string; value: number };
 
 export function periodLabel(days: number) {
   return days === ALL_TIME_PERIOD ? "All time" : `${days}d`;
@@ -91,11 +90,11 @@ export function useReportPeriod({
   }, [defaultValue, paramName, parse, searchParams, values]);
 
   // Track back/forward and in-app links that change the param.
-  useEffect(() => {
+  useAdjustState([paramName, parse, searchParams], () => {
     const fromUrl = parse(searchParams.get(paramName));
     if (fromUrl === null) return;
     setDaysState((current) => (current === fromUrl ? current : fromUrl));
-  }, [paramName, parse, searchParams]);
+  });
 
   const activeFilters: OperationalActiveFilter[] =
     days === defaultValue

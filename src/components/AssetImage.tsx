@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Package } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,12 +21,10 @@ export function AssetImage({
   className,
   fallbackClassName,
 }: AssetImageProps) {
-  const [failed, setFailed] = useState(false);
   const normalizedSrc = normalizeAssetImageSrc(src);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [normalizedSrc]);
+  // A new source gets a fresh attempt; only the src that failed stays hidden.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = failedSrc !== null && failedSrc === normalizedSrc;
 
   if (!normalizedSrc || failed) {
     return (
@@ -60,7 +58,7 @@ export function AssetImage({
         height={size * 2}
         className="size-full object-cover"
         unoptimized={!isOptimizableAssetImageSrc(normalizedSrc)}
-        onError={() => setFailed(true)}
+        onError={() => setFailedSrc(normalizedSrc)}
       />
     </div>
   );

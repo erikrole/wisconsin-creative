@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
   ChevronDownIcon,
@@ -37,7 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
   BULK_ASSIGNMENT_WORKER_SCOPES,
   BULK_ASSIGNMENT_WORKER_SCOPE_LABELS,
@@ -74,7 +75,7 @@ export type AutoAssignCustomWindow = {
 };
 
 /** Event detail's Auto assign: the scope is pinned to this one event. */
-export type AutoAssignEvent = {
+type AutoAssignEvent = {
   id: string;
   summary: string;
   startsAt: string;
@@ -256,6 +257,7 @@ export function AutoAssignDialog({
   // One event is usually filled partway (a slot nobody fits stays open), so
   // the single-event default lets the rest stage instead of holding it all.
   const defaultRequireFullCrew = !event;
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("scope");
   const [sportCodes, setSportCodes] = useState<string[]>(initialSportCodes ?? []);
   const [area, setArea] = useState<Area | null>(initialArea ?? null);
@@ -278,10 +280,6 @@ export function AutoAssignDialog({
   const skipScopeResetRef = useRef(false);
 
   const { batches: pendingBatches, refresh: refreshBatches } = usePendingAssignmentBatches(open);
-  const [roster, setRoster] = useState<SportRosterPreviewResponse | null>(null);
-  const [rosterLoading, setRosterLoading] = useState(false);
-  const [rosterError, setRosterError] = useState<string | null>(null);
-  const [rosterToken, setRosterToken] = useState(0);
 
   const sportGroups = useMemo(() => sportsGroupedByProgram(), []);
   const sportColumnCount = Number(sportGroups.men.length > 0) + Number(sportGroups.women.length > 0);
@@ -360,40 +358,26 @@ export function AutoAssignDialog({
     if (step === "review") setStep("scope");
   }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!open || event || sportCodes.length === 0) {
-      setRoster(null);
-      setRosterError(null);
-      return;
-    }
-    let cancelled = false;
-    setRosterLoading(true);
-    setRosterError(null);
-    void (async () => {
-      try {
-        const response = await fetch(`/api/schedule/sport-roster?codes=${encodeURIComponent(sportCodes.join(","))}`);
-        if (handleAuthRedirect(response)) return;
-        if (!response.ok) {
-          if (!cancelled) setRosterError("Sport assignments could not be loaded.");
-          return;
-        }
-        const json = await parseJsonSafely<{ data?: SportRosterPreviewResponse }>(response);
-        if (cancelled) return;
-        if (!json?.data) {
-          setRosterError("Sport assignments could not be loaded.");
-          return;
-        }
-        setRoster(json.data);
-      } catch {
-        if (!cancelled) setRosterError("Sport assignments could not be loaded.");
-      } finally {
-        if (!cancelled) setRosterLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, event, sportCodes, rosterToken]);
+  const rosterEnabled = open && !event && sportCodes.length > 0;
+  const rosterQuery = useQuery({
+    queryKey: ["schedule", "sport-roster", sportCodes.join(",")],
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`/api/schedule/sport-roster?codes=${encodeURIComponent(sportCodes.join(","))}`, { signal });
+      if (handleAuthRedirect(response)) throw new DOMException("Auth redirect", "AbortError");
+      const json = response.ok ? await parseJsonSafely<{ data?: SportRosterPreviewResponse }>(response) : null;
+      if (!json?.data) throw new Error("Sport assignments could not be loaded.");
+      return json.data;
+    },
+    enabled: rosterEnabled,
+    // Keep the last roster on screen while a changed sport list loads.
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  const roster = rosterEnabled ? rosterQuery.data ?? null : null;
+  const rosterLoading = rosterEnabled && rosterQuery.isFetching;
+  const rosterError = rosterEnabled && rosterQuery.isError && !isAbortError(rosterQuery.error)
+    ? "Sport assignments could not be loaded."
+    : null;
 
   const buildPreview = useCallback(async (nextScope: BulkAssignmentScope = scope) => {
     setLoading(true);
@@ -1045,7 +1029,7 @@ export function AutoAssignDialog({
         onOpenChange={(next) => { if (!next) setWizardSportCode(null); }}
         startAtSportCode={wizardSportCode}
         onCompleted={() => {
-          setRosterToken((current) => current + 1);
+          void queryClient.invalidateQueries({ queryKey: ["schedule", "sport-roster"] });
           setPreview(null);
           setSelectedProposalIds(new Set());
           setStep("scope");

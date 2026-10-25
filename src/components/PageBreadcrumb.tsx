@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import {
   Breadcrumb,
@@ -36,6 +36,7 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 // The trail lives in the app top bar, so it drops the "Home" root (the sidebar already offers it)
 // and keeps at most the last two crumbs visible behind an ellipsis.
@@ -60,10 +61,8 @@ export default function PageBreadcrumb() {
   const { data: currentUser } = useCurrentUser();
   const currentUserRole = currentUser?.role;
   const canViewOwnerReport = currentUser?.canViewUsageAnalytics === true;
-  const [expanded, setExpanded] = useState(false);
-
   // Reset collapse when navigating
-  useEffect(() => { setExpanded(false); }, [pathname]);
+  const [expanded, setExpanded] = useSyncedDraft(pathname, () => false);
 
   const firstSegment = pathname.split("/").filter(Boolean)[0] ?? "";
   const { items: allItems, onDetailPage } = buildBreadcrumbItems(pathname, entityLabel);

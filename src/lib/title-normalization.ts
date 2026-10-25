@@ -74,6 +74,8 @@ export function normalizeTeamAbbreviations(value: string): string {
 function isAssetLabelToken(title: string, word: string, offset: number, next: RegExpMatchArray | undefined) {
   if (/^\d+(?:ST|ND|RD|TH)$/u.test(word)) return false;
   if (/^(?=.*\p{Lu})(?=.*\d)[\p{Lu}\d]{2,}$/u.test(word)) return true;
+  // A short all-caps tag in its own parentheses, e.g. "(GC)".
+  if (/^\p{Lu}{2,4}$/u.test(word) && /\(\s*$/u.test(title.slice(0, offset)) && /^\s*\)/u.test(title.slice(offset + word.length))) return true;
   if (!/^\p{Lu}{2,}$/u.test(word) || !next || next.index === undefined) return false;
   const gap = title.slice(offset + word.length, next.index);
   return /^\s+$/u.test(gap) && /^\d{1,2}$/u.test(next[0]);

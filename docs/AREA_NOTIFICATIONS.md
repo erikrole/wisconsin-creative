@@ -78,7 +78,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/check
 - Native push is best-effort for claimed, completed, approved, and declined trade events when push and the `trade` category are enabled.
 - Initial Trade Board claim review plus escalation, blocked, and auto-approved outcome notifications target active visible Admins only. Staff do not receive claim-review alerts.
 - Direct-assignment emails remain out of scope; open Student-slot requests have their own reviewer fanout below.
-- Implementation: `src/lib/services/shift-trades.ts` + `src/lib/services/shift-trade-emails.ts`
+- Implementation: `src/lib/services/shift-trades-*.ts` (facade `shift-trades.ts`) + `src/lib/services/shift-trade-emails.ts`
 
 ## Open Shift Claim Triggers (Implemented 2026-08-26)
 

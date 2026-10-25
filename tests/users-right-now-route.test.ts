@@ -7,6 +7,9 @@ vi.mock("@/lib/db", () => ({
     booking: { findMany: vi.fn() },
   },
 }));
+vi.mock("@/lib/services/checkout-policies", () => ({
+  loadCheckoutPolicies: vi.fn(async () => ({ gracePeriodHours: 1 })),
+}));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 import { requireAuth } from "@/lib/auth";
@@ -115,10 +118,14 @@ describe("GET /api/users/[id]/right-now", () => {
         },
       },
     ] as never);
+    // Accountability's rule: on time unless returned after due plus the 1 hour grace; a
+    // checkout still out past grace counts against the rate.
     vi.mocked(db.booking.findMany).mockImplementation((async (args: {
       where: { status: string };
     }) =>
-      args.where.status === "COMPLETED"
+      args.where.status === "OPEN"
+        ? [{ endsAt: new Date(now - 5 * hour) }]
+        : args.where.status === "COMPLETED"
         ? [
             {
               endsAt: new Date(now - 10 * hour),
@@ -127,6 +134,10 @@ describe("GET /api/users/[id]/right-now", () => {
             {
               endsAt: new Date(now - 20 * hour),
               completedAt: new Date(now - 19 * hour),
+            },
+            {
+              endsAt: new Date(now - 50 * hour),
+              completedAt: new Date(now - 47 * hour),
             },
             { endsAt: new Date(now - 30 * hour), completedAt: null },
             {
@@ -139,6 +150,20 @@ describe("GET /api/users/[id]/right-now", () => {
     expect(body.data.week).toEqual([
       expect.objectContaining({ summary: "Soccer", area: "VIDEO" }),
     ]);
-    expect(body.data.performance).toEqual({ checkouts: 4, onTimeRate: 67 });
+    expect(body.data.performance).toEqual({ checkouts: 5, onTimeRate: 67 });
+  });
+
+  it("shows no on-time rate until there are 3 completed or overdue checkouts", async () => {
+    vi.mocked(db.booking.findMany).mockImplementation((async (args: {
+      where: { status: string };
+    }) =>
+      args.where.status === "COMPLETED"
+        ? [
+            { endsAt: new Date(Date.now() - 10 * hour), completedAt: new Date(Date.now() - 11 * hour) },
+            { endsAt: new Date(Date.now() - 20 * hour), completedAt: new Date(Date.now() - 21 * hour) },
+          ]
+        : []) as never);
+    const body = await (await call("u1")).json();
+    expect(body.data.performance).toEqual({ checkouts: 2, onTimeRate: null });
   });
 });

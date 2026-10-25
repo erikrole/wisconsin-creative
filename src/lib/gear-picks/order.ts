@@ -3,7 +3,7 @@ import type { GearPicksAdminResponse } from "./types";
 
 export type OrderSource = "STANDARD_ISSUE" | "CORE_KIT" | "STUDENT_KIT" | "PICK";
 
-export type OrderLine = {
+type OrderLine = {
   sku: string;
   itemName: string;
   colorLabel: string;

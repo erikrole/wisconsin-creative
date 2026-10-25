@@ -26,14 +26,14 @@ export default defineConfig({
       // including them would only add noise until they get render tests.
       include: ["src/lib/**/*.ts", "src/app/api/**/*.ts"],
       reporter: ["text-summary", "json-summary"],
-      // Floors sit just under the measured numbers (2026-10-24: lines 74.8,
-      // statements 72.2, functions 73.1, branches 65.1). Raise them when
+      // Floors sit just under the measured numbers (2026-10-25: lines 89.0,
+      // statements 86.5, functions 87.7, branches 78.8). Raise them when
       // coverage rises; never lower them to land a change.
       thresholds: {
-        statements: 71,
-        branches: 64,
-        functions: 72,
-        lines: 73
+        statements: 86,
+        branches: 78,
+        functions: 87,
+        lines: 88
       }
     }
   }

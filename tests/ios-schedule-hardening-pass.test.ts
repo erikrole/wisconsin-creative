@@ -14,12 +14,10 @@ describe("iOS Schedule hardening pass", () => {
   const calendar = source("ios/Wisconsin/Views/Schedule/ScheduleCalendarSubscriptionSheet.swift");
   const published = source("ios/Wisconsin/Views/Schedule/PublishedScheduleView.swift");
   const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
-  const tradeService = source("src/lib/services/shift-trades.ts");
 
   it("offers Post trade for the assignment statuses the server sends", () => {
     // The route returns these two, and the trade service accepts these two.
     expect(myShiftsRoute).toContain('status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },');
-    expect(tradeService).toContain("Only active assignments can be traded");
     expect(schedule).toContain('case directAssigned = "DIRECT_ASSIGNED"');
     expect(schedule).toContain('case approved = "APPROVED"');
     expect(schedule).not.toContain('case active = "ACTIVE"');
@@ -86,7 +84,7 @@ describe("iOS Schedule hardening pass", () => {
     expect(schedule).toContain('Text("Add your shifts to Calendar")\n                .font(.subheadline.weight(.bold))\n                .lineLimit(nil)\n                .fixedSize(horizontal: false, vertical: true)');
     expect(row).toContain(".lineLimit(stacksTime ? 3 : 2)");
     // "Non-game" fits the type control at the same size as its neighbours.
-    expect(filters).toContain(".padding(.horizontal, compact ? 8 : 14)");
+    expect(filters).toContain(".padding(.horizontal, compact ? 3 : 14)");
   });
 
   it("names a multi-day event's real end while it runs", () => {

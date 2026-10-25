@@ -179,13 +179,6 @@ export function formatOperationalDateTime(
   return `${dayLabel}, ${formatTimeShort(iso)}`;
 }
 
-/** "Mar 11, 3:00 – 5:00 PM" — compact date + time range */
-export function formatEventDateTime(startsAt: string, endsAt: string, allDay?: boolean) {
-  const date = formatDateShort(startsAt);
-  if (allDay) return date;
-  return `${date}, ${formatTimeShort(startsAt)} – ${formatTimeShort(endsAt)}`;
-}
-
 /** "Mar 11, 2026" */
 export function formatDateFull(iso: string | null) {
   if (!iso) return "—";

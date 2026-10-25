@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
  * notification. Writes are best-effort and never fail a send.
  */
 
-export type DeliveryChannel = "apns" | "web" | "email";
+type DeliveryChannel = "apns" | "web" | "email";
 
-export type DeliveryOutcome =
+type DeliveryOutcome =
   | "sent"
   | "sent_silent"
   | "suppressed"

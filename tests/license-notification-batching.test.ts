@@ -12,6 +12,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+import { appTzDateKey } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { sendPushToUser } from "@/lib/services/notifications";
 import { processExpiryWarnings, processLicenseNags } from "@/lib/services/licenses";
@@ -59,8 +60,7 @@ describe("processExpiryWarnings batching", () => {
   });
 
   it("preserves the dedupe key format and payload of the per-pair writes", async () => {
-    const now = new Date();
-    const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const yearMonth = appTzDateKey(new Date()).slice(0, 7);
     vi.mocked(db.licenseCode.findMany).mockResolvedValue(codes(1) as never);
     vi.mocked(db.user.findMany).mockResolvedValue(admins(1) as never);
 
@@ -79,9 +79,23 @@ describe("processExpiryWarnings batching", () => {
     expect(rows[0]!.body).toBe("Seat 0 (PM-0). Renew it soon to avoid disruption.");
   });
 
+  it("starts a new month at Madison midnight, not UTC midnight", async () => {
+    vi.useFakeTimers({ now: new Date("2026-11-01T03:30:00.000Z") }); // Oct 31, 10:30 PM in Madison
+    try {
+      vi.mocked(db.licenseCode.findMany).mockResolvedValue(codes(1) as never);
+      vi.mocked(db.user.findMany).mockResolvedValue(admins(1) as never);
+
+      await processExpiryWarnings();
+
+      const rows = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0]!.data as Array<Record<string, unknown>>;
+      expect(rows[0]!.dedupeKey).toBe("license-expiry-code-0-2026-10-admin-0");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("writes nothing when every key already exists", async () => {
-    const now = new Date();
-    const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const yearMonth = appTzDateKey(new Date()).slice(0, 7);
     vi.mocked(db.licenseCode.findMany).mockResolvedValue(codes(1) as never);
     vi.mocked(db.user.findMany).mockResolvedValue(admins(1) as never);
     vi.mocked(db.notification.findMany).mockResolvedValue(

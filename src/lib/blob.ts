@@ -31,23 +31,27 @@ export function isAllowedImageType(type: string): boolean {
 }
 
 /**
- * Verify the file's leading bytes match a real raster-image signature, so a
- * client can't smuggle HTML/SVG/script past the upload by lying about
- * `file.type`. Covers the four types we accept (JPEG, PNG, GIF, WebP).
+ * The image type a file's leading bytes actually carry, or null. Lets uploads
+ * and mirrored downloads trust the content rather than a client-supplied
+ * `file.type` or a remote server's Content-Type, so HTML/SVG/script can't be
+ * stored under an image name. Covers the four types we accept.
  */
-export async function hasValidImageMagic(file: File): Promise<boolean> {
-  const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-  if (header.length < 12) return false;
-  const b = header;
+function imageTypeFromMagic(b: Uint8Array): string | null {
+  if (b.length < 12) return null;
   // JPEG: FF D8 FF
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return true;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
   // PNG: 89 50 4E 47 0D 0A 1A 0A
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return true;
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return "image/png";
   // GIF: 47 49 46 38 ("GIF8")
-  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return true;
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return "image/gif";
   // WebP: "RIFF"...."WEBP"
-  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return true;
-  return false;
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return "image/webp";
+  return null;
+}
+
+/** Verify the file's leading bytes match a real raster-image signature. */
+export async function hasValidImageMagic(file: File): Promise<boolean> {
+  return imageTypeFromMagic(new Uint8Array(await file.slice(0, 12).arrayBuffer())) !== null;
 }
 
 export async function validateImage(file: File): Promise<string | null> {
@@ -141,12 +145,15 @@ export async function downloadImageToBlob(
 
     const body = await res.arrayBuffer();
     if (body.byteLength === 0 || body.byteLength > maxBytes) return null;
+    // Store what the bytes are, not what the remote server claims.
+    const detectedType = imageTypeFromMagic(new Uint8Array(body, 0, Math.min(12, body.byteLength)));
+    if (!detectedType) return null;
 
-    const pathname = `assets/${assetId}/${Date.now()}.${ext}`;
+    const pathname = `assets/${assetId}/${Date.now()}.${CONTENT_TYPE_TO_EXT[detectedType]}`;
     const blob = await put(pathname, Buffer.from(body), {
       ...publicBlobAuth(),
       access: "public",
-      contentType: contentType || `image/${ext === "jpg" ? "jpeg" : ext}`,
+      contentType: detectedType,
     });
 
     return blob.url;

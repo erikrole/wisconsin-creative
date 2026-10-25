@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { appTzDateKey } from "@/lib/app-time";
+import { appTzDateKey, startOfDayInAppTz } from "@/lib/app-time";
+import { env } from "@/lib/env";
 import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
 import { HttpError } from "@/lib/http";
@@ -236,7 +237,10 @@ export async function listIssues(filters: IssueListFilters = {}) {
     ...(filters.platform ? { platform: filters.platform } : {}),
     ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: "insensitive" } }, { culprit: { contains: filters.q, mode: "insensitive" } }] } : {}),
   };
-  const since = new Date(Date.now() - 14 * 86_400_000);
+  // Fourteen Madison calendar days ending today, so an evening crash lands on
+  // the day it happened rather than the next UTC day.
+  const now = new Date();
+  const since = startOfDayInAppTz(now, -13);
   const [issues, statusCounts] = await Promise.all([
     db.errorIssue.findMany({ where, orderBy: { lastSeenAt: "desc" }, take: 200 }),
     db.errorIssue.groupBy({ by: ["status"], _count: { _all: true } }),
@@ -244,8 +248,10 @@ export async function listIssues(filters: IssueListFilters = {}) {
   const ids = issues.map((issue) => issue.id);
   const [daily, users] = ids.length
     ? await Promise.all([
-        db.$queryRaw<Array<{ issue_id: string; day: Date; n: number }>>`
-          SELECT issue_id, date_trunc('day', occurred_at) AS day, count(*)::int AS n
+        db.$queryRaw<Array<{ issue_id: string; day: string; n: number }>>`
+          SELECT issue_id,
+                 to_char(occurred_at AT TIME ZONE 'UTC' AT TIME ZONE ${env.appTimezone}::text, 'YYYY-MM-DD') AS day,
+                 count(*)::int AS n
           FROM error_events
           WHERE issue_id IN (${Prisma.join(ids)}) AND occurred_at >= ${since}
           GROUP BY 1, 2`,
@@ -257,14 +263,11 @@ export async function listIssues(filters: IssueListFilters = {}) {
       ])
     : [[], []];
 
-  const dayKeys = Array.from({ length: 14 }, (_, index) => {
-    const day = new Date(since.getTime() + (index + 1) * 86_400_000);
-    return day.toISOString().slice(0, 10);
-  });
+  const dayKeys = Array.from({ length: 14 }, (_, index) => appTzDateKey(startOfDayInAppTz(now, index - 13)));
   const dailyByIssue = new Map<string, Map<string, number>>();
   for (const row of daily) {
     const map = dailyByIssue.get(row.issue_id) ?? new Map<string, number>();
-    map.set(new Date(row.day).toISOString().slice(0, 10), row.n);
+    map.set(row.day, row.n);
     dailyByIssue.set(row.issue_id, map);
   }
   const usersByIssue = new Map(users.map((row) => [row.issue_id, row.n]));

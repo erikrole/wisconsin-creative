@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 const CREW_SURFACES = {
   eventCrew: "src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx",
@@ -12,7 +12,7 @@ const CREW_SURFACES = {
 describe("crew row standardization", () => {
   it("routes every crew surface through the shared crew-row vocabulary", () => {
     for (const path of Object.values(CREW_SURFACES)) {
-      expect(source(path)).toMatch(/from "(?:@\/components\/shift-detail|\.)\/crew-row"/);
+      expect(splitSource(path)).toMatch(/from "(?:@\/components\/shift-detail|\.)\/crew-row"/);
     }
   });
 
@@ -25,7 +25,7 @@ describe("crew row standardization", () => {
     expect(crewRow).toContain("group-focus-within/crew-row:opacity-100");
 
     for (const path of Object.values(CREW_SURFACES)) {
-      const text = source(path);
+      const text = splitSource(path);
       // No local reveal strings, tone maps, or hand-rolled status dots.
       expect(text).not.toContain("sm:group-hover/assignment:opacity-100");
       expect(text).not.toContain("sm:group-hover/slot:opacity-100");
@@ -58,7 +58,6 @@ describe("crew row standardization", () => {
   it("keeps the crew column order identical across surfaces", () => {
     const eventCrew = source(CREW_SURFACES.eventCrew);
     const scheduleStaff = source(CREW_SURFACES.scheduleStaff);
-    const scheduleWorker = source(CREW_SURFACES.scheduleWorker);
 
     // Call, then Type, then Person.
     expect(eventCrew).toContain('<TableHead className="w-28">Call</TableHead>');
@@ -68,10 +67,7 @@ describe("crew row standardization", () => {
     expect(eventCrew.indexOf("Type</TableHead>")).toBeLessThan(eventCrew.indexOf("Person</TableHead>"));
 
     expect(scheduleStaff).toContain('const SLOT_ROW_GRID_CLASS = "grid-cols-[4.5rem_4.5rem_minmax(0,1fr)]"');
-    // The flat worker list prefixes the same order with an area column.
-    expect(scheduleWorker).toContain("grid-cols-[104px_72px_72px_minmax(0,1fr)_auto]");
-    expect(scheduleWorker).toContain("<CrewAreaDot");
-    expect(scheduleWorker).toContain("{callCell}");
+    // The Schedule worker rows render Area, then the same order (schedule-list-render.test.ts).
   });
 
   it("keeps one definition of the shift area labels", () => {
@@ -81,7 +77,7 @@ describe("crew row standardization", () => {
       "src/app/(app)/events/[id]/_utils.ts",
       "src/components/shift-detail/UserAvatarPicker.tsx",
     ]) {
-      expect(source(path)).not.toMatch(duplicate);
+      expect(splitSource(path)).not.toMatch(duplicate);
     }
     expect(source("src/types/areas.ts")).toContain('VIDEO: "Video"');
   });

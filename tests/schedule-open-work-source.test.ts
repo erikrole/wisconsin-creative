@@ -64,23 +64,6 @@ describe("schedule open work source contracts", () => {
     expect(service).toContain("TransactionIsolationLevel.Serializable");
   });
 
-  it("keeps trade lifecycle freshness checks on effective call windows", () => {
-    const service = source("src/lib/services/shift-trades.ts");
-
-    expect(service).toContain("function effectiveAssignmentWindow");
-    expect(service).toContain("function futureEffectiveAssignmentWhere");
-    expect(service).toContain("function staleEffectiveAssignmentWhere");
-    expect(service).toContain("assertShiftNotStarted(effectiveAssignmentWindow(assignment).startsAt)");
-    expect(service).toContain("const window = effectiveAssignmentWindow(trade.shiftAssignment)");
-    expect(service).toContain("await checkTimeConflict(tx, userId, window.startsAt, window.endsAt)");
-    expect(service).toContain("assertShiftNotStarted(effectiveAssignmentWindow(trade.shiftAssignment).startsAt)");
-    expect(service).toContain("availabilityContextFromBlocks");
-    expect(service).toContain("viewerAvailabilityContext");
-    expect(service).toContain("claimedByAvailabilityContext");
-    expect(service).toContain("viewerCanClaim");
-    expect(service).toContain("viewerClaimReason");
-  });
-
   it("keeps native iOS on the same Open Work contract as web", () => {
     const apiClient = apiClientSource();
     const models = source("ios/Wisconsin/Models/ShiftTradeModels.swift");

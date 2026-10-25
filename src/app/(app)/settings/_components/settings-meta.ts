@@ -58,7 +58,7 @@ export const SETTINGS_GROUP_META: Record<SettingsGroup, {
   },
 };
 
-export const SETTINGS_SECTION_ICONS: Record<string, SettingsIcon> = {
+const SETTINGS_SECTION_ICONS: Record<string, SettingsIcon> = {
   "/settings/profile": UserRound,
   "/settings/security": KeyRound,
   "/settings/notifications": Bell,

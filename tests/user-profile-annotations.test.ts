@@ -1,19 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { splitSource } from "./_helpers/source";
 
-const info = readFileSync("src/app/(app)/staff/[id]/UserInfoTab.tsx", "utf8");
+// The rendered fields (Wiscard, sizing, birthday, no Slack or password card)
+// are checked in tests/user-info-tab.test.ts.
+const info = splitSource("src/app/(app)/staff/[id]/UserInfoTab.tsx");
 const page = readFileSync("src/app/(app)/staff/[id]/page.tsx", "utf8");
 const schema = readFileSync("prisma/schema.prisma", "utf8");
 
 describe("annotated user profile contract", () => {
   it("uses split Wiscard fields and keeps Slack hidden", () => {
-    expect(info).toContain('label="Wiscard"');
-    expect(info).toContain('aria-label="Wiscard number"');
-    expect(info).toContain('aria-label="Issue code"');
     expect(info).toContain("Issue code can be found in the bottom right of your Wiscard");
-    expect(info).not.toContain('label="Slack handle"');
-    expect(info).not.toContain('label="Slack profile"');
-    expect(info).not.toContain('label="Slack Profile URL"');
     expect(schema).toContain("slackHandle");
     expect(schema).toContain("slackProfileUrl");
   });
@@ -22,23 +19,14 @@ describe("annotated user profile contract", () => {
     expect(page).toContain("{profile.name}");
     expect(page).not.toContain('isSelf ? "My Profile"');
     expect(page).toContain('href="/settings/security"');
-    expect(info).not.toContain("Password Change Card");
   });
 
   it("standardizes sizing, removes direct-report linkage badges, and adds birthday", () => {
-    expect(info).toContain('ariaLabel="Top fit"');
-    expect(info).toContain('label="Clothing"');
-    expect(info).toContain('label="Shoes"');
-    expect(info).toContain('ariaLabel="Shoe sizing"');
-    expect(info).not.toContain(">Linked</Badge>");
-    expect(info).toContain('label="Birthday"');
-    expect(info).toContain('placeholder="MM/DD"');
     expect(info).not.toContain("birthdayIso");
     expect(schema).toContain("birthYear");
     expect(info).toContain("options={TOP_SIZE_OPTIONS.map");
     expect(info).not.toContain("String(24 + index * 2)");
     expect(info).not.toContain("canViewBirthYear");
-    expect(info).not.toContain('aria-label="Birth year"');
   });
 
   it("routes roster photo selection through the shared crop editor", () => {

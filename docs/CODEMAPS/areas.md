@@ -25,7 +25,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/budget`
 - APIs: `/api/budget/[id]/import`, `/api/budget/[id]/lines/bulk`, `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/history`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`, `/api/budget/lines/[lineId]/suggestions`
 - Services: `src/lib/services/budget.ts`
-- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-import.test.ts`, `tests/budget-insights.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-table.test.ts`
+- Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-import.test.ts`, `tests/budget-insights.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-suggestions-service.test.ts`
 
 ## bulk-inventory
 
@@ -57,7 +57,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: _none matched_
 - APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
-- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
+- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-route.test.ts`, `tests/dashboard-stats-route.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`
 
 ## error-reporting
 
@@ -65,7 +65,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: _none matched_
 - APIs: _none matched_
 - Services: _none matched_
-- Tests: `tests/error-reporting.test.ts`
+- Tests: `tests/error-reporting-client.test.ts`, `tests/error-reporting.test.ts`
 
 ## events
 
@@ -73,7 +73,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/events/[id]`, `/events`
 - APIs: `/api/badges/events/app-open`, `/api/bookings/[id]/events`, `/api/calendar-events/[id]/command-center`, `/api/calendar-events/[id]`, `/api/calendar-events/[id]/travel/[memberId]`, `/api/calendar-events/[id]/travel/defaults`, `/api/calendar-events/[id]/travel`, `/api/calendar-events/[id]/visibility`, `/api/calendar-events/[id]/workers/[workerId]`, `/api/calendar-events/[id]/workers`
 - Services: `src/lib/services/combined-schedule-events.ts`
-- Tests: `tests/all-day-events-have-no-call-time.test.ts`, `tests/booking-events-route-contract.test.ts`, `tests/calendar-events-route.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/ios-events-browse.test.ts`, `tests/kiosk-events-route.test.ts`
+- Tests: `tests/all-day-events-have-no-call-time.test.ts`, `tests/booking-events-route-contract.test.ts`, `tests/calendar-events-route.test.ts`, `tests/combine-events-route.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/ios-events-browse.test.ts`
 
 ## gear-picks
 
@@ -89,7 +89,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/import`
 - APIs: `/api/assets/import`, `/api/budget/[id]/import`, `/api/hiring/import`, `/api/resources/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`, `/api/workforce/import`
 - Services: _none matched_
-- Tests: `tests/budget-import.test.ts`, `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
+- Tests: `tests/asset-import-rows.test.ts`, `tests/budget-import.test.ts`, `tests/hiring-import.test.ts`, `tests/import-route.test.ts`, `tests/resource-import-images.test.ts`, `tests/resource-import-route.test.ts`, `tests/resource-import.test.ts`
 
 ## items
 
@@ -97,7 +97,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`
 - APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/report`, `/api/assets/[id]/retire`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
-- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`, `tests/ios-items-favorite-recovery.test.ts`, `tests/ios-items-retired-reserve-gating.test.ts`
+- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-list-route-extras.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/bulk-assets-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`
 
 ## kiosk
 
@@ -113,7 +113,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/kits/[id]`, `/kits`
 - APIs: `/api/kiosk/kits/[id]`, `/api/kiosk/kits`, `/api/kits/[id]/bulk-members`, `/api/kits/[id]/clone`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
 - Services: `src/lib/services/kits.ts`
-- Tests: `tests/football-gameday-kits.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service.test.ts`
+- Tests: `tests/football-gameday-kits.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`, `tests/kiosk-kits-and-heartbeat-report.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list-route.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service-writes.test.ts`
 
 ## licenses
 
@@ -121,7 +121,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/licenses`
 - APIs: `/api/licenses/[id]/claim`, `/api/licenses/[id]/history`, `/api/licenses/[id]/occupy`, `/api/licenses/[id]/release`, `/api/licenses/[id]/report-broken`, `/api/licenses/[id]`, `/api/licenses/bulk`, `/api/licenses/export`, `/api/licenses/my/history`, `/api/licenses/my`
 - Services: `src/lib/services/licenses.ts`
-- Tests: `tests/ios-licenses-native-page.test.ts`, `tests/licenses-export-route.test.ts`, `tests/licenses-history-route.test.ts`, `tests/licenses-release-concurrency.test.ts`, `tests/licenses-report-broken.test.ts`, `tests/licenses-ui-privacy-contract.test.ts`
+- Tests: `tests/ios-licenses-native-page.test.ts`, `tests/licenses-export-route.test.ts`, `tests/licenses-history-route.test.ts`, `tests/licenses-release-concurrency.test.ts`, `tests/licenses-report-broken.test.ts`, `tests/licenses-service.test.ts`, `tests/licenses-ui-privacy-contract.test.ts`
 
 ## mobile
 
@@ -137,7 +137,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/notifications`, `/settings/notifications`
 - APIs: `/api/cron/notifications`, `/api/notifications/count`, `/api/notifications/nudge`, `/api/notifications/process`, `/api/notifications`
 - Services: `src/lib/services/booking-notifications.ts`, `src/lib/services/checkout-escalation-notifications.ts`, `src/lib/services/claim-review-notifications.ts`, `src/lib/services/notifications.ts`, `src/lib/services/shift-notifications.ts`, `src/lib/services/trade-post-notifications.ts`
-- Tests: `tests/ios-notifications-read-recovery.test.ts`, `tests/ios-notifications-registration-health.test.ts`, `tests/ios-notifications-tapthrough.test.ts`, `tests/ios-notifications-token-honesty.test.ts`, `tests/notifications-count-route.test.ts`, `tests/notifications-ownership-ui-contract.test.ts`, `tests/notifications-route.test.ts`, `tests/notifications-support-hardening.test.ts`
+- Tests: `tests/booking-notifications-delivery.test.ts`, `tests/claim-review-notifications.test.ts`, `tests/ios-notifications-read-recovery.test.ts`, `tests/ios-notifications-registration-health.test.ts`, `tests/ios-notifications-tapthrough.test.ts`, `tests/ios-notifications-token-honesty.test.ts`, `tests/notifications-count-route.test.ts`, `tests/notifications-ownership-ui-contract.test.ts`
 
 ## public-showroom
 
@@ -177,7 +177,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/reports/scans`
 - APIs: `/api/checkouts/[id]/checkin-scan`, `/api/checkouts/[id]/scan-status`, `/api/checkouts/[id]/scan`, `/api/checkouts/[id]/start-scan-session`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/scan`, `/api/kiosk/pickup/[id]/scan`, `/api/kiosk/resolve-scan`, `/api/kiosk/scan-lookup`, `/api/reports/scans`
 - Services: `src/lib/services/bulk-unit-scans.ts`, `src/lib/services/kiosk-scan.ts`, `src/lib/services/scan-audit-reports.ts`, `src/lib/services/scans.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/checkout-scan-status-access.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`, `tests/kiosk-pickup-scan-bulk-add.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/bulk-unit-scan-edges.test.ts`, `tests/checkout-scan-status-access.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`
 
 ## search
 
@@ -201,7 +201,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/schedule/assign`, `/schedule`
 - APIs: `/api/my-shifts`, `/api/schedule/automation`, `/api/schedule/bulk-assignment/apply`, `/api/schedule/bulk-assignment/batches/[id]/cancel`, `/api/schedule/bulk-assignment/batches`, `/api/schedule/bulk-assignment/preview`, `/api/schedule/export`, `/api/schedule/health`, `/api/schedule/open-work`, `/api/schedule/published/[id]/follow`
 - Services: `src/lib/services/bulk-schedule-assignment.ts`, `src/lib/services/collaborator-schedule.ts`, `src/lib/services/combined-schedule-events.ts`, `src/lib/services/non-game-schedule-defaults.ts`, `src/lib/services/reservation-schedule.ts`, `src/lib/services/schedule-automation.ts`, `src/lib/services/schedule-call-time-sync.ts`, `src/lib/services/schedule-change-history.ts`
-- Tests: `tests/badge-shift-breadth.test.ts`, `tests/bulk-schedule-assignment-source.test.ts`, `tests/collaborator-schedule-follow.test.ts`, `tests/combined-schedule-event-suggestions.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/ios-collaborator-published-schedule-redesign.test.ts`
+- Tests: `tests/badge-shift-breadth.test.ts`, `tests/bulk-schedule-assignment-source.test.ts`, `tests/bulk-schedule-assignment.test.ts`, `tests/collaborator-schedule-follow.test.ts`, `tests/combined-schedule-event-suggestions.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`
 
 ## signatures
 
@@ -225,7 +225,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/staff/onboarding-status`
 - APIs: `/api/allowed-emails/[id]/resend`, `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`, `src/lib/services/onboarding-readiness.ts`
-- Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/onboarding-dialog-source.test.ts`, `tests/onboarding-lifecycle.test.ts`, `tests/onboarding-readiness-route.test.ts`
+- Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/ios-profile-refresh-keeps-data.test.ts`, `tests/me-profile-route.test.ts`, `tests/onboarding-dialog-source.test.ts`
 
 ## youtube
 
@@ -233,4 +233,4 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/youtube`
 - APIs: `/api/cron/youtube-sweep`, `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/check-playlists`, `/api/youtube/drafts/[videoId]/check-send`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/make-public`, `/api/youtube/drafts/[videoId]/playlists`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]/publish`, `/api/youtube/drafts/[videoId]`
 - Services: _none matched_
-- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-service.test.ts`, `tests/youtube-review-queue-ui-source.test.ts`, `tests/youtube-review-queue.test.ts`
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service-checks.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-refresh.test.ts`, `tests/youtube-queue-service.test.ts`

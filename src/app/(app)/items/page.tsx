@@ -72,6 +72,7 @@ import { restoreDialogFocus } from "@/lib/a11y-resilience";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { buildBulkRowId, getItemHref, parseBulkRowId } from "./lib/item-href";
 import { compareItemAssetTags } from "@/lib/item-asset-tag-sort";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 export default function ItemsPage() {
   const router = useRouter();
@@ -100,7 +101,21 @@ export default function ItemsPage() {
   const [showGapWizard, setShowGapWizard] = useState(false);
   const [showCleanupWizard, setShowCleanupWizard] = useState(false);
   const [cleanupWizardKind, setCleanupWizardKind] = useState<CleanupWizardKind | null>(null);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  // Clear selection when page/filters change
+  const selectionScope = JSON.stringify([
+    query.page,
+    filters.search,
+    filters.statusKey,
+    filters.locationKey,
+    filters.categoryKey,
+    filters.brandKey,
+    filters.departmentKey,
+    filters.showAccessories,
+    filters.favoritesOnly,
+    filters.itemType,
+    filters.sortKey,
+  ]);
+  const [rowSelection, setRowSelection] = useSyncedDraft(selectionScope, (): RowSelectionState => ({}));
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [density, setDensity] = useState<Density>("comfortable");
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
@@ -163,22 +178,6 @@ export default function ItemsPage() {
   // the optimistic UI from server state.
   const favoriteInFlight = useRef<Set<string>>(new Set());
 
-  // Clear selection when page/filters change
-  useEffect(() => {
-    setRowSelection({});
-  }, [
-    query.page,
-    filters.search,
-    filters.statusKey,
-    filters.locationKey,
-    filters.categoryKey,
-    filters.brandKey,
-    filters.departmentKey,
-    filters.showAccessories,
-    filters.favoritesOnly,
-    filters.itemType,
-    filters.sortKey,
-  ]);
 
   const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k]);
   const selectedCount = selectedIds.length;
@@ -242,7 +241,7 @@ export default function ItemsPage() {
     } finally {
       setSelectingAll(false);
     }
-  }, [filters]);
+  }, [filters, setRowSelection]);
 
   // Merge item-family rows into the main table as Asset-shaped rows.
   const mergedData = useMemo(() => {

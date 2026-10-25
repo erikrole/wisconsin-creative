@@ -28,7 +28,7 @@ export function escapeEmailHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export type EmailFact = { label: string; value: string };
+type EmailFact = { label: string; value: string };
 
 export type EmailContent = {
   /** Shown in the inbox list beside the subject. Keep under about 90 characters. */

@@ -19,7 +19,7 @@ export function welcomeNextSteps(role: Role): NextStep[] {
   const app: NextStep = {
     href: APP_STORE_URL,
     title: "Get the iPhone app",
-    detail: "Scan gear, get shift reminders, and claim open trades from your pocket.",
+    detail: "Sign in with this same email and password. Scan gear, get shift reminders, and claim open trades.",
     icon: SmartphoneIcon,
     external: true,
   };

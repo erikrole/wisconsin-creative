@@ -38,6 +38,7 @@ import type {
   GearPicksAdminResponse,
   GearPickSubmissionStatus,
 } from "@/lib/gear-picks/types";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 const ADMIN_QUERY_KEY = ["gear-picks", "admin"] as const;
 
@@ -418,10 +419,7 @@ function DeadlineCard({
   pending: boolean;
   onApply: (change: AdminChange, success: string) => Promise<boolean>;
 }) {
-  const [draft, setDraft] = useState<Date | undefined>(deadline ? new Date(deadline) : undefined);
-  useEffect(() => {
-    setDraft(deadline ? new Date(deadline) : undefined);
-  }, [deadline]);
+  const [draft, setDraft] = useSyncedDraft(deadline, (iso): Date | undefined => (iso ? new Date(iso) : undefined));
   const changed = (draft?.toISOString() ?? null) !== deadline;
 
   return (
@@ -542,10 +540,7 @@ function AllowanceInput({
   pending: boolean;
   onApply: (change: AdminChange, success: string) => Promise<boolean>;
 }) {
-  const [value, setValue] = useState((participant.allowanceCents / 100).toFixed(2));
-  useEffect(() => {
-    setValue((participant.allowanceCents / 100).toFixed(2));
-  }, [participant.allowanceCents]);
+  const [value, setValue] = useSyncedDraft(participant.allowanceCents, (cents) => (cents / 100).toFixed(2));
 
   function commit() {
     // Number("") is 0, so a cleared box would silently save $0; treat it as invalid.

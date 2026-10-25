@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { UserAvatar } from "@/components/UserAvatar";
 import type { WrappedCard, WrappedTone } from "@/lib/wrapped/recap";
+import { formatCount } from "@/lib/wrapped/format";
 import { cn } from "@/lib/utils";
 
 /** Each tone is one bold field with one readable ink, so every card is an event. */
@@ -56,7 +57,7 @@ function Rise({ delay = 0, children, className }: { delay?: number; children: Re
 function BigValue({ card }: { card: WrappedCard }) {
   const rolled = useRollIn(card.countTo);
   const text = card.countTo !== undefined && rolled !== undefined
-    ? card.value.replace(String(card.countTo), String(rolled))
+    ? card.value.replace(formatCount(card.countTo), formatCount(rolled))
     : card.value;
   // A bare number gets the poster size; words step down so they wrap less.
   const numeric = /^[\d–.,%]+$/.test(card.value);
@@ -147,7 +148,7 @@ export function WrappedCardView({
               <dl className="mt-5 grid grid-cols-2 gap-2.5">
                 {(card.items ?? []).map((item) => (
                   <div key={item.label} className="rounded-2xl bg-[#f3f4f6] px-3.5 py-3">
-                    <dd className="truncate text-xl font-black tabular-nums tracking-tight">{item.value}</dd>
+                    <dd className="line-clamp-2 break-words text-xl font-black leading-tight tabular-nums tracking-tight">{item.value}</dd>
                     <dt className="text-xs text-[#5b616e]">{item.label}</dt>
                   </div>
                 ))}
