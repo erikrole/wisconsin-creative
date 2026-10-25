@@ -209,6 +209,9 @@ private struct ProfileNextUpRow: View {
                         // A long opponent name wraps to a second line instead
                         // of cutting off at 390pt.
                         .lineLimit(2)
+                        // Without this the row proposes one line of height and
+                        // the title truncates before it ever wraps.
+                        .fixedSize(horizontal: false, vertical: true)
                     if !detail.isEmpty {
                         Text(detail)
                             .font(.caption)
