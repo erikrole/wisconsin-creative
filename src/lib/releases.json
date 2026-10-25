@@ -1,5 +1,19 @@
 [
   {
+    "date": "2026-10-25",
+    "title": "Battery pickup counts fixed",
+    "type": "fixes",
+    "summary": "A battery scanned twice at the kiosk now counts once when a reservation is picked up.",
+    "details": [
+      "A full pickup waits until every battery the reservation needs has actually been scanned.",
+      "Each numbered battery goes on the new checkout only once."
+    ],
+    "platforms": [
+      "Kiosk"
+    ],
+    "pr": 685
+  },
+  {
     "date": "2026-10-24",
     "title": "Position tags and lost units fixed",
     "type": "fixes",
