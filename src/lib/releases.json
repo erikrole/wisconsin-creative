@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-25",
+    "title": "Equipment picker tabs no longer double up",
+    "type": "fixes",
+    "summary": "Each item in the equipment picker now appears on exactly one tab, the same one its count is shown under.",
+    "details": [
+      "An item with a known category always appears on that category's tab, even when its type mentions something else, like a camera battery grip.",
+      "Items without a category are sorted by their type, using the first matching tab, so a camera battery no longer shows on both Cameras and Batteries.",
+      "Removing someone from a sport roster twice in a row now says the person was already removed instead of showing an error."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 706
+  },
+  {
+    "date": "2026-10-25",
     "title": "One password-change path",
     "type": "fixes",
     "summary": "Passwords can now only be changed through the protected Change password form, which limits repeated tries and signs out your other apps.",
