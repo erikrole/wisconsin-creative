@@ -182,15 +182,25 @@ export const PUT = withAuth(async (req, { user }) => {
   }
   deferCompanionProjectionRefreshForCommittedMutation(req);
 
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "user",
-    entityId: user.id,
-    action: "profile_updated",
-    before: before ? auditProfileData(before) : undefined,
-    after: auditProfileData(data),
-  });
+  // The form sends every field on each save. Audit only what changed, so the
+  // activity feed can say "Updated their phone" instead of counting them all.
+  const beforeValues: Record<string, unknown> = before ?? {};
+  const changed = Object.fromEntries(
+    Object.entries(data).filter(([key, value]) => (beforeValues[key] ?? null) !== (value ?? null)),
+  );
+  if (Object.keys(changed).length > 0) {
+    await createAuditEntry({
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "user",
+      entityId: user.id,
+      action: "profile_updated",
+      before: before
+        ? auditProfileData(Object.fromEntries(Object.keys(changed).map((key) => [key, beforeValues[key] ?? null])))
+        : undefined,
+      after: auditProfileData(changed),
+    });
+  }
 
   return ok({ data: updated });
 });
