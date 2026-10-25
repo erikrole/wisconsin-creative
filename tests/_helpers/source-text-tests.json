@@ -145,7 +145,6 @@
   "tests/item-family-photo-focus.test.ts",
   "tests/item-family-products-schema.test.ts",
   "tests/item-freshness-sync-source.test.ts",
-  "tests/item-info-sidebar-hardening.test.ts",
   "tests/items-filter-options.test.ts",
   "tests/items-response-parsing.test.ts",
   "tests/items-ui-source.test.ts",

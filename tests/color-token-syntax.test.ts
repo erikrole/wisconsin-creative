@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { splitSource } from "./_helpers/source";
 import { walkFiles } from "./_helpers/source-tree";
 
 describe("full-color CSS token syntax", () => {
@@ -9,7 +9,7 @@ describe("full-color CSS token syntax", () => {
     // Guard the guard: an empty sweep must not read as a pass.
     expect(files.length).toBeGreaterThan(100);
 
-    const offenders = files.filter((file) => /hsl\(var\(--/.test(source(file)));
+    const offenders = files.filter((file) => /hsl\(var\(--/.test(splitSource(file)));
     expect(offenders).toEqual([]);
   });
 
@@ -18,7 +18,7 @@ describe("full-color CSS token syntax", () => {
       "src/app/(app)/schedule/_components/ListView.tsx",
       "src/app/(app)/schedule/_components/ScheduleFilters.tsx",
       "src/app/(app)/staff/[id]/UserBadgesTab.tsx",
-    ].map((path) => source(path));
+    ].map((path) => splitSource(path));
 
     for (const source of sources) {
       expect(source).toContain("color-mix(in_oklch");

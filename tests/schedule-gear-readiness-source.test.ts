@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { splitSource } from "./_helpers/source";
 
-const listViewSource = readFileSync("src/app/(app)/schedule/_components/ListView.tsx", "utf8");
+const listViewSource = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 const crewSource = readFileSync("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx", "utf8");
 const reservationWizardSource = readFileSync("src/components/booking-wizard/BookingWizard.tsx", "utf8");
 

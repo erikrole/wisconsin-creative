@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 const hook = source("src/hooks/use-schedule-data.ts");
 const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx");
-const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 const page = source("src/app/(app)/schedule/page.tsx");
 const appShell = source("src/components/AppShell.tsx");
 const timelinePosition = source("src/lib/schedule-timeline-position.ts");

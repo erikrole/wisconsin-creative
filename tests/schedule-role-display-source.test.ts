@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { source, serviceModuleSource } from "./_helpers/source";
+import { serviceModuleSource, source, splitSource } from "./_helpers/source";
 
 describe("schedule staff/student display source contracts", () => {
   it("uses assigned user scheduling-class labels for filled schedule rows", () => {
-    const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const eventCrew = source("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
     const slotCard = source("src/components/shift-detail/ShiftSlotCard.tsx");
     const picker = source("src/components/shift-detail/UserAvatarPicker.tsx");
@@ -23,7 +23,7 @@ describe("schedule staff/student display source contracts", () => {
   });
 
   it("keeps open-coverage needs copy neutral instead of class-specific", () => {
-    const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const readiness = source("src/app/(app)/schedule/_components/ScheduleReadiness.tsx");
     const assignmentCell = source("src/app/(app)/schedule/assign/_components/AssignmentCell.tsx");
     const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx");
@@ -43,7 +43,7 @@ describe("schedule staff/student display source contracts", () => {
   });
 
   it("keeps staff assignment inside the working-copy class gate", () => {
-    const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const workingEditor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
     const assignmentCell = source("src/app/(app)/schedule/assign/_components/AssignmentCell.tsx");
     const shiftDetail = source("src/components/ShiftDetailPanel.tsx");
@@ -60,7 +60,7 @@ describe("schedule staff/student display source contracts", () => {
   });
 
   it("shows editable call times only for Student schedule rows", () => {
-    const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const workingEditor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
     const assignmentCell = source("src/app/(app)/schedule/assign/_components/AssignmentCell.tsx");
     const slotCard = source("src/components/shift-detail/ShiftSlotCard.tsx");

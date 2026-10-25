@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("student shift claim surfaces", () => {
   it("keeps one approval-aware action in Schedule disclosure and Event detail", () => {
     const helper = source("src/components/ClaimShiftAction.tsx");
-    const schedule = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const schedule = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const eventDetail = source("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
     const panel = source("src/components/ShiftDetailPanel.tsx");
     const area = source("src/components/shift-detail/ShiftAreaSection.tsx");
