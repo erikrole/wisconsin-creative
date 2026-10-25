@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-25",
+    "title": "Clearer profile history",
+    "type": "fixes",
+    "summary": "Saving your profile in Settings now records only the fields you changed.",
+    "details": [
+      "A person's activity now reads \"Updated their phone\" instead of counting every field on the form.",
+      "A save that changes nothing no longer adds an activity row."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 698
+  },
+  {
+    "date": "2026-10-25",
     "title": "Import and override fixes",
     "type": "fixes",
     "summary": "Item imports no longer turn a price like \"n/a\" into a zero price, and checkout overrides show up once in the audit log.",
