@@ -3,7 +3,10 @@
 // Review screenshots belong in /mnt/project-files or a scratch/<topic>-shots
 // branch. CI sets BASE_SHA; locally only the root check runs. A PR that truly
 // needs a large file takes the `allow-large-files` label (re-run CI after).
+// Workflow actions must be pinned to a full commit SHA with a `# vN` comment;
+// Dependabot (github-actions ecosystem) bumps the SHA and the comment together.
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const MAX_BYTES = 1024 * 1024;
 const ASSET_ROOTS = ["public/", "ios/", "macos/", "src/"];
@@ -14,6 +17,16 @@ for (const f of git("ls-files", "-z").split("\0")) {
   if (f && !f.includes("/") && /\.(png|jpe?g|gif|webp|mp4|mov|zip)$/i.test(f)) {
     problems.push(`${f}: media at the repository root`);
   }
+}
+
+for (const f of git("ls-files", "-z", ".github/workflows").split("\0")) {
+  if (!/\.ya?ml$/.test(f)) continue;
+  readFileSync(f, "utf8").split("\n").forEach((line, i) => {
+    const ref = line.match(/^\s*(?:-\s+)?uses:\s+([^\s#]+)/)?.[1];
+    if (ref && !ref.startsWith("./") && !/@[0-9a-f]{40}$/.test(ref)) {
+      problems.push(`${f}:${i + 1}: ${ref} is not pinned to a commit SHA`);
+    }
+  });
 }
 
 const base = process.env.BASE_SHA ?? "";
@@ -28,7 +41,7 @@ if (!allowLarge && /^[0-9a-f]{40}$/.test(base) && !/^0+$/.test(base)) {
 }
 
 if (problems.length > 0) {
-  console.error("Repo hygiene failed. Keep review captures out of main:");
+  console.error("Repo hygiene failed:");
   for (const p of problems) console.error(`  ${p}`);
   process.exit(1);
 }
