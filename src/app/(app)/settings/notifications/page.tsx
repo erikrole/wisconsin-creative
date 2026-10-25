@@ -91,6 +91,10 @@ function formatPausedUntil(iso: string | null): string | null {
   });
 }
 
+function isoFromNow(ms: number) {
+  return new Date(Date.now() + ms).toISOString();
+}
+
 export default function NotificationsSettingsPage() {
   const { data: fetched, loading, error, reload } = useFetch<Loaded>({
     url: "/api/me/notification-preferences",
@@ -169,7 +173,7 @@ export default function NotificationsSettingsPage() {
 
   async function pauseFor(ms: number) {
     if (!prefs) return;
-    const until = new Date(Date.now() + ms).toISOString();
+    const until = isoFromNow(ms);
     const saved = await save({ ...prefs, pausedUntil: until }, { pausedUntil: until }, { silent: true });
     if (saved) {
       toast.success(`Paused until ${new Date(until).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" })}`);

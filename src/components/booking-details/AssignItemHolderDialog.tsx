@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +41,7 @@ export function AssignItemHolderDialog({
   onOpenChange,
   onUpdated,
 }: Props) {
+  const router = useRouter();
   const { users, loading, error: usersError } = useTransferRoster(open);
   const [targetValue, setTargetValue] = useState("");
   const [reason, setReason] = useState("");
@@ -106,7 +108,7 @@ export function AssignItemHolderDialog({
     toast.success(`${item.asset.assetTag} moved to ${transfer.targetUserName}'s checkout`, {
       action: {
         label: transfer.targetRefNumber ?? "View checkout",
-        onClick: () => window.location.assign(`/checkouts/${transfer.targetBookingId}`),
+        onClick: () => router.push(`/checkouts/${transfer.targetBookingId}`),
       },
     });
     window.dispatchEvent(new CustomEvent(BOOKING_CHANGE_SYNC_EVENT, {

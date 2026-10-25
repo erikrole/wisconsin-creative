@@ -182,7 +182,7 @@
 | `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
-| `src/components/ui/sidebar.tsx` | 710 |
+| `src/components/ui/sidebar.tsx` | 708 |
 | `src/components/schedule/SportSetupWizard.tsx` | 681 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |
 | `src/components/CommandPalette.tsx` | 588 |
@@ -222,6 +222,7 @@
 | `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 69 |
 | `src/hooks/use-mobile.ts` | 19 |
+| `src/hooks/use-now.ts` | 31 |
 | `src/hooks/use-onboarding-save.ts` | 249 |
 | `src/hooks/use-operational-polling-activity.ts` | 155 |
 | `src/hooks/use-profile-completion.ts` | 83 |

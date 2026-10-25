@@ -29,6 +29,7 @@ import {
 import { CREW_ROW_GROUP, CrewAreaDot, CrewAreaLabel, CrewTypeLabel } from "@/components/shift-detail/crew-row";
 import type { CalendarEntry } from "./types";
 import { ACTIVE_STATUSES, AREA_LABELS, scheduleEventTitleParts } from "./types";
+import { useNow } from "@/hooks/use-now";
 import { type CrewTemplateSide } from "./ListView";
 import {
   activeShiftAssignment,
@@ -186,6 +187,7 @@ export function ShiftRowList({
   onClaimed?: () => void | Promise<void>;
   compact?: boolean;
 }) {
+  const now = useNow();
   const commonCall = commonCallWindow(entry);
 
   return (
@@ -222,7 +224,7 @@ export function ShiftRowList({
           && !activeTrade
           && !entry.archivedAt
           && Number.isFinite(new Date(effectiveStart).getTime())
-          && new Date(effectiveStart).getTime() > Date.now(),
+          && new Date(effectiveStart).getTime() > now,
         );
         const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
         const workerType = workerKindForShift(shift);
