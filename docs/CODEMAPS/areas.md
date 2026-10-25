@@ -233,4 +233,4 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/youtube`
 - APIs: `/api/cron/youtube-sweep`, `/api/youtube/connection`, `/api/youtube/drafts/[videoId]/check-playlists`, `/api/youtube/drafts/[videoId]/check-send`, `/api/youtube/drafts/[videoId]/game`, `/api/youtube/drafts/[videoId]/make-public`, `/api/youtube/drafts/[videoId]/playlists`, `/api/youtube/drafts/[videoId]/prepare`, `/api/youtube/drafts/[videoId]/publish`, `/api/youtube/drafts/[videoId]`
 - Services: _none matched_
-- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service-checks.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-refresh.test.ts`, `tests/youtube-queue-service.test.ts`
+- Tests: `tests/youtube-connection.test.ts`, `tests/youtube-diff.test.ts`, `tests/youtube-oauth-routes.test.ts`, `tests/youtube-playlist-service.test.ts`, `tests/youtube-publish-service-checks.test.ts`, `tests/youtube-publish-service.test.ts`, `tests/youtube-publishing.test.ts`, `tests/youtube-queue-refresh.test.ts`

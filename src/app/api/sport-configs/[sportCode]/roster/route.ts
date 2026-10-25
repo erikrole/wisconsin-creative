@@ -122,7 +122,11 @@ export const DELETE = withAuth<{ sportCode: string }>(async (req, { user, params
     throw new HttpError(400, "assignmentId query parameter required");
   }
 
-  await removeFromRoster(assignmentId);
+  // Scoped to the sport in the URL, so a stale or repeated tap gets a 404
+  // instead of a server error, and the audit never names the wrong sport.
+  if (!(await removeFromRoster(assignmentId, sportCode))) {
+    throw new HttpError(404, "Assignment not found");
+  }
 
   await createAuditEntry({
     actorId: user.id,

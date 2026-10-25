@@ -44,7 +44,7 @@ export const EQUIPMENT_SECTIONS: EquipmentSection[] = [
  * Category name → equipment section mapping.
  * Keys are lowercased category names.
  */
-const CATEGORY_MAP: Record<string, EquipmentSectionKey> = {
+export const CATEGORY_MAP: Record<string, EquipmentSectionKey> = {
   // Cameras tab
   cameras: "cameras",
   camera: "cameras",
@@ -83,7 +83,7 @@ const CATEGORY_MAP: Record<string, EquipmentSectionKey> = {
 /**
  * Normalized keyword sets for type-based fallback classification.
  */
-const BUCKET_KEYWORDS: Record<EquipmentSectionKey, string[]> = {
+export const BUCKET_KEYWORDS: Record<EquipmentSectionKey, string[]> = {
   cameras: [
     "camera", "camcorder", "cinema camera", "dslr", "mirrorless",
     "video camera", "camera body",
@@ -102,6 +102,11 @@ const BUCKET_KEYWORDS: Record<EquipmentSectionKey, string[]> = {
   other: [], // catch-all — never matched by keywords
 };
 
+/** Keyword sections in match order; the first section with a matching keyword wins. */
+export const KEYWORD_SECTION_ORDER: Exclude<EquipmentSectionKey, "other">[] = [
+  "cameras", "lenses", "batteries", "audio", "tripods", "lighting",
+];
+
 /**
  * Classify an asset into an equipment section.
  * Checks category name first, then falls back to keyword matching on type.
@@ -115,8 +120,7 @@ export function classifyAssetType(type: string, categoryName?: string | null): E
 
   // 2. Fallback to keyword matching on type
   const normalized = type.toLowerCase().trim();
-  const orderedKeys: EquipmentSectionKey[] = ["cameras", "lenses", "batteries", "audio", "tripods", "lighting"];
-  for (const key of orderedKeys) {
+  for (const key of KEYWORD_SECTION_ORDER) {
     for (const keyword of BUCKET_KEYWORDS[key]) {
       if (normalized.includes(keyword)) {
         return key;
