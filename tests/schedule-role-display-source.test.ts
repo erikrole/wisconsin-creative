@@ -68,14 +68,12 @@ describe("schedule staff/student display source contracts", () => {
   });
 
   it("never substitutes event time into Staff call-time presentation", () => {
-    const dashboardRoute = source("src/app/api/dashboard/route.ts");
     const myShiftsRoute = source("src/app/api/my-shifts/route.ts");
     const dashboardColumn = source("src/app/(app)/_home/home-model.ts");
     const notifications = serviceModuleSource("notifications");
     const home = source("ios/Wisconsin/Views/Home/HomeModel.swift");
     const profile = source("ios/Wisconsin/Views/ProfileNextUp.swift");
 
-    expect((dashboardRoute.match(/a\.shift\.workerType === "ST"/g) ?? []).length).toBeGreaterThanOrEqual(2);
     expect(myShiftsRoute).toContain('a.shift.workerType === "ST"');
     expect(dashboardColumn).toContain('s.workerType === "ST"');
     expect(dashboardColumn).toContain("studentCallWindow && !isFullDayDefault");

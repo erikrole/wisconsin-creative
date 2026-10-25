@@ -222,6 +222,7 @@
 | `src/lib/cron.ts` | 35 |
 | `src/lib/crypto.ts` | 17 |
 | `src/lib/csv.ts` | 17 |
+| `src/lib/dashboard-payload.ts` | 376 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email-template.ts` | 207 |

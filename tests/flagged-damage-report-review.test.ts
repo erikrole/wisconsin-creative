@@ -2,14 +2,6 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 describe("flagged damage report review", () => {
-  it("sends the report photo, notes and asset status to staff", () => {
-    const route = source("src/app/api/dashboard/route.ts");
-    expect(route).toContain("asset: { select: { id: true, assetTag: true, name: true, status: true } }");
-    expect(route).toContain("description: r.description ?? null");
-    expect(route).toContain("imageUrl: r.imageUrl ?? null");
-    expect(route).toContain("assetStatus: r.asset.status");
-  });
-
   it("shows the photo and a maintenance action on web, not just a Photo badge", () => {
     const banner = source("src/app/(app)/dashboard/flagged-report-dialog.tsx");
     expect(banner).toContain("function FlaggedReportDialog");
