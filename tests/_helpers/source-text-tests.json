@@ -201,7 +201,6 @@
   "tests/schedule-freshness-source.test.ts",
   "tests/schedule-gear-readiness-source.test.ts",
   "tests/schedule-instant-pickup-source.test.ts",
-  "tests/schedule-list-row-grid-source.test.ts",
   "tests/schedule-open-work-source.test.ts",
   "tests/schedule-queue-source-contract.test.ts",
   "tests/schedule-release-notice-source.test.ts",

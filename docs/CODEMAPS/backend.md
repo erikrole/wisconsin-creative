@@ -145,7 +145,7 @@
 | `src/lib/services/user-deactivation.ts` | 589 |
 | `src/lib/services/utilization-report.ts` | 444 |
 | `src/lib/services/wishlist.ts` | 193 |
-| `src/lib/services/wrapped.ts` | 278 |
+| `src/lib/services/wrapped.ts` | 286 |
 
 ## Key Library Files
 

@@ -132,6 +132,14 @@ describe("buildPersonCards", () => {
     expect(week.sentence).toContain("3 events in 7 days");
   });
 
+  it("never ranks events without a sport as a sport", () => {
+    const games = [1, 2, 3, 4, 5].map((day) => game({ day, sportCode: null }));
+    const cards = buildPersonCards(input({ games }));
+    expect(ids(cards)).not.toContain("sport");
+    expect(JSON.stringify(cards)).not.toContain("Other");
+    expect(cards.find((card) => card.id === "style")!.value).toBe("Team Player");
+  });
+
   it("puts at most four stats on the summary card", () => {
     const cards = buildPersonCards(input({
       games: [1, 2, 3].map((day) => game({ day })),
@@ -184,6 +192,11 @@ describe("buildTeamCards", () => {
     expect(cards[0]!.sentence).toBe("Events covered by 3 people.");
     expect(cards[1]!.value).toBe("2–0");
     expect(cards[2]!.sentence).toBe("Homecoming on Sep 2.");
+  });
+
+  it("skips the biggest-crew card when nobody worked together", () => {
+    const cards = buildTeamCards({ games: [game({ day: 1, crew: [ME] })], checkouts: 0, badgesAwarded: 0 });
+    expect(ids(cards)).not.toContain("team-biggest");
   });
 
   it("is empty when nobody worked anything", () => {

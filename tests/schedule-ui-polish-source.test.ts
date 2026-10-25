@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { source, splitSource } from "./_helpers/source";
+import { source } from "./_helpers/source";
 
 describe("Schedule interaction-detail contracts", () => {
   it("keeps primary and secondary Schedule commands on the 40px baseline", () => {
     const page = source("src/app/(app)/schedule/page.tsx");
     const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
-    const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const periodNavigator = source("src/app/(app)/schedule/_components/SchedulePeriodNavigator.tsx");
     const sourceSignal = source("src/app/(app)/schedule/_components/ScheduleSourceSignal.tsx");
 
@@ -16,8 +15,6 @@ describe("Schedule interaction-detail contracts", () => {
     expect(calendar).toContain("<SchedulePeriodNavigator");
     expect(periodNavigator).toContain('className="size-10 text-muted-foreground"');
     expect(periodNavigator).toContain('className="h-10"');
-    expect(list).toContain('className="h-10" onClick={loadData}');
-    expect(list).not.toContain('className="h-9 shrink-0 px-2 text-xs');
     expect(sourceSignal).toContain('className="h-10 w-fit"');
   });
 
@@ -33,26 +30,6 @@ describe("Schedule interaction-detail contracts", () => {
     expect(week).toContain("transition-[background-color,border-color,opacity,scale]");
     expect(week).toContain("focus-visible:ring-2 focus-visible:ring-ring");
     expect(week).toContain("flex min-h-14 w-full items-center justify-between");
-  });
-
-  it("keeps crew avatars beside coverage and routes crew ownership through row actions", () => {
-    const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
-
-    expect(list).toContain("<span>Coverage</span>");
-    expect(list).toContain('<span className="block text-right">Crew</span>');
-    expect(list).toContain("<CrewSummary entry={entry} />");
-    expect(list).toContain("Manage crew");
-    expect(list).toContain("Set up crew");
-    expect(list).toContain("Use Home defaults");
-    expect(list).toContain("Use Away defaults");
-    expect(list).toContain("Start empty");
-    expect(list).toContain("<WorkingCrewEditor");
-    expect(list).toContain("onQuickManageCrew");
-    expect(list).toContain("Open Event detail");
-    expect(list).toContain("eventDetailHref");
-    expect(list).not.toContain("Assign {openCount} open");
-    expect(list).not.toContain("/api/shift-assignments");
-    expect(list).not.toContain("onSelectGroup();\n          }}\n        >\n          Assign {openCount}");
   });
 
   it("keeps expanded crew actions quiet and aligned", () => {

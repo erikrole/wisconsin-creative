@@ -119,6 +119,7 @@
 | `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
 | `/dev-transfer` | `src/app/dev-transfer/page.tsx` |
 | `/dev-welcome` | `src/app/dev-welcome/page.tsx` |
+| `/dev-wrapped` | `src/app/dev-wrapped/page.tsx` |
 | `/forgot-password` | `src/app/forgot-password/page.tsx` |
 | `/login` | `src/app/login/page.tsx` |
 | `/privacy` | `src/app/privacy/page.tsx` |
@@ -176,7 +177,7 @@
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1046 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1041 |
 | `src/components/TradeBoard.tsx` | 940 |
-| `src/components/BookingListPage.tsx` | 919 |
+| `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/Sidebar.tsx` | 798 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |

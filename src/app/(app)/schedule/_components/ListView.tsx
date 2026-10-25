@@ -293,6 +293,26 @@ export function ListView({
     }
   }, [anchorToday, firstEventId, groupedEntries, prependRestore]);
 
+  // The snapshot above is only taken when the rows change, so without this it
+  // still held the offset from before the reader scrolled, and the next prepend
+  // threw them to `stale offset + added height` instead of keeping their place.
+  useEffect(() => {
+    const track = () => {
+      prependSnapshotRef.current = {
+        ...prependSnapshotRef.current,
+        height: document.documentElement.scrollHeight,
+        y: window.scrollY,
+      };
+    };
+    window.addEventListener("scroll", track, { passive: true });
+    const observer = new ResizeObserver(track);
+    observer.observe(document.getElementById("main-content") ?? document.body);
+    return () => {
+      window.removeEventListener("scroll", track);
+      observer.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     if (!isTimeline) return;
     const claim = (event: Event) => {
@@ -694,7 +714,7 @@ export function ListView({
 
   return (
     <>
-      <div className={cn("schedule-enter overflow-hidden rounded-md border border-border/60 bg-card transition-opacity duration-200", fillingWindow && "opacity-80")} aria-busy={fillingWindow || undefined} data-schedule-view="list">
+      <div className={cn("schedule-enter overflow-clip rounded-md border border-border/60 bg-card transition-opacity duration-200", fillingWindow && "opacity-80")} aria-busy={fillingWindow || undefined} data-schedule-view="list">
         {/* ── Header ── */}
         <div className="flex items-center justify-between border-b border-border/60 bg-muted/15 px-3 py-2.5">
           <div className="flex items-center gap-2">

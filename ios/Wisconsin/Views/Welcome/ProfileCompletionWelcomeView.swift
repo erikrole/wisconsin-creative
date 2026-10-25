@@ -144,6 +144,7 @@ struct ProfileCompletionWelcomeView: View {
                     .accessibilityIdentifier("onboarding-save-status")
             }
 
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if isStudent && !data.profile.email.lowercased().hasSuffix("@wisc.edu") {
@@ -226,6 +227,20 @@ struct ProfileCompletionWelcomeView: View {
                 .animation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.22), value: currentStep)
             }
             .scrollDismissesKeyboard(.interactively)
+            // With the keyboard up the footer rides above it, so the focused
+            // field can sit half behind that bar. Bring the step body's bottom
+            // edge (where the input is) clear of the footer once the keyboard
+            // has finished opening.
+            .onChange(of: focusedField) { _, field in
+                guard field != nil else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+                        proxy.scrollTo("body-\(currentStep.rawValue)", anchor: .bottom)
+                    }
+                }
+            }
+            }
 
             footer
         }

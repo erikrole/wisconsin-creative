@@ -29,6 +29,37 @@
   },
   {
     "date": "2026-10-24",
+    "title": "Wrapped hours and team totals fixed",
+    "type": "fixes",
+    "summary": "A dry run of the fall recap fixed how hours and team numbers are counted.",
+    "details": [
+      "Shift hours now count shifts whose attendance was never logged, so hours no longer come up short.",
+      "Events without a sport are no longer ranked as an “Other” sport.",
+      "Team totals leave out collaborators, and the biggest-crew card only shows when people worked together.",
+      "Big numbers get commas, tied sports are called a tie, and long venue and sport names no longer get cut off."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 668
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Schedule list keeps your place",
+    "type": "fixes",
+    "summary": "Day headers on the Schedule list now stay pinned while you scroll, and loading older events no longer jumps you to a different spot.",
+    "details": [
+      "The date header for the day you are reading stays visible under the Schedule bar.",
+      "Scrolling up into older events keeps the event you were looking at in the same place on screen."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 681
+  },
+  {
+    "date": "2026-10-24",
     "title": "Position tags and lost units fixed",
     "type": "fixes",
     "summary": "Position tags like ROAM2 and GC show in capitals again, and a lost unit can be settled right from the Dashboard.",
@@ -54,6 +85,39 @@
       "Widgets and Spotlight catch up with the first background refresh after 6 AM.",
       "Opening the app still loads everything right away, at any hour."
     ]
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Clearer first-week guidance",
+    "type": "improvement",
+    "summary": "New students are told how to sign in to the app, where checkouts start, and why Home has no shifts yet.",
+    "details": [
+      "The setup finish screen now says to sign in to the iPhone app with the same email and password.",
+      "An empty Checkouts list explains that gear is checked out at the kiosk or in the iPhone app, and shows up here with its return time.",
+      "A new student's Home says nothing is scheduled yet and shifts appear once the team schedules them, instead of sending them to hunt for trades.",
+      "In the next iPhone app update, a new student's Home welcomes them instead of saying they are caught up, the setup fields stay clear of the Continue bar when the keyboard opens, and long empty stretches on the Schedule show their end year."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 670
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Tidier layouts across the iPhone app",
+    "type": "improvement",
+    "summary": "Home, Schedule, Items and Profile fit better on every iPhone size we support.",
+    "details": [
+      "The Home greeting now uses the full width instead of wrapping beside your photo.",
+      "Schedule's Non-game filter is the same size as the others.",
+      "Profile's Next Up and the Items list show longer names on two lines instead of cutting them off.",
+      "Report a Problem uses the app's standard red and green."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 671
   },
   {
     "date": "2026-10-24",

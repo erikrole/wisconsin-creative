@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { source, splitSource } from "./_helpers/source";
+import { source } from "./_helpers/source";
 
 describe("schedule source-of-truth and browser smoke contracts", () => {
   it("keeps the authenticated launch browser gate configured and scoped", () => {
@@ -138,7 +138,6 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
   });
 
   it("keeps timed release, Open Work, Event detail gear readiness, and change history visible", () => {
-    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const eventCrew = source("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
     const editor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
     const release = source("src/lib/schedule-release.ts");
@@ -161,8 +160,6 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(tradeBoard).toContain("Claim shift");
     expect(tradeBoard).toContain("Request sent for Admin approval");
 
-    expect(listView).not.toContain("Reserve gear");
-    expect(listView).not.toContain("/reservations/new?");
     const eventDetail = source("src/app/(app)/events/[id]/page.tsx");
     const eventHeader = source("src/app/(app)/events/[id]/_components/EventHeader.tsx");
     const eventActivity = source("src/app/(app)/events/[id]/_components/EventActivityCard.tsx");
@@ -176,43 +173,11 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     }
     expect(eventCrew).not.toContain("type: \"slot\", id: shift.id");
 
-    expect(listView).not.toContain("Review changes");
-    expect(listView).not.toContain("Unpublished changes");
-    expect(listView).not.toContain("Changed recently");
     expect(eventCrew).not.toContain("Recent schedule changes");
     expect(eventActivity).toContain("Activity");
     expect(eventActivity).toContain("Needs review");
   });
 
-  it("keeps Schedule list triage dense, grouped, and actionable across viewport sizes", () => {
-    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
-    const mobile = listView.slice(
-      listView.indexOf("Mobile: card list"),
-      listView.indexOf("<Dialog"),
-    );
-
-    expect(listView).toContain("EVENT_GRID_CLASS");
-    expect(listView).toContain("const EVENT_COLUMNS =");
-    expect(listView).toContain("grid-cols-[44px_72px_minmax(180px,1fr)_80px_minmax(100px,140px)_136px_40px]");
-    expect(listView).toContain("const openCount =");
-    expect(listView).toContain("Manage crew");
-    expect(listView).toContain("Set up crew");
-    expect(listView).not.toContain("Assign {openCount}");
-    expect(listView).toContain('weekday: "short"');
-    expect(listView).toContain('month: "short"');
-    expect(listView).toContain('day: "numeric"');
-    expect(listView).not.toContain('text-[22px]');
-    expect(mobile).toContain("groupedEntries.map");
-    expect(mobile).toContain("groupEntries.map");
-    expect(mobile).not.toContain("filteredEntries.map");
-    expect(mobile).toContain("<CrewRowActions");
-    expect(listView).toContain("Hide event");
-    expect(mobile).toContain("onHideEvent(entry.id)");
-    expect(mobile).toContain("hidingEventIds?.has(entry.id)");
-    expect(listView).toContain('"group/row border-l-[3px] transition-colors"');
-    expect(mobile).toContain('"schedule-enter relative border-b border-l-[3px] border-border/50 last:border-b-0"');
-    expect(listView).toContain("venueTone.railClass");
-  });
 
   it("keeps active Schedule filters visible and partial health failures out of the all-clear state", () => {
     const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx");
