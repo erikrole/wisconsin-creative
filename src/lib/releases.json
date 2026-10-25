@@ -5,7 +5,8 @@
     "type": "fixes",
     "summary": "Game and gear names on a profile's Next Up list now wrap instead of cutting off.",
     "details": [
-      "Names like “Volleyball vs Nebraska” show in full on a second line on every iPhone size."
+      "Names like “Volleyball vs Nebraska” show in full on a second line on every iPhone size.",
+      "Applies to your own profile and to a teammate's profile."
     ],
     "platforms": [
       "iOS"
