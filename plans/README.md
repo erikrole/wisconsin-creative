@@ -127,7 +127,7 @@ Verified plan status against `main` HEAD (not just branch existence):
 | 004 | Rehost external BulkSku images through Blob | P2 | M/L | none | DONE (branch improve-exec/004-rehost-bulk-sku-images; 9 cron tests). Deviation (approved): also added BulkSku.imageRehostAttempts to schema.prisma — it was missing despite the migration SQL existing (schema↔DB drift). No new migration. |
 | 005 | Split iOS profile and availability views out of AppTabView | P2 | M | none | DONE ON MAIN (2026-06-19): `AppTabView.swift` now owns only the stable native tab shell and push routing; profile, notification settings, account security, account avatar, and availability code live in focused Swift files. XcodeBuildMCP simulator build passed. |
 | 006 | Refresh the testing guide against the current suite | P3 | S | none | DONE (branch improve-exec/006-testing-guide; historical counts from that run only; current inventory is maintained in `docs/TESTING.md`) |
-| 007 | Make database diagnostics use live migration truth | P2 | M | 001 | DONE (branch improve-exec/007-db-diagnostics, 12/12 tests) |
+| 007 | Make database diagnostics use live migration truth | P2 | M | 001 | DONE on main (the branch never merged; landed in #707) |
 | 008 | Normalize custom API limit parsing | P3 | S | none | DONE (branch improve-exec/008-limit-parsing) |
 | 009 | Register iOS UserAvatarView in the audit inventory | P1 | S | none | DONE (branch improve-exec/009-ios-audit-registry; both surfaces registered, gate green) |
 | 010 | Extend iOS API error guardrails into Core | P1 | M | none | DONE (branch improve-exec/010-ios-core-api-guardrails; source-contract R3 guardrail test, no Swift code change, 21 tests + drift:ios green) |

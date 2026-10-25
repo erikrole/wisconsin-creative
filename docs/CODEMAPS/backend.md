@@ -9,9 +9,9 @@
 | `src/lib/services/app-activity-report.ts` | 508 |
 | `src/lib/services/app-diagnostics.ts` | 56 |
 | `src/lib/services/auto-assign.ts` | 92 |
-| `src/lib/services/auto-fill-preview.ts` | 322 |
+| `src/lib/services/auto-fill-preview.ts` | 323 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 700 |
+| `src/lib/services/availability.ts` | 683 |
 | `src/lib/services/badge-report.ts` | 144 |
 | `src/lib/services/battery-low-stock.ts` | 89 |
 | `src/lib/services/blast-targeting.ts` | 166 |
@@ -43,7 +43,7 @@
 | `src/lib/services/checkout-escalation-notifications.ts` | 504 |
 | `src/lib/services/checkout-lifecycle.ts` | 664 |
 | `src/lib/services/checkout-policies.ts` | 40 |
-| `src/lib/services/checkout-reports.ts` | 375 |
+| `src/lib/services/checkout-reports.ts` | 370 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
 | `src/lib/services/collaborator-schedule.ts` | 228 |
