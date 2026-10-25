@@ -287,7 +287,10 @@ function parseDate(raw: string): Date | null {
 
 function parseCurrency(raw: string): number | undefined {
   if (!raw) return undefined;
-  const n = Number(raw.replace(/[^\d.-]+/g, ""));
+  const digits = raw.replace(/[^\d.-]+/g, "");
+  // Text with no digits ("n/a", "TBD") is no price, not $0.
+  if (!/\d/.test(digits)) return undefined;
+  const n = Number(digits);
   return Number.isFinite(n) ? n : undefined;
 }
 
