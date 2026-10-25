@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-25",
+    "title": "One password-change path",
+    "type": "fixes",
+    "summary": "Passwords can now only be changed through the protected Change password form, which limits repeated tries and signs out your other apps.",
+    "details": [
+      "An older, unused way to change a password has been removed.",
+      "Every password change now goes through the same rate-limited check and signs out the Mac and iPhone companions.",
+      "Behind the scenes: more automated checks for sign-in sessions, push alerts, schedules, the dashboard and trade alerts."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 704
+  },
+  {
+    "date": "2026-10-25",
     "title": "Safer item photo links",
     "type": "fixes",
     "summary": "When you add an item or battery family photo from a link, the app now checks that the file really is an image before saving a copy.",
