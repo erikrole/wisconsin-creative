@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-24",
+    "title": "Schedule list keeps your place",
+    "type": "fixes",
+    "summary": "Day headers on the Schedule list now stay pinned while you scroll, and loading older events no longer jumps you to a different spot.",
+    "details": [
+      "The date header for the day you are reading stays visible under the Schedule bar.",
+      "Scrolling up into older events keeps the event you were looking at in the same place on screen."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 681
+  },
+  {
+    "date": "2026-10-24",
     "title": "Position tags and lost units fixed",
     "type": "fixes",
     "summary": "Position tags like ROAM2 and GC show in capitals again, and a lost unit can be settled right from the Dashboard.",
