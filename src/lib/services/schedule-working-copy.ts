@@ -527,6 +527,18 @@ async function editorResponse(
   };
 }
 
+/** User-facing replies for the codes `applyWorkingScheduleCommand` throws. */
+const WORKING_SCHEDULE_COMMAND_ERRORS = new Map<string, [status: number, message: string]>([
+  ["UNASSIGN_BEFORE_CONVERTING", [409, "Unassign this person before converting the slot."]],
+  ["CONVERT_AND_REPLACE_REQUIRES_CONVERSION", [400, "Choose the other worker class when converting this slot."]],
+  ["CANCEL_TRADE_BEFORE_REPLACING", [409, "Cancel the active trade before replacing this person."]],
+  ["UNLINK_BOOKING_BEFORE_REPLACING", [409, "Unlink the assignment's booking before replacing this person."]],
+  ["WORKING_SLOT_NOT_FOUND", [404, "Working slot not found"]],
+  ["WORKING_SLOT_ALREADY_ASSIGNED", [409, "This slot is already assigned"]],
+  ["WORKING_SLOT_NOT_ASSIGNED", [409, "This slot is not assigned"]],
+  ["CALL_TIME_STUDENT_ONLY", [400, "Call times apply only to Student slots."]],
+]);
+
 async function findEditorGroup(shiftGroupId: string, tx: Prisma.TransactionClient = db) {
   const group = await tx.shiftGroup.findUnique({ where: { id: shiftGroupId }, select: groupEditorSelect });
   if (!group) throw new HttpError(404, "Shift group not found");
@@ -832,30 +844,8 @@ export async function mutateWorkingSchedule(
           ? "Some of those slots have people or history. Unassign them, or remove them one at a time, before lowering the count."
           : "Unassign an open matching slot before reducing this crew count.");
       }
-      if (error instanceof Error && error.message === "UNASSIGN_BEFORE_CONVERTING") {
-        throw new HttpError(409, "Unassign this person before converting the slot.");
-      }
-      if (error instanceof Error && error.message === "CONVERT_AND_REPLACE_REQUIRES_CONVERSION") {
-        throw new HttpError(400, "Choose the other worker class when converting this slot.");
-      }
-      if (error instanceof Error && error.message === "CANCEL_TRADE_BEFORE_REPLACING") {
-        throw new HttpError(409, "Cancel the active trade before replacing this person.");
-      }
-      if (error instanceof Error && error.message === "UNLINK_BOOKING_BEFORE_REPLACING") {
-        throw new HttpError(409, "Unlink the assignment's booking before replacing this person.");
-      }
-      if (error instanceof Error && error.message === "WORKING_SLOT_NOT_FOUND") {
-        throw new HttpError(404, "Working slot not found");
-      }
-      if (error instanceof Error && error.message === "WORKING_SLOT_ALREADY_ASSIGNED") {
-        throw new HttpError(409, "This slot is already assigned");
-      }
-      if (error instanceof Error && error.message === "WORKING_SLOT_NOT_ASSIGNED") {
-        throw new HttpError(409, "This slot is not assigned");
-      }
-      if (error instanceof Error && error.message === "CALL_TIME_STUDENT_ONLY") {
-        throw new HttpError(400, "Call times apply only to Student slots.");
-      }
+      const mapped = error instanceof Error ? WORKING_SCHEDULE_COMMAND_ERRORS.get(error.message) : undefined;
+      if (mapped) throw new HttpError(mapped[0], mapped[1]);
       throw error;
     }
 

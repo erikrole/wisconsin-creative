@@ -118,7 +118,7 @@
 | `src/lib/services/schedule-open-work.ts` | 597 |
 | `src/lib/services/schedule-publication.ts` | 1133 |
 | `src/lib/services/schedule-template-review.ts` | 549 |
-| `src/lib/services/schedule-working-copy.ts` | 1275 |
+| `src/lib/services/schedule-working-copy.ts` | 1265 |
 | `src/lib/services/scoreboard.ts` | 290 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
