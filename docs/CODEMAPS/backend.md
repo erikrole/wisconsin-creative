@@ -86,7 +86,7 @@
 | `src/lib/services/kit-member-availability.ts` | 97 |
 | `src/lib/services/kits.ts` | 836 |
 | `src/lib/services/label-print-jobs.ts` | 102 |
-| `src/lib/services/licenses.ts` | 684 |
+| `src/lib/services/licenses.ts` | 687 |
 | `src/lib/services/live-activities.ts` | 630 |
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
