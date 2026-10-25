@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-25",
+    "title": "Audit report comparison fixed",
+    "type": "fixes",
+    "summary": "The audit report's comparison with the previous period now respects the record type you filtered by.",
+    "details": [
+      "Filtering the audit report to one kind of record, such as bookings, now compares it with the same kind of record in the period before.",
+      "Before, the earlier period counted every kind of record, so the change looked larger than it was."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 692
+  },
+  {
+    "date": "2026-10-25",
     "title": "Damage report emails fixed",
     "type": "fixes",
     "summary": "Emails about an item reported from its own page now open the Damage page instead of a broken link.",
