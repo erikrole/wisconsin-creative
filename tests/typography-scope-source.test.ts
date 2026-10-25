@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 /**
  * Two cascade traps, both measured in the browser on 2026-08-23.
@@ -40,7 +40,7 @@ describe("Typography scope contracts", () => {
     ];
 
     for (const [path, expected] of cases) {
-      expect(source(path), path).toContain(expected);
+      expect(splitSource(path), path).toContain(expected);
     }
   });
 
@@ -57,7 +57,7 @@ describe("Typography scope contracts", () => {
     const inert = /<(?:h[1-6]|CardTitle)[^>]*className="[^"]*(?:text-(?:xs|sm|base|lg|xl|[2-9]xl)|text-\[[^\]]+\]|font-(?:normal|medium|semibold|bold|extrabold|black))(?!!)[\s"]/;
 
     for (const path of files) {
-      expect(source(path), path).not.toMatch(inert);
+      expect(splitSource(path), path).not.toMatch(inert);
     }
   });
 });

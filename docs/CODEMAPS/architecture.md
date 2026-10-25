@@ -14,7 +14,7 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 | API route handlers | 439 |
 | Service files | 141 |
 | Component files | 192 |
-| Test files | 891 |
+| Test files | 892 |
 
 ## Oversized Source Watchlist
 
@@ -22,11 +22,9 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/app/(app)/schedule/_components/ListView.tsx` | 1991 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/app/(app)/resources/page.tsx` | 1578 |
 | `src/app/(app)/staff/[id]/UserInfoTab.tsx` | 1569 |
-| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1567 |
 | `src/lib/services/shift-trades.ts` | 1567 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1549 |
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1398 |
@@ -39,9 +37,11 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/gear-picks.ts` | 1192 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/app/(app)/staff/[id]/page.tsx` | 1160 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1154 |
 | `src/lib/services/shift-notifications.ts` | 1144 |
 | `src/lib/services/schedule-publication.ts` | 1133 |
 | `src/app/(app)/kits/[id]/page.tsx` | 1132 |
+| `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
 
 ## High-Level Data Flow
 

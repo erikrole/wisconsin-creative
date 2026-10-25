@@ -74,3 +74,29 @@ export function serviceModuleSource(name: keyof typeof SPLIT_SERVICE_MODULES): s
     .map((file) => source(`src/lib/services/${file}.ts`))
     .join("\n");
 }
+
+/** Component files that were split; the entry file's text includes these. */
+const SPLIT_COMPONENT_FILES: Record<string, string[]> = {
+  "src/app/(app)/schedule/_components/ListView.tsx": [
+    "src/app/(app)/schedule/_components/ListViewEventRows.tsx",
+    "src/app/(app)/schedule/_components/ListViewCrewRows.tsx",
+    "src/app/(app)/schedule/_components/ListViewGrid.tsx",
+    "src/app/(app)/schedule/_components/ListViewTimeline.tsx",
+    "src/app/(app)/schedule/_components/list-view-helpers.ts",
+  ],
+  "src/app/(app)/items/[id]/ItemInfoTab.tsx": [
+    "src/app/(app)/items/[id]/ItemInfoFields.tsx",
+    "src/app/(app)/items/[id]/ItemQrModal.tsx",
+    "src/app/(app)/items/[id]/FirmwareWatchPanel.tsx",
+    "src/app/(app)/items/[id]/item-info-format.ts",
+  ],
+};
+
+/**
+ * A component file plus the files it was split into, as one text, so a
+ * contract about the surface does not depend on which file a piece lives in.
+ * Files that were never split read as themselves.
+ */
+export function splitSource(entryFile: string): string {
+  return [entryFile, ...(SPLIT_COMPONENT_FILES[entryFile] ?? [])].map((file) => source(file)).join("\n");
+}

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { source, splitSource } from "./_helpers/source";
 
 describe("schedule source-of-truth and browser smoke contracts", () => {
   it("keeps the authenticated launch browser gate configured and scoped", () => {
@@ -138,7 +138,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
   });
 
   it("keeps timed release, Open Work, Event detail gear readiness, and change history visible", () => {
-    const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const eventCrew = source("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
     const editor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
     const release = source("src/lib/schedule-release.ts");
@@ -185,7 +185,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
   });
 
   it("keeps Schedule list triage dense, grouped, and actionable across viewport sizes", () => {
-    const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const listView = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const mobile = listView.slice(
       listView.indexOf("Mobile: card list"),
       listView.indexOf("<Dialog"),

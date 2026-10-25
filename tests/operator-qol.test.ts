@@ -7,6 +7,8 @@ const clipboardConsumers = [
   "src/components/resources/MarkdownReader.tsx",
   "src/app/(app)/staff/[id]/UserInfoTab.tsx",
   "src/app/(app)/items/[id]/ItemInfoTab.tsx",
+  "src/app/(app)/items/[id]/ItemInfoFields.tsx",
+  "src/app/(app)/items/[id]/ItemQrModal.tsx",
 ];
 
 afterEach(() => {
@@ -44,7 +46,9 @@ describe("operator clipboard feedback", () => {
 
   it("BUG: keeps transient copied feedback owned by the latest attempt", () => {
     const hook = source("src/hooks/use-copy-feedback.ts");
-    const item = source("src/app/(app)/items/[id]/ItemInfoTab.tsx");
+    const item = ["ItemInfoTab", "ItemInfoFields", "ItemQrModal"]
+      .map((file) => source(`src/app/(app)/items/[id]/${file}.tsx`))
+      .join("\n");
     const markdown = source("src/components/resources/MarkdownReader.tsx");
 
     expect(hook).toContain('export type CopyFeedbackResult = "copied" | "failed" | "superseded"');
