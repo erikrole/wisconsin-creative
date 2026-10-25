@@ -601,6 +601,20 @@
   },
   {
     "date": "2026-10-22",
+    "title": "Fill crews faster",
+    "type": "improvement",
+    "summary": "Assign several people to open slots at once, and start a crew from the sport's usual size.",
+    "details": [
+      "When an area has two or more open slots, Fill picks several people at once and assigns them in one save.",
+      "Crew size shows the sport's home or away template, so you can match it in one tap or save the current counts as the new template."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 611
+  },
+  {
+    "date": "2026-10-22",
     "title": "One on-time rule across the app",
     "type": "improvement",
     "summary": "The on-time rate on staff profiles now matches the Accountability report.",

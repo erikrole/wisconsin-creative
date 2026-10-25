@@ -219,6 +219,8 @@ function workingScheduleActionMeta(row: AuditRow): { kind: ScheduleChangeKind; l
   switch (commandType) {
     case "assign":
       return { kind: "assignment_assigned", label: "Assigned worker", detail: "Working copy" };
+    case "assignMany":
+      return { kind: "assignment_assigned", label: "Assigned workers", detail: "Working copy" };
     case "unassign":
       return { kind: "assignment_removed", label: "Removed worker", detail: "Working copy" };
     case "convertAndReplace":
