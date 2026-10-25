@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth";
 import { changePasswordSchema, normalizeSlackHandle, normalizeSlackProfileUrl, normalizeWiscardNumber, updateProfileSchema } from "@/lib/validation";
 import { createAuditEntry } from "@/lib/audit";
 import { normalizeProfilePhone, phoneAuditValue } from "@/lib/profile-phone";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import { revokeCompanionUser } from "@/lib/companion-store";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
 
@@ -18,6 +19,19 @@ const PRESENCE_ONLY_AUDIT_FIELDS = new Set([
   "wiscardNumber", "wiscardCardNumber", "wiscardIssueCode",
   "birthdayMonth", "birthdayDay", "birthYear",
 ]);
+/** Fields saved as sent, with null clearing them. */
+const NULLABLE_PROFILE_FIELDS = [
+  "locationId", "title", "gradYear", "graduationTerm", "studentYearOverride",
+  "topSize", "topSizeFit", "bottomSize", "shoeSize", "shoeSizeSystem",
+  "birthdayMonth", "birthdayDay", "birthYear",
+] as const;
+
+/** How a field's value reads in the audit log: phones masked, private values only as present. */
+function auditValue(key: string, value: unknown) {
+  if (PHONE_AUDIT_FIELDS.has(key)) return phoneAuditValue(value);
+  if (PRESENCE_ONLY_AUDIT_FIELDS.has(key)) return value == null ? null : "[set]";
+  return value instanceof Date ? value.toISOString() : value;
+}
 
 export const GET = withAuth(async (_req, { user }) => {
   const profile = await db.user.findUniqueOrThrow({
@@ -146,54 +160,45 @@ export const PATCH = withAuth(async (req, { user }) => {
     },
   });
 
+  const sent = (key: keyof typeof payload) => Object.hasOwn(payload, key);
   const data: Record<string, unknown> = {};
   if (payload.name !== undefined) data.name = payload.name;
-  if (Object.prototype.hasOwnProperty.call(payload, "phone")) {
+  if (sent("phone")) {
     const personalPhone = normalizeProfilePhone(payload.phone);
     data.phone = personalPhone;
     data.personalPhone = personalPhone;
   }
-  if (Object.prototype.hasOwnProperty.call(payload, "personalPhone")) {
+  if (sent("personalPhone")) {
     const personalPhone = normalizeProfilePhone(payload.personalPhone);
     data.personalPhone = personalPhone;
     data.phone = personalPhone;
   }
-  if (Object.prototype.hasOwnProperty.call(payload, "workPhone")) {
+  if (sent("workPhone")) {
     const workPhone = normalizeProfilePhone(payload.workPhone);
     data.workPhone = workPhone;
     data.workPhoneNotApplicable = workPhone === null;
   }
-  if (Object.prototype.hasOwnProperty.call(payload, "wiscardNumber")) {
+  if (sent("wiscardNumber")) {
     data.wiscardNumber = normalizeWiscardNumber(payload.wiscardNumber);
   }
-  if (Object.prototype.hasOwnProperty.call(payload, "wiscardCardNumber") || Object.prototype.hasOwnProperty.call(payload, "wiscardIssueCode")) {
-    const cardNumber = Object.prototype.hasOwnProperty.call(payload, "wiscardCardNumber") ? payload.wiscardCardNumber : current.wiscardCardNumber;
-    const issueCode = Object.prototype.hasOwnProperty.call(payload, "wiscardIssueCode") ? payload.wiscardIssueCode : current.wiscardIssueCode;
+  if (sent("wiscardCardNumber") || sent("wiscardIssueCode")) {
+    const cardNumber = sent("wiscardCardNumber") ? payload.wiscardCardNumber : current.wiscardCardNumber;
+    const issueCode = sent("wiscardIssueCode") ? payload.wiscardIssueCode : current.wiscardIssueCode;
     data.wiscardCardNumber = cardNumber || null;
     data.wiscardIssueCode = issueCode || null;
     data.wiscardNumber = cardNumber && issueCode ? `${cardNumber}${issueCode}` : null;
   }
-  if (Object.prototype.hasOwnProperty.call(payload, "slackHandle")) data.slackHandle = normalizeSlackHandle(payload.slackHandle);
-  if (Object.prototype.hasOwnProperty.call(payload, "slackProfileUrl")) data.slackProfileUrl = normalizeSlackProfileUrl(payload.slackProfileUrl);
-  if (Object.prototype.hasOwnProperty.call(payload, "locationId")) data.locationId = payload.locationId ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "title")) data.title = payload.title ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "athleticsEmail")) {
+  if (sent("slackHandle")) data.slackHandle = normalizeSlackHandle(payload.slackHandle);
+  if (sent("slackProfileUrl")) data.slackProfileUrl = normalizeSlackProfileUrl(payload.slackProfileUrl);
+  if (sent("athleticsEmail")) {
     data.athleticsEmail = payload.athleticsEmail ? payload.athleticsEmail.toLowerCase() : null;
   }
-  if (Object.prototype.hasOwnProperty.call(payload, "startDate")) {
+  if (sent("startDate")) {
     data.startDate = payload.startDate ? new Date(payload.startDate) : null;
   }
-  if (Object.prototype.hasOwnProperty.call(payload, "gradYear")) data.gradYear = payload.gradYear ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "graduationTerm")) data.graduationTerm = payload.graduationTerm ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "studentYearOverride")) data.studentYearOverride = payload.studentYearOverride ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "topSize")) data.topSize = payload.topSize ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "topSizeFit")) data.topSizeFit = payload.topSizeFit ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "bottomSize")) data.bottomSize = payload.bottomSize ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "shoeSize")) data.shoeSize = payload.shoeSize ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "shoeSizeSystem")) data.shoeSizeSystem = payload.shoeSizeSystem ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "birthdayMonth")) data.birthdayMonth = payload.birthdayMonth ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "birthdayDay")) data.birthdayDay = payload.birthdayDay ?? null;
-  if (Object.prototype.hasOwnProperty.call(payload, "birthYear")) data.birthYear = payload.birthYear ?? null;
+  for (const key of NULLABLE_PROFILE_FIELDS) {
+    if (sent(key)) data[key] = payload[key] ?? null;
+  }
 
   let updated;
   try {
@@ -203,7 +208,7 @@ export const PATCH = withAuth(async (req, { user }) => {
       include: { location: { select: { id: true, name: true } } },
     });
   } catch (err) {
-    if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002") {
+    if (isUniqueConstraintError(err)) {
       const target = ((err as { meta?: { target?: string[] | string } }).meta?.target) ?? [];
       const targetValues = Array.isArray(target) ? target : [String(target)];
       if (targetValues.some((t) => t.includes("wiscard_number") || t.includes("wiscardNumber") || t.includes("wiscard_card_number"))) {
@@ -220,14 +225,8 @@ export const PATCH = withAuth(async (req, { user }) => {
   for (const key of Object.keys(data)) {
     const before = (current as Record<string, unknown>)[key] ?? null;
     const after = (updated as Record<string, unknown>)[key] ?? null;
-    let beforeKey = PHONE_AUDIT_FIELDS.has(key)
-      ? phoneAuditValue(before)
-      : PRESENCE_ONLY_AUDIT_FIELDS.has(key) ? (before == null ? null : "[set]")
-      : before instanceof Date ? before.toISOString() : before;
-    let afterKey = PHONE_AUDIT_FIELDS.has(key)
-      ? phoneAuditValue(after)
-      : PRESENCE_ONLY_AUDIT_FIELDS.has(key) ? (after == null ? null : "[set]")
-      : after instanceof Date ? after.toISOString() : after;
+    let beforeKey = auditValue(key, before);
+    let afterKey = auditValue(key, after);
     if (PRESENCE_ONLY_AUDIT_FIELDS.has(key) && before !== after && beforeKey === afterKey) {
       beforeKey = "[set]";
       afterKey = "[updated]";
