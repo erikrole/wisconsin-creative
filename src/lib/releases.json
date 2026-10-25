@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-25",
+    "title": "Damage report emails fixed",
+    "type": "fixes",
+    "summary": "Emails about an item reported from its own page now open the Damage page instead of a broken link.",
+    "details": [
+      "Reports filed during a return still open that checkout.",
+      "The in-app alert and the email now always link to the same place."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 686
+  },
+  {
+    "date": "2026-10-25",
     "title": "Battery pickup counts fixed",
     "type": "fixes",
     "summary": "A battery scanned twice at the kiosk now counts once when a reservation is picked up.",

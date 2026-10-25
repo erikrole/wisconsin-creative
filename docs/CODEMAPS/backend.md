@@ -20,7 +20,7 @@
 | `src/lib/services/booking-custody.ts` | 82 |
 | `src/lib/services/booking-event-links.ts` | 273 |
 | `src/lib/services/booking-item-holder.ts` | 194 |
-| `src/lib/services/booking-notifications.ts` | 191 |
+| `src/lib/services/booking-notifications.ts` | 192 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 215 |
 | `src/lib/services/booking-rules.ts` | 135 |

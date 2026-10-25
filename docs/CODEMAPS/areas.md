@@ -137,7 +137,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/notifications`, `/settings/notifications`
 - APIs: `/api/cron/notifications`, `/api/notifications/count`, `/api/notifications/nudge`, `/api/notifications/process`, `/api/notifications`
 - Services: `src/lib/services/booking-notifications.ts`, `src/lib/services/checkout-escalation-notifications.ts`, `src/lib/services/claim-review-notifications.ts`, `src/lib/services/notifications.ts`, `src/lib/services/shift-notifications.ts`, `src/lib/services/trade-post-notifications.ts`
-- Tests: `tests/ios-notifications-read-recovery.test.ts`, `tests/ios-notifications-registration-health.test.ts`, `tests/ios-notifications-tapthrough.test.ts`, `tests/ios-notifications-token-honesty.test.ts`, `tests/notifications-count-route.test.ts`, `tests/notifications-ownership-ui-contract.test.ts`, `tests/notifications-route.test.ts`, `tests/notifications-support-hardening.test.ts`
+- Tests: `tests/booking-notifications-delivery.test.ts`, `tests/ios-notifications-read-recovery.test.ts`, `tests/ios-notifications-registration-health.test.ts`, `tests/ios-notifications-tapthrough.test.ts`, `tests/ios-notifications-token-honesty.test.ts`, `tests/notifications-count-route.test.ts`, `tests/notifications-ownership-ui-contract.test.ts`, `tests/notifications-route.test.ts`
 
 ## public-showroom
 
