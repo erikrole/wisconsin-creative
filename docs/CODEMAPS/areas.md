@@ -57,7 +57,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: _none matched_
 - APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
-- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
+- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-route.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`, `tests/kiosk-dashboard-route.test.ts`
 
 ## error-reporting
 
@@ -201,7 +201,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/schedule/assign`, `/schedule`
 - APIs: `/api/my-shifts`, `/api/schedule/automation`, `/api/schedule/bulk-assignment/apply`, `/api/schedule/bulk-assignment/batches/[id]/cancel`, `/api/schedule/bulk-assignment/batches`, `/api/schedule/bulk-assignment/preview`, `/api/schedule/export`, `/api/schedule/health`, `/api/schedule/open-work`, `/api/schedule/published/[id]/follow`
 - Services: `src/lib/services/bulk-schedule-assignment.ts`, `src/lib/services/collaborator-schedule.ts`, `src/lib/services/combined-schedule-events.ts`, `src/lib/services/non-game-schedule-defaults.ts`, `src/lib/services/reservation-schedule.ts`, `src/lib/services/schedule-automation.ts`, `src/lib/services/schedule-call-time-sync.ts`, `src/lib/services/schedule-change-history.ts`
-- Tests: `tests/badge-shift-breadth.test.ts`, `tests/bulk-schedule-assignment-source.test.ts`, `tests/collaborator-schedule-follow.test.ts`, `tests/combined-schedule-event-suggestions.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`, `tests/ios-collaborator-published-schedule-redesign.test.ts`
+- Tests: `tests/badge-shift-breadth.test.ts`, `tests/bulk-schedule-assignment-source.test.ts`, `tests/bulk-schedule-assignment.test.ts`, `tests/collaborator-schedule-follow.test.ts`, `tests/combined-schedule-event-suggestions.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`
 
 ## signatures
 

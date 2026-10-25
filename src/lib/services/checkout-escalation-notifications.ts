@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { buildNotificationEmail } from "@/lib/email";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
 import { formatAppTime } from "@/lib/app-time";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import {
   checkoutEscalationCategory,
@@ -68,10 +69,6 @@ function responderUserIds(raw: unknown): string[] {
   if (!raw || typeof raw !== "object") return [];
   const ids = (raw as { userIds?: unknown }).userIds;
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
-}
-
-function isUniqueConflict(error: unknown): boolean {
-  return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2002");
 }
 
 function requesterEscalationBody(args: {
@@ -191,7 +188,7 @@ async function persistCheckoutEscalation(args: {
     notificationId = row.id;
     args.existingKeys.add(dedupeKey);
   } catch (error) {
-    if (isUniqueConflict(error)) return false;
+    if (isUniqueConstraintError(error)) return false;
     throw error;
   }
 

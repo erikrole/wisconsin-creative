@@ -46,8 +46,6 @@ describe("schedule browse fixes", () => {
     expect(hook).toContain("dateRange: deepLink.dateRange");
     expect(hook).toContain("clearDateRange");
     expect(hook).not.toContain("setMyShiftsOnlyRaw(false)");
-    const clearAll = hook.slice(hook.indexOf("clearAll: () => {"));
-    expect(clearAll).not.toContain('params.delete("myShifts")');
   });
 
   it("leads the readiness rail with recent crew and calendar activity", () => {

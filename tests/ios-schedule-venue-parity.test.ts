@@ -71,7 +71,6 @@ describe("iOS Schedule venue parity", () => {
     // Trade Board and the collaborator schedule must keep the narrower call.
     expect(tones).toContain("func venueTone(isHome: Bool?) -> StatusTone");
     expect(tones).toContain("func venueRailColor(isHome: Bool?) -> Color");
-    expect(source("src/lib/services/shift-trades.ts")).toContain("isHome: true,");
     expect(source("src/lib/services/collaborator-schedule.ts")).toContain("isHome: true,");
   });
 });

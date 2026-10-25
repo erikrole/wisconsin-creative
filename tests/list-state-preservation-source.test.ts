@@ -14,39 +14,16 @@ describe("list state preservation source contracts", () => {
     expect(query).not.toContain("window.history.replaceState");
   });
 
-  it("serializes and rehydrates the complete Schedule list context", () => {
+  it("writes and rehydrates the Schedule list context through App Router history", () => {
+    // What goes in the query string is behavior-tested in
+    // tests/schedule-url-state.test.ts; this pins the hook's history wiring.
     const schedule = source("src/hooks/use-schedule-data.ts");
-
-    for (const key of [
-      "view",
-      "month",
-      "week",
-      "sportCode",
-      "area",
-      "coverage",
-      "venue",
-      "includeArchived",
-      "myShifts",
-    ]) {
-      expect(schedule).toContain(`query.get("${key}")`);
-    }
 
     expect(schedule).toContain("scheduleSearchSignatureRef");
     expect(schedule).toContain("skipNextScheduleUrlWriteRef");
     expect(schedule).toContain("router.replace(nextUrl, { scroll: false })");
-    expect(schedule).toContain("setViewModeRaw(parseScheduleViewMode(query.get(\"view\")) ?? \"list\")");
-    expect(schedule).toContain("setAreaFilterRaw(query.get(\"area\") ?? \"\")");
-    expect(schedule).toContain("setHomeAwayFilterRaw(parseScheduleVenue(query.get(\"venue\")))");
-  });
-
-  it("keeps existing queue/deep-link parameters while clearing owned filters", () => {
-    const schedule = source("src/hooks/use-schedule-data.ts");
-
-    expect(schedule).toContain('params.set("queue", queue)');
-    expect(schedule).toContain('params.delete("queue")');
-    for (const key of ["area", "coverage", "venue", "includeArchived", "startDate", "endDate"]) {
-      expect(schedule).toContain(`params.delete("${key}")`);
-    }
+    expect(schedule).toContain("readScheduleUrlFilters(query)");
+    expect(schedule).toContain("writeScheduleUrlState(");
   });
 
   it("keeps the complete Bookings list context in App Router history", () => {

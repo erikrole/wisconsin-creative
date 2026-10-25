@@ -166,6 +166,28 @@ describe("PATCH /api/profile", () => {
     expect(JSON.stringify(audit)).not.toMatch(/9081234567|1234567890|2004/);
   });
 
+  it("saves only the fields sent, clearing those sent as null", async () => {
+    await patch({
+      title: null,
+      athleticsEmail: "Maya.R@Athletics.Wisc.edu",
+      startDate: "2026-08-24T05:00:00.000Z",
+      shoeSize: "9",
+      shoeSizeSystem: "US_WOMENS",
+      gradYear: 2028,
+      locationId: null,
+    });
+
+    expect(mocks.userUpdate.mock.calls[0]![0].data).toEqual({
+      title: null,
+      athleticsEmail: "maya.r@athletics.wisc.edu",
+      startDate: new Date("2026-08-24T05:00:00.000Z"),
+      shoeSize: "9",
+      shoeSizeSystem: "US_WOMENS",
+      gradYear: 2028,
+      locationId: null,
+    });
+  });
+
   it("writes no audit when nothing actually changed", async () => {
     await patch({ name: "Maya" });
 

@@ -12,7 +12,6 @@ import { source, serviceModuleSource } from "./_helpers/source";
 describe("all-day events carry no call time", () => {
   it("suppresses the call window in every API payload that emits one", () => {
     const myShifts = source("src/app/api/my-shifts/route.ts");
-    const dashboard = source("src/app/api/dashboard/route.ts");
     const kiosk = source("src/app/api/kiosk/dashboard/route.ts");
     const published = source("src/lib/services/collaborator-schedule.ts");
 
@@ -23,13 +22,8 @@ describe("all-day events carry no call time", () => {
     expect(myShifts).toContain("&& studentCallTimeAppliesToEvent(event)");
     expect(myShifts).toContain("allDay: event.allDay,");
 
-    // Personal shift rows and event-work rows, each guarding start and end,
-    // plus the today-event call chip.
-    expect(dashboard.match(/a\.shift\.workerType === "ST" && !ev\.allDay/g)?.length).toBe(6);
-    expect(dashboard).toContain("e.isHome === true");
-    expect(dashboard).toContain("&& !e.allDay");
-    expect(dashboard).toContain("&& studentCallTimeAppliesToEvent(e)");
-    expect(dashboard).toContain("&& earliestShift");
+    // The Home dashboard payload is covered by behavior in
+    // tests/dashboard-route.test.ts.
 
     // The kiosk route already nulled these; keep it that way.
     expect(kiosk).toContain("callStartsAt: allDay ? null : callStartsAt");
