@@ -105,6 +105,22 @@
   },
   {
     "date": "2026-10-24",
+    "title": "Tidier layouts across the iPhone app",
+    "type": "improvement",
+    "summary": "Home, Schedule, Items and Profile fit better on every iPhone size we support.",
+    "details": [
+      "The Home greeting now uses the full width instead of wrapping beside your photo.",
+      "Schedule's Non-game filter is the same size as the others.",
+      "Profile's Next Up and the Items list show longer names on two lines instead of cutting them off.",
+      "Report a Problem uses the app's standard red and green."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 671
+  },
+  {
+    "date": "2026-10-24",
     "title": "Wiscard is now optional during setup",
     "type": "improvement",
     "summary": "New teammates without a Wiscard can finish setting up their account.",

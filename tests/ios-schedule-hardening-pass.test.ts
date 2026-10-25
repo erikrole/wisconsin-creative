@@ -86,7 +86,7 @@ describe("iOS Schedule hardening pass", () => {
     expect(schedule).toContain('Text("Add your shifts to Calendar")\n                .font(.subheadline.weight(.bold))\n                .lineLimit(nil)\n                .fixedSize(horizontal: false, vertical: true)');
     expect(row).toContain(".lineLimit(stacksTime ? 3 : 2)");
     // "Non-game" fits the type control at the same size as its neighbours.
-    expect(filters).toContain(".padding(.horizontal, compact ? 8 : 14)");
+    expect(filters).toContain(".padding(.horizontal, compact ? 3 : 14)");
   });
 
   it("names a multi-day event's real end while it runs", () => {
