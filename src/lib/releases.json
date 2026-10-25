@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-25",
+    "title": "Safer item photo links",
+    "type": "fixes",
+    "summary": "When you add an item or battery family photo from a link, the app now checks that the file really is an image before saving a copy.",
+    "details": [
+      "A link that returns a web page instead of a picture is now refused, even when the link ends in .png or .jpg.",
+      "Saved copies use the picture's real type, so a JPEG sent as PNG is stored correctly.",
+      "When a kiosk hand-off moves one item, the server's reply now reads \"1 item\" instead of \"1 items\"."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 703
+  },
+  {
+    "date": "2026-10-25",
     "title": "Kiosk times in Chicago time",
     "type": "fixes",
     "summary": "When the kiosk says an item is booked for a shared travel case, the booking times now show in Chicago time.",
