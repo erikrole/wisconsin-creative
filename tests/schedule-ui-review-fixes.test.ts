@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { source, splitSource } from "./_helpers/source";
+import { source } from "./_helpers/source";
 
 const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx");
 const readiness = source("src/app/(app)/schedule/_components/ScheduleReadiness.tsx");
 const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
-const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 const week = source("src/app/(app)/schedule/_components/WeekView.tsx");
 const page = source("src/app/(app)/schedule/page.tsx");
 
@@ -113,24 +112,6 @@ describe("schedule browse fixes", () => {
     expect(calendar).toContain("function goToMonth(next: Date) {");
     expect(calendar).toContain("setExpandedDay(null);");
     expect(calendar).not.toContain("function prevMonth() {\n    setCalMonth(");
-  });
-
-  it("aligns the list column headers with the rows they name", () => {
-    // Body rows carry a 3px venue rail on the <tr>; the header needs the same
-    // reserve or every label sits 3px left of its column.
-    expect(list).toContain("border-b border-l-[3px] border-border/50 border-l-transparent");
-  });
-
-  it("does not put an inert control in the mobile tab order", () => {
-    expect(list).toContain("{canExpand ? (");
-    expect(list).toContain("onClick={() => toggleExpandedRow(entry.id)}");
-    expect(list).toContain('<div className="w-full px-4 py-3 pr-14 text-left">');
-    expect(list).not.toContain("canExpand\n                        ? toggleExpandedRow(entry.id)");
-  });
-
-  it("only clears the expanded-row pointer for the row that owns it", () => {
-    expect(list).toContain("if (expandedRowId === entryId) setExpandedRowId(null);");
-    expect(list).toContain("}, [expandedRowId, setExpandedRowId]);");
   });
 
   it("dates both halves of a week that crosses New Year", () => {

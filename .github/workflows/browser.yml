@@ -1,7 +1,7 @@
 name: Browser
 
-# Fixture-backed browser tests (tests/browser): the real gear picker and setup
-# wizard bundled with esbuild, every API answered by fixtures, plus an axe-core
+# Fixture-backed browser tests (tests/browser): the real gear picker, setup
+# wizard and Schedule list bundled with esbuild, every API answered by fixtures, plus an axe-core
 # accessibility scan. No database, credentials or deploy. Path filters keep it
 # off docs-only and iOS-only pushes; it is not a required check.
 

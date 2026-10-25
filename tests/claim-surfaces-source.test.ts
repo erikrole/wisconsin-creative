@@ -1,17 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { source, splitSource } from "./_helpers/source";
+import { source } from "./_helpers/source";
 import { apiClientSource } from "./_helpers/ios-api-client-source";
 
 describe("student shift claim surfaces", () => {
   it("keeps one approval-aware action in Schedule disclosure and Event detail", () => {
     const helper = source("src/components/ClaimShiftAction.tsx");
-    const schedule = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
     const eventDetail = source("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
     const panel = source("src/components/ShiftDetailPanel.tsx");
     const area = source("src/components/shift-detail/ShiftAreaSection.tsx");
     const slot = source("src/components/shift-detail/ShiftSlotCard.tsx");
 
-    expect(schedule).toContain("<ClaimShiftAction");
     expect(eventDetail).toContain("<ClaimShiftAction");
     expect(helper).toContain('"/api/shift-assignments/pickup"');
     expect(helper).toContain("/withdraw");
@@ -19,8 +17,6 @@ describe("student shift claim surfaces", () => {
     expect(helper).toContain("claimsPaused");
     expect(helper).toContain("Staff are updating this crew");
     expect(helper).toContain("function ClaimsPausedNotice");
-    expect(schedule).toContain("claimsPaused={Boolean(entry.claimsPaused)}");
-    expect(schedule).toContain("<ClaimsPausedNotice");
     expect(eventDetail).toContain("claimsPaused={Boolean(shiftGroup.claimsPaused)}");
     expect(eventDetail).toContain("<ClaimsPausedNotice");
     expect(panel).not.toContain("onRequest");

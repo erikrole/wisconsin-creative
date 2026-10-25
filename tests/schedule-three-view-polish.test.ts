@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { source, splitSource } from "./_helpers/source";
+import { source } from "./_helpers/source";
 
 const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
 const hook = source("src/hooks/use-schedule-data.ts");
-const list = splitSource("src/app/(app)/schedule/_components/ListView.tsx");
 const navigator = source("src/app/(app)/schedule/_components/SchedulePeriodNavigator.tsx");
 const timeline = source("src/lib/schedule-timeline-position.ts");
 const week = source("src/app/(app)/schedule/_components/WeekView.tsx");
 
 describe("Schedule three-view polish", () => {
   it("gives every view an explicit, testable surface", () => {
-    expect(list).toContain('data-schedule-view="list"');
     expect(week).toContain('data-schedule-view="week"');
     expect(calendar).toContain('data-schedule-view="calendar"');
   });
@@ -43,14 +41,10 @@ describe("Schedule three-view polish", () => {
   it("measures the live sticky frame during a pinned-state transition", () => {
     expect(timeline).toContain('querySelector<HTMLElement>("[data-schedule-sticky-frame]")');
     expect(timeline).toContain("return Math.max(publishedBottom, liveBottom);");
-    expect(list).toContain("return Math.max(publishedBottom, liveBottom);");
   });
 
   it("keeps a saved List anchor while its view control is taking focus", () => {
     expect(source("src/app/(app)/schedule/_components/ScheduleFilters.tsx")).toContain("data-schedule-view-controls");
-    expect(list).toContain('target.closest("[data-schedule-view-controls]")');
-    expect(list).toContain("rememberScheduleTimelineReadingPosition");
-    expect(list).toContain("window.setTimeout(rememberScheduleTimelineReadingPosition, 160)");
   });
 
   it("uses one period navigator with orientation and live coverage context", () => {
