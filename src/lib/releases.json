@@ -7,7 +7,7 @@
     "details": [
       "An item with a known category always appears on that category's tab, even when its type mentions something else, like a camera battery grip.",
       "Items without a category are sorted by their type, using the first matching tab, so a camera battery no longer shows on both Cameras and Batteries.",
-      "Removing someone from a sport roster twice in a row now says the person was already removed instead of showing an error."
+      "Removing someone from a sport roster who was already removed now returns a clear \"not found\" answer instead of a server error."
     ],
     "platforms": [
       "Web"
