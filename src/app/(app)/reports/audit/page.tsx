@@ -229,9 +229,10 @@ export default function AuditReportPage() {
     keepPreviousData: true,
   });
 
+  const auditRows = data?.data;
   const timelineEntries = useMemo(
-    () => (data?.data ? toTimelineEntries(data.data) : []),
-    [data?.data],
+    () => (auditRows ? toTimelineEntries(auditRows) : []),
+    [auditRows],
   );
   const totalPages = data ? Math.ceil(data.total / limit) : 0;
 

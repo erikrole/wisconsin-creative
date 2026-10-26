@@ -1,83 +1,60 @@
 /**
  * Prisma WHERE clause builders for equipment section filtering.
  *
- * Encodes the same classification logic as `classifyAssetType` in
- * equipment-sections.ts but as database-level filters for use in queries.
+ * Mirrors `classifyAssetType` in equipment-sections.ts as database filters, so
+ * every asset lands in exactly the section the picker counts it under: a known
+ * category decides first, and only an asset without one falls back to the first
+ * section whose type keyword matches.
  */
 import { Prisma } from "@prisma/client";
-import type { EquipmentSectionKey } from "@/lib/equipment-sections";
+import {
+  BUCKET_KEYWORDS,
+  CATEGORY_MAP,
+  KEYWORD_SECTION_ORDER,
+  type EquipmentSectionKey,
+} from "@/lib/equipment-sections";
 
-/** Category names that map to each section (lowercased for matching). */
-const SECTION_CATEGORIES: Record<EquipmentSectionKey, string[]> = {
-  cameras: ["cameras", "camera", "camera bodies", "bodies"],
-  lenses: ["lenses", "lens"],
-  batteries: ["batteries", "battery"],
-  audio: ["audio", "microphones", "microphone", "recorders", "recorder", "wireless"],
-  tripods: ["tripods", "tripod", "support"],
-  lighting: ["lighting", "lights", "light"],
-  other: [
-    "monitors", "monitor", "media storage", "media cards", "storage", "office",
+const MAPPED_CATEGORY_NAMES = Object.keys(CATEGORY_MAP);
+
+function categoryNamesFor(section: EquipmentSectionKey): string[] {
+  return MAPPED_CATEGORY_NAMES.filter((name) => CATEGORY_MAP[name] === section);
+}
+
+/** No category, or one the category map does not know, so the type decides. */
+const UNMAPPED_CATEGORY: Prisma.AssetWhereInput = {
+  OR: [
+    { categoryId: null },
+    { category: { name: { notIn: MAPPED_CATEGORY_NAMES, mode: "insensitive" } } },
   ],
 };
 
-/** Type-field keywords for fallback classification (same as BUCKET_KEYWORDS). */
-const SECTION_TYPE_KEYWORDS: Record<EquipmentSectionKey, string[]> = {
-  cameras: [
-    "camera", "camcorder", "cinema camera", "dslr", "mirrorless",
-    "video camera", "camera body",
-  ],
-  lenses: ["lens", "lenses"],
-  batteries: [
-    "battery", "batteries", "charger", "power supply", "power",
-    "v-mount", "vmount", "gold mount",
-  ],
-  audio: [
-    "microphone", "mic", "audio", "mixer", "headphone",
-    "lavalier", "shotgun mic", "recorder", "transmitter", "receiver", "wireless",
-  ],
-  tripods: ["tripod", "monopod", "slider"],
-  lighting: ["lighting", "light", "led panel", "fresnel", "strobe"],
-  other: [], // catch-all
-};
+function typeMatches(section: EquipmentSectionKey): Prisma.AssetWhereInput {
+  return { OR: BUCKET_KEYWORDS[section].map((keyword) => ({ type: { contains: keyword, mode: "insensitive" } })) };
+}
 
-/**
- * Build a Prisma WHERE clause that matches assets belonging to a section.
- *
- * For "other" (catch-all): matches assets NOT in any other section.
- */
+/** Build a Prisma WHERE clause that matches assets belonging to a section. */
 export function sectionWhere(section: EquipmentSectionKey): Prisma.AssetWhereInput {
   if (section === "other") {
-    // "Other" is the catch-all — assets not matching any specific section
-    const excludeSections: EquipmentSectionKey[] = ["cameras", "lenses", "batteries", "audio", "tripods", "lighting"];
-    const excludeClauses = excludeSections.map((s) => sectionMatchClause(s));
-    return { NOT: { OR: excludeClauses } };
+    // The catch-all: assets that no keyword section claims.
+    return { NOT: { OR: KEYWORD_SECTION_ORDER.map(sectionMatchClause) } };
   }
-
   return sectionMatchClause(section);
 }
 
-/** Build a positive match clause for a non-catch-all section. */
-function sectionMatchClause(section: EquipmentSectionKey): Prisma.AssetWhereInput {
-  const categoryNames = SECTION_CATEGORIES[section];
-  const typeKeywords = SECTION_TYPE_KEYWORDS[section];
-
-  const conditions: Prisma.AssetWhereInput[] = [];
-
-  // Match by category name (case-insensitive via IN on known values)
-  if (categoryNames.length > 0) {
-    conditions.push({
-      category: { name: { in: categoryNames, mode: "insensitive" } },
-    });
-  }
-
-  // Fallback: match by type keywords
-  for (const keyword of typeKeywords) {
-    conditions.push({
-      type: { contains: keyword, mode: "insensitive" },
-    });
-  }
-
-  return conditions.length === 1 ? conditions[0]! : { OR: conditions }; // length === 1 guard
+function sectionMatchClause(section: Exclude<EquipmentSectionKey, "other">): Prisma.AssetWhereInput {
+  const earlierSections = KEYWORD_SECTION_ORDER.slice(0, KEYWORD_SECTION_ORDER.indexOf(section));
+  return {
+    OR: [
+      { category: { name: { in: categoryNamesFor(section), mode: "insensitive" } } },
+      {
+        AND: [
+          UNMAPPED_CATEGORY,
+          typeMatches(section),
+          ...earlierSections.map((earlier) => ({ NOT: typeMatches(earlier) })),
+        ],
+      },
+    ],
+  };
 }
 
 /** All section keys for iteration. */

@@ -244,11 +244,12 @@ export async function addToRoster(userId: string, sportCode: string) {
   });
 }
 
-/** Remove a user from a sport roster */
-export async function removeFromRoster(assignmentId: string) {
-  return db.studentSportAssignment.delete({
-    where: { id: assignmentId },
+/** Remove a user from a sport roster. Returns false when that sport has no such assignment. */
+export async function removeFromRoster(assignmentId: string, sportCode: string) {
+  const { count } = await db.studentSportAssignment.deleteMany({
+    where: { id: assignmentId, sportCode },
   });
+  return count > 0;
 }
 
 /** Bulk add users to a sport roster */

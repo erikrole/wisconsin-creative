@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Check, X, CalendarIcon } from "lucide-react";
 import { clampToQuarterHour } from "@/lib/quarter-hour";
 import { pad2 } from "@/lib/format";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTE_OPTIONS = [0, 15, 30, 45];
@@ -52,9 +53,9 @@ export function InlineDateField({
 	  const controlId = useId();
 
   // Reset pending when value changes externally (e.g. after successful save)
-  useEffect(() => {
+  useAdjustState([value, open], () => {
     if (!open) setPendingDate(new Date(value));
-  }, [value, open]);
+  });
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 

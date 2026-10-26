@@ -203,6 +203,42 @@ describe("buildAutoFillPreview", () => {
     ]);
   });
 
+  it("names the first filter that emptied the pool, and reports slots the sport policy leaves open", () => {
+    const preview = (scores: CandidateRecommendation[], extra: Partial<Parameters<typeof buildAutoFillPreview>[0]> = {}) => buildAutoFillPreview({
+      shiftGroupId: "group-1",
+      eventId: "event-1",
+      eventSummary: "Volleyball vs Iowa",
+      eventSportCode: null,
+      policy: "FULL_CREW" as const,
+      eventIsHome: true,
+      eventHasTravelRoster: false,
+      generatedAt: new Date("2026-10-01T12:00:00.000Z"),
+      shifts: [shifts[0]!],
+      users: [...users, { id: "staff-a", name: "A Staff", role: "STAFF", staffingType: "FT" }],
+      scoresByShiftId: { "shift-1": scores },
+      ...extra,
+    }).skipped[0];
+
+    expect(preview([score({ userId: "hidden", score: 90 })])).toEqual(expect.objectContaining({
+      reasonCode: "no_visible_candidates", reason: "No active candidates were available for this student slot.",
+    }));
+    expect(preview([score({ userId: "student-a", score: 90 })], { eventSportCode: "VB" })).toEqual(expect.objectContaining({
+      reasonCode: "no_sport_roster", reason: "Nobody is assigned to this sport.",
+    }));
+    expect(preview([score({ userId: "staff-a", score: 90 })])).toEqual(expect.objectContaining({
+      reasonCode: "no_scheduling_class_match", reason: "No student scheduling-class candidates were available.",
+    }));
+    expect(preview([score({ userId: "student-a", score: 90, reasons: [{ code: "role_fit", label: "Student slot fit", weight: 24 }] })])).toEqual(expect.objectContaining({
+      reasonCode: "no_area_fit", reason: "No student candidate had Video area fit.",
+    }));
+    expect(preview([score({ userId: "student-a", score: 90 })], { policy: "STAFF_ONLY" as const, eventSportCode: "VB" })).toEqual(expect.objectContaining({
+      reasonCode: "sport_policy_staff_only", reason: "Student slots stay open for students to request on this sport.", candidateCount: 0,
+    }));
+    expect(preview([score({ userId: "student-a", score: 90 })], { policy: "HOLD" as const, eventSportCode: "VB" })).toEqual(expect.objectContaining({
+      reasonCode: "sport_policy_hold", reason: "Volleyball is on hold for auto assignment.",
+    }));
+  });
+
   it("explains skipped slots when eligible candidates were already proposed", () => {
     const preview = buildAutoFillPreview({
       shiftGroupId: "group-1",

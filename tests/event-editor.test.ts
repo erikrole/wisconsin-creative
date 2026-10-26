@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   NONE_SPORT_VALUE,
+  buildCreatedEventWindow,
+  buildEventDraftDateTime,
   createManualEventDraft,
+  eventDraftDate,
+  eventDraftTime,
   emptyEventEditorDraft,
   gameTitleIsNotMatchup,
   suggestedEventEditorTitle,
@@ -68,5 +72,36 @@ describe("gameTitleIsNotMatchup", () => {
     expect(gameTitleIsNotMatchup({ ...base, title: "Football at Iowa" })).toBe(false);
     expect(gameTitleIsNotMatchup({ ...base, title: "" })).toBe(false);
     expect(gameTitleIsNotMatchup({ ...base, eventType: "non-game", title: "Official Visit" })).toBe(false);
+  });
+});
+
+describe("event draft dates and times", () => {
+  // Tests run in America/Chicago (see vitest.config.ts).
+  const oct31 = new Date(2026, 9, 31);
+
+  it("stores all-day events as UTC midnights with an exclusive end, and reads them back as the same days", () => {
+    const startsAt = buildEventDraftDateTime(oct31, "09:00", true, false);
+    const endsAt = buildEventDraftDateTime(oct31, "17:00", true, true);
+
+    expect(startsAt).toBe("2026-10-31T00:00:00.000Z");
+    expect(endsAt).toBe("2026-11-01T00:00:00.000Z");
+    expect(eventDraftDate(startsAt!, true, false).toDateString()).toBe(oct31.toDateString());
+    expect(eventDraftDate(endsAt!, true, true).toDateString()).toBe(oct31.toDateString());
+  });
+
+  it("stores timed events at the chosen Chicago wall time, across the DST change", () => {
+    expect(buildEventDraftDateTime(oct31, "13:30", false, false)).toBe("2026-10-31T18:30:00.000Z");
+    // Nov 1, 2026 falls back to CST (UTC-6).
+    expect(buildEventDraftDateTime(new Date(2026, 10, 1), "13:30", false, false)).toBe("2026-11-01T19:30:00.000Z");
+    expect(eventDraftTime("2026-11-01T19:30:00.000Z")).toBe("13:30");
+    expect(eventDraftDate("2026-10-31T18:30:00.000Z", false, false).toISOString()).toBe("2026-10-31T18:30:00.000Z");
+  });
+
+  it("needs both dates, and rounds timed windows up to the quarter hour", () => {
+    const draft = { ...createManualEventDraft(oct31), startTime: "13:05", endTime: "15:46" };
+
+    expect(buildCreatedEventWindow({ ...draft, endDate: undefined })).toEqual({ startsAt: null, endsAt: null });
+    expect(buildCreatedEventWindow(draft)).toEqual({ startsAt: "2026-10-31T18:15:00.000Z", endsAt: "2026-10-31T21:00:00.000Z" });
+    expect(buildCreatedEventWindow({ ...draft, allDay: true })).toEqual({ startsAt: "2026-10-31T00:00:00.000Z", endsAt: "2026-11-01T00:00:00.000Z" });
   });
 });

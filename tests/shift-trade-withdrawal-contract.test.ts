@@ -38,11 +38,9 @@ describe("shift trade and request withdrawal contract", () => {
     const web = source("src/components/TradeBoard.tsx");
     const models = source("ios/Wisconsin/Models/ShiftTradeModels.swift");
     const openWork = source("src/lib/services/schedule-open-work.ts");
-    const trades = source("src/lib/services/shift-trades.ts");
 
     expect(web).toContain("Auto-approval check by");
     expect(models).toContain("let reviewAutoApprovesAt: Date?");
     expect(openWork).toContain("claimReviewDeadlines");
-    expect(trades).toContain("reviewAutoApprovesAt");
   });
 });

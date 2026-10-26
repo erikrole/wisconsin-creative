@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import type { TabKey as BookingSheetSection } from "@/components/booking-details/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 /** Shared fetch wrapper with 401 redirect */
 async function fetchAction(url: string, method = "POST"): Promise<Response> {
@@ -55,8 +56,8 @@ export default function BookingsPage() {
   const requestedView = searchParams.get("view") === "table" || searchParams.get("view") === "cards"
     ? searchParams.get("view") as "table" | "cards"
     : null;
-  const [activeTab, setActiveTab] = useState<"all" | "checkouts" | "reservations">(requestedTab);
-  const [scope, setScope] = useState<"active" | "past">(requestedScope);
+  const [activeTab, setActiveTab] = useSyncedDraft<"all" | "checkouts" | "reservations">(requestedTab);
+  const [scope, setScope] = useSyncedDraft<"active" | "past">(requestedScope);
   const [viewMode, setViewModeRaw] = useState<"cards" | "table">("cards");
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const actionBusyRef = useRef(false);
@@ -68,14 +69,6 @@ export default function BookingsPage() {
     const id = searchParams.get("highlight") || searchParams.get("id");
     return id ? { id, tab: requestedTab, sheetTab: parseBookingSheetSection(searchParams.get("sheetTab")) } : null;
   });
-
-  useEffect(() => {
-    setActiveTab(requestedTab);
-  }, [requestedTab]);
-
-  useEffect(() => {
-    setScope(requestedScope);
-  }, [requestedScope]);
 
   useEffect(() => {
     if (requestedView) {
@@ -123,7 +116,7 @@ export default function BookingsPage() {
     next.delete("page");
     const qs = next.toString();
     router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false });
-  }, [router, searchParams]);
+  }, [router, searchParams, setActiveTab]);
 
   const handleScopeChange = useCallback((value: string) => {
     if (value !== "active" && value !== "past") return;
@@ -139,7 +132,7 @@ export default function BookingsPage() {
     next.delete("page");
     const qs = next.toString();
     router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false });
-  }, [router, searchParams]);
+  }, [router, searchParams, setScope]);
 
   const isPastScope = scope === "past";
   const canCreateReservation = currentUser != null && !currentUser.preview?.readOnly && (

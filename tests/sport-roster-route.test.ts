@@ -28,9 +28,9 @@ vi.mock("@/lib/audit", () => ({
 import { requireAuth } from "@/lib/auth";
 import { createAuditEntry } from "@/lib/audit";
 import { MAX_SPORT_ROSTER_USERS_PER_REQUEST } from "@/lib/request-limits";
-import { bulkAddToRoster } from "@/lib/services/sport-configs";
+import { addToRoster, bulkAddToRoster, getSportRoster, removeFromRoster } from "@/lib/services/sport-configs";
 import { db } from "@/lib/db";
-import { PATCH, POST } from "@/app/api/sport-configs/[sportCode]/roster/route";
+import { DELETE, GET, PATCH, POST } from "@/app/api/sport-configs/[sportCode]/roster/route";
 
 const user = {
   id: "cm000000000000000000000001",
@@ -112,5 +112,78 @@ describe("PATCH /api/sport-configs/[sportCode]/roster", () => {
       before: { defaultTraveler: true },
       after: expect.objectContaining({ defaultTraveler: true }),
     }));
+  });
+});
+
+const headers = { "content-type": "application/json", host: "app.example.com", origin: "https://app.example.com" };
+
+describe("GET and single POST /api/sport-configs/[sportCode]/roster", () => {
+  it("reads the roster for the normalized sport code", async () => {
+    vi.mocked(getSportRoster).mockResolvedValue([{ id: "a1" }] as never);
+
+    const res = await GET(new Request("https://app.example.com/api/sport-configs/fb/roster"), routeParams);
+
+    expect(await res.json()).toEqual({ data: [{ id: "a1" }] });
+    expect(getSportRoster).toHaveBeenCalledWith("FB");
+  });
+
+  it("adds one person and audits the new assignment", async () => {
+    vi.mocked(addToRoster).mockResolvedValue({ id: "a2" } as never);
+
+    const res = await POST(new Request("https://app.example.com/api/sport-configs/fb/roster", {
+      method: "POST", headers, body: JSON.stringify({ userId: cuid(1) }),
+    }), routeParams);
+
+    expect(res.status).toBe(201);
+    expect(addToRoster).toHaveBeenCalledWith(cuid(1), "FB");
+    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({ entityId: "a2", action: "roster_added", after: { sportCode: "FB", userId: cuid(1) } }));
+  });
+
+  it("explains a bad body", async () => {
+    const res = await POST(new Request("https://app.example.com/api/sport-configs/fb/roster", {
+      method: "POST", headers, body: JSON.stringify({ userId: "nope" }),
+    }), routeParams);
+
+    expect(res.status).toBe(400);
+    expect(addToRoster).not.toHaveBeenCalled();
+  });
+});
+
+describe("PATCH /api/sport-configs/[sportCode]/roster guards", () => {
+  it("returns 404 for an assignment in another sport", async () => {
+    vi.mocked(db.studentSportAssignment.findUnique).mockResolvedValue({ sportCode: "MBB", defaultTraveler: false } as never);
+
+    const res = await PATCH(new Request("https://app.example.com/api/sport-configs/fb/roster", {
+      method: "PATCH", headers, body: JSON.stringify({ assignmentId: cuid(1), defaultTraveler: true }),
+    }), routeParams);
+
+    expect(res.status).toBe(404);
+    expect(db.studentSportAssignment.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("DELETE /api/sport-configs/[sportCode]/roster", () => {
+  const remove = (query: string) => DELETE(new Request(`https://app.example.com/api/sport-configs/fb/roster${query}`, { method: "DELETE", headers }), routeParams);
+
+  it("removes the assignment within the URL's sport and audits it", async () => {
+    vi.mocked(removeFromRoster).mockResolvedValue(true);
+
+    const res = await remove("?assignmentId=a1");
+
+    expect(await res.json()).toEqual({ success: true });
+    expect(removeFromRoster).toHaveBeenCalledWith("a1", "FB");
+    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({ action: "roster_removed", entityId: "a1", after: { sportCode: "FB", assignmentId: "a1" } }));
+  });
+
+  it("returns 404 without an audit when the assignment is already gone or belongs to another sport", async () => {
+    vi.mocked(removeFromRoster).mockResolvedValue(false);
+
+    expect((await remove("?assignmentId=a1")).status).toBe(404);
+    expect(createAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it("requires an assignment id", async () => {
+    expect((await remove("")).status).toBe(400);
+    expect(removeFromRoster).not.toHaveBeenCalled();
   });
 });

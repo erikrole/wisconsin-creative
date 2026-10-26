@@ -206,7 +206,7 @@ export default function CheckoutsReportPage() {
     ...(focusDate
       ? [{
           key: "date",
-          label: `Day: ${formatDateFull(`${focusDate}T00:00:00.000Z`)}`,
+          label: `Day: ${formatDateFull(`${focusDate}T00:00:00.000Z`, true)}`,
           onRemove: () => setFocusDate(null),
         }]
       : []),
@@ -299,8 +299,8 @@ export default function CheckoutsReportPage() {
         >
             <LazyHeatmap
               data={data.heatmap}
-              startDate={new Date(Date.now() - 365 * 86_400_000)}
-              endDate={new Date()}
+              startDate={new Date(now.getTime() - 365 * 86_400_000)}
+              endDate={now}
               colorMode="interpolate"
               cellSize={12}
               gap={2}
@@ -314,7 +314,7 @@ export default function CheckoutsReportPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Recent checkouts */}
         <ReportSectionCard
-          title={focusDate ? `Checkouts on ${formatDateFull(`${focusDate}T00:00:00.000Z`)}` : "Recent checkouts"}
+          title={focusDate ? `Checkouts on ${formatDateFull(`${focusDate}T00:00:00.000Z`, true)}` : "Recent checkouts"}
           contentClassName="p-0"
         >
           {(data.recentCheckouts ?? []).length === 0 ? (

@@ -174,7 +174,7 @@ private struct ScheduleFilterChip: View {
                 .foregroundStyle(isOn ? Color(.systemBackground) : Color.primary)
                 // Five equal segments leave little room; wide padding shrank
                 // "Non-game" a size below its neighbours.
-                .padding(.horizontal, compact ? 8 : 14)
+                .padding(.horizontal, compact ? 3 : 14)
                 .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 32)
                 .background {
                     if isOn {

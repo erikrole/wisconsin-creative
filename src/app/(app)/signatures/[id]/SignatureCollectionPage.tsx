@@ -49,6 +49,7 @@ import {
 } from "@/lib/signatures/types";
 import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/hooks/use-synced-draft";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type Member = {
   id: string;
@@ -156,7 +157,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     [isAdHocRoster, isStandaloneStaffRoster, isCreativeStaffRoster],
   );
 
-  useEffect(() => {
+  useAdjustState([collection?.id, setCollapsedGroups], () => {
     setGroup("ALL");
     setSearch("");
     setSignatureFilter("ALL");
@@ -164,7 +165,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     setActionError(null);
     setCollapsedGroups(new Set());
     setSettingsOpen(false);
-  }, [collection?.id, setCollapsedGroups]);
+  });
 
 
   useEffect(() => {

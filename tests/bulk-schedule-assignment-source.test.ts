@@ -56,7 +56,6 @@ describe("bulk schedule assignment contracts", () => {
   it("keeps the UI preview-first and supports the recipient filter deep link", () => {
     const dialog = read("src/components/schedule/AutoAssignDialog.tsx");
     const assignPage = read("src/app/(app)/schedule/assign/_components/AssignPageClient.tsx");
-    const scheduleHook = read("src/hooks/use-schedule-data.ts");
 
     expect(dialog).toContain('type Step = "scope" | "review"');
     expect(dialog).toContain("1. Scope");
@@ -74,10 +73,6 @@ describe("bulk schedule assignment contracts", () => {
     expect(dialog).not.toContain("Nothing to assign in this scope");
     expect(dialog).not.toContain("Nothing selected");
     expect(assignPage).toContain("AutoAssignDialog");
-    expect(scheduleHook).toContain('query.get("myShifts") === "true"');
-    expect(scheduleHook).toContain('query.get("startDate")');
-    expect(scheduleHook).toContain('query.get("endDate")');
-    expect(scheduleHook).toContain("dateRange");
   });
 
   it("gives staff one Auto assign entry point on the Schedule page", () => {

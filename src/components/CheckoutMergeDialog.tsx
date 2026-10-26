@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { dateTimeLocalToIso, toDateTimeLocalValue } from "@/lib/shift-call-windows";
 import { formatDateTime } from "@/lib/format";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 const DIRECT_SOURCE_VALUE = "__direct_event_checkout__";
 
@@ -96,14 +97,14 @@ export function CheckoutMergeDialog({
   const [sourceChoice, setSourceChoice] = useState("");
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
-  useEffect(() => {
+  useAdjustState([open, preview], () => {
     if (!open || !preview) return;
     const defaultEndsAt = preview.targetCheckout.endsAt;
     setReturnChoice(defaultEndsAt);
     setEndsAtInput(toDateTimeLocalValue(defaultEndsAt));
     setSourceChoice(sourceOptionValue(preview.targetCheckout.sourceReservationId));
     setValidationMessage(null);
-  }, [open, preview]);
+  });
 
   const selectedSource = preview?.sourceReservationOptions.find(
     (option) => sourceOptionValue(option.sourceReservationId) === sourceChoice,

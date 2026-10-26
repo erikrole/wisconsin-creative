@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createTransport } from "@/lib/youtube/transport";
+import { createPlaylistTransport, createTransport } from "@/lib/youtube/transport";
 import { BADGERS_CHANNEL_ID } from "@/lib/youtube/google";
 
 const snapshot = {
@@ -36,5 +36,53 @@ describe("YouTube transport", () => {
     const live = await createTransport("token", fetcher as unknown as typeof fetch).read("hl");
     expect((fetcher.mock.calls[0] as [URL])[0].searchParams.get("part")).toBe("snippet,status");
     expect(live.snapshot.title).toBe("T");
+  });
+});
+
+describe("YouTube playlist transport", () => {
+  const respond = (body: unknown) => vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+
+  it("refuses a read that returns another video", async () => {
+    const fetcher = respond({ items: [{ id: "other" }] });
+
+    await expect(createTransport("token", fetcher as unknown as typeof fetch).read("hl")).rejects.toThrow("YouTube did not return this video.");
+  });
+
+  it("reads one playlist, filling blanks, and refuses one without a channel", async () => {
+    const fetcher = respond({ items: [{ id: "PL1", snippet: { channelId: BADGERS_CHANNEL_ID } }] });
+    const transport = createPlaylistTransport("token", fetcher as unknown as typeof fetch);
+
+    expect(await transport.readPlaylist("PL1")).toEqual({ id: "PL1", title: "", channelId: BADGERS_CHANNEL_ID, privacy: "", itemCount: 0 });
+    const [url] = fetcher.mock.calls[0] as [URL];
+    expect(url.pathname).toMatch(/\/playlists$/);
+    expect(url.searchParams.get("part")).toBe("snippet,contentDetails,status");
+
+    fetcher.mockResolvedValue(new Response(JSON.stringify({ items: [{ id: "PL1", snippet: {} }] }), { status: 200 }));
+    await expect(transport.readPlaylist("PL1")).rejects.toThrow("YouTube did not return this playlist.");
+  });
+
+  it("looks up one membership and reports none when the video is not on the playlist", async () => {
+    const fetcher = respond({ items: [{ id: "item-1", snippet: { playlistId: "PL1", resourceId: { videoId: "hl" } } }] });
+    const transport = createPlaylistTransport("token", fetcher as unknown as typeof fetch);
+
+    expect(await transport.membership("hl", "PL1")).toEqual({ id: "item-1", playlistId: "PL1", videoId: "hl" });
+    const [url] = fetcher.mock.calls[0] as [URL];
+    expect(Object.fromEntries(url.searchParams)).toEqual({ part: "snippet", playlistId: "PL1", videoId: "hl", maxResults: "1" });
+
+    fetcher.mockResolvedValue(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    expect(await transport.membership("hl", "PL1")).toBeNull();
+  });
+
+  it("inserts once with a POST and requires YouTube to confirm it", async () => {
+    const fetcher = respond({ id: "item-2", snippet: { playlistId: "PL1", resourceId: { videoId: "hl" } } });
+    const transport = createPlaylistTransport("token", fetcher as unknown as typeof fetch);
+
+    expect(await transport.insert("hl", "PL1")).toEqual({ id: "item-2", playlistId: "PL1", videoId: "hl" });
+    const [, init] = fetcher.mock.calls[0] as [URL, RequestInit];
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ snippet: { playlistId: "PL1", resourceId: { kind: "youtube#video", videoId: "hl" } } });
+
+    fetcher.mockResolvedValue(new Response("{}", { status: 200 }));
+    await expect(transport.insert("hl", "PL1")).rejects.toThrow("YouTube did not confirm the playlist addition.");
   });
 });

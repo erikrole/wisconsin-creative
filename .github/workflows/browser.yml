@@ -1,8 +1,8 @@
 name: Browser
 
-# Fixture-backed browser tests (tests/browser): the real gear picker and setup
-# wizard bundled with esbuild, every API answered by fixtures, plus an axe-core
-# accessibility scan. No database, credentials or deploy. Path filters keep it
+# Fixture-backed browser tests (tests/browser): the real gear picker, setup
+# wizard and Schedule list bundled with esbuild, every API answered by fixtures, plus an axe-core
+# accessibility scan, and the Brother label renderer drawn with the real font and QR decoder. No database, credentials or deploy. Path filters keep it
 # off docs-only and iOS-only pushes; it is not a required check.
 
 on:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -44,7 +44,7 @@ jobs:
             /*
             !/tasks/**
             !/goldie/**
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: npm
@@ -52,7 +52,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium-headless-shell
       - run: npm run test:browser
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: failure()
         with:
           name: browser-test-results

@@ -944,20 +944,11 @@ export const GET = withAuth(async (req, { user }) => {
       });
       const allBulkItems = await buildBulkListItems(bulkSkus, derivedBulkUnitQr);
       matchingBulkTotal = allBulkItems.length;
-      const recentCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-      const popularityScores = shouldUsePopularitySort
-        ? await loadPopularityScores([], allBulkItems.map((bulk) => bulk.id))
-        : new Map<PopularityKey, PopularityScore>();
-      const sortedBulkItems = allBulkItems.sort((a, b) => {
-        if (shouldUsePopularitySort) {
-          const popularityDiff = popularityScore(popularityScores, popularityKey("bulk", b.id), recentCutoff)
-            - popularityScore(popularityScores, popularityKey("bulk", a.id), recentCutoff);
-          if (popularityDiff !== 0) return popularityDiff;
-        }
-        return compareItemAssetTags(a.name, b.name);
-      });
-      if (sortKey === "-assetTag" || sortKey === "-popular") sortedBulkItems.reverse();
-      bulkItems = sortedBulkItems.slice(offset, offset + limit);
+      // Asset-tag and popularity sorts take the unified branch above, so a
+      // families-only list here is always ordered by name.
+      bulkItems = allBulkItems
+        .sort((a, b) => compareItemAssetTags(a.name, b.name))
+        .slice(offset, offset + limit);
       total = allBulkItems.length;
     }
   }

@@ -1164,7 +1164,7 @@ private enum GuideSort: String, CaseIterable, Identifiable {
     }
 }
 
-private extension GuideListItem {
+extension GuideListItem {
     var updatedSummary: String {
         let date = guideDate(updatedAt)
         guard date != .distantPast else { return "Updated" }

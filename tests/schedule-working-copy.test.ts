@@ -68,6 +68,36 @@ describe("working schedule commands", () => {
     }, () => "x")).toThrow("UNASSIGN_BEFORE_REDUCING");
   });
 
+  it("fills several open slots in one command", () => {
+    const base = payload({
+      slots: [
+        { ...payload().slots[0]!, key: "a" },
+        { ...payload().slots[0]!, key: "b" },
+        { ...payload().slots[0]!, key: "c" },
+      ],
+    });
+    const next = applyWorkingScheduleCommand(base, {
+      type: "assignMany",
+      assignments: [{ slotKey: "a", userId: "u1" }, { slotKey: "c", userId: "u2" }],
+    }, () => "x");
+    expect(next.slots.map((slot) => slot.assignment?.userId ?? null)).toEqual(["u1", null, "u2"]);
+    // The source payload is untouched.
+    expect(base.slots.every((slot) => slot.assignment === null)).toBe(true);
+  });
+
+  it("rejects a multi-assign that repeats a person or a slot", () => {
+    const repeatPerson = workingScheduleCommandSchema.safeParse({
+      type: "assignMany",
+      assignments: [{ slotKey: "a", userId: "u1" }, { slotKey: "b", userId: "u1" }],
+    });
+    const repeatSlot = workingScheduleCommandSchema.safeParse({
+      type: "assignMany",
+      assignments: [{ slotKey: "a", userId: "u1" }, { slotKey: "a", userId: "u2" }],
+    });
+    expect(repeatPerson.success).toBe(false);
+    expect(repeatSlot.success).toBe(false);
+  });
+
   it("rejects a crew-size command that names an area and class twice", () => {
     const parsed = workingScheduleCommandSchema.safeParse({
       type: "setSlotCounts",

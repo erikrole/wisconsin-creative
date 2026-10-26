@@ -53,6 +53,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/format";
 import type { SoftwareCredentialAudience, SoftwareCredentialSummary } from "./types";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 const SUGGESTED_SOFTWARE = ["Envato Elements", "APM Music", "Motion Array"];
 const DEFAULT_VISIBLE_TO: SoftwareCredentialAudience[] = ["STAFF", "STUDENT"];
@@ -127,7 +128,7 @@ function SoftwareCredentialDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const savingRef = useRef(false);
 
-  useEffect(() => {
+  useAdjustState([editing, open], () => {
     if (!open) return;
     setName(editing?.name ?? "");
     setCategory(editing?.category ?? "");
@@ -136,7 +137,7 @@ function SoftwareCredentialDialog({
     setPassword("");
     setVisibleTo(editing?.visibleTo?.length ? [...editing.visibleTo] : [...DEFAULT_VISIBLE_TO]);
     setErrorMessage(null);
-  }, [editing, open]);
+  });
 
   function toggleAudience(audience: SoftwareCredentialAudience, checked: boolean) {
     setVisibleTo((current) => {

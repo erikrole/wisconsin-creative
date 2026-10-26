@@ -30,6 +30,9 @@ struct ProfileView: View {
     @State private var ownShifts: [MyShift] = []
     /// Next Up requests that failed. Without this a dropped connection read as "Nothing coming up".
     @State private var nextUpLoadFailed = false
+    /// Whose data the `own*` state holds, so a failed refresh keeps it but a
+    /// different account never inherits it.
+    @State private var ownLoadedFor: String?
     @State private var ownHours: MyHours?
     @State private var hoursLoading = true
     @State private var showBadgeGallery = false
@@ -287,11 +290,23 @@ struct ProfileView: View {
         async let reservationsTask = try? await APIClient.shared.reservationsByUser(userId: id, activeOnly: true, limit: 5)
         async let shiftsTask = try? await APIClient.shared.myShifts(limit: 5)
         let (detail, badges, checkouts, reservations, shifts) = await (detailTask, badgeTask, checkoutsTask, reservationsTask, shiftsTask)
-        ownDetail = detail
-        ownBadges = badges
-        ownCheckouts = checkouts?.data ?? []
-        ownReservations = reservations?.data ?? []
-        ownShifts = shifts ?? []
+        // Leaving the screen or pulling again cancels these requests, and each
+        // `try?` then reads as a failure. That must not blank what was readable.
+        guard !Task.isCancelled else { return }
+        if ownLoadedFor != id {
+            ownDetail = nil
+            ownBadges = nil
+            ownCheckouts = []
+            ownReservations = []
+            ownShifts = []
+            ownLoadedFor = id
+        }
+        // A failed refresh keeps the last good value; only a response replaces it.
+        if let detail { ownDetail = detail }
+        if let badges { ownBadges = badges }
+        if let checkouts { ownCheckouts = checkouts.data }
+        if let reservations { ownReservations = reservations.data }
+        if let shifts { ownShifts = shifts }
         nextUpLoadFailed = checkouts == nil || reservations == nil || shifts == nil
     }
 

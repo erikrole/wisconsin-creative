@@ -422,7 +422,7 @@ enum HomeModel {
         if let next = upNext(dash: dash, now: now).first(where: { $0.startsAt > now }) {
             return "Next: \(next.title), \(homeWhen(next.startsAt, now: now))."
         }
-        return "Nothing on your calendar yet."
+        return "Nothing on your calendar yet. Shifts show up here once you\u{2019}re scheduled."
     }
 
     // MARK: Trades

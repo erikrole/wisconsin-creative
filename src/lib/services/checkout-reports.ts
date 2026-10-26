@@ -10,18 +10,11 @@ import {
   settledReportValue,
 } from "./report-shared";
 
-/** `YYYY-MM-DD`, interpreted as a UTC day to match the daily aggregates. */
+/** `YYYY-MM-DD`, an app-timezone calendar day like the heatmap cells. */
 export function parseCheckoutFocusDate(value: string | null | undefined) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(parsed.getTime()) ? null : value;
-}
-
-function checkoutFocusDateRange(focusDate: string) {
-  // The clicked heatmap cell is an app-timezone calendar day, so its row list
-  // must span Central midnight to Central midnight. A UTC window instead starts
-  // the day at 7pm the evening before.
-  return appTzDayRange(focusDate);
 }
 
 export async function getCheckoutReport(days: number, focusDate?: string | null) {
@@ -36,7 +29,9 @@ export async function getCheckoutReport(days: number, focusDate?: string | null)
     ? {
         kind: "CHECKOUT" as const,
         status: { in: [...CHECKOUT_CUSTODY_REPORT_STATUSES] },
-        createdAt: checkoutFocusDateRange(focusDate),
+        // The clicked cell is a Central calendar day, so the rows span Central
+        // midnight to Central midnight, not the UTC day that starts at 7pm.
+        createdAt: appTzDayRange(focusDate),
       }
     : checkoutActivityWhere;
 

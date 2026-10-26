@@ -124,7 +124,8 @@ export async function buildWrappedRecap(userId: string, now: Date = new Date()):
       where: {
         userId,
         status: { in: ACTIVE_ASSIGNMENT_STATUSES },
-        attended: { not: false },
+        // attended is null until someone logs it; Prisma's `not: false` would drop those rows.
+        OR: [{ attended: null }, { attended: true }],
         shift: { startsAt: WINDOW, endsAt: { lt: now } },
       },
       select: {
@@ -151,8 +152,15 @@ export async function buildWrappedRecap(userId: string, now: Date = new Date()):
       where: { userId, awardedAt: WINDOW },
       select: { awardedAt: true, definition: { select: { name: true } } },
     }),
-    db.booking.count({ where: { kind: "CHECKOUT", status: { in: [...COUNTED_CHECKOUT_STATUSES] }, startsAt: WINDOW } }),
-    db.studentBadge.count({ where: { awardedAt: WINDOW } }),
+    db.booking.count({
+      where: {
+        kind: "CHECKOUT",
+        status: { in: [...COUNTED_CHECKOUT_STATUSES] },
+        startsAt: WINDOW,
+        requester: { role: { not: "COLLABORATOR" } },
+      },
+    }),
+    db.studentBadge.count({ where: { awardedAt: WINDOW, user: { role: { not: "COLLABORATOR" } } } }),
   ]);
 
   const shiftHours = assignments.reduce((total, assignment) => {

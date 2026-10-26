@@ -180,9 +180,9 @@ export function formatOperationalDateTime(
 }
 
 /** "Mar 11, 2026" */
-export function formatDateFull(iso: string | null) {
+export function formatDateFull(iso: string | null, allDay = false) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
+  return calendarDate(iso, allDay).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

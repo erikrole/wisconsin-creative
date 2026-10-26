@@ -110,7 +110,8 @@ export async function transferKioskItems(args: {
       [receiving.id, "kiosk_items_transferred_in"],
     ];
     for (const [entityId, action] of auditEntries) await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId, action, before: { sourceSnapshot: source.updatedAt.toISOString(), custodyScope: source.custodyScope, requesterId: source.custodyScope === "PERSON" ? source.requesterUserId : null }, after: evidence });
-    const response = { success: true, targetBookingId: receiving.id, sourceClosed, itemCount: serialized.length + units.length, message: `${serialized.length + units.length} items transferred to ${target?.name ?? receiving.title}`, endsAt: receiving.endsAt };
+    const itemCount = serialized.length + units.length;
+    const response = { success: true, targetBookingId: receiving.id, sourceClosed, itemCount, message: `${itemCount} item${itemCount === 1 ? "" : "s"} transferred to ${target?.name ?? receiving.title}`, endsAt: receiving.endsAt };
     await finishKioskOperationReceiptTx(tx, args.receipt, response);
     const newHolder = target ?? (destination?.custodyScope === "PERSON" ? destination.requester : null);
     const handover = newHolder && source.custodyScope === "PERSON" && source.requester ? {
@@ -122,7 +123,7 @@ export async function transferKioskItems(args: {
       endsAt: receiving.endsAt,
       from: source.requester,
       to: newHolder,
-      itemCount: serialized.length + units.length,
+      itemCount,
       sourceClosed,
       isCheckout: true,
     } : null;

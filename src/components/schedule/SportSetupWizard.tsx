@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Check, CopyIcon, Plane, RefreshCw, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ import type {
 } from "@/lib/services/sport-setup";
 import { AREA_LABELS } from "@/types/areas";
 import { cn } from "@/lib/utils";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type SportSetupWizardProps = {
   open: boolean;
@@ -138,7 +139,13 @@ export function SportSetupWizard({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
   const [matchRoster, setMatchRoster] = useState(true);
+  // Each opening starts with nothing touched.
   const [touchedCodes, setTouchedCodes] = useState<Set<string>>(() => new Set());
+  const [touchedOpen, setTouchedOpen] = useState(open);
+  if (touchedOpen !== open) {
+    setTouchedOpen(open);
+    if (open) setTouchedCodes(new Set());
+  }
 
   const queryClient = useQueryClient();
   const setupQuery = useQuery({
@@ -169,17 +176,12 @@ export function SportSetupWizard({
   const setSetup = (update: (current: SportSetupResponse | null) => SportSetupResponse | null) =>
     queryClient.setQueryData<SportSetupResponse>(SPORT_SETUP_KEY, (current) => update(current ?? null) ?? undefined);
 
-  useEffect(() => {
-    if (!open) return;
-    setTouchedCodes(new Set());
-  }, [open]);
-
   // Seek to the requested sport once the list has arrived.
-  useEffect(() => {
+  useAdjustState([setup, startAtSportCode], () => {
     if (!setup || !startAtSportCode) return;
     const target = setup.sports.findIndex((sport) => sport.sportCode === startAtSportCode);
     setIndex(target >= 0 ? target : 0);
-  }, [setup, startAtSportCode]);
+  });
 
   const sport: SportSetupEntry | null = setup?.sports[index] ?? null;
   const total = setup?.sports.length ?? 0;

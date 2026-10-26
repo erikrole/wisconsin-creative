@@ -304,13 +304,10 @@ export default function BookingListPage({
   const [checkoutMergeDialog, setCheckoutMergeDialog] = useState<CheckoutMergeDialogState | null>(null);
   const checkoutMergeDialogResolver = useRef<((decision: CheckoutMergeDecision | null) => void) | null>(null);
   const [bulkActionBusy, setBulkActionBusy] = useState(false);
-  const [bulkLocationId, setBulkLocationId] = useState("");
+  const [pickedBulkLocationId, setBulkLocationId] = useState("");
+  // A picked location that is no longer offered reads as no pick.
+  const bulkLocationId = pickupLocations.some((location) => location.id === pickedBulkLocationId) ? pickedBulkLocationId : "";
   const [bulkRequesterId, setBulkRequesterId] = useState("");
-  useEffect(() => {
-    if (bulkLocationId && !pickupLocations.some((location) => location.id === bulkLocationId)) {
-      setBulkLocationId("");
-    }
-  }, [bulkLocationId, pickupLocations]);
   const canCreateReservation = meData != null && !meData.preview?.readOnly && (
     meData.role !== "COLLABORATOR" || currentUserCapabilities.includes("RESERVATION_CREATE")
   );
@@ -416,9 +413,13 @@ export default function BookingListPage({
     });
   }, [items, config.overdueStatus]);
 
-  useEffect(() => {
-    setSelectedBookingIds((selected) => selected.filter((id) => items.some((item) => item.id === id)));
-  }, [items]);
+  // Drop selections for bookings that left the list, as soon as a new list arrives.
+  const [prunedItems, setPrunedItems] = useState(items);
+  if (prunedItems !== items) {
+    setPrunedItems(items);
+    const next = selectedBookingIds.filter((id) => items.some((item) => item.id === id));
+    if (next.length !== selectedBookingIds.length) setSelectedBookingIds(next);
+  }
 
   const toggleBookingSelection = useCallback((id: string, selected: boolean) => {
     setSelectedBookingIds((current) => selected
@@ -758,7 +759,9 @@ export default function BookingListPage({
               ? "Try a different search term or clear filters to see all results."
               : config.pastOnly
                 ? `Completed and cancelled ${config.labelPlural.toLowerCase()} will appear here.`
-                : `${config.label.charAt(0).toUpperCase() + config.label.slice(1)}s you create will appear here.`}
+                : config.kind === "CHECKOUT"
+                  ? "Gear you check out at the kiosk or in the iPhone app shows up here, with its return time."
+                  : `${config.label.charAt(0).toUpperCase() + config.label.slice(1)}s you create will appear here.`}
             actionLabel={hasUserFilters ? "Clear filters" : undefined}
             onAction={hasUserFilters ? clearAllFilters : undefined}
           />

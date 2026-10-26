@@ -48,6 +48,7 @@ import {
   type EventEditorDraft,
   type EventTypeDraft,
 } from "@/lib/event-editor";
+import { useNow } from "@/hooks/use-now";
 
 type LocationOption = { id: string; name: string };
 
@@ -63,6 +64,7 @@ function combinedSourceTime(event: Pick<CalendarEvent, "startsAt" | "endsAt" | "
 }
 
 export default function EventDetailPage() {
+  const now = useNow();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { setBreadcrumbLabel } = useBreadcrumbLabel();
@@ -462,7 +464,7 @@ export default function EventDetailPage() {
     : null;
 
   const reserveHref = `/reservations?title=${titleParam}&startsAt=${dateParam}&endsAt=${endParam}${locationParam}${eventParam}`;
-  const eventHasEnded = new Date(event.endsAt).getTime() <= Date.now();
+  const eventHasEnded = new Date(event.endsAt).getTime() <= now;
 
   return (
     <div className="flex flex-col gap-4">

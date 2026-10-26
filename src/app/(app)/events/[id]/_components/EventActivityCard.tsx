@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createElement, useMemo, useState } from "react";
 import {
   CalendarClock,
   Clock3,
@@ -60,13 +60,14 @@ function changeTimeLabel(iso: string, now: Date) {
 }
 
 function ActivityRow({ item, now }: { item: DescribedScheduleChange; now: Date }) {
-  const Icon = changeIcon(item.kind);
+  // createElement: the icon is a static module component picked per row, not one made in render.
+  const icon = createElement(changeIcon(item.kind), { className: "size-3.5", "aria-hidden": true });
   const time = changeTimeLabel(item.createdAt, now);
   return (
     <article className="flex gap-3">
       <div className="flex w-8 shrink-0 flex-col items-center self-stretch">
         <div className="mt-0.5 flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <Icon className="size-3.5" aria-hidden />
+          {icon}
         </div>
         <div className="mt-1 w-px flex-1 bg-border/50" />
       </div>

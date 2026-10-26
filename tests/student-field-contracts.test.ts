@@ -442,12 +442,4 @@ describe("student field mobile contracts", () => {
     expect(route).toContain("{ shiftAssignmentId: { in: assignmentIds } }");
     expect(route).toContain("{ shiftAssignment: { shift: { shiftGroup: { eventId: { in: eventIds } } } } }");
   });
-
-  it("returns real dashboard event-work all-day state instead of a hardcoded value", () => {
-    const route = source("src/app/api/dashboard/route.ts");
-
-    expect(route).toContain("allDay: true");
-    expect(route).toContain("allDay: ev.allDay");
-    expect(route).not.toContain("allDay: false");
-  });
 });

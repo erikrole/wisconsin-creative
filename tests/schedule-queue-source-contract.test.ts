@@ -7,10 +7,8 @@ describe("schedule queue source contract", () => {
     const hook = source("src/hooks/use-schedule-data.ts");
 
     expect(hook).toContain('searchParams.get("queue")');
-    expect(hook).toContain('params.set("queue", queue)');
-    expect(hook).toContain('params.delete("queue")');
-    expect(hook).toContain("router.replace");
-    expect(hook).toContain("filterEntriesForScheduleQueue");
+    expect(hook).toContain("withScheduleQueue(");
+    expect(hook).toContain("filterScheduleEntries(");
   });
 
   it("routes readiness cards into named queues", () => {

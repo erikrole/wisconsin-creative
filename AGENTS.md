@@ -24,6 +24,17 @@ If a conflict could change behavior, reconcile it using the current request and 
 - If the same approach fails twice, stop repeating it. Re-plan with a safer alternative or report the concrete blocker.
 - Promote a new lesson only when it is reusable, non-obvious, and supported by a verified failure or accepted decision.
 
+## Coding rules
+
+Erik's standing rules for every change, by any agent:
+
+1. Ask before adding code for unlikely edge cases: say what it fixes, how likely it is, and how many lines it costs.
+2. Validate outside data once at the entry point, then trust the types everywhere else.
+3. Inline one-time logic and skip try/catch unless the failure is real and you can handle it.
+4. Keep functions whole unless splitting makes them reused or easier to read.
+5. Cut any label or explainer text the UI doesn't need, and if it breaks without them, fix the layout.
+6. Ship a change only if it's better for users, developers and agents and breaks nothing.
+
 ## Execution flow
 
 1. Establish scope: inspect `git status` and the relevant route/view/service, schema when needed, and current owner contracts. Consult `docs/NORTH_STAR.md` when product direction affects the decision. Choose one primary workflow from `.agents/skills/README.md`; add another only for a distinct dependency.
