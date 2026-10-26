@@ -1,6 +1,17 @@
 [
   {
     "date": "2026-10-26",
+    "title": "Fix License and Profile loading",
+    "type": "fixes",
+    "summary": "Licenses and some coworker profiles failed to open in the iPhone app. Both load again.",
+    "details": [
+      "The Licenses page shows who holds each seat again.",
+      "Opening a collaborator's profile from the directory works again."
+    ],
+    "pr": 0
+  },
+  {
+    "date": "2026-10-26",
     "title": "Auto assign explains itself",
     "type": "improvement",
     "summary": "Auto assign always fills every slot it can, and shows each sport's default.",

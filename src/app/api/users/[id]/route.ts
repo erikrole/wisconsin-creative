@@ -208,6 +208,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       data: {
         id: target.id,
         name: target.name,
+        // Shipped iOS builds require email and active; email stays blank.
+        email: "",
+        active: target.active,
         avatarUrl: target.avatarUrl ?? null,
         title: target.title ?? null,
         role: target.role,

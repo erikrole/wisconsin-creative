@@ -37,10 +37,11 @@ export const GET = withAuth(async (_req, { user }) => {
             id: claim.id,
             userId: isOwnClaim ? claim.userId : null,
             // A student can see who is using a slot, but does not need the
-            // other account's stable id to understand the pool.
+            // other account's stable id. Shipped iOS builds require user.id,
+            // so other holders get the claim id instead.
             user: claim.user
               ? {
-                  ...(isOwnClaim ? { id: claim.user.id } : {}),
+                  id: isOwnClaim ? claim.user.id : claim.id,
                   name: claim.user.name,
                   avatarUrl: claim.user.avatarUrl,
                 }
