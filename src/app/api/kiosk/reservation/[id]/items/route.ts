@@ -15,10 +15,10 @@ import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 
 const bodySchema = z.object({
-  actorId: z.string().min(1), expectedUpdatedAt: z.string().datetime({ offset: true }),
+  actorId: z.string().min(1).max(128), expectedUpdatedAt: z.string().datetime({ offset: true }),
   action: z.enum(["add", "remove", "quantity"]),
   scanValue: z.string().trim().min(1).max(256).optional(),
-  itemId: z.string().min(1).optional(),
+  itemId: z.string().min(1).max(128).optional(),
   quantity: z.number().int().min(0).max(MAX_EQUIPMENT_SELECTIONS_PER_REQUEST).optional(),
 });
 
