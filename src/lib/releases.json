@@ -1,6 +1,19 @@
 [
   {
     "date": "2026-10-26",
+    "title": "Fix false shift conflict when claiming",
+    "type": "fixes",
+    "summary": "Claiming a shift no longer says you already have one just because you are on a multi-day event.",
+    "details": [
+      "A crew spot on a multi-day all-day event, like a tournament, no longer blocks claims on every other game during those days."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-26",
     "title": "Fix License and Profile loading",
     "type": "fixes",
     "summary": "Licenses and some coworker profiles failed to open in the iPhone app. Both load again.",

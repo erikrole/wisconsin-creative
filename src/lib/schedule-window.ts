@@ -75,6 +75,22 @@ export function resolveEffectiveAssignmentWindow(
   return completeCallWindow(assignment) ?? resolveEffectiveShiftWindow(assignment.shift);
 }
 
+/**
+ * True when a shift has no call times of its own and takes its window from a
+ * multi-day all-day event (a tournament, a multi-day shoot). That window is the
+ * whole event span, not a time anyone is booked, so it must not block claims on
+ * other events that happen inside the span.
+ */
+export function inheritsMultiDayAllDayWindow(
+  assignment: Pick<ScheduleAssignmentTiming, "callStartsAt" | "callEndsAt"> & { shift: ScheduleShiftTiming },
+): boolean {
+  if (completeCallWindow(assignment) || completeCallWindow(assignment.shift)) return false;
+  const event = eventTimingForShift(assignment.shift);
+  if (!event?.allDay) return false;
+  const { startsAt, endsAt } = resolveEffectiveShiftWindow(assignment.shift);
+  return endsAt.getTime() - startsAt.getTime() > DAY_MS;
+}
+
 /** Schedule intervals use half-open overlap semantics: [start, end). */
 export function scheduleWindowsOverlap(a: ScheduleWindow, b: ScheduleWindow): boolean {
   return a.startsAt < b.endsAt && a.endsAt > b.startsAt;
