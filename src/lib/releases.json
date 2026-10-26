@@ -8,7 +8,10 @@
       "The Licenses page shows who holds each seat again.",
       "Opening a collaborator's profile from the directory works again."
     ],
-    "pr": 711
+    "pr": 711,
+    "platforms": [
+      "iOS"
+    ]
   },
   {
     "date": "2026-10-26",
