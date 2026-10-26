@@ -5,7 +5,8 @@
     "type": "fixes",
     "summary": "Claiming a shift no longer says you already have one just because you are on a multi-day event.",
     "details": [
-      "A crew spot on a multi-day all-day event, like a tournament, no longer blocks claims on every other game during those days."
+      "A crew spot on a multi-day all-day event, like a tournament, no longer blocks claims on every other game during those days.",
+      "Single-day events and shifts with a set call time still count as conflicts."
     ],
     "pr": 712,
     "platforms": [
