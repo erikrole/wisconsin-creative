@@ -31,6 +31,7 @@ function proposal(overrides: Partial<BulkAssignmentPreviewProposal>): BulkAssign
     warnings: [],
     advisoryConflict: false,
     advisoryConflictNote: null,
+    alternatives: [],
     ...overrides,
   };
 }
@@ -54,7 +55,6 @@ describe("auto assign scope", () => {
     expect(scope.workerScope).toBe("ALL");
     expect(scope.area).toBeNull();
     expect(scope.period).toBe("custom");
-    expect(scope.requireFullCrew).toBe(false);
     expect(scope.eventIds).toEqual([]);
   });
 

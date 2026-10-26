@@ -203,6 +203,24 @@ describe("scoreCandidatesForShift", () => {
     expect(score?.warnings[0]?.code).toBe("overlapping_assignment");
   });
 
+  it("does not block staff who are allowed to overlap shifts", () => {
+    const [score] = scoreCandidatesForShift({
+      shift: { ...shift, workerType: "FT" as const },
+      candidates: [
+        candidate({
+          id: "staff-double-booked",
+          role: "STAFF",
+          staffingType: "FT",
+          assignments: [assignment("overlap", "2026-10-06T17:00:00.000Z", "2026-10-06T19:00:00.000Z")],
+        }),
+      ],
+      now: new Date("2026-10-01T12:00:00.000Z"),
+    });
+
+    expect(score?.blockingConflict).toBe(false);
+    expect(score?.warnings.map((warning) => warning.code)).not.toContain("overlapping_assignment");
+  });
+
   it("groups heavy workload candidates as overloaded", () => {
     const [score] = scoreCandidatesForShift({
       shift,

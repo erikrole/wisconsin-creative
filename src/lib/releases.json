@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-10-26",
+    "title": "Auto assign explains itself",
+    "type": "improvement",
+    "summary": "Auto assign always fills every slot it can, and shows each sport's default.",
+    "details": [
+      "The “Full crews only” switch is gone. An event with a slot nobody fits is still filled for the rest, and you can uncheck any single assignment in review.",
+      "A sport that fills both staff and student slots is now labeled “Staff and students,” so it no longer sounds like the crew toggle.",
+      "If something changes while you review (a request, time off, another edit), Auto assign now stages everything that still fits and tells you how many it left out, instead of asking you to start over.",
+      "Staff and admins, who can be double-booked, are no longer skipped just for having another shift at the same time.",
+      "“This semester” from December 21 to 31 now runs through spring instead of a full year ahead, and the event dates in the dialog use Central time.",
+      "Review has a Change button on every assignment that offers the next best people for that slot, so you can swap someone without leaving Auto assign."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 709
+  },
+  {
     "date": "2026-10-25",
     "title": "Checkout report shows the right day",
     "type": "fixes",

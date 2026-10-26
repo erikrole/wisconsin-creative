@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
@@ -36,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
@@ -98,7 +97,6 @@ type Step = "scope" | "review";
 /** Product-facing buckets for why an event did not make the staging list. */
 type BlockerKind =
   | "needs_schedule"
-  | "incomplete_crew"
   | "pending_changes"
   | "no_open_slots"
   | "no_match"
@@ -112,7 +110,6 @@ type BlockerGroup = {
 };
 
 const BLOCKER_ORDER: BlockerKind[] = [
-  "incomplete_crew",
   "needs_schedule",
   "pending_changes",
   "no_match",
@@ -121,10 +118,6 @@ const BLOCKER_ORDER: BlockerKind[] = [
 ];
 
 const BLOCKER_COPY: Record<BlockerKind, { title: string; detail: string }> = {
-  incomplete_crew: {
-    title: "Couldn't fill every open slot",
-    detail: "Full crews only kept these out so nothing stages short.",
-  },
   needs_schedule: {
     title: "No crew schedule yet",
     detail: "Open the event and set Home or Away before auto assign can fill it.",
@@ -149,6 +142,7 @@ const BLOCKER_COPY: Record<BlockerKind, { title: string; detail: string }> = {
 
 function formatEventDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
+    timeZone: "America/Chicago",
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -183,6 +177,64 @@ function proposalReason(proposal: BulkAssignmentPreviewProposal) {
   return { tone: "neutral" as const, text: reasons.join(" · ") || (proposal.workerType === "ST" ? "Student" : "Staff") };
 }
 
+/** Swap a proposed person for one of the runners-up the preview offered for the slot. */
+function ChangePerson({
+  proposal,
+  current,
+  takenIds,
+  disabled,
+  onPick,
+}: {
+  proposal: BulkAssignmentPreviewProposal;
+  current: string;
+  takenIds: string[];
+  disabled: boolean;
+  onPick: (userId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (proposal.alternatives.length === 0) return null;
+  const people = [proposal, ...proposal.alternatives];
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-10 px-2 text-xs" disabled={disabled} aria-label={`Change ${proposal.area.toLowerCase()} person`}>
+          Change
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-1">
+        <ul className="flex flex-col">
+          {people.map((person) => {
+            const reason = proposalReason({ ...proposal, ...person });
+            const taken = takenIds.includes(person.userId);
+            return (
+              <li key={person.userId}>
+                <button
+                  type="button"
+                  disabled={taken}
+                  onClick={() => {
+                    onPick(person.userId);
+                    setOpen(false);
+                  }}
+                  className="flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-[var(--bg-surface)] disabled:opacity-40"
+                >
+                  <UserAvatar name={person.userName} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">{person.userName}</span>
+                    <span className={cn("block truncate text-xs", reason.tone === "warning" ? "text-[var(--orange-text)]" : "text-[var(--text-secondary)]")}>
+                      {taken ? "Already on this event" : reason.text}
+                    </span>
+                  </span>
+                  {person.userId === current ? <Check className="size-4 shrink-0" aria-hidden="true" /> : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function firstName(name: string) {
   return name.split(" ")[0] ?? name;
 }
@@ -203,8 +255,6 @@ function blockerKindForEvent(event: BulkAssignmentPreviewEvent): BlockerKind {
   switch (primaryReasonCode(event)) {
     case "no_shift_group":
       return "needs_schedule";
-    case "partial_crew_blocked":
-      return "incomplete_crew";
     case "pending_working_copy":
       return "pending_changes";
     case "no_open_slots":
@@ -254,15 +304,11 @@ export function AutoAssignDialog({
   customWindow,
   event,
 }: AutoAssignDialogProps) {
-  // One event is usually filled partway (a slot nobody fits stays open), so
-  // the single-event default lets the rest stage instead of holding it all.
-  const defaultRequireFullCrew = !event;
   const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("scope");
   const [sportCodes, setSportCodes] = useState<string[]>(initialSportCodes ?? []);
   const [area, setArea] = useState<Area | null>(initialArea ?? null);
   const [workerScope, setWorkerScope] = useState<BulkAssignmentWorkerScope>("ALL");
-  const [requireFullCrew, setRequireFullCrew] = useState(defaultRequireFullCrew);
   const [period, setPeriod] = useState<AssignmentPeriodValue>(
     initialPeriod ?? (customWindow ? "custom" : "week"),
   );
@@ -273,12 +319,11 @@ export function AutoAssignDialog({
 
   const [preview, setPreview] = useState<BulkAssignmentPreviewResponse | null>(null);
   const [selectedProposalIds, setSelectedProposalIds] = useState<Set<string>>(new Set());
+  /** proposalId -> the runner-up staff swapped in during review. */
+  const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** Lets Review rebuild after a Full-crews tweak without bouncing to Scope. */
-  const skipScopeResetRef = useRef(false);
-
   const { batches: pendingBatches, refresh: refreshBatches } = usePendingAssignmentBatches(open);
 
   const sportGroups = useMemo(() => sportsGroupedByProgram(), []);
@@ -290,7 +335,6 @@ export function AutoAssignDialog({
     setSportCodes(initialSportCodes ?? []);
     setArea(initialArea ?? null);
     setWorkerScope("ALL");
-    setRequireFullCrew(defaultRequireFullCrew);
     setPeriod(initialPeriod ?? (customWindow ? "custom" : "week"));
     setPreview(null);
     setSelectedProposalIds(new Set());
@@ -341,15 +385,10 @@ export function AutoAssignDialog({
     rangeEndsAt: activeWindow.rangeEndsAt,
     area,
     workerScope,
-    requireFullCrew,
     period: event ? "custom" : period,
-  }), [activeWindow, area, event, period, requireFullCrew, sportCodes, workerScope]);
+  }), [activeWindow, area, event, period, sportCodes, workerScope]);
 
   useEffect(() => {
-    if (skipScopeResetRef.current) {
-      skipScopeResetRef.current = false;
-      return;
-    }
     setPreview(null);
     setSelectedProposalIds(new Set());
     setFocusPersonId(null);
@@ -404,6 +443,7 @@ export function AutoAssignDialog({
         return;
       }
       setPreview(json.data);
+      setSwaps({});
       setSelectedProposalIds(new Set(
         json.data.events
           .filter((event) => event.status === "ready")
@@ -416,28 +456,24 @@ export function AutoAssignDialog({
     }
   }, [scope]);
 
-  const allowIncompleteCrews = useCallback(() => {
-    const nextScope = { ...scope, requireFullCrew: false };
-    skipScopeResetRef.current = true;
-    setRequireFullCrew(false);
-    void buildPreview(nextScope);
-  }, [buildPreview, scope]);
+  /** The proposal as staff currently see it: the pick, or the runner-up swapped in. */
+  const withSwap = useCallback((proposal: BulkAssignmentPreviewProposal): BulkAssignmentPreviewProposal => {
+    const swapped = proposal.alternatives.find((person) => person.userId === swaps[proposal.proposalId]);
+    return swapped ? { ...proposal, ...swapped } : proposal;
+  }, [swaps]);
 
   const selectedProposals = useMemo(
     () => preview?.events
       .filter((event) => event.status === "ready")
       .flatMap((event) => event.proposals)
-      .filter((proposal) => selectedProposalIds.has(proposal.proposalId)) ?? [],
-    [preview, selectedProposalIds],
+      .filter((proposal) => selectedProposalIds.has(proposal.proposalId))
+      .map(withSwap) ?? [],
+    [preview, selectedProposalIds, withSwap],
   );
   const selectedEventCount = useMemo(
     () => new Set(selectedProposals.map((proposal) => proposal.eventId)).size,
     [selectedProposals],
   );
-  // Full crews only means an event is staged whole or not at all, so single
-  // slots can be dropped only when partial crews are allowed.
-  const canDropSingleSlots = preview ? !preview.scope.requireFullCrew : false;
-
   const selectedPeople = useMemo(
     () => summarizeAssignmentPeople(selectedProposals),
     [selectedProposals],
@@ -455,7 +491,6 @@ export function AutoAssignDialog({
   );
 
   const blockerGroups = useMemo(() => summarizeBlockers(blockedEvents), [blockedEvents]);
-  const incompleteCrewCount = blockerGroups.find((group) => group.kind === "incomplete_crew")?.count ?? 0;
   const eventsChecked = preview?.events.length ?? 0;
   const heldAside = preview?.summary.eventsOnHold ?? 0;
 
@@ -514,7 +549,7 @@ export function AutoAssignDialog({
         toast.error(message);
         return;
       }
-      const json = await parseJsonSafely<{ data?: { eventCount?: number; assignmentCount?: number; releaseAt?: string } }>(response);
+      const json = await parseJsonSafely<{ data?: { eventCount?: number; assignmentCount?: number; droppedCount?: number; releaseAt?: string } }>(response);
       const eventCount = json?.data?.eventCount;
       const assignmentCount = json?.data?.assignmentCount;
       if (typeof eventCount !== "number" || typeof assignmentCount !== "number") {
@@ -525,7 +560,11 @@ export function AutoAssignDialog({
       }
       toast.success(
         `Staged ${assignmentCount} assignment${assignmentCount === 1 ? "" : "s"} across ${eventCount} event${eventCount === 1 ? "" : "s"}`,
-        { description: "Workers are notified when it releases. Reopen Auto assign to cancel before then." },
+        {
+          description: json?.data?.droppedCount
+            ? `${json.data.droppedCount} no longer fit and ${json.data.droppedCount === 1 ? "was" : "were"} left out. Workers are notified when it releases. Reopen Auto assign to cancel before then.`
+            : "Workers are notified when it releases. Reopen Auto assign to cancel before then.",
+        },
       );
       void refreshBatches();
       onOpenChange(false);
@@ -706,18 +745,6 @@ export function AutoAssignDialog({
                   </ToggleGroup>
                 </ScopeRow>
 
-                <ScopeRow
-                  label="Full crews only"
-                  hint={requireFullCrew
-                    ? "Events that cannot be filled completely are held back."
-                    : "Events may be filled partway. You can drop single slots in review."}
-                >
-                  <Switch
-                    checked={requireFullCrew}
-                    onCheckedChange={setRequireFullCrew}
-                    aria-label="Full crews only"
-                  />
-                </ScopeRow>
               </div>
 
             </div>
@@ -807,7 +834,7 @@ export function AutoAssignDialog({
                     <div className="flex items-baseline justify-between gap-3">
                       <h3 className="text-sm font-bold">Include events</h3>
                       <span className="text-xs text-[var(--text-muted)] max-sm:hidden">
-                        {canDropSingleSlots ? "Uncheck any slot to leave it open" : "Full crews only: events go in whole"}
+                        Uncheck any slot to leave it open
                       </span>
                     </div>
                     <ul className="flex flex-col gap-2">
@@ -816,9 +843,10 @@ export function AutoAssignDialog({
                         const eventChecked = selectedCount === event.proposals.length
                           ? true
                           : selectedCount === 0 ? false : "indeterminate" as const;
+                        const shown = event.proposals.map(withSwap);
                         const proposals = focusPersonId
-                          ? event.proposals.filter((proposal) => proposal.userId === focusPersonId)
-                          : event.proposals;
+                          ? shown.filter((proposal) => proposal.userId === focusPersonId)
+                          : shown;
                         if (focusPersonId && proposals.length === 0) return null;
                         return (
                           <li key={event.eventId} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)]">
@@ -868,7 +896,14 @@ export function AutoAssignDialog({
                                         </span>
                                       </span>
                                     </span>
-                                    {canDropSingleSlots ? (
+                                    <span className="flex items-center gap-1">
+                                      <ChangePerson
+                                        proposal={event.proposals.find((candidate) => candidate.proposalId === proposal.proposalId)!}
+                                        current={proposal.userId}
+                                        takenIds={shown.filter((other) => other.proposalId !== proposal.proposalId && selectedProposalIds.has(other.proposalId)).map((other) => other.userId)}
+                                        disabled={applying}
+                                        onPick={(userId) => setSwaps((current) => ({ ...current, [proposal.proposalId]: userId }))}
+                                      />
                                       <Checkbox
                                         checked={included}
                                         disabled={applying}
@@ -876,7 +911,7 @@ export function AutoAssignDialog({
                                         aria-label={`Assign ${proposal.userName} to ${AREA_LABELS[proposal.area] ?? proposal.area} for ${event.summary}`}
                                         className="size-5"
                                       />
-                                    ) : <span aria-hidden="true" />}
+                                    </span>
                                   </li>
                                 );
                               })}
@@ -963,11 +998,6 @@ export function AutoAssignDialog({
                   )}
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {incompleteCrewCount > 0 && requireFullCrew ? (
-                      <Button onClick={allowIncompleteCrews} disabled={loading || applying}>
-                        Allow incomplete crews
-                      </Button>
-                    ) : null}
                     <Button variant="outline" onClick={backToScope} disabled={loading || applying}>
                       Change scope
                     </Button>

@@ -142,7 +142,6 @@ const scope: BulkAssignmentScope = {
   rangeEndsAt: "2026-11-02T05:00:00.000Z",
   area: null,
   workerScope: "ALL",
-  requireFullCrew: false,
   eventIds: [],
   period: "custom",
 } as BulkAssignmentScope;
@@ -334,17 +333,14 @@ describe("getBulkAssignmentPreview", () => {
     expect(preview.events[0]?.skipped[0]?.reasonCode).toBe("no_travel_roster");
   });
 
-  it("drops a partial crew entirely when full crews are required", async () => {
+  it("fills what fits and counts the slot nobody fits", async () => {
     const group = shiftGroup("g1", saturday, [{ id: "s-ft", workerType: "FT" }, { id: "s-st", workerType: "ST" }]);
     given({ events: [eventRow(group)], candidates: [person("staff-1")] });
 
-    const preview = await getBulkAssignmentPreview({ ...scope, requireFullCrew: true });
+    const preview = await getBulkAssignmentPreview(scope);
 
-    expect(preview.events[0]?.proposals).toEqual([]);
-    expect(preview.events[0]?.skipped[0]).toMatchObject({
-      reasonCode: "partial_crew_blocked",
-      reason: "Only 1 of 2 open slots could be filled.",
-    });
+    expect(preview.events[0]?.proposals.map((proposal) => proposal.userId)).toEqual(["staff-1"]);
+    expect(preview.events[0]).toMatchObject({ unfilledSlots: 1, fullyCrewed: false });
   });
 
   it("does not let approved time off be overridden", async () => {
@@ -423,12 +419,37 @@ describe("applyBulkScheduleAssignment", () => {
     expect(mocks.createAuditEntriesTx).toHaveBeenCalledWith(mocks.tx, [expect.objectContaining({ action: "schedule_bulk_assignment_staged", entityId: result.batchId })]);
   });
 
-  it("rejects a preview that no longer matches the data", async () => {
+  it("stages what still fits and reports what it left out", async () => {
     const { input } = await previewed();
+    const gone = { ...input.proposals[1]!, proposalId: "g1:s-gone:st-9", shiftId: "s-gone", userId: "st-9" };
 
-    await expect(applyBulkScheduleAssignment({ ...input, fingerprint: "0".repeat(64) }, actor, release))
-      .rejects.toMatchObject({ status: 409 });
-    expect(release).not.toHaveBeenCalled();
+    const result = await applyBulkScheduleAssignment({ ...input, proposals: [input.proposals[0]!, gone] }, actor, release);
+
+    expect(result).toMatchObject({ assignmentCount: 1, droppedCount: 1 });
+  });
+
+  it("applies a runner-up swapped in during review", async () => {
+    const group = shiftGroup("g1", saturday, [{ id: "s-st", workerType: "ST" }]);
+    const candidates = [person("st-1"), person("st-2")];
+    given({ events: [eventRow(group)], candidates });
+    const preview = await getBulkAssignmentPreview(scope);
+    mocks.tx.shiftGroup.findMany.mockResolvedValue([group]);
+    mocks.tx.user.findMany.mockResolvedValue(candidates.map((candidate) => liveUser(candidate)));
+    release.mockResolvedValue({ at: new Date("2026-10-21T12:00:00Z"), runId: "run-1" });
+    const [proposal] = preview.events[0]!.proposals;
+    const runnerUp = proposal!.alternatives[0]!.userId;
+    const { proposalId, shiftGroupId, shiftId, eventId } = proposal!;
+
+    const result = await applyBulkScheduleAssignment(
+      { scope, fingerprint: preview.fingerprint, proposals: [{ proposalId, shiftGroupId, shiftId, eventId, userId: runnerUp }] },
+      actor,
+      release,
+    );
+
+    expect(result).toMatchObject({ assignmentCount: 1, droppedCount: 0 });
+    expect(mocks.tx.scheduleBulkAssignmentItem.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ proposalPayload: [{ shiftId: "s-st", userId: runnerUp }] })],
+    });
   });
 
   it("rejects picking the same proposal twice", async () => {
@@ -438,12 +459,12 @@ describe("applyBulkScheduleAssignment", () => {
       .rejects.toMatchObject({ status: 400 });
   });
 
-  it("rejects a proposal edited to a different person", async () => {
+  it("rejects a proposal edited to someone who was not offered", async () => {
     const { input } = await previewed();
     const tampered = [{ ...input.proposals[1]!, userId: "st-9" }];
 
     await expect(applyBulkScheduleAssignment({ ...input, proposals: tampered }, actor, release))
-      .rejects.toMatchObject({ status: 409, message: expect.stringContaining("stale") });
+      .rejects.toMatchObject({ status: 409, message: expect.stringContaining("available anymore") });
   });
 
   it("re-checks the roster inside the transaction", async () => {

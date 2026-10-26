@@ -110,9 +110,9 @@ export function academicTermForDayKey(key: string): AcademicTerm {
   const term = ACADEMIC_TERMS.find(
     (candidate) => compareMonthDay(key, candidate.startsOn) >= 0 && compareMonthDay(key, candidate.endsOn) <= 0,
   );
-  // Dec 21-31 falls past the fall term's end; it belongs to the fall term that
-  // is closing out, not to the spring term that has not begun.
-  return term ?? ACADEMIC_TERMS[ACADEMIC_TERMS.length - 1]!;
+  // Dec 21-31 falls past the fall term's end, so the next term to work toward is
+  // spring.
+  return term ?? ACADEMIC_TERMS[0]!;
 }
 
 /**
@@ -136,8 +136,7 @@ function lastDayForPeriod(period: AssignmentPeriod, todayKey: string): string {
 
   if (period === "semester") {
     const term = academicTermForDayKey(todayKey);
-    // A date past the fall end (Dec 21-31) still belongs to that fall term, so
-    // roll its end into the following calendar year rather than backwards.
+    // Dec 21-31 resolves to spring, which ends in the following calendar year.
     const endYear = compareMonthDay(todayKey, term.endsOn) > 0 ? year + 1 : year;
     return dayKey(endYear, term.endsOn);
   }

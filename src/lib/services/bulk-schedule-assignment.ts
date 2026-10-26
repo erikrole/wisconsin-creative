@@ -56,6 +56,8 @@ import { createBulkScheduleAssignmentNotifications } from "@/lib/services/notifi
 import { unique } from "@/lib/utils";
 
 const MAX_BULK_EVENTS = 200;
+/** Runners-up offered per slot when staff change a proposed person in review. */
+const MAX_ALTERNATIVES = 3;
 
 const bulkShiftGroupSelect = {
   id: true,
@@ -585,7 +587,7 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
         const target = candidateTarget(slot, state.event.sportCode);
         const scores = scoreCandidatesForShift({ shift: target, candidates, now: new Date() });
         const eventHasTravelRoster = sportHasTravelRoster(travelRosterCounts, state.event.sportCode);
-        const chosen = scores.find((score) => {
+        const eligible = scores.filter((score) => {
           const candidate = candidatesById.get(score.userId);
           if (!candidate || usedUserIds.has(score.userId)) return false;
           // The sport roster is the pool, not a tiebreaker.
@@ -598,6 +600,7 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           if (!hasAreaFit(score) || score.blockingConflict) return false;
           return true;
         });
+        const [chosen, ...runnersUp] = eligible;
         if (!chosen) {
           skipped.push(buildSkippedSlot(slot, scores, candidatesById, usedUserIds, state.event.sportCode, {
             isHome: state.event.isHome,
@@ -627,29 +630,21 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           warnings: chosen.warnings,
           advisoryConflict: chosen.advisoryConflict,
           advisoryConflictNote: chosen.advisoryConflictNote,
+          alternatives: runnersUp.slice(0, MAX_ALTERNATIVES).map((score) => ({
+            userId: score.userId,
+            userName: candidatesById.get(score.userId)!.name ?? score.userId,
+            userRole: candidatesById.get(score.userId)!.role,
+            score: score.score,
+            bucket: score.bucket,
+            reasons: score.reasons,
+            warnings: score.warnings,
+            advisoryConflict: score.advisoryConflict,
+            advisoryConflictNote: score.advisoryConflictNote,
+          })),
         });
         appendTentativeAssignment(candidate, target);
       }
 
-      // Refusing to half-crew an event is all-or-nothing: drop the partial set
-      // rather than staging a schedule that releases a position short.
-      if (scope.requireFullCrew && proposals.length < state.openSlots.length) {
-        events.push({
-          ...buildEventResult(state, [], skipped),
-          skipped: [
-            {
-              shiftId: null,
-              area: null,
-              workerType: null,
-              reasonCode: "partial_crew_blocked",
-              reason: `Only ${proposals.length} of ${state.openSlots.length} open slots could be filled.`,
-              reasonDetails: ["Full-crew-only is on, so no assignment was proposed for this event."],
-            },
-            ...skipped,
-          ],
-        });
-        continue;
-      }
       events.push(buildEventResult(state, proposals, skipped));
     }
   }
@@ -683,31 +678,41 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
   };
 }
 
+/**
+ * Keeps the reviewed proposals that still stand in a fresh preview. A proposal
+ * that no longer does (the person got time off, the slot filled) is dropped
+ * and counted rather than failing the whole apply: any subset of a valid
+ * preview is itself valid.
+ */
 function proposalsByGroup(input: BulkAssignmentApplyInput, preview: BulkAssignmentPreviewResponse) {
   const available = new Map(
     preview.events.flatMap((event) => event.proposals.map((proposal) => [proposal.proposalId, proposal] as const)),
   );
   const seen = new Set<string>();
-  const selected = input.proposals.map((proposal) => {
+  const selected: BulkAssignmentPreviewProposal[] = [];
+  for (const proposal of input.proposals) {
     if (seen.has(proposal.proposalId)) throw new HttpError(400, "Each bulk assignment proposal may be selected only once.");
     seen.add(proposal.proposalId);
     const current = available.get(proposal.proposalId);
     if (!current
       || current.shiftGroupId !== proposal.shiftGroupId
       || current.shiftId !== proposal.shiftId
-      || current.eventId !== proposal.eventId
-      || current.userId !== proposal.userId) {
-      throw new HttpError(409, "The bulk assignment preview is stale. Review it again before applying.");
+      || current.eventId !== proposal.eventId) continue;
+    // Staff may swap in one of the runners-up they were shown; any other person
+    // is a stale proposal.
+    if (proposal.userId === current.userId) {
+      selected.push(current);
+    } else if (current.alternatives.some((alternative) => alternative.userId === proposal.userId)) {
+      selected.push({ ...current, userId: proposal.userId });
     }
-    return current;
-  });
+  }
   const grouped = new Map<string, BulkAssignmentPreviewProposal[]>();
   for (const proposal of selected) {
     const list = grouped.get(proposal.shiftGroupId) ?? [];
     list.push(proposal);
     grouped.set(proposal.shiftGroupId, list);
   }
-  return grouped;
+  return { grouped, applied: selected.length, dropped: input.proposals.length - selected.length };
 }
 
 function addTentativeWindow(windowsByUser: Map<string, Array<{ startsAt: Date; endsAt: Date }>>, userId: string, window: { startsAt: Date; endsAt: Date }) {
@@ -726,11 +731,8 @@ export async function applyBulkScheduleAssignment(
 ) {
   const input = bulkAssignmentApplySchema.parse(rawInput);
   const preview = await getBulkAssignmentPreview(input.scope);
-  if (preview.fingerprint !== input.fingerprint) {
-    throw new HttpError(409, "The bulk assignment preview is stale. Review it again before applying.");
-  }
-  const grouped = proposalsByGroup(input, preview);
-  if (grouped.size === 0) throw new HttpError(400, "Select at least one proposed assignment.");
+  const { grouped, applied, dropped } = proposalsByGroup(input, preview);
+  if (grouped.size === 0) throw new HttpError(409, "None of the selected assignments are available anymore. Build the preview again.");
 
   const batchId = randomUUID();
   const now = new Date();
@@ -922,7 +924,8 @@ export async function applyBulkScheduleAssignment(
       batchId,
       releaseAt: releaseAt.toISOString(),
       eventCount: grouped.size,
-      assignmentCount: input.proposals.length,
+      assignmentCount: applied,
+      droppedCount: dropped,
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 

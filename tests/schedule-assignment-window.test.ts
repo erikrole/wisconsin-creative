@@ -49,10 +49,10 @@ describe("schedule assignment windows", () => {
     expect(window.detail).toContain("Dec 20");
   });
 
-  it("keeps the late-December tail in the fall term rather than jumping back", () => {
-    // Dec 21-31 falls past the fall end date but still belongs to that term.
-    expect(academicTermForDayKey("2026-12-27").id).toBe("FALL");
-    expect(endDayKey(resolveAssignmentWindow("semester", noonUtc("2026-12-27")))).toBe("2027-12-20");
+  it("runs the late-December tail through spring, not another year of fall", () => {
+    // Dec 21-31 falls past the fall end date, so the window runs through spring.
+    expect(academicTermForDayKey("2026-12-27").id).toBe("SPRING");
+    expect(endDayKey(resolveAssignmentWindow("semester", noonUtc("2026-12-27")))).toBe("2027-05-15");
   });
 
   it("resolves spring and summer semesters from their own boundaries", () => {
