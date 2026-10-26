@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
 import type {
@@ -104,10 +105,20 @@ const LAB_EVENT = {
   endsAt: "2026-10-27T03:00:00.000Z",
 };
 
+const ROSTER = {
+  sports: [
+    { sportCode: "FB", label: "Football", policy: "FULL_CREW", total: 4, staff: [{ id: "s1", name: "Dana Reyes" }], students: [{ id: "u1", name: "Macy Farrell" }, { id: "u2", name: "Jon Lee" }, { id: "u3", name: "Ava Kim" }] },
+    { sportCode: "MHOC", label: "Men's Hockey", policy: "STAFF_ONLY", total: 3, staff: [{ id: "s2", name: "Chris Park" }], students: [{ id: "u4", name: "Sam Ortiz" }, { id: "u5", name: "Lily Tran" }] },
+  ],
+  emptySportCodes: [],
+  heldSportCodes: [],
+};
+
 function Lab() {
   const params = useSearchParams();
   const eventMode = params.get("mode") === "event";
   const [ready, setReady] = useState(false);
+  const [client] = useState(() => new QueryClient());
   useEffect(() => {
     document.documentElement.dataset.theme = params.get("theme") === "dark" ? "dark" : "light";
     const original = window.fetch;
@@ -115,14 +126,18 @@ function Lab() {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("/bulk-assignment/batches")) return json({ batches: [] });
       if (url.includes("/bulk-assignment/preview")) return json(eventMode ? EVENT_PREVIEW : PREVIEW);
-      if (url.includes("/sport-roster")) return json({ sports: [] });
+      if (url.includes("/sport-roster")) return json(ROSTER);
       return original(input, init);
     };
     setReady(true);
     return () => { window.fetch = original; };
   }, [eventMode, params]);
   if (!ready) return null;
-  return <AutoAssignDialog open onOpenChange={() => {}} onApplied={() => {}} event={eventMode ? LAB_EVENT : null} />;
+  return (
+    <QueryClientProvider client={client}>
+      <AutoAssignDialog open onOpenChange={() => {}} onApplied={() => {}} event={eventMode ? LAB_EVENT : null} initialSportCodes={eventMode ? undefined : ["FB", "MHOC"]} />
+    </QueryClientProvider>
+  );
 }
 
 export default function AutoAssignLab() {

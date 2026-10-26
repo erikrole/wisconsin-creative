@@ -63,7 +63,7 @@ describe("bulk schedule assignment contracts", () => {
     expect(dialog).toContain("2. Review");
     expect(dialog).toContain("Who is getting added");
     expect(dialog).toContain("Nothing ready to stage");
-    expect(dialog).toContain("Allow incomplete crews");
+    expect(dialog).toContain("Fill what fits");
     expect(dialog).toContain("Include events");
     expect(dialog).toContain("stayed out");
     expect(dialog).toContain("Build preview");
@@ -132,14 +132,14 @@ describe("bulk schedule assignment contracts", () => {
     expect(service).toContain('reasonCode: "partial_crew_blocked"');
     expect(service).toContain("eventsPartiallyCrewed");
     expect(service).toContain("eventsPendingChanges");
-    expect(dialog).toContain("Full crews only");
+    expect(dialog).toContain("If a crew can't be filled");
     // Multi-event scopes default to full crews; a single event defaults to partial.
     expect(dialog).toContain("useState(defaultRequireFullCrew)");
     expect(dialog).toContain("const defaultRequireFullCrew = !event");
-    expect(dialog).toContain("Events that cannot be filled completely are held back.");
-    expect(dialog).toContain("Events may be filled partway.");
+    expect(dialog).toContain("That event gets no assignments at all");
+    expect(dialog).toContain("People are still assigned to the slots that fit.");
     expect(dialog).toContain("Couldn't fill every open slot");
-    expect(dialog).toContain("Allow incomplete crews");
+    expect(dialog).toContain("Fill what fits");
     expect(dialog).toContain("skipped for unreleased staff changes");
     expect(dialog).toContain("sportsGroupedByProgram");
     expect(dialog).toContain('heading={program === "men" ? "Men" : "Women"}');

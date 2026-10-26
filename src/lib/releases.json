@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-10-26",
+    "title": "Auto assign explains itself",
+    "type": "improvement",
+    "summary": "Auto assign now says plainly what happens when a crew can't be fully filled, and shows each sport's default.",
+    "details": [
+      "The old “Full crews only” switch is now two choices: “Leave that event open” or “Fill what fits.”",
+      "A sport that fills both staff and student slots is now labeled “Staff and students,” so it no longer sounds like the crew toggle."
+    ]
+  },
+  {
     "date": "2026-10-24",
     "title": "A clearer, friendlier Dashboard",
     "type": "improvement",

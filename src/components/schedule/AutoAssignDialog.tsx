@@ -122,7 +122,7 @@ const BLOCKER_ORDER: BlockerKind[] = [
 const BLOCKER_COPY: Record<BlockerKind, { title: string; detail: string }> = {
   incomplete_crew: {
     title: "Couldn't fill every open slot",
-    detail: "Full crews only kept these out so nothing stages short.",
+    detail: "These stayed open because \"Leave that event open\" is on. Switch to \"Fill what fits\" to stage them anyway.",
   },
   needs_schedule: {
     title: "No crew schedule yet",
@@ -450,7 +450,7 @@ export function AutoAssignDialog({
     () => new Set(selectedProposals.map((proposal) => proposal.eventId)).size,
     [selectedProposals],
   );
-  // Full crews only means an event is staged whole or not at all, so single
+  // Leave-event-open mode means an event is staged whole or not at all, so single
   // slots can be dropped only when partial crews are allowed.
   const canDropSingleSlots = preview ? !preview.scope.requireFullCrew : false;
 
@@ -723,16 +723,23 @@ export function AutoAssignDialog({
                 </ScopeRow>
 
                 <ScopeRow
-                  label="Full crews only"
+                  label="If a crew can't be filled"
                   hint={requireFullCrew
-                    ? "Events that cannot be filled completely are held back."
-                    : "Events may be filled partway. You can drop single slots in review."}
+                    ? "That event gets no assignments at all, so nothing is staged short."
+                    : "People are still assigned to the slots that fit. You can drop single slots in review."}
                 >
-                  <Switch
-                    checked={requireFullCrew}
-                    onCheckedChange={setRequireFullCrew}
-                    aria-label="Full crews only"
-                  />
+                  <ToggleGroup
+                    type="single"
+                    value={requireFullCrew ? "hold" : "fit"}
+                    onValueChange={(value) => {
+                      if (value) setRequireFullCrew(value === "hold");
+                    }}
+                    className="flex-wrap justify-start"
+                    aria-label="If a crew can't be filled"
+                  >
+                    <ToggleGroupItem value="hold" className="h-10 px-3 text-sm">Leave that event open</ToggleGroupItem>
+                    <ToggleGroupItem value="fit" className="h-10 px-3 text-sm">Fill what fits</ToggleGroupItem>
+                  </ToggleGroup>
                 </ScopeRow>
               </div>
 
@@ -823,7 +830,7 @@ export function AutoAssignDialog({
                     <div className="flex items-baseline justify-between gap-3">
                       <h3 className="text-sm font-bold">Include events</h3>
                       <span className="text-xs text-[var(--text-muted)] max-sm:hidden">
-                        {canDropSingleSlots ? "Uncheck any slot to leave it open" : "Full crews only: events go in whole"}
+                        {canDropSingleSlots ? "Uncheck any slot to leave it open" : "Events go in whole or not at all"}
                       </span>
                     </div>
                     <ul className="flex flex-col gap-2">
@@ -981,7 +988,7 @@ export function AutoAssignDialog({
                   <div className="flex flex-wrap items-center gap-2">
                     {incompleteCrewCount > 0 && requireFullCrew ? (
                       <Button onClick={allowIncompleteCrews} disabled={loading || applying}>
-                        Allow incomplete crews
+                        Fill what fits
                       </Button>
                     ) : null}
                     <Button variant="outline" onClick={backToScope} disabled={loading || applying}>

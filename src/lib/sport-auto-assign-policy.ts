@@ -28,13 +28,13 @@ export const SPORT_AUTO_ASSIGN_POLICIES = [
 export const DEFAULT_SPORT_AUTO_ASSIGN_POLICY = SportAutoAssignPolicy.FULL_CREW;
 
 export const SPORT_AUTO_ASSIGN_POLICY_LABELS: Record<SportAutoAssignPolicy, string> = {
-  FULL_CREW: "Full crew",
+  FULL_CREW: "Staff and students",
   STAFF_ONLY: "Staff only",
   HOLD: "Hold",
 };
 
 export const SPORT_AUTO_ASSIGN_POLICY_DESCRIPTIONS: Record<SportAutoAssignPolicy, string> = {
-  FULL_CREW: "Auto assign fills both staff and student slots.",
+  FULL_CREW: "Auto assign fills staff and student slots.",
   STAFF_ONLY: "Auto assign fills staff slots. Student slots stay open for students to request.",
   HOLD: "Auto assign proposes nothing for this sport.",
 };
