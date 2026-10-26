@@ -14,7 +14,6 @@ describe("bulk schedule assignment contracts", () => {
 
     expect(service).toContain("scope.eventIds.length > 0 ? { id: { in: scope.eventIds } } : {}");
     expect(dialog).toContain("eventIds: event ? [event.id] : []");
-    expect(dialog).toContain("const defaultRequireFullCrew = !event");
     expect(card).toContain("<AutoAssignDialog");
     expect(card).toContain("Fill open slots");
     expect(card).toContain("disabled={shiftGroup.hasWorkingCopy}");
@@ -63,7 +62,6 @@ describe("bulk schedule assignment contracts", () => {
     expect(dialog).toContain("2. Review");
     expect(dialog).toContain("Who is getting added");
     expect(dialog).toContain("Nothing ready to stage");
-    expect(dialog).toContain("Fill what fits");
     expect(dialog).toContain("Include events");
     expect(dialog).toContain("stayed out");
     expect(dialog).toContain("Build preview");
@@ -121,25 +119,18 @@ describe("bulk schedule assignment contracts", () => {
     expect(autoFill).toContain("if (!isSportRosterEligible(score, eventSportCode)) return false;");
   });
 
-  it("never half-crews an event silently", () => {
+  it("always fills what fits and never holds an event back for a short crew", () => {
     const types = read("src/lib/bulk-schedule-assignment-types.ts");
     const service = read("src/lib/services/bulk-schedule-assignment.ts");
     const dialog = read("src/components/schedule/AutoAssignDialog.tsx");
 
-    expect(types).toContain("requireFullCrew");
     expect(types).toContain("unfilledSlots");
-    expect(service).toContain("scope.requireFullCrew && proposals.length < state.openSlots.length");
-    expect(service).toContain('reasonCode: "partial_crew_blocked"');
+    expect(types).not.toContain("requireFullCrew");
+    expect(service).not.toContain("partial_crew_blocked");
     expect(service).toContain("eventsPartiallyCrewed");
     expect(service).toContain("eventsPendingChanges");
-    expect(dialog).toContain("If a crew can't be filled");
-    // Multi-event scopes default to full crews; a single event defaults to partial.
-    expect(dialog).toContain("useState(defaultRequireFullCrew)");
-    expect(dialog).toContain("const defaultRequireFullCrew = !event");
-    expect(dialog).toContain("That event gets no assignments at all");
-    expect(dialog).toContain("People are still assigned to the slots that fit.");
-    expect(dialog).toContain("Couldn't fill every open slot");
-    expect(dialog).toContain("Fill what fits");
+    expect(dialog).not.toContain("requireFullCrew");
+    expect(dialog).toContain("Uncheck any slot to leave it open");
     expect(dialog).toContain("skipped for unreleased staff changes");
     expect(dialog).toContain("sportsGroupedByProgram");
     expect(dialog).toContain('heading={program === "men" ? "Men" : "Women"}');
@@ -264,7 +255,6 @@ describe("bulk schedule assignment contracts", () => {
     expect(dialog).toContain("Workers are notified after a ten-minute cancel window");
     expect(dialog).toContain("nothing notifies workers until release");
     expect(dialog).toContain("Nothing ready to stage");
-    expect(dialog).toContain("Couldn't fill every open slot");
     expect(wizard).toContain("take effect the next time Auto assign runs");
     expect(wizard).toContain("Skip leaves a sport exactly as it is");
     expect(wizard).toContain("\n                Skip\n              </Button>");

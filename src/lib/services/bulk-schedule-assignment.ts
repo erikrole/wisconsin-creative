@@ -631,25 +631,6 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
         appendTentativeAssignment(candidate, target);
       }
 
-      // Refusing to half-crew an event is all-or-nothing: drop the partial set
-      // rather than staging a schedule that releases a position short.
-      if (scope.requireFullCrew && proposals.length < state.openSlots.length) {
-        events.push({
-          ...buildEventResult(state, [], skipped),
-          skipped: [
-            {
-              shiftId: null,
-              area: null,
-              workerType: null,
-              reasonCode: "partial_crew_blocked",
-              reason: `Only ${proposals.length} of ${state.openSlots.length} open slots could be filled.`,
-              reasonDetails: ["Full-crew-only is on, so no assignment was proposed for this event."],
-            },
-            ...skipped,
-          ],
-        });
-        continue;
-      }
       events.push(buildEventResult(state, proposals, skipped));
     }
   }

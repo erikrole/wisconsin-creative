@@ -3,9 +3,9 @@
     "date": "2026-10-26",
     "title": "Auto assign explains itself",
     "type": "improvement",
-    "summary": "Auto assign now says plainly what happens when a crew can't be fully filled, and shows each sport's default.",
+    "summary": "Auto assign always fills every slot it can, and shows each sport's default.",
     "details": [
-      "The old “Full crews only” switch is now two choices: “Leave that event open” or “Fill what fits.”",
+      "The “Full crews only” switch is gone. An event with a slot nobody fits is still filled for the rest, and you can uncheck any single assignment in review.",
       "A sport that fills both staff and student slots is now labeled “Staff and students,” so it no longer sounds like the crew toggle."
     ]
   },

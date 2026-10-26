@@ -38,12 +38,6 @@ export const bulkAssignmentScopeSchema = z.object({
   area: z.nativeEnum(ShiftArea).nullable().default(null),
   workerScope: z.enum(BULK_ASSIGNMENT_WORKER_SCOPES).default("ALL"),
   /**
-   * Refuse to half-crew an event: when set, an event is proposed only if every
-   * open slot in scope can be filled, so applying never releases a schedule
-   * that is short a position.
-   */
-  requireFullCrew: z.boolean().default(false),
-  /**
    * Narrow to specific events (Event detail's Auto assign). Empty means every
    * event in the window. The window and sport filters still apply.
    */
@@ -110,7 +104,6 @@ export type BulkAssignmentPreviewSkipped = {
     | "approved_time_off_blocked"
     | "overlapping_assignment_blocked"
     | "already_proposed"
-    | "partial_crew_blocked"
     | "no_safe_candidate";
   reason: string;
   reasonDetails: string[];

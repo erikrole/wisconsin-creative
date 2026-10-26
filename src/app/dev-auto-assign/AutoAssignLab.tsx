@@ -74,7 +74,6 @@ const PREVIEW: BulkAssignmentPreviewResponse = {
     rangeEndsAt: "2026-10-28T05:00:00.000Z",
     area: null,
     workerScope: "ALL",
-    requireFullCrew: false,
     eventIds: [],
     period: "week",
   },

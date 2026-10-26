@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Check,
   ChevronDownIcon,
@@ -35,7 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
@@ -97,7 +96,6 @@ type Step = "scope" | "review";
 /** Product-facing buckets for why an event did not make the staging list. */
 type BlockerKind =
   | "needs_schedule"
-  | "incomplete_crew"
   | "pending_changes"
   | "no_open_slots"
   | "no_match"
@@ -111,7 +109,6 @@ type BlockerGroup = {
 };
 
 const BLOCKER_ORDER: BlockerKind[] = [
-  "incomplete_crew",
   "needs_schedule",
   "pending_changes",
   "no_match",
@@ -120,10 +117,6 @@ const BLOCKER_ORDER: BlockerKind[] = [
 ];
 
 const BLOCKER_COPY: Record<BlockerKind, { title: string; detail: string }> = {
-  incomplete_crew: {
-    title: "Couldn't fill every open slot",
-    detail: "These stayed open because \"Leave that event open\" is on. Switch to \"Fill what fits\" to stage them anyway.",
-  },
   needs_schedule: {
     title: "No crew schedule yet",
     detail: "Open the event and set Home or Away before auto assign can fill it.",
@@ -202,8 +195,6 @@ function blockerKindForEvent(event: BulkAssignmentPreviewEvent): BlockerKind {
   switch (primaryReasonCode(event)) {
     case "no_shift_group":
       return "needs_schedule";
-    case "partial_crew_blocked":
-      return "incomplete_crew";
     case "pending_working_copy":
       return "pending_changes";
     case "no_open_slots":
@@ -253,14 +244,10 @@ export function AutoAssignDialog({
   customWindow,
   event,
 }: AutoAssignDialogProps) {
-  // One event is usually filled partway (a slot nobody fits stays open), so
-  // the single-event default lets the rest stage instead of holding it all.
-  const defaultRequireFullCrew = !event;
   const [step, setStep] = useState<Step>("scope");
   const [sportCodes, setSportCodes] = useState<string[]>(initialSportCodes ?? []);
   const [area, setArea] = useState<Area | null>(initialArea ?? null);
   const [workerScope, setWorkerScope] = useState<BulkAssignmentWorkerScope>("ALL");
-  const [requireFullCrew, setRequireFullCrew] = useState(defaultRequireFullCrew);
   const [period, setPeriod] = useState<AssignmentPeriodValue>(
     initialPeriod ?? (customWindow ? "custom" : "week"),
   );
@@ -274,9 +261,6 @@ export function AutoAssignDialog({
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** Lets Review rebuild after a Full-crews tweak without bouncing to Scope. */
-  const skipScopeResetRef = useRef(false);
-
   const { batches: pendingBatches, refresh: refreshBatches } = usePendingAssignmentBatches(open);
   const [roster, setRoster] = useState<SportRosterPreviewResponse | null>(null);
   const [rosterLoading, setRosterLoading] = useState(false);
@@ -292,7 +276,6 @@ export function AutoAssignDialog({
     setSportCodes(initialSportCodes ?? []);
     setArea(initialArea ?? null);
     setWorkerScope("ALL");
-    setRequireFullCrew(defaultRequireFullCrew);
     setPeriod(initialPeriod ?? (customWindow ? "custom" : "week"));
     setPreview(null);
     setSelectedProposalIds(new Set());
@@ -343,15 +326,10 @@ export function AutoAssignDialog({
     rangeEndsAt: activeWindow.rangeEndsAt,
     area,
     workerScope,
-    requireFullCrew,
     period: event ? "custom" : period,
-  }), [activeWindow, area, event, period, requireFullCrew, sportCodes, workerScope]);
+  }), [activeWindow, area, event, period, sportCodes, workerScope]);
 
   useEffect(() => {
-    if (skipScopeResetRef.current) {
-      skipScopeResetRef.current = false;
-      return;
-    }
     setPreview(null);
     setSelectedProposalIds(new Set());
     setFocusPersonId(null);
@@ -432,13 +410,6 @@ export function AutoAssignDialog({
     }
   }, [scope]);
 
-  const allowIncompleteCrews = useCallback(() => {
-    const nextScope = { ...scope, requireFullCrew: false };
-    skipScopeResetRef.current = true;
-    setRequireFullCrew(false);
-    void buildPreview(nextScope);
-  }, [buildPreview, scope]);
-
   const selectedProposals = useMemo(
     () => preview?.events
       .filter((event) => event.status === "ready")
@@ -450,10 +421,6 @@ export function AutoAssignDialog({
     () => new Set(selectedProposals.map((proposal) => proposal.eventId)).size,
     [selectedProposals],
   );
-  // Leave-event-open mode means an event is staged whole or not at all, so single
-  // slots can be dropped only when partial crews are allowed.
-  const canDropSingleSlots = preview ? !preview.scope.requireFullCrew : false;
-
   const selectedPeople = useMemo(
     () => summarizeAssignmentPeople(selectedProposals),
     [selectedProposals],
@@ -471,7 +438,6 @@ export function AutoAssignDialog({
   );
 
   const blockerGroups = useMemo(() => summarizeBlockers(blockedEvents), [blockedEvents]);
-  const incompleteCrewCount = blockerGroups.find((group) => group.kind === "incomplete_crew")?.count ?? 0;
   const eventsChecked = preview?.events.length ?? 0;
   const heldAside = preview?.summary.eventsOnHold ?? 0;
 
@@ -722,25 +688,6 @@ export function AutoAssignDialog({
                   </ToggleGroup>
                 </ScopeRow>
 
-                <ScopeRow
-                  label="If a crew can't be filled"
-                  hint={requireFullCrew
-                    ? "That event gets no assignments at all, so nothing is staged short."
-                    : "People are still assigned to the slots that fit. You can drop single slots in review."}
-                >
-                  <ToggleGroup
-                    type="single"
-                    value={requireFullCrew ? "hold" : "fit"}
-                    onValueChange={(value) => {
-                      if (value) setRequireFullCrew(value === "hold");
-                    }}
-                    className="flex-wrap justify-start"
-                    aria-label="If a crew can't be filled"
-                  >
-                    <ToggleGroupItem value="hold" className="h-10 px-3 text-sm">Leave that event open</ToggleGroupItem>
-                    <ToggleGroupItem value="fit" className="h-10 px-3 text-sm">Fill what fits</ToggleGroupItem>
-                  </ToggleGroup>
-                </ScopeRow>
               </div>
 
             </div>
@@ -830,7 +777,7 @@ export function AutoAssignDialog({
                     <div className="flex items-baseline justify-between gap-3">
                       <h3 className="text-sm font-bold">Include events</h3>
                       <span className="text-xs text-[var(--text-muted)] max-sm:hidden">
-                        {canDropSingleSlots ? "Uncheck any slot to leave it open" : "Events go in whole or not at all"}
+                        Uncheck any slot to leave it open
                       </span>
                     </div>
                     <ul className="flex flex-col gap-2">
@@ -891,15 +838,13 @@ export function AutoAssignDialog({
                                         </span>
                                       </span>
                                     </span>
-                                    {canDropSingleSlots ? (
-                                      <Checkbox
+                                    <Checkbox
                                         checked={included}
                                         disabled={applying}
                                         onCheckedChange={(checked) => toggleProposal(proposal.proposalId, checked === true)}
                                         aria-label={`Assign ${proposal.userName} to ${AREA_LABELS[proposal.area] ?? proposal.area} for ${event.summary}`}
                                         className="size-5"
                                       />
-                                    ) : <span aria-hidden="true" />}
                                   </li>
                                 );
                               })}
@@ -986,11 +931,6 @@ export function AutoAssignDialog({
                   )}
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {incompleteCrewCount > 0 && requireFullCrew ? (
-                      <Button onClick={allowIncompleteCrews} disabled={loading || applying}>
-                        Fill what fits
-                      </Button>
-                    ) : null}
                     <Button variant="outline" onClick={backToScope} disabled={loading || applying}>
                       Change scope
                     </Button>
