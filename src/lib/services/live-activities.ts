@@ -5,7 +5,7 @@ import {
   startCheckoutReturnLiveActivityTokens,
   updateCheckoutReturnLiveActivityTokens,
 } from "@/lib/push/apns";
-import { BookingKind, BookingStatus } from "@prisma/client";
+import { BookingKind, BookingStatus, Prisma } from "@prisma/client";
 import { unique } from "@/lib/utils";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 
@@ -267,182 +267,51 @@ export async function retryPendingCheckoutReturnLiveActivityEnds(args: {
   };
 }
 
-export async function startDueCheckoutReturnLiveActivities(args: {
-  now?: Date;
-  leadMs?: number;
-  overdueWindowMs?: number;
-  limit?: number;
-} = {}) {
-  const now = args.now ?? new Date();
-  const leadMs = args.leadMs ?? DEFAULT_LEAD_MS;
-  const overdueWindowMs = args.overdueWindowMs ?? OVERDUE_START_WINDOW_MS;
-  const leadCutoff = new Date(now.getTime() + leadMs);
-  const overdueCutoff = new Date(now.getTime() - overdueWindowMs);
-
-  const dueCheckouts = await db.booking.findMany({
-    where: {
-      kind: BookingKind.CHECKOUT,
-      status: BookingStatus.OPEN,
-      endsAt: {
-        gte: overdueCutoff,
-        lte: leadCutoff,
-      },
-      liveActivityTokens: {
-        none: {
-          activity: CHECKOUT_RETURN_ACTIVITY,
-          endedAt: null,
-        },
-      },
-      liveActivityStarts: {
-        none: {
-          activity: CHECKOUT_RETURN_ACTIVITY,
-          endedAt: null,
-        },
-      },
-      requester: {
-        active: true,
-        liveActivityStartTokens: {
-          some: {
-            activity: CHECKOUT_RETURN_ACTIVITY,
-            revokedAt: null,
-          },
-        },
-      },
+// A checkout that can start a return activity: open, nothing running or
+// recorded for it yet, and a requester who is active with a start token.
+const checkoutReturnStartableWhere = {
+  kind: BookingKind.CHECKOUT,
+  status: BookingStatus.OPEN,
+  liveActivityTokens: {
+    none: { activity: CHECKOUT_RETURN_ACTIVITY, endedAt: null },
+  },
+  liveActivityStarts: {
+    none: { activity: CHECKOUT_RETURN_ACTIVITY, endedAt: null },
+  },
+  requester: {
+    active: true,
+    liveActivityStartTokens: {
+      some: { activity: CHECKOUT_RETURN_ACTIVITY, revokedAt: null },
     },
+  },
+} satisfies Prisma.BookingWhereInput;
+
+const checkoutReturnStartSelect = {
+  id: true,
+  title: true,
+  endsAt: true,
+  requesterUserId: true,
+  requester: {
     select: {
-      id: true,
-      title: true,
-      endsAt: true,
-      requesterUserId: true,
-      requester: {
-        select: {
-          name: true,
-          avatarUrl: true,
-          liveActivityStartTokens: {
-            where: {
-              activity: CHECKOUT_RETURN_ACTIVITY,
-              revokedAt: null,
-              user: { active: true },
-            },
-            select: { token: true },
-          },
+      name: true,
+      avatarUrl: true,
+      liveActivityStartTokens: {
+        where: {
+          activity: CHECKOUT_RETURN_ACTIVITY,
+          revokedAt: null,
+          user: { active: true },
         },
+        select: { token: true },
       },
     },
-    orderBy: { endsAt: "asc" },
-    take: args.limit ?? 5,
-  });
+  },
+} satisfies Prisma.BookingSelect;
 
-  const scanned = dueCheckouts.length;
-  const outcomes = await Promise.allSettled(dueCheckouts.map(async (booking) => {
-    const tokens = booking.requester.liveActivityStartTokens.map((row) => row.token);
-    const result = await startCheckoutReturnLiveActivityTokens(
-      tokens,
-      {
-        bookingId: booking.id,
-        bookingTitle: displayBookingTitle(booking.title),
-        requesterName: booking.requester.name,
-        requesterInitials: initialsFor(booking.requester.name),
-        requesterAvatarUrl: booking.requester.avatarUrl,
-        returnTimeText: returnTimeText(booking.endsAt),
-      },
-      {
-        endsAt: booking.endsAt,
-        nextNeedAt: null,
-        allowsExtend: true,
-        urgency: urgencyFor(booking.endsAt, now),
-      },
-    );
-
-    if (result.revoked.length > 0) {
-      await db.liveActivityStartToken.updateMany({
-        where: { token: { in: result.revoked } },
-        data: { revokedAt: new Date() },
-      });
-    }
-
-    const revokedTokens = new Set(result.revoked);
-    const recorded = result.ok > 0 && await recordCheckoutReturnLiveActivityStartIfEligible({
-      userId: booking.requesterUserId,
-      bookingId: booking.id,
-      expectedEndsAt: booking.endsAt,
-      candidateTokens: tokens.filter((token) => !revokedTokens.has(token)),
-      now,
-    });
-
-    return {
-      started: recorded ? result.ok : 0,
-      revoked: result.revoked.length,
-    };
-  }));
-
-  let started = 0;
-  let revoked = 0;
-  for (const outcome of outcomes) {
-    if (outcome.status === "fulfilled") {
-      started += outcome.value.started;
-      revoked += outcome.value.revoked;
-    } else {
-      console.error("[LiveActivity] scheduled start failed", outcome.reason);
-    }
-  }
-
-  return {
-    scanned,
-    started,
-    revoked,
-  };
-}
-
-export async function startCheckoutReturnLiveActivityForBooking(args: {
-  bookingId: string;
-  expectedEndsAt: Date;
-  now?: Date;
-}) {
-  const now = args.now ?? new Date();
-  const booking = await db.booking.findFirst({
-    where: {
-      id: args.bookingId,
-      kind: BookingKind.CHECKOUT,
-      status: BookingStatus.OPEN,
-      endsAt: args.expectedEndsAt,
-      liveActivityTokens: {
-        none: { activity: CHECKOUT_RETURN_ACTIVITY, endedAt: null },
-      },
-      liveActivityStarts: {
-        none: { activity: CHECKOUT_RETURN_ACTIVITY, endedAt: null },
-      },
-      requester: {
-        active: true,
-        liveActivityStartTokens: {
-          some: { activity: CHECKOUT_RETURN_ACTIVITY, revokedAt: null },
-        },
-      },
-    },
-    select: {
-      id: true,
-      title: true,
-      endsAt: true,
-      requesterUserId: true,
-      requester: {
-        select: {
-          name: true,
-          avatarUrl: true,
-          liveActivityStartTokens: {
-            where: {
-              activity: CHECKOUT_RETURN_ACTIVITY,
-              revokedAt: null,
-              user: { active: true },
-            },
-            select: { token: true },
-          },
-        },
-      },
-    },
-  });
-
-  if (!booking) return { started: 0, revoked: 0, skipped: true };
-
+/** Pushes the start, revokes tokens APNs rejected, and records the start only if it still applies. */
+async function startCheckoutReturnLiveActivity(
+  booking: Prisma.BookingGetPayload<{ select: typeof checkoutReturnStartSelect }>,
+  now: Date,
+) {
   const tokens = booking.requester.liveActivityStartTokens.map((row) => row.token);
   const result = await startCheckoutReturnLiveActivityTokens(
     tokens,
@@ -465,7 +334,7 @@ export async function startCheckoutReturnLiveActivityForBooking(args: {
   if (result.revoked.length > 0) {
     await db.liveActivityStartToken.updateMany({
       where: { token: { in: result.revoked } },
-      data: { revokedAt: now },
+      data: { revokedAt: new Date() },
     });
   }
 
@@ -483,6 +352,69 @@ export async function startCheckoutReturnLiveActivityForBooking(args: {
     revoked: result.revoked.length,
     skipped: result.ok > 0 && !recorded,
   };
+}
+
+export async function startDueCheckoutReturnLiveActivities(args: {
+  now?: Date;
+  leadMs?: number;
+  overdueWindowMs?: number;
+  limit?: number;
+} = {}) {
+  const now = args.now ?? new Date();
+  const leadMs = args.leadMs ?? DEFAULT_LEAD_MS;
+  const overdueWindowMs = args.overdueWindowMs ?? OVERDUE_START_WINDOW_MS;
+  const leadCutoff = new Date(now.getTime() + leadMs);
+  const overdueCutoff = new Date(now.getTime() - overdueWindowMs);
+
+  const dueCheckouts = await db.booking.findMany({
+    where: {
+      ...checkoutReturnStartableWhere,
+      endsAt: {
+        gte: overdueCutoff,
+        lte: leadCutoff,
+      },
+    },
+    select: checkoutReturnStartSelect,
+    orderBy: { endsAt: "asc" },
+    take: args.limit ?? 5,
+  });
+
+  const outcomes = await Promise.allSettled(dueCheckouts.map((booking) => startCheckoutReturnLiveActivity(booking, now)));
+
+  let started = 0;
+  let revoked = 0;
+  for (const outcome of outcomes) {
+    if (outcome.status === "fulfilled") {
+      started += outcome.value.started;
+      revoked += outcome.value.revoked;
+    } else {
+      console.error("[LiveActivity] scheduled start failed", outcome.reason);
+    }
+  }
+
+  return {
+    scanned: dueCheckouts.length,
+    started,
+    revoked,
+  };
+}
+
+export async function startCheckoutReturnLiveActivityForBooking(args: {
+  bookingId: string;
+  expectedEndsAt: Date;
+  now?: Date;
+}) {
+  const booking = await db.booking.findFirst({
+    where: {
+      ...checkoutReturnStartableWhere,
+      id: args.bookingId,
+      endsAt: args.expectedEndsAt,
+    },
+    select: checkoutReturnStartSelect,
+  });
+
+  if (!booking) return { started: 0, revoked: 0, skipped: true };
+  return startCheckoutReturnLiveActivity(booking, args.now ?? new Date());
 }
 
 export async function sweepOverdueCheckoutReturnLiveActivities(args: {
@@ -593,24 +525,13 @@ export async function updateCheckoutReturnLiveActivities(args: {
 
     if (rows.length === 0) return;
 
-    const now = new Date();
-    const remaining = args.endsAt.getTime() - now.getTime();
-    const urgency =
-      remaining <= 0
-        ? "overdue"
-        : remaining <= 10 * 60_000
-          ? "critical"
-          : remaining <= 30 * 60_000
-            ? "warning"
-            : "normal";
-
     const { revoked } = await updateCheckoutReturnLiveActivityTokens(
       rows.map((row) => row.token),
       {
         endsAt: args.endsAt,
         nextNeedAt: null,
         allowsExtend: true,
-        urgency,
+        urgency: urgencyFor(args.endsAt, new Date()),
       },
     );
 

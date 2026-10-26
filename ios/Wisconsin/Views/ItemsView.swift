@@ -751,7 +751,9 @@ struct ItemFamilyListRow: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(family.name)
                 .font(.gothamBold(size: 17))
-                .lineLimit(lineLimit)
+                // Two lines: the availability badge leaves a 390pt row about
+                // 170pt, which cut "Football battery family" to "Football batte...".
+                .lineLimit(lineLimit == 1 ? 2 : lineLimit)
                 .fixedSize(horizontal: false, vertical: true)
             if shouldShowLocation {
                 Text(metadataLine)

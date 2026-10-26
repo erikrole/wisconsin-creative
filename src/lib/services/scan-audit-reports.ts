@@ -278,7 +278,7 @@ export async function getAuditReport(
     ? auditResults[3].value.map((g) => ({ entityType: g.entityType, count: g._count }))
     : [];
 
-  const previousTotal = await getAuditReportPreviousTotal({ action, endDate, startDate });
+  const previousTotal = await getAuditReportPreviousTotal({ action, endDate, entityType, startDate });
 
   return {
     data: data.map(mapAuditReportEntry),
@@ -291,16 +291,16 @@ export async function getAuditReport(
   };
 }
 
-/** Event count for the window before this one; null for an unbounded range. */
+/**
+ * Event count for the window before this one, under the same action and
+ * entity filters; null for an unbounded range.
+ */
 async function getAuditReportPreviousTotal({
   action,
   endDate,
+  entityType,
   startDate,
-}: {
-  action?: string | null;
-  endDate?: string | null;
-  startDate?: string | null;
-}) {
+}: AuditReportFilters) {
   if (!startDate) return null;
 
   const start = new Date(startDate);
@@ -312,6 +312,7 @@ async function getAuditReportPreviousTotal({
     db.auditLog.count({
       where: buildAuditReportWhere({
         action,
+        entityType,
         endDate: new Date(start.getTime() - 1).toISOString(),
         startDate: new Date(start.getTime() - span).toISOString(),
       }),

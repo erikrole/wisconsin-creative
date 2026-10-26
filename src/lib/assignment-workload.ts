@@ -1,6 +1,6 @@
 import type { GridEvent } from "@/hooks/use-assignment-grid";
 
-export type WorkloadPerson = {
+type WorkloadPerson = {
   userId: string;
   name: string;
   avatarUrl: string | null;

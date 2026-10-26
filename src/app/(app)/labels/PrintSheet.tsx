@@ -480,7 +480,7 @@ export function PrintSheet({
   const [exportedUnits, setExportedUnits] = useState<Record<string, number[]>>({});
   const { data: me } = useCurrentUser();
   const canMarkPrinted = me?.role === "ADMIN" || me?.role === "STAFF";
-  const prepared = preparedSheet(cart, unitsBySku);
+  const prepared = useMemo(() => preparedSheet(cart, unitsBySku), [cart, unitsBySku]);
   const { rows, groups, labels: usbLabels, total } = prepared;
   const preflight = usePrintPreflight(usbLabels);
   const files = useMemo(() => total <= 500 ? templateFiles(rows) : [], [rows, total]);

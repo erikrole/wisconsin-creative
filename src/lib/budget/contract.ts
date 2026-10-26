@@ -69,7 +69,7 @@ export function plannedCents(line: Pick<BudgetLineMoney, "unitCostCents" | "quan
   return line.unitCostCents * line.quantity;
 }
 
-export type BudgetCategoryTotal = {
+type BudgetCategoryTotal = {
   category: BudgetCategoryValue;
   plannedCents: number;
   spentCents: number;

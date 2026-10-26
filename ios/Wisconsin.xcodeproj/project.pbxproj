@@ -89,6 +89,7 @@
 		378EAC94D977370BCA1221DF /* Wisconsin-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FB3A4E91E54011106FA7A62 /* Wisconsin-Regular.ttf */; };
 		37F0EBD3CF55156C593EB7E5 /* GearWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = E376E0961E9404F4D93C4B4E /* GearWidgetPublisher.swift */; };
 		383ABBBBEAE924DCBCCAF277 /* SignatureStrokeRecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA6BB23E442CE2634F3482E3 /* SignatureStrokeRecorderTests.swift */; };
+		389CA991B4B8AC19201E870F /* KioskRetryPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A14E6E2AAC1445E9DAE3A9 /* KioskRetryPolicyTests.swift */; };
 		390F43409B451AAB78D2D0C9 /* WisconsinApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BDE438C8F05EAA14B299BB /* WisconsinApp.swift */; };
 		3A34548DD720E71C6B54BB31 /* ItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12684601FE641B454D0219B /* ItemsView.swift */; };
 		3C1AF895D25D70A9E5081E9B /* MissingUnitsReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC77DC85721D10BD0331AD0 /* MissingUnitsReportView.swift */; };
@@ -105,6 +106,7 @@
 		45024C2592BDCC5901293130 /* CreateBookingEquipmentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DFAABBDCC4FC644E2F8E8B /* CreateBookingEquipmentPicker.swift */; };
 		46010B21A5285A7396574B59 /* DayTimeChipPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */; };
 		46239E3116E5DE148E7A9C4F /* ItemListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */; };
+		46B99E45E67F85EFF0D5409C /* DeviceSweepScreenshotUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42E211B456A6BFB247BF19AE /* DeviceSweepScreenshotUITests.swift */; };
 		470F79B703DF9EB55FECE070 /* FormModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6148A160C162A021FF9DE4C0 /* FormModels.swift */; };
 		47DD202255737DB455061266 /* LatestRequestGeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39486DE707928DB17EA4667 /* LatestRequestGeneration.swift */; };
 		48ED42A7AF3A2894F3C9C7E6 /* GearPicksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 278E72E73C5B3A226373D733 /* GearPicksView.swift */; };
@@ -245,6 +247,7 @@
 		C3ADFDC332E02AC83743947D /* BookingActionSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1E235656D8727D0F626EBA /* BookingActionSheets.swift */; };
 		C3C5D175C583096B0D645F24 /* AssetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3967BD5EC55792F3B9E94724 /* AssetModels.swift */; };
 		C4B395605B732BF0CA7623DD /* LaunchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C139D1C1F9A3D2C4AB5EEF42 /* LaunchView.swift */; };
+		C4FBD2EEE380DAC2064D4050 /* GuideSkeletonPlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10284D3D50414F7DD64F9565 /* GuideSkeletonPlaceholderTests.swift */; };
 		C72EB6E27A3B853D2B074874 /* KioskNativeTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046675A42DFADB1133461EDD /* KioskNativeTextField.swift */; };
 		C83FFED16F228A22C9980715 /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379F929043CF47B63E8FD5E6 /* EventsView.swift */; };
 		C93ABAAAABB346E24DA1AD05 /* ReportLibraryModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DAC11C4B916E9E50AAEBF3 /* ReportLibraryModelTests.swift */; };
@@ -303,6 +306,7 @@
 		F8198BB80C4CB84C0C12ED6A /* FloatingSearchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E89852F4DC85939BA9A8AA /* FloatingSearchButton.swift */; };
 		FBCE9485C52357F314061D25 /* ReservationDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4461DC62BDB05085191DB129 /* ReservationDraftStoreTests.swift */; };
 		FC55F8C00EAB32F578B178F0 /* ItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80CA4880F08046F8E23F079B /* ItemDetailView.swift */; };
+		FE57DAF967DAB72DD06A33E9 /* WebContractFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE309BC0254D6CA5E2207E52 /* WebContractFixtureTests.swift */; };
 		FEB0D17D856222BBA8478CC0 /* ScanResultHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5B889D242E8A0835B68845 /* ScanResultHeroCard.swift */; };
 		FF970D3BAC5C5F1FC59A799A /* ScanReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5E3C096214B8CB5202573F /* ScanReportView.swift */; };
 /* End PBXBuildFile section */
@@ -375,7 +379,9 @@
 		0D900B3FE267BAB0F0904D07 /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
 		0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskShellView.swift; sourceTree = "<group>"; };
 		0E6123A836C8A0D47EA24AA1 /* EventCatalogModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCatalogModels.swift; sourceTree = "<group>"; };
+		10284D3D50414F7DD64F9565 /* GuideSkeletonPlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideSkeletonPlaceholderTests.swift; sourceTree = "<group>"; };
 		1284B141E75FF8117D418B12 /* DayTimeChipPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTimeChipPicker.swift; sourceTree = "<group>"; };
+		13A14E6E2AAC1445E9DAE3A9 /* KioskRetryPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskRetryPolicyTests.swift; sourceTree = "<group>"; };
 		14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailsStep.swift; sourceTree = "<group>"; };
 		14DA88A1DF6F8D23066A07BC /* GuidesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidesView.swift; sourceTree = "<group>"; };
 		1615C6F17BFBA54D91D47F78 /* BlastArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlastArchive.swift; sourceTree = "<group>"; };
@@ -425,6 +431,7 @@
 		403FC3F4680ABC2772263AB2 /* ScheduleWindowCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleWindowCacheTests.swift; sourceTree = "<group>"; };
 		40E011969D2B77CA098ECCD1 /* ProfileCompletionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionStore.swift; sourceTree = "<group>"; };
 		41D51AC00210AD1B6DE0E466 /* LinkStickerWizard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkStickerWizard.swift; sourceTree = "<group>"; };
+		42E211B456A6BFB247BF19AE /* DeviceSweepScreenshotUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSweepScreenshotUITests.swift; sourceTree = "<group>"; };
 		4321D991D40907BB2A1819C1 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
 		445F132369BD2F1BB30AA5D6 /* LegacyGearCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyGearCache.swift; sourceTree = "<group>"; };
 		4461DC62BDB05085191DB129 /* ReservationDraftStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftStoreTests.swift; sourceTree = "<group>"; };
@@ -640,6 +647,7 @@
 		FB4AA8F791BB1EE9F9EBD8CA /* APIClient+Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "APIClient+Schedule.swift"; sourceTree = "<group>"; };
 		FBF5F57A830BEA38433C56E1 /* ReportFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportFormatting.swift; sourceTree = "<group>"; };
 		FC5B889D242E8A0835B68845 /* ScanResultHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanResultHeroCard.swift; sourceTree = "<group>"; };
+		FE309BC0254D6CA5E2207E52 /* WebContractFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebContractFixtureTests.swift; sourceTree = "<group>"; };
 		FE7F7F41A126A5E914C982A9 /* CurrentDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentDayTests.swift; sourceTree = "<group>"; };
 		FF98C537202359B822B1D752 /* BookingEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingEntity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -985,6 +993,7 @@
 			children = (
 				7CB467BB9EEA5C6B7553E3B2 /* KioskCompletionPreparationTests.swift */,
 				8F93CDFD1D75D7CAC2D88211 /* KioskFlowRoutingTests.swift */,
+				13A14E6E2AAC1445E9DAE3A9 /* KioskRetryPolicyTests.swift */,
 			);
 			path = WisconsinKioskTests;
 			sourceTree = "<group>";
@@ -1036,6 +1045,7 @@
 		E4C0BE70BBCA61E06847F9A5 /* WisconsinUITests */ = {
 			isa = PBXGroup;
 			children = (
+				42E211B456A6BFB247BF19AE /* DeviceSweepScreenshotUITests.swift */,
 				61CE8AE7D19F957C5BA61C46 /* NativeInviteSignupUITests.swift */,
 				382CC3A14FCDC4E920CCC863 /* OnboardingWalkthroughUITests.swift */,
 				B4AC4A5E9A1F61ABB128DDBD /* RecentIOSRegressionUITests.swift */,
@@ -1149,6 +1159,7 @@
 				F0F125F7F77142B7AB7F206E /* EventCatalogModelsTests.swift */,
 				21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */,
 				6FDEEC500E8732A76AA01E90 /* GuideMarkdownTests.swift */,
+				10284D3D50414F7DD64F9565 /* GuideSkeletonPlaceholderTests.swift */,
 				F7E2243115099DA4F3973F11 /* LatestRequestGenerationTests.swift */,
 				68542663977099AEC90AAFE5 /* LicenseExpiryTests.swift */,
 				3718A6A573E1BE664C1E8FB5 /* ManagedPreviewEnvironmentTests.swift */,
@@ -1164,6 +1175,7 @@
 				8EE808994D4A26C719DA2432 /* ScoreboardModelsTests.swift */,
 				DA6BB23E442CE2634F3482E3 /* SignatureStrokeRecorderTests.swift */,
 				DEF52CE902DAB5F4F5AFC87D /* SoftwareLoginModelTests.swift */,
+				FE309BC0254D6CA5E2207E52 /* WebContractFixtureTests.swift */,
 			);
 			path = WisconsinTests;
 			sourceTree = "<group>";
@@ -1417,6 +1429,7 @@
 				2C1482077FD5A009856F4093 /* EventCatalogModelsTests.swift in Sources */,
 				563D04BBDE05CA2EDE98513A /* GearTrackerRouteTests.swift in Sources */,
 				0E3E3B49635A5FE7B0C6DE71 /* GuideMarkdownTests.swift in Sources */,
+				C4FBD2EEE380DAC2064D4050 /* GuideSkeletonPlaceholderTests.swift in Sources */,
 				D90FDB80F8FFF8F2921E26A5 /* LatestRequestGenerationTests.swift in Sources */,
 				C102925440D4EB154CF681D1 /* LicenseExpiryTests.swift in Sources */,
 				1F6E628E06F0EE43B3B68AF6 /* ManagedPreviewEnvironmentTests.swift in Sources */,
@@ -1432,6 +1445,7 @@
 				1B4E293359A562A97EC501C0 /* ScoreboardModelsTests.swift in Sources */,
 				383ABBBBEAE924DCBCCAF277 /* SignatureStrokeRecorderTests.swift in Sources */,
 				581681815B6B5031BF8CB447 /* SoftwareLoginModelTests.swift in Sources */,
+				FE57DAF967DAB72DD06A33E9 /* WebContractFixtureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1441,6 +1455,7 @@
 			files = (
 				D95A4FC980027927CC581CBB /* KioskCompletionPreparationTests.swift in Sources */,
 				6D30C6F8EA800382F2619212 /* KioskFlowRoutingTests.swift in Sources */,
+				389CA991B4B8AC19201E870F /* KioskRetryPolicyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1448,6 +1463,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				46B99E45E67F85EFF0D5409C /* DeviceSweepScreenshotUITests.swift in Sources */,
 				2F7DA9360562159A551FEF65 /* NativeInviteSignupUITests.swift in Sources */,
 				D43D840F1E69810C5E0FADA3 /* OnboardingWalkthroughUITests.swift in Sources */,
 				CAA22DA410C36FA0B508A17B /* RecentIOSRegressionUITests.swift in Sources */,
@@ -1756,7 +1772,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1764,7 +1780,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1778,7 +1794,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WisconsinLiveActivities/WisconsinLiveActivities.entitlements;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = WisconsinLiveActivities/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1786,7 +1802,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1840,14 +1856,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
@@ -1864,14 +1880,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisconsin/Wisconsin.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				INFOPLIST_FILE = Wisconsin/Supporting/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
 				PRODUCT_NAME = "Wisconsin Creative";

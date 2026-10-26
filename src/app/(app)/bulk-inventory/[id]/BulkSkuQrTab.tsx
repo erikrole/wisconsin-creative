@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, PencilLine, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import type { BulkSkuDetail } from "./types";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 export default function BulkSkuQrTab({
   sku,
@@ -21,15 +22,11 @@ export default function BulkSkuQrTab({
   onFieldSaved: (partial: Partial<BulkSkuDetail>) => void;
 }) {
   const confirm = useConfirm();
-  const [manualEntry, setManualEntry] = useState(false);
-  const [draft, setDraft] = useState("");
+  // A new bin code closes manual entry and drops any half-typed value.
+  const [manualEntry, setManualEntry] = useSyncedDraft(sku.binQrCodeValue, () => false);
+  const [draft, setDraft] = useSyncedDraft(sku.binQrCodeValue, () => "");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-
-  useEffect(() => {
-    setManualEntry(false);
-    setDraft("");
-  }, [sku.binQrCodeValue]);
 
   async function replaceQrCode(value?: string) {
     if (savingRef.current) return;

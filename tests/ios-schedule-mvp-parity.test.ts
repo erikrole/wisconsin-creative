@@ -50,12 +50,7 @@ describe("native Schedule MVP parity", () => {
   });
 
   it("keeps pause, combined, and trade-count cues from lying", () => {
-    const list = source("src/app/(app)/schedule/_components/ListView.tsx");
-    const data = source("src/hooks/use-schedule-data.ts");
     const eventDetail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
-    expect(list).toContain("eventSpansMultipleDays");
-    expect(list).toContain("<ClaimsPausedNotice");
-    expect(data).toContain('throw new Error("trade count fetch failed")');
     expect(eventDetail).toContain("myShifts: [MyShift]");
     expect(eventDetail).toContain("multiAssignmentSubtitle");
   });

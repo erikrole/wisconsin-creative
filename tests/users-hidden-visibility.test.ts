@@ -36,6 +36,7 @@ vi.mock("@/lib/role-preview", async (importOriginal) => ({
 }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  enforceRateLimit: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { requireAuth, requireKiosk } from "@/lib/auth";

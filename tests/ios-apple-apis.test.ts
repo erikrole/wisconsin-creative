@@ -42,6 +42,18 @@ describe("iOS Apple API adoption", () => {
     expect(plist).toContain("<string>fetch</string>");
   });
 
+  it("keeps background refresh off the database overnight, like web polling", () => {
+    const publisher = source("ios/Wisconsin/Widgets/GearWidgetPublisher.swift");
+
+    expect(publisher).toContain("request.earliestBeginDate = earliestBegin(after: Date(timeIntervalSinceNow: interval))");
+    expect(publisher).toContain("guard !isQuietHours(Date()) else { return }");
+    expect(publisher.indexOf("guard !isQuietHours(Date())")).toBeLessThan(publisher.indexOf("APIClient.shared.dashboard()"));
+    // Same 10 PM to 6 AM window as isOvernightQuietHours on the web.
+    expect(publisher).toContain("static let quietHoursStart = 22");
+    expect(publisher).toContain("static let quietHoursEnd = 6");
+    expect(publisher).toContain("calendar.timeZone = NotificationPrefsViewModel.appTimeZone");
+  });
+
   it("gives each Home Screen widget its own Smart Stack relevance", () => {
     const widgets = source("ios/WisconsinLiveActivities/GearHomeScreenWidgets.swift");
     const snapshot = source("ios/Wisconsin/Widgets/GearWidgetSnapshot.swift");

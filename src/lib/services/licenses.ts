@@ -1,5 +1,6 @@
 import { LicenseCodeStatus, Prisma, type Role } from "@prisma/client";
 import { createAuditEntryTx } from "@/lib/audit";
+import { appTzDateKey } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { sendPushToUser } from "@/lib/services/notifications";
@@ -245,8 +246,9 @@ export async function reportBrokenCode(codeId: string, userId: string, actorRole
         });
 
         // Same preference as the claim button: fill half-used codes first, then
-        // the longest-lived expiry. Expiry dates are UTC-midnight calendar days.
-        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        // the longest-lived expiry. Expiry dates are UTC-midnight calendar days,
+        // so compare against today's Madison date stored the same way.
+        const today = new Date(`${appTzDateKey(now)}T00:00:00.000Z`);
         const candidates = await tx.licenseCode.findMany({
           where: {
             id: { not: codeId },
@@ -528,7 +530,8 @@ export async function processExpiryWarnings() {
 
   // Dedupe on the CURRENT month so admins are re-warned monthly until the
   // license is renewed or retired (keying on the expiry month fires only once ever).
-  const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  // The month turns over at Madison midnight, not UTC's.
+  const yearMonth = appTzDateKey(now).slice(0, 7);
 
   // One row per (code, admin). Built up front so the whole fanout costs one
   // dedupe read and one insert instead of two queries per pair.

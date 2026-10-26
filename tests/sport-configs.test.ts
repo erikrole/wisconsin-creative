@@ -21,7 +21,7 @@ vi.mock("@/lib/db", () => {
       findMany: vi.fn(),
       create: vi.fn(),
       createMany: vi.fn(),
-      delete: vi.fn(),
+      deleteMany: vi.fn(),
     },
   };
 
@@ -66,7 +66,7 @@ type SportConfigMockTx = {
     findMany: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     createMany: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
+    deleteMany: ReturnType<typeof vi.fn>;
   };
 };
 
@@ -94,8 +94,8 @@ function createManyResult(count: number) {
   return { count } as Awaited<ReturnType<typeof db.studentSportAssignment.createMany>>;
 }
 
-function deleteResult(row: unknown) {
-  return row as Awaited<ReturnType<typeof db.studentSportAssignment.delete>>;
+function deleteManyResult(count: number) {
+  return { count } as Awaited<ReturnType<typeof db.studentSportAssignment.deleteMany>>;
 }
 
 const mockTx = (db as unknown as { _mockTx: SportConfigMockTx })._mockTx;
@@ -353,16 +353,20 @@ describe("addToRoster", () => {
 });
 
 describe("removeFromRoster", () => {
-  it("deletes a sport assignment", async () => {
-    vi.mocked(db.studentSportAssignment.delete).mockResolvedValue(deleteResult({}));
+  it("deletes a sport assignment only within its sport", async () => {
+    vi.mocked(db.studentSportAssignment.deleteMany).mockResolvedValue(deleteManyResult(1));
 
-    await removeFromRoster("ssa-1");
+    expect(await removeFromRoster("ssa-1", "FB")).toBe(true);
 
-    expect(db.studentSportAssignment.delete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "ssa-1" },
-      })
-    );
+    expect(db.studentSportAssignment.deleteMany).toHaveBeenCalledWith({
+      where: { id: "ssa-1", sportCode: "FB" },
+    });
+  });
+
+  it("reports an assignment that is already gone or in another sport", async () => {
+    vi.mocked(db.studentSportAssignment.deleteMany).mockResolvedValue(deleteManyResult(0));
+
+    expect(await removeFromRoster("ssa-1", "MBB")).toBe(false);
   });
 });
 

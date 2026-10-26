@@ -64,8 +64,6 @@ export const diagnosticUploadSchema = z
   })
   .strict();
 
-export type AppSession = z.infer<typeof appSessionSchema>;
-
 export const issueUpdateSchema = z
   .object({
     status: z.enum(["open", "resolved", "ignored"]).optional(),

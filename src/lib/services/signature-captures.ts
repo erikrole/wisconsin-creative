@@ -8,6 +8,7 @@ import {
 import { db } from "@/lib/db";
 import { createAuditEntryTx } from "@/lib/audit";
 import { HttpError } from "@/lib/http";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import { isSerializationConflict, withSerializationRetry } from "@/lib/serialization";
 import { renderSignatureArtifacts } from "@/lib/signatures/artifacts";
 import { penSettingsSchema, type CaptureSaveRequest } from "@/lib/signatures/types";
@@ -24,7 +25,6 @@ import {
   assertSignatureSaveOperationTarget,
   committedSignatureSave,
   isStaleSignatureSave,
-  isPrismaUniqueConflict,
   resolveSignatureCaptureTarget,
   cleanupSignatureRevisions,
   Actor,
@@ -160,7 +160,7 @@ export async function saveSignatureCapture(input: { actor: Actor; collectionId: 
     operationId = prepared.operationId;
     revisionId = prepared.revisionId;
   } catch (error) {
-    if (isPrismaUniqueConflict(error)) {
+    if (isUniqueConstraintError(error)) {
       const winner = await db.signatureSaveOperation.findUnique({ where: { requestId: input.request.requestId }, include: saveOperationInclude });
       if (winner) {
         assertSignatureSaveOperationTarget(winner, { actor: input.actor, target, request: input.request });

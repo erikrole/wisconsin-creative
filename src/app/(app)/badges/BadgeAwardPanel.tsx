@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { createElement, useMemo, useState } from "react";
 import { Award, Info, RefreshCw, Search, UsersRound, X } from "lucide-react";
 import BulkBadgeAwardDialog from "../staff/BulkBadgeAwardDialog";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -109,14 +109,14 @@ export default function BadgeAwardPanel({
     ? selectedUsers[0]?.name ?? "1 selected user"
     : `${selectedUsers.length} selected users`;
 
-  useEffect(() => {
-    if (!directory) return;
+  // Drop picks for people who left the directory, as soon as a new directory arrives.
+  const [prunedDirectory, setPrunedDirectory] = useState(directory);
+  if (directory && prunedDirectory !== directory) {
+    setPrunedDirectory(directory);
     const availableIds = new Set(directory.users.map((user) => user.id));
-    setSelectedUserIds((current) => {
-      const next = current.filter((id) => availableIds.has(id));
-      return next.length === current.length ? current : next;
-    });
-  }, [directory]);
+    const next = selectedUserIds.filter((id) => availableIds.has(id));
+    if (next.length !== selectedUserIds.length) setSelectedUserIds(next);
+  }
 
   function toggleUser(userId: string) {
     setSelectedUserIds((current) => {
@@ -389,13 +389,13 @@ export default function BadgeAwardPanel({
 }
 
 function BadgeCatalogCard({ definition }: { definition: BadgeDefinition }) {
-  const Icon = badgeIcon(definition.icon);
+  const icon = createElement(badgeIcon(definition.icon), { className: "size-5" });
 
   return (
     <Card className="border-border/40 shadow-none">
       <CardContent className="flex gap-3 p-4">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--purple-bg)] text-[var(--purple-text)]">
-          <Icon className="size-5" />
+          {icon}
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

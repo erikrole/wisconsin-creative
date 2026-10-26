@@ -50,9 +50,11 @@ const baseConfig: NextConfig = {
   },
   transpilePackages: ["@mdxeditor/editor"],
   serverExternalPackages: ["web-push"],
-  // These routes read files at runtime: the department's workbook template and
-  // the Wrapped share image's fonts.
+  // These routes read files at runtime: the department's workbook template,
+  // the Wrapped share image's fonts and the migration folders Database Health
+  // compares against.
   outputFileTracingIncludes: {
+    "/api/db-diagnostics": ["./prisma/migrations/*/migration.sql"],
     "/api/gear-picks/admin/export.xlsx": ["./src/lib/gear-picks/templates/**"],
     "/api/wrapped/card": ["./src/lib/wrapped/fonts/**"],
   },

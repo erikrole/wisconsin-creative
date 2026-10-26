@@ -206,7 +206,9 @@ private struct ProfileNextUpRow: View {
                     Text(title)
                         .font(.gothamBold(size: 16))
                         .foregroundStyle(.primary)
-                        .lineLimit(1)
+                        // A long opponent name wraps to a second line instead
+                        // of cutting off at 390pt.
+                        .lineLimit(2)
                     if !detail.isEmpty {
                         Text(detail)
                             .font(.caption)
@@ -222,6 +224,7 @@ private struct ProfileNextUpRow: View {
                     .foregroundStyle(Color.statusText(tone))
                     .multilineTextAlignment(.trailing)
                     .lineLimit(2)
+                    .layoutPriority(1)
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.tertiary)

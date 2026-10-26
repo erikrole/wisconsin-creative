@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { encodeLicenseExpiryDate, licenseDaysUntilExpiry } from "@/lib/license-dates";
 import type { LicenseCode } from "./types";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type Props = {
   open: boolean;
@@ -50,10 +51,10 @@ export function BulkRenewDialog({ open, onOpenChange, codes, onRenewed }: Props)
   const targetCodes = scope === "expiring" ? expiringCodes : activeCodes;
   const targetCount = targetCodes.length;
 
-  useEffect(() => {
+  useAdjustState([expiringCodes.length, open], () => {
     if (!open) return;
     setScope(expiringCodes.length > 0 ? "expiring" : "visible");
-  }, [expiringCodes.length, open]);
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

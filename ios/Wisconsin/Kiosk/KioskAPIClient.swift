@@ -903,10 +903,37 @@ struct KioskAPI {
         return result.0
     }
 
+    /// Reads (GET) retry a couple of times on a transient network failure so a
+    /// Wi-Fi blip or one slow response does not blank a screen. Writes never
+    /// retry here: completions have their own saved-request replay, and any
+    /// other mutation must not be sent twice behind the person's back.
     private func performWithResponse<T: Decodable>(
         _ request: URLRequest,
         broadcastsUnauthorizedSession: Bool = true,
         typedClientErrors: Bool = false
+    ) async throws -> (T, HTTPURLResponse) {
+        var attempt = 0
+        while true {
+            do {
+                return try await performWithResponseOnce(
+                    request,
+                    broadcastsUnauthorizedSession: broadcastsUnauthorizedSession,
+                    typedClientErrors: typedClientErrors
+                )
+            } catch {
+                guard let delay = KioskRetryPolicy.delay(method: request.httpMethod, error: error, attempt: attempt) else {
+                    throw error
+                }
+                attempt += 1
+                try await Task.sleep(for: delay)
+            }
+        }
+    }
+
+    private func performWithResponseOnce<T: Decodable>(
+        _ request: URLRequest,
+        broadcastsUnauthorizedSession: Bool,
+        typedClientErrors: Bool
     ) async throws -> (T, HTTPURLResponse) {
         let requestGeneration = kioskCredentialBoundary.capture()
         let data: Data
@@ -1122,6 +1149,30 @@ enum KioskCompletionPreparation {
             return KioskPreparedCompletion(path: url.path, body: data, shouldPersist: true)
         } catch {
             throw APIError.serverError("Could not save this handoff. Try again.")
+        }
+    }
+}
+
+/// When a kiosk read may be retried after a transient network failure.
+/// Credential changes surface as `CancellationError`, which never retries.
+enum KioskRetryPolicy {
+    static let maxRetries = 2
+
+    static func delay(method: String?, error: Error, attempt: Int) -> Duration? {
+        guard attempt < maxRetries, (method ?? "GET").uppercased() == "GET" else { return nil }
+        guard case APIError.networkError(let underlying) = error,
+              let code = (underlying as? URLError)?.code,
+              isTransient(code) else { return nil }
+        return .milliseconds(attempt == 0 ? 750 : 2_000)
+    }
+
+    static func isTransient(_ code: URLError.Code) -> Bool {
+        switch code {
+        case .timedOut, .networkConnectionLost, .cannotConnectToHost,
+             .cannotFindHost, .dnsLookupFailed, .secureConnectionFailed:
+            return true
+        default:
+            return false
         }
     }
 }

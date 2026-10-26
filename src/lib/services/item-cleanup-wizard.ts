@@ -6,7 +6,7 @@ import { withSerializationRetry } from "@/lib/serialization";
 
 const SERIALIZABLE = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable } as const;
 
-export const CLEANUP_WIZARD_KINDS = ["legacy_qr", "missing_serial", "attachment_candidate"] as const;
+const CLEANUP_WIZARD_KINDS = ["legacy_qr", "missing_serial", "attachment_candidate"] as const;
 export type CleanupWizardKind = (typeof CLEANUP_WIZARD_KINDS)[number];
 
 const DEFERRED_CONFIG_KEY = "item_cleanup_wizard_deferred";

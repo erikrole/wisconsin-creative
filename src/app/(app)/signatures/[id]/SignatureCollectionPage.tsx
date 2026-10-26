@@ -48,6 +48,8 @@ import {
   signatureCollectionTitle,
 } from "@/lib/signatures/types";
 import { cn } from "@/lib/utils";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type Member = {
   id: string;
@@ -141,7 +143,11 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
   const [moveTargetId, setMoveTargetId] = useState("");
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: "", jerseyNumber: "" });
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<Member["roleGroup"]>>(new Set());
+  // Reveal fresh matches, while keeping disclosure controls usable afterward.
+  const [collapsedGroups, setCollapsedGroups] = useSyncedDraft(
+    `${group}\u0000${search}\u0000${signatureFilter}`,
+    () => new Set<Member["roleGroup"]>(),
+  );
   const isCreativeStaffRoster = collection?.sportCode === SIGNATURE_CREATIVE_STAFF_SPORT_CODE;
   const isAdministrationRoster = collection?.sportCode === SIGNATURE_ADMINISTRATION_SPORT_CODE;
   const isStandaloneStaffRoster = collection ? isStandaloneStaffSignatureCollection(collection.sportCode) : false;
@@ -151,7 +157,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     [isAdHocRoster, isStandaloneStaffRoster, isCreativeStaffRoster],
   );
 
-  useEffect(() => {
+  useAdjustState([collection?.id, setCollapsedGroups], () => {
     setGroup("ALL");
     setSearch("");
     setSignatureFilter("ALL");
@@ -159,13 +165,8 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     setActionError(null);
     setCollapsedGroups(new Set());
     setSettingsOpen(false);
-  }, [collection?.id]);
+  });
 
-
-  useEffect(() => {
-    // Reveal fresh matches, while keeping disclosure controls usable afterward.
-    setCollapsedGroups(new Set());
-  }, [group, search, signatureFilter]);
 
   useEffect(() => {
     if (collection) setBreadcrumbLabel(signatureCollectionTitle(collection.sportCode));

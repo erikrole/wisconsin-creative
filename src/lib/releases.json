@@ -11,7 +11,277 @@
       "Staff and admins, who can be double-booked, are no longer skipped just for having another shift at the same time.",
       "“This semester” from December 21 to 31 now runs through spring instead of a full year ahead, and the event dates in the dialog use Central time.",
       "Review has a Change button on every assignment that offers the next best people for that slot, so you can swap someone without leaving Auto assign."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 709
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Checkout report shows the right day",
+    "type": "fixes",
+    "summary": "Clicking a day on the checkout report heatmap now labels the list with that same day.",
+    "details": [
+      "The day chip and the \"Checkouts on\" title used to show the day before the one you clicked.",
+      "Auto-fill previews now name the sport on hold, like \"Volleyball\", instead of a short code.",
+      "Gear availability checks for consumables now run one shared query, so both checks always agree.",
+      "Database health in Settings now checks every database update this version ships, and flags failed or unknown ones, instead of an old fixed list."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 707
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Equipment picker tabs no longer double up",
+    "type": "fixes",
+    "summary": "Each item in the equipment picker now appears on exactly one tab, the same one its count is shown under.",
+    "details": [
+      "An item with a known category always appears on that category's tab, even when its type mentions something else, like a camera battery grip.",
+      "Items without a category are sorted by their type, using the first matching tab, so a camera battery no longer shows on both Cameras and Batteries.",
+      "Removing someone from a sport roster who was already removed now returns a clear \"not found\" answer instead of a server error."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 706
+  },
+  {
+    "date": "2026-10-25",
+    "title": "One password-change path",
+    "type": "fixes",
+    "summary": "Passwords can now only be changed through the protected Change password form, which limits repeated tries and signs out your other apps.",
+    "details": [
+      "An older, unused way to change a password has been removed.",
+      "Every password change now goes through the same rate-limited check and signs out the Mac and iPhone companions.",
+      "Behind the scenes: more automated checks for sign-in sessions, push alerts, schedules, the dashboard and trade alerts."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 704
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Safer item photo links",
+    "type": "fixes",
+    "summary": "When you add an item or battery family photo from a link, the app now checks that the file really is an image before saving a copy.",
+    "details": [
+      "A link that returns a web page instead of a picture is now refused, even when the link ends in .png or .jpg.",
+      "Saved copies use the picture's real type, so a JPEG sent as PNG is stored correctly.",
+      "When a kiosk hand-off moves one item, the server's reply now reads \"1 item\" instead of \"1 items\"."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 703
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Kiosk times in Chicago time",
+    "type": "fixes",
+    "summary": "When the kiosk says an item is booked for a shared travel case, the booking times now show in Chicago time.",
+    "details": [
+      "Before, those times showed in UTC, five or six hours ahead.",
+      "Other booking messages already used Chicago time and are unchanged."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 702
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Clearer profile history",
+    "type": "fixes",
+    "summary": "Saving your profile in Settings now records only the fields you changed.",
+    "details": [
+      "A person's activity now reads \"Updated their phone\" instead of counting every field on the form.",
+      "A save that changes nothing no longer adds an activity row."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 698
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Import and override fixes",
+    "type": "fixes",
+    "summary": "Item imports no longer turn a price like \"n/a\" into a zero price, and checkout overrides show up once in the audit log.",
+    "details": [
+      "A price or value cell with no number in it now imports as blank.",
+      "Each admin override on a checkout records one audit entry, with the items it skipped."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 696
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Issues page day counts fixed",
+    "type": "fixes",
+    "summary": "The daily counts on the Issues page now follow Madison days, so evening reports land on the right day.",
+    "details": [
+      "Before, a report from the evening counted toward the next day, and the last two weeks ended on the wrong day.",
+      "Photo Mechanic license reminders and replacements also follow Madison dates now."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 694
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Audit report comparison fixed",
+    "type": "fixes",
+    "summary": "The audit report's comparison with the previous period now respects the record type you filtered by.",
+    "details": [
+      "Filtering the audit report to one kind of record, such as bookings, now compares it with the same kind of record in the period before.",
+      "Before, the earlier period counted every kind of record, so the change looked larger than it was."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 692
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Damage report emails fixed",
+    "type": "fixes",
+    "summary": "Emails about an item reported from its own page now open the Damage page instead of a broken link.",
+    "details": [
+      "Reports filed during a return still open that checkout.",
+      "The in-app alert and the email now always link to the same place."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 686
+  },
+  {
+    "date": "2026-10-25",
+    "title": "Battery pickup counts fixed",
+    "type": "fixes",
+    "summary": "A battery scanned twice at the kiosk now counts once when a reservation is picked up.",
+    "details": [
+      "A full pickup waits until every battery the reservation needs has actually been scanned.",
+      "Each numbered battery goes on the new checkout only once."
+    ],
+    "platforms": [
+      "Kiosk"
+    ],
+    "pr": 685
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Wrapped hours and team totals fixed",
+    "type": "fixes",
+    "summary": "A dry run of the fall recap fixed how hours and team numbers are counted.",
+    "details": [
+      "Shift hours now count shifts whose attendance was never logged, so hours no longer come up short.",
+      "Events without a sport are no longer ranked as an “Other” sport.",
+      "Team totals leave out collaborators, and the biggest-crew card only shows when people worked together.",
+      "Big numbers get commas, tied sports are called a tie, and long venue and sport names no longer get cut off."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 668
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Schedule list keeps your place",
+    "type": "fixes",
+    "summary": "Day headers on the Schedule list now stay pinned while you scroll, and loading older events no longer jumps you to a different spot.",
+    "details": [
+      "The date header for the day you are reading stays visible under the Schedule bar.",
+      "Scrolling up into older events keeps the event you were looking at in the same place on screen."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 681
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Position tags and lost units fixed",
+    "type": "fixes",
+    "summary": "Position tags like ROAM2 and GC show in capitals again, and a lost unit can be settled right from the Dashboard.",
+    "details": [
+      "Titles such as Football vs USC (ROAM2) keep their capitals in Recent activity and other lists, including ones saved earlier.",
+      "The lost-unit row on the Dashboard now opens a short list where each unit can be marked Found it or Write off."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 672
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Quieter background refresh at night",
+    "type": "improvement",
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 659,
+    "summary": "The iPhone app no longer refreshes its widgets in the background between 10 PM and 6 AM, which lets the server rest overnight.",
+    "details": [
+      "Widgets and Spotlight catch up with the first background refresh after 6 AM.",
+      "Opening the app still loads everything right away, at any hour."
     ]
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Clearer first-week guidance",
+    "type": "improvement",
+    "summary": "New students are told how to sign in to the app, where checkouts start, and why Home has no shifts yet.",
+    "details": [
+      "The setup finish screen now says to sign in to the iPhone app with the same email and password.",
+      "An empty Checkouts list explains that gear is checked out at the kiosk or in the iPhone app, and shows up here with its return time.",
+      "A new student's Home says nothing is scheduled yet and shifts appear once the team schedules them, instead of sending them to hunt for trades.",
+      "In the next iPhone app update, a new student's Home welcomes them instead of saying they are caught up, the setup fields stay clear of the Continue bar when the keyboard opens, and long empty stretches on the Schedule show their end year."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 670
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Tidier layouts across the iPhone app",
+    "type": "improvement",
+    "summary": "Home, Schedule, Items and Profile fit better on every iPhone size we support.",
+    "details": [
+      "The Home greeting now uses the full width instead of wrapping beside your photo.",
+      "Schedule's Non-game filter is the same size as the others.",
+      "Profile's Next Up and the Items list show longer names on two lines instead of cutting them off.",
+      "Report a Problem uses the app's standard red and green."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 671
+  },
+  {
+    "date": "2026-10-24",
+    "title": "Wiscard is now optional during setup",
+    "type": "improvement",
+    "summary": "New teammates without a Wiscard can finish setting up their account.",
+    "details": [
+      "The Wiscard step can be skipped, so people who are not UW students are no longer stuck.",
+      "A Wiscard can still be added any time from your profile."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 666
   },
   {
     "date": "2026-10-24",
@@ -477,6 +747,36 @@
       "iOS"
     ],
     "pr": 610
+  },
+  {
+    "date": "2026-10-22",
+    "title": "Fill crews faster",
+    "type": "improvement",
+    "summary": "Assign several people to open slots at once, and start a crew from the sport's usual size.",
+    "details": [
+      "When an area has two or more open slots, Fill picks several people at once and assigns them in one save.",
+      "Crew size shows the sport's home or away template, so you can match it in one tap or save the current counts as the new template."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 611
+  },
+  {
+    "date": "2026-10-22",
+    "title": "One on-time rule across the app",
+    "type": "improvement",
+    "summary": "The on-time rate on staff profiles now matches the Accountability report.",
+    "details": [
+      "A return counts as on time unless it came back after the due time plus the grace period.",
+      "A checkout still out past that point counts against the rate.",
+      "The rate only shows once someone has 3 or more completed or overdue checkouts."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 609
   },
   {
     "date": "2026-10-22",

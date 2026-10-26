@@ -18,7 +18,7 @@ const EQUIPMENT_SHEET_TEMPLATE_PATH = path.join(
   "src/lib/gear-picks/templates/equipment-sheet-brand-creative.xlsx",
 );
 
-export type EquipmentSheetSectionKey = "SHOES" | "SIDELINE" | "TEAM_CATALOG" | "GOLF";
+type EquipmentSheetSectionKey = "SHOES" | "SIDELINE" | "TEAM_CATALOG" | "GOLF";
 
 /** Data rows (1-based) under each section header on a cycle tab. Coaches/Staff issue is left for the department. */
 const SECTION_ROWS: Record<EquipmentSheetSectionKey, { first: number; last: number; label: string }> = {
@@ -41,7 +41,7 @@ const SHOE_COLUMNS = Array.from({ length: 15 }, (_, index) => String(6 + index /
 const APPAREL_COLUMNS = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "2XL", "2XLT", "3XL", "3XLT", "4XL", "4XLT", "5XL"];
 const APPAREL_ALIASES: Record<string, string> = { XXL: "2XL", XXXL: "3XL", XXXXL: "4XL" };
 
-export type EquipmentSheetRow = {
+type EquipmentSheetRow = {
   section: EquipmentSheetSectionKey;
   /** Section the row belongs in when it had to move because that section was full. */
   movedFrom: EquipmentSheetSectionKey | null;

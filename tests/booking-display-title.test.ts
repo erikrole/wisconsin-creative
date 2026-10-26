@@ -59,3 +59,13 @@ describe("leftover promo text", () => {
     expect(displayBookingTitle("Volleyball vs Iowa (Stuff the Fieldhouse)")).toBe("Volleyball vs Iowa");
   });
 });
+
+describe("position tags", () => {
+  it("shows a trailing crew tag in caps even when it was saved title-cased", async () => {
+    const { displayBookingTitle } = await import("@/lib/booking-display-title");
+    expect(displayBookingTitle("Football vs USC (Roam1)")).toBe("Football vs USC (ROAM1)");
+    expect(displayBookingTitle("Football vs USC (Gc)")).toBe("Football vs USC (GC)");
+    expect(displayBookingTitle("Football vs USC (Photo3)")).toBe("Football vs USC (PHOTO3)");
+    expect(displayBookingTitle("Football vs USC (Roam 2)")).toBe("Football vs USC (ROAM 2)");
+  });
+});

@@ -10,17 +10,15 @@ import {
 } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { createAuditEntriesTx, createAuditEntryTx, lookupActorRole } from "@/lib/audit";
+import { createAuditEntryTx, lookupActorRole } from "@/lib/audit";
 import {
   checkAvailability,
   checkCheckoutDueTime,
-  type BulkRequest,
 } from "@/lib/services/availability";
 import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import {
   bookingInclude,
   dedupeIds,
-  diffEquipment,
   upsertBulkBalancesAndMovements,
   type AuditJson,
 } from "./bookings-helpers";
@@ -30,7 +28,6 @@ import {
 } from "./live-activities";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
-import { assertCheckoutDistinctBulkSkuLimit } from "@/lib/services/kiosk-checkout-complete";
 import {
   createShiftScheduleNotification,
   dispatchScheduleAssignmentNotifications,
@@ -45,7 +42,6 @@ import {
   OWNER_TRANSFER_STATUSES,
   isStaffOrAdmin,
   assertValidBookingWindow,
-  assertCheckoutBulkLineChangeLimit,
   handleBookingMutationRace,
   UpdateBookingInput,
   BookingUpdateOptions,
@@ -102,23 +98,16 @@ export async function updateCheckout(
       const nextStartsAt = existing.startsAt; // start is fixed for OPEN checkouts
       assertValidBookingWindow(nextStartsAt, nextEndsAt);
 
-      const serializedAssetIds = dedupeIds(
-        updates.serializedAssetIds ?? existing.serializedItems.map((item) => item.assetId)
-      );
-      const bulkItems = updates.bulkItems ??
-        existing.bulkItems.map((item) => ({
-          bulkSkuId: item.bulkSkuId,
-          quantity: item.plannedQuantity
-        }));
-      const updatesEquipment = updates.serializedAssetIds !== undefined || updates.bulkItems !== undefined;
+      // Equipment is never edited here (refused above), so the availability
+      // check covers the gear already on the checkout.
+      const serializedAssetIds = dedupeIds(existing.serializedItems.map((item) => item.assetId));
+      const bulkItems = existing.bulkItems.map((item) => ({
+        bulkSkuId: item.bulkSkuId,
+        quantity: item.plannedQuantity
+      }));
       const updatesWindow = updates.endsAt !== undefined || updates.locationId !== undefined;
 
-      if (updates.bulkItems !== undefined) {
-        assertCheckoutDistinctBulkSkuLimit(bulkItems);
-        assertCheckoutBulkLineChangeLimit(existing.bulkItems, bulkItems);
-      }
-
-      if (updatesEquipment || updatesWindow) {
+      if (updatesWindow) {
         const extendsOpenCheckout = existing.status === BookingStatus.OPEN
           && updates.endsAt !== undefined
           && nextEndsAt > existing.endsAt;
@@ -150,133 +139,15 @@ export async function updateCheckout(
         }
       });
 
-      if (!updatesEquipment) {
-        if (updatesWindow) {
-          await tx.assetAllocation.updateMany({
-            where: { bookingId },
-            data: {
-              startsAt: nextStartsAt,
-              endsAt: nextEndsAt,
-            },
-          });
-        }
-      } else {
-        // Diff-based equipment edits. A checkout carries custody state that a
-        // delete-all rebuild erases: returned serialized items would flip back
-        // to "active", numbered bulk unit allocations cascade away leaving
-        // stale CHECKED_OUT flags, and bulk quantity changes without matching
-        // stock movements drift BulkStockBalance — which availability reads.
-        const nextAssetIdSet = new Set(serializedAssetIds);
-        const removedSerialized = existing.serializedItems.filter((item) => !nextAssetIdSet.has(item.assetId));
-        const returnedRemoval = removedSerialized.find((item) => item.allocationStatus === "returned");
-        if (returnedRemoval) {
-          throw new HttpError(409, "A returned item cannot be removed from this checkout's record");
-        }
-        const currentAssetIdSet = new Set(existing.serializedItems.map((item) => item.assetId));
-        const addedAssetIds = serializedAssetIds.filter((assetId) => !currentAssetIdSet.has(assetId));
-
-        if (removedSerialized.length > 0) {
-          const removedIds = removedSerialized.map((item) => item.assetId);
-          await tx.bookingSerializedItem.deleteMany({ where: { bookingId, assetId: { in: removedIds } } });
-          await tx.assetAllocation.deleteMany({ where: { bookingId, assetId: { in: removedIds } } });
-        }
-        if (addedAssetIds.length > 0) {
-          await tx.bookingSerializedItem.createMany({
-            data: addedAssetIds.map((assetId) => ({
-              bookingId,
-              assetId,
-              allocationStatus: "active"
-            }))
-          });
-
-          await tx.assetAllocation.createMany({
-            data: addedAssetIds.map((assetId) => ({
-              bookingId,
-              assetId,
-              startsAt: nextStartsAt,
-              endsAt: nextEndsAt,
-              active: true,
-              kind: "CHECKOUT"
-            }))
-          });
-        }
-
-        // Bulk rows: SKUs with kiosk custody activity are kiosk-owned; the
-        // rest may be re-planned here with matching stock movements.
-        const nextBulkMap = new Map(bulkItems.map((item) => [item.bulkSkuId, item.quantity]));
-        const currentBulkSkuIds = new Set(existing.bulkItems.map((item) => item.bulkSkuId));
-        const increases: BulkRequest[] = [];
-        const decreases: BulkRequest[] = [];
-
-        for (const item of existing.bulkItems) {
-          const nextQuantity = nextBulkMap.get(item.bulkSkuId);
-          if (nextQuantity === item.plannedQuantity) continue;
-          const hasCustodyState = item.checkedOutQuantity !== null
-            || (item.checkedInQuantity ?? 0) > 0
-            || item.unitAllocations.length > 0;
-          if (hasCustodyState) {
-            throw new HttpError(409, "Bulk gear on this checkout has kiosk custody activity. Return or adjust it at the kiosk instead.");
-          }
-          if (nextQuantity === undefined) {
-            decreases.push({ bulkSkuId: item.bulkSkuId, quantity: item.plannedQuantity });
-            await tx.bookingBulkItem.deleteMany({ where: { id: item.id } });
-          } else {
-            const delta = nextQuantity - item.plannedQuantity;
-            if (delta > 0) increases.push({ bulkSkuId: item.bulkSkuId, quantity: delta });
-            else decreases.push({ bulkSkuId: item.bulkSkuId, quantity: -delta });
-            await tx.bookingBulkItem.update({
-              where: { id: item.id },
-              data: { plannedQuantity: nextQuantity },
-            });
-          }
-        }
-
-        const addedBulk = bulkItems.filter((item) => !currentBulkSkuIds.has(item.bulkSkuId));
-        if (addedBulk.length > 0) {
-          await tx.bookingBulkItem.createMany({
-            data: addedBulk.map((item) => ({
-              bookingId,
-              bulkSkuId: item.bulkSkuId,
-              plannedQuantity: item.quantity,
-            }))
-          });
-          increases.push(...addedBulk.map((item) => ({ bulkSkuId: item.bulkSkuId, quantity: item.quantity })));
-        }
-
-        if (decreases.length > 0) {
-          await upsertBulkBalancesAndMovements(tx, {
-            locationId: existing.locationId,
-            bookingId,
-            actorUserId,
-            kind: BulkMovementKind.CHECKIN,
-            items: decreases,
-          });
-        }
-        if (increases.length > 0) {
-          await upsertBulkBalancesAndMovements(tx, {
-            locationId: existing.locationId,
-            bookingId,
-            actorUserId,
-            kind: BulkMovementKind.CHECKOUT,
-            items: increases,
-          });
-        }
-
-        if (updatesWindow) {
-          await tx.assetAllocation.updateMany({
-            where: { bookingId },
-            data: { startsAt: nextStartsAt, endsAt: nextEndsAt },
-          });
-        }
+      if (updatesWindow) {
+        await tx.assetAllocation.updateMany({
+          where: { bookingId },
+          data: {
+            startsAt: nextStartsAt,
+            endsAt: nextEndsAt,
+          },
+        });
       }
-
-      // Granular equipment audit entries
-      const equipEntries = diffEquipment(
-        existing.serializedItems.map((i) => i.assetId),
-        serializedAssetIds,
-        existing.bulkItems.map((i) => ({ bulkSkuId: i.bulkSkuId, quantity: i.plannedQuantity })),
-        bulkItems
-      );
 
       const fieldChanges: AuditJson = {};
       if (title && title !== existing.title) fieldChanges.title = title;
@@ -284,37 +155,19 @@ export async function updateCheckout(
       if (updates.endsAt && updates.endsAt.toISOString() !== existing.endsAt.toISOString()) fieldChanges.endsAt = updates.endsAt.toISOString();
 
       const actorRole = await lookupActorRole(tx, actorUserId);
-
-      if (Object.keys(fieldChanges).length > 0 || equipEntries.length === 0) {
-        await createAuditEntryTx(tx, {
-          actorId: actorUserId,
-          actorRole,
-          entityType: "booking",
-          entityId: bookingId,
-          action: "updated",
-          before: {
-            title: existing.title,
-            endsAt: existing.endsAt.toISOString(),
-            notes: existing.notes,
-          } as AuditJson as Record<string, unknown>,
-          after: fieldChanges as Record<string, unknown>,
-        });
-      }
-
-      if (equipEntries.length > 0) {
-        await createAuditEntriesTx(
-          tx,
-          equipEntries.map((entry) => ({
-            actorId: actorUserId,
-            actorRole,
-            entityType: "booking",
-            entityId: bookingId,
-            action: entry.action,
-            before: entry.beforeJson as Record<string, unknown>,
-            after: entry.afterJson as Record<string, unknown>,
-          })),
-        );
-      }
+      await createAuditEntryTx(tx, {
+        actorId: actorUserId,
+        actorRole,
+        entityType: "booking",
+        entityId: bookingId,
+        action: "updated",
+        before: {
+          title: existing.title,
+          endsAt: existing.endsAt.toISOString(),
+          notes: existing.notes,
+        } as AuditJson as Record<string, unknown>,
+        after: fieldChanges as Record<string, unknown>,
+      });
 
       await options.afterUpdateTx?.(tx);
 

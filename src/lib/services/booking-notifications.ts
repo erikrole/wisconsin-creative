@@ -125,6 +125,7 @@ export async function notifyItemReport(args: {
   const notifType = `checkin_item_${typeLower}`;
   const title = `Item reported ${typeLower}: ${args.assetTag}`;
   const where = args.bookingTitle ? ` during check-in of "${bookingTitle}"` : "";
+  const href = args.bookingId ? `/checkouts/${args.bookingId}` : "/damage";
   const body = args.reportType === "DAMAGED"
     ? `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as damaged${where}.${args.damageDescription ? ` Description: ${args.damageDescription}` : ""}`
     : `${args.reporterName} reported ${args.itemDescription} (${args.assetTag}) as ${args.bookingTitle ? "lost" : "missing"}${where}.`;
@@ -143,7 +144,7 @@ export async function notifyItemReport(args: {
       assetTag: args.assetTag,
       reportType: args.reportType,
       reporterName: args.reporterName,
-      href: args.bookingId ? `/checkouts/${args.bookingId}` : "/damage",
+      href,
       ...(args.evidenceImageUrl ? { evidenceImageUrl: args.evidenceImageUrl } : {}),
     },
     channel: "IN_APP" as const,
@@ -180,7 +181,7 @@ export async function notifyItemReport(args: {
           body,
           bookingTitle: args.bookingTitle ? bookingTitle : args.assetTag,
           dueAt: now.toISOString(),
-          href: `/checkouts/${args.bookingId}`,
+          href,
         }),
       }, "itemReports").catch((err) =>
         console.error(`[NOTIFY] Failed to send item report email to ${s.email}:`, err)

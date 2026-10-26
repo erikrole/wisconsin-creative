@@ -179,17 +179,10 @@ export function formatOperationalDateTime(
   return `${dayLabel}, ${formatTimeShort(iso)}`;
 }
 
-/** "Mar 11, 3:00 – 5:00 PM" — compact date + time range */
-export function formatEventDateTime(startsAt: string, endsAt: string, allDay?: boolean) {
-  const date = formatDateShort(startsAt);
-  if (allDay) return date;
-  return `${date}, ${formatTimeShort(startsAt)} – ${formatTimeShort(endsAt)}`;
-}
-
 /** "Mar 11, 2026" */
-export function formatDateFull(iso: string | null) {
+export function formatDateFull(iso: string | null, allDay = false) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
+  return calendarDate(iso, allDay).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

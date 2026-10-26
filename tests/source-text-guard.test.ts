@@ -11,7 +11,7 @@ import KNOWN_SOURCE_TEXT_TESTS from "./_helpers/source-text-tests.json";
 // cross-language contract may opt out with a `// source-contract: <why>` line.
 
 const WEB_SOURCE_PATH = /["'`]src\/[^"'`\n]*["'`]|(?:join|resolve)\([^)]*["'`]src["'`]/;
-const READS_TEXT = /\b(?:source|readFileSync|readSource|read)\s*\(/;
+const READS_TEXT = /\b(?:source|splitSource|readFileSync|readSource|read)\s*\(/;
 const OPT_OUT = /\/\/ source-contract: \S/;
 
 function testFiles(dir: string): string[] {

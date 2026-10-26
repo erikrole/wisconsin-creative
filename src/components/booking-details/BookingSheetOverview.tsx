@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
 } from "@/lib/format";
 import type { BookingDetail } from "./types";
 import { minimumBookingEndDate } from "@/lib/quarter-hour";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type EditableBookingField = "startsAt" | "endsAt" | "notes";
 
@@ -84,9 +85,9 @@ function NotesField({
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  useAdjustState([editing, value], () => {
     if (!editing) setDraft(value);
-  }, [editing, value]);
+  });
 
   async function commit() {
     if (draft.trim() === value.trim()) {

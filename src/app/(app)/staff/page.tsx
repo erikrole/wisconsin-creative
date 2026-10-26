@@ -33,6 +33,7 @@ import { SPORT_CODES } from "@/lib/sports";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { RosterRelatedLinks } from "./_components/RosterRelatedLinks";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 const LIMIT = 50;
 const ROLE_VALUES = new Set<string>(["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"]);
@@ -294,9 +295,9 @@ export default function UsersPage() {
   const [showBulkAward, setShowBulkAward] = useState(false);
   const didMountRef = useRef(false);
 
-  useEffect(() => {
+  useAdjustState([onboardRequested], () => {
     if (onboardRequested) setShowCreate(true);
-  }, [onboardRequested]);
+  });
 
   // Reset page when filters change
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEvent, ShiftGroup } from "@/app/(app)/schedule/_components/types";
-import { mergeScheduleData } from "@/hooks/use-schedule-data";
+import { mergeScheduleData } from "@/lib/schedule-read";
 
 function calendarEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {

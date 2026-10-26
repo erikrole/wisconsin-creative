@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,6 +11,7 @@ import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { messageOf } from "./types";
 import { STANDING_LABELS, TERM_LABELS, parseTermLabel } from "@/lib/hiring/contract";
 import { AREA_OPTIONS } from "./types";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 type PossibleMatch = { applicantId: string; name: string; reason: "email" | "name_and_grad" | "previous_applicant" };
 
@@ -361,13 +362,10 @@ export function CloseCycleDialog({
   label: string;
   onConfirm: (closedOn: string | undefined) => void;
 }) {
-  const [closedOn, setClosedOn] = useState("");
   // A date entered for one cycle must never preload for another: a stale old date would start the
   // next cycle's retention clock years too early. Clear it whenever the dialog opens, closes, or
   // targets a different cycle.
-  useEffect(() => {
-    setClosedOn("");
-  }, [open, label]);
+  const [closedOn, setClosedOn] = useSyncedDraft(`${open}\u0000${label}`, () => "");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>

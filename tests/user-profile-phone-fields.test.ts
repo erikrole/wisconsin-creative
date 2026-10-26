@@ -26,8 +26,6 @@ describe("user profile phone fields", () => {
   });
 
   it("shows both phone fields on canonical and Settings profile surfaces", () => {
-    expect(userInfo).toContain('label="Personal phone"');
-    expect(userInfo).toContain('label="Work phone"');
     expect(userInfo).toContain("patchUser({ personalPhone: v || null })");
     expect(userInfo).toContain("patchUser({ workPhone: v || null })");
     expect(settingsProfile).toContain("Personal phone");

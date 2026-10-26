@@ -102,7 +102,7 @@ struct ReportProblemSheet: View {
             if let errorMessage {
                 Section {
                     Text(errorMessage)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.statusText(.red))
                     Link("Email support instead", destination: supportURL)
                 }
             }
@@ -113,7 +113,7 @@ struct ReportProblemSheet: View {
     private var sentConfirmation: some View {
         ContentUnavailableView {
             Label("Thanks, we got it", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.statusText(.green))
         } description: {
             Text("Your report and the details above were sent. We'll follow up if we need more.")
         } actions: {

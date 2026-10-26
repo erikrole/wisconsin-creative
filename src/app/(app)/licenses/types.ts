@@ -1,12 +1,12 @@
 export type LicenseCodeStatus = "AVAILABLE" | "PARTIAL" | "CLAIMED" | "RETIRED";
 
-export type ClaimHolder = {
+type ClaimHolder = {
   id?: string;
   name: string;
   avatarUrl: string | null;
 };
 
-export type ActiveClaim = {
+type ActiveClaim = {
   id: string;
   userId: string | null;
   user: ClaimHolder | null;

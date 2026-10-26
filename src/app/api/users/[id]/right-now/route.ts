@@ -2,7 +2,9 @@ import { BookingStatus, Role, ShiftAssignmentStatus } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
+import { accountableCheckoutWhere, isPastGrace, onTimeRate } from "@/lib/on-time-rate";
 import { requireRole } from "@/lib/rbac";
+import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
 
 /**
  * What is going on with this person right now: their next confirmed shift and the gear they
@@ -19,7 +21,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     ShiftAssignmentStatus.DIRECT_ASSIGNED,
     ShiftAssignmentStatus.APPROVED,
   ];
-  const [assignment, bookings, weekShifts, completed] = await Promise.all([
+  const [assignment, bookings, weekShifts, completed, overdue, policies] = await Promise.all([
     db.shiftAssignment.findFirst({
       where: {
         userId: params.id,
@@ -85,15 +87,22 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       },
     }),
     db.booking.findMany({
-      where: { requesterUserId: params.id, status: BookingStatus.COMPLETED },
+      where: { ...accountableCheckoutWhere, requesterUserId: params.id, status: BookingStatus.COMPLETED },
       select: { endsAt: true, completedAt: true },
     }),
+    db.booking.findMany({
+      where: { ...accountableCheckoutWhere, requesterUserId: params.id, status: BookingStatus.OPEN },
+      select: { endsAt: true },
+    }),
+    loadCheckoutPolicies(),
   ]);
 
-  // On time = returned at or before the due time. Bookings with no recorded return time are
-  // counted as checkouts but left out of the rate.
-  const returned = completed.filter((b) => b.completedAt);
-  const onTime = returned.filter((b) => b.completedAt! <= b.endsAt).length;
+  // The app-wide on-time rule (see on-time-rate.ts): late means returned after due plus grace,
+  // and checkouts still out past that point count against the rate.
+  const lateCompleted = completed.filter(
+    (b) => b.completedAt && isPastGrace(b.endsAt, b.completedAt, policies.gracePeriodHours),
+  ).length;
+  const activeLate = overdue.filter((b) => isPastGrace(b.endsAt, now, policies.gracePeriodHours)).length;
 
   const shift = assignment?.shift ?? null;
   return ok({
@@ -116,9 +125,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       })),
       performance: {
         checkouts: completed.length,
-        onTimeRate: returned.length
-          ? Math.round((onTime / returned.length) * 100)
-          : null,
+        onTimeRate: onTimeRate({ completed: completed.length, lateCompleted, activeLate }),
       },
       holding: bookings.map((b) => ({
         id: b.id,

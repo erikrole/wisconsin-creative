@@ -62,6 +62,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useOnboardingSave } from "@/hooks/use-onboarding-save";
 import type { OnboardingGroup } from "@/lib/onboarding-save";
+import { useAdjustState } from "@/hooks/use-synced-draft";
 
 type LegacyPhoneType = "PERSONAL" | "WORK" | "";
 type ApiEnvelope = { data?: ProfileCompletionResponse };
@@ -181,7 +182,7 @@ export function ProfileCompletionWizard({
     },
   });
 
-  useEffect(() => {
+  useAdjustState([data, open], () => {
     // Background refreshes must not replace details the person is typing.
     if (!data || open) return;
     const profile = data.profile;
@@ -217,7 +218,7 @@ export function ProfileCompletionWizard({
       setShoeSizeChoice("OTHER");
       setShoeSizeOther(profile.shoeSize);
     }
-  }, [data, open]);
+  });
 
   useEffect(() => {
     if (!data) return;
@@ -271,7 +272,7 @@ export function ProfileCompletionWizard({
     ? { title: "Add your phone number", description: "Add the personal phone number we should use to reach you." }
     : PROFILE_STEP_COPY[step];
   const requiresSetup = data?.completion.requiresSetup === true;
-  const isOptionalStep = step === "PHOTO" || (step === "APPAREL" && !requiresSetup);
+  const isOptionalStep = step === "PHOTO" || step === "WISCARD" || (step === "APPAREL" && !requiresSetup);
   const stepMotionContext = { direction: stepDirection, reduceMotion };
   const needsLegacyClassification = Boolean(
     !hasSimplePhoneStep && legacyPhone && !data?.profile.personalPhone && !data?.profile.workPhone,

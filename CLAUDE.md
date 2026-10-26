@@ -12,6 +12,7 @@
 ## How to work
 
 - Write a bounded plan for non-trivial work, then execute it without waiting for an unnecessary approval loop.
+- Follow the six rules in the "Coding rules" section of `AGENTS.md` (edge-case code needs asking first, validate at the entry point, inline one-time logic, keep functions whole, cut unneeded UI text, ship only clear improvements).
 - Implement the smallest independently verifiable slice.
 - Preserve unrelated work and stage explicit paths only when a commit is requested.
 - Do not update `tasks/lessons.md` for every correction. Promote only reusable, non-obvious lessons supported by verified evidence, and place dated context in `tasks/archive/lessons-history-2026.md`.

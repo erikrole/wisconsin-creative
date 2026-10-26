@@ -31,8 +31,8 @@ export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "shift", "view");
 
   const url = new URL(req.url);
-  const { limit: rawLimit, offset } = parsePagination(url.searchParams);
-  const limit = Math.min(rawLimit, 500);
+  // parsePagination caps the page at 200, the size the schedule pages request.
+  const { limit, offset } = parsePagination(url.searchParams);
 
   const sportCode = optionalSportCodeSchema.parse(url.searchParams.get("sportCode") ?? undefined);
   const startDate = url.searchParams.get("startDate");

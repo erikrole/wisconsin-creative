@@ -44,6 +44,7 @@ import {
   getReportExportFilename,
   readReportExportFailureMessage,
 } from "../report-export";
+import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
 const LazyCheckoutTrendChart = dynamic(
   () => import("./charts").then((m) => ({ default: m.CheckoutTrendChart })),
@@ -172,17 +173,13 @@ export default function CheckoutsReportPage() {
     values: VALID_CHECKOUT_PERIODS,
   });
   const days = period.days;
-  const [focusDate, setFocusDate] = useState<string | null>(null);
+  // A day selected inside one window is meaningless in another.
+  const [focusDate, setFocusDate] = useSyncedDraft(days, (): string | null => null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
-
-  // A day selected inside one window is meaningless in another.
-  useEffect(() => {
-    setFocusDate(null);
-  }, [days]);
 
   const { data, loading, refreshing, error, lastRefreshed, reload } = useFetch<CheckoutData>({
     url: `/api/reports/checkouts?days=${days}${focusDate ? `&date=${focusDate}` : ""}`,
@@ -209,7 +206,7 @@ export default function CheckoutsReportPage() {
     ...(focusDate
       ? [{
           key: "date",
-          label: `Day: ${formatDateFull(`${focusDate}T00:00:00.000Z`)}`,
+          label: `Day: ${formatDateFull(`${focusDate}T00:00:00.000Z`, true)}`,
           onRemove: () => setFocusDate(null),
         }]
       : []),
@@ -302,8 +299,8 @@ export default function CheckoutsReportPage() {
         >
             <LazyHeatmap
               data={data.heatmap}
-              startDate={new Date(Date.now() - 365 * 86_400_000)}
-              endDate={new Date()}
+              startDate={new Date(now.getTime() - 365 * 86_400_000)}
+              endDate={now}
               colorMode="interpolate"
               cellSize={12}
               gap={2}
@@ -317,7 +314,7 @@ export default function CheckoutsReportPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Recent checkouts */}
         <ReportSectionCard
-          title={focusDate ? `Checkouts on ${formatDateFull(`${focusDate}T00:00:00.000Z`)}` : "Recent checkouts"}
+          title={focusDate ? `Checkouts on ${formatDateFull(`${focusDate}T00:00:00.000Z`, true)}` : "Recent checkouts"}
           contentClassName="p-0"
         >
           {(data.recentCheckouts ?? []).length === 0 ? (

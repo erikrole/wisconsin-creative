@@ -501,26 +501,7 @@ export async function checkBulkShortages(
   });
 
   const balanceMap = new Map(balanceRows.map((row) => [row.bulkSkuId, row.onHandQuantity]));
-  const committedRows = await tx.bookingBulkItem.findMany({
-    where: {
-      bulkSkuId: { in: args.bulkItems.map((item) => item.bulkSkuId) },
-      booking: {
-        status: { in: bulkReservationCommitmentStatuses },
-        locationId: args.locationId,
-        startsAt: { lt: args.endsAt },
-        endsAt: { gt: args.startsAt },
-        ...(args.excludeBookingId ? { id: { not: args.excludeBookingId } } : {}),
-      },
-    },
-    select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true },
-  });
-  const committedMap = new Map<string, number>();
-  for (const row of committedRows) {
-    committedMap.set(
-      row.bulkSkuId,
-      (committedMap.get(row.bulkSkuId) ?? 0) + remainingReservationQuantity(row),
-    );
-  }
+  const committedMap = await committedBulkQuantities(tx, { ...args, bulkSkuIds: args.bulkItems.map((item) => item.bulkSkuId) });
 
   return args.bulkItems
     .map((item) => {
@@ -534,6 +515,31 @@ export async function checkBulkShortages(
       };
     })
     .filter((item) => item.available < item.requested);
+}
+
+/** Units of each SKU still owed to overlapping reservations at the location. */
+async function committedBulkQuantities(
+  tx: Prisma.TransactionClient | PrismaClient,
+  args: { bulkSkuIds: string[]; locationId: string; startsAt: Date; endsAt: Date; excludeBookingId?: string },
+) {
+  const rows = await tx.bookingBulkItem.findMany({
+    where: {
+      bulkSkuId: { in: args.bulkSkuIds },
+      booking: {
+        status: { in: bulkReservationCommitmentStatuses },
+        locationId: args.locationId,
+        startsAt: { lt: args.endsAt },
+        endsAt: { gt: args.startsAt },
+        ...(args.excludeBookingId ? { id: { not: args.excludeBookingId } } : {}),
+      },
+    },
+    select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true },
+  });
+  const committed = new Map<string, number>();
+  for (const row of rows) {
+    committed.set(row.bulkSkuId, (committed.get(row.bulkSkuId) ?? 0) + remainingReservationQuantity(row));
+  }
+  return committed;
 }
 
 type BulkAvailabilityEntry = {
@@ -564,30 +570,7 @@ export async function getBulkAvailability(
 
   if (balances.length === 0) return {};
 
-  const skuIds = balances.map((b) => b.bulkSkuId);
-
-  // Sum planned quantities from overlapping active bookings
-  const committedRows = await tx.bookingBulkItem.findMany({
-    where: {
-      bulkSkuId: { in: skuIds },
-      booking: {
-        status: { in: bulkReservationCommitmentStatuses },
-        locationId: args.locationId,
-        startsAt: { lt: args.endsAt },
-        endsAt: { gt: args.startsAt },
-        ...(args.excludeBookingId ? { id: { not: args.excludeBookingId } } : {}),
-      },
-    },
-    select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true },
-  });
-
-  const committedMap = new Map<string, number>();
-  for (const row of committedRows) {
-    committedMap.set(
-      row.bulkSkuId,
-      (committedMap.get(row.bulkSkuId) ?? 0) + remainingReservationQuantity(row),
-    );
-  }
+  const committedMap = await committedBulkQuantities(tx, { ...args, bulkSkuIds: balances.map((b) => b.bulkSkuId) });
 
   const result: Record<string, BulkAvailabilityEntry> = {};
   for (const b of balances) {

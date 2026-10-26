@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchSchedule } from "@/hooks/use-schedule-data";
+import { fetchSchedule } from "@/lib/schedule-read";
 
 afterEach(() => vi.unstubAllGlobals());
 
