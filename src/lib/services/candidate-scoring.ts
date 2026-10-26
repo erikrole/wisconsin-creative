@@ -248,11 +248,14 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         addReason("prior_sport_assignment", `Has worked ${sportName} before`, 8);
       }
 
-      const blockingConflict = candidate.assignments.some((assignment) => {
-        if (assignment.shift.id === shift.id) return false;
-        return overlaps(targetWindow, assignmentWindow(assignment));
-      });
-      if (blockingConflict && !allowsOverlappingShifts(candidate.role)) {
+      // Staff and admins may double-book, so an overlap is neither a warning nor
+      // a block for them, matching what the assign write accepts.
+      const blockingConflict = !allowsOverlappingShifts(candidate.role)
+        && candidate.assignments.some((assignment) => {
+          if (assignment.shift.id === shift.id) return false;
+          return overlaps(targetWindow, assignmentWindow(assignment));
+        });
+      if (blockingConflict) {
         addWarning("overlapping_assignment", "Already working during this time", -60);
       }
 

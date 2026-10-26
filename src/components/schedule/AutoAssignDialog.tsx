@@ -141,6 +141,7 @@ const BLOCKER_COPY: Record<BlockerKind, { title: string; detail: string }> = {
 
 function formatEventDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
+    timeZone: "America/Chicago",
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -496,7 +497,7 @@ export function AutoAssignDialog({
         toast.error(message);
         return;
       }
-      const json = await parseJsonSafely<{ data?: { eventCount?: number; assignmentCount?: number; releaseAt?: string } }>(response);
+      const json = await parseJsonSafely<{ data?: { eventCount?: number; assignmentCount?: number; droppedCount?: number; releaseAt?: string } }>(response);
       const eventCount = json?.data?.eventCount;
       const assignmentCount = json?.data?.assignmentCount;
       if (typeof eventCount !== "number" || typeof assignmentCount !== "number") {
@@ -507,7 +508,11 @@ export function AutoAssignDialog({
       }
       toast.success(
         `Staged ${assignmentCount} assignment${assignmentCount === 1 ? "" : "s"} across ${eventCount} event${eventCount === 1 ? "" : "s"}`,
-        { description: "Workers are notified when it releases. Reopen Auto assign to cancel before then." },
+        {
+          description: json?.data?.droppedCount
+            ? `${json.data.droppedCount} no longer fit and ${json.data.droppedCount === 1 ? "was" : "were"} left out. Workers are notified when it releases. Reopen Auto assign to cancel before then.`
+            : "Workers are notified when it releases. Reopen Auto assign to cancel before then.",
+        },
       );
       void refreshBatches();
       onOpenChange(false);

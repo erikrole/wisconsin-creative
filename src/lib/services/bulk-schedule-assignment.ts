@@ -664,31 +664,37 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
   };
 }
 
+/**
+ * Keeps the reviewed proposals that still stand in a fresh preview. A proposal
+ * that no longer does (the person got time off, the slot filled) is dropped
+ * and counted rather than failing the whole apply: any subset of a valid
+ * preview is itself valid.
+ */
 function proposalsByGroup(input: BulkAssignmentApplyInput, preview: BulkAssignmentPreviewResponse) {
   const available = new Map(
     preview.events.flatMap((event) => event.proposals.map((proposal) => [proposal.proposalId, proposal] as const)),
   );
   const seen = new Set<string>();
-  const selected = input.proposals.map((proposal) => {
+  const selected: BulkAssignmentPreviewProposal[] = [];
+  for (const proposal of input.proposals) {
     if (seen.has(proposal.proposalId)) throw new HttpError(400, "Each bulk assignment proposal may be selected only once.");
     seen.add(proposal.proposalId);
     const current = available.get(proposal.proposalId);
-    if (!current
-      || current.shiftGroupId !== proposal.shiftGroupId
-      || current.shiftId !== proposal.shiftId
-      || current.eventId !== proposal.eventId
-      || current.userId !== proposal.userId) {
-      throw new HttpError(409, "The bulk assignment preview is stale. Review it again before applying.");
+    if (current
+      && current.shiftGroupId === proposal.shiftGroupId
+      && current.shiftId === proposal.shiftId
+      && current.eventId === proposal.eventId
+      && current.userId === proposal.userId) {
+      selected.push(current);
     }
-    return current;
-  });
+  }
   const grouped = new Map<string, BulkAssignmentPreviewProposal[]>();
   for (const proposal of selected) {
     const list = grouped.get(proposal.shiftGroupId) ?? [];
     list.push(proposal);
     grouped.set(proposal.shiftGroupId, list);
   }
-  return grouped;
+  return { grouped, applied: selected.length, dropped: input.proposals.length - selected.length };
 }
 
 function addTentativeWindow(windowsByUser: Map<string, Array<{ startsAt: Date; endsAt: Date }>>, userId: string, window: { startsAt: Date; endsAt: Date }) {
@@ -707,11 +713,8 @@ export async function applyBulkScheduleAssignment(
 ) {
   const input = bulkAssignmentApplySchema.parse(rawInput);
   const preview = await getBulkAssignmentPreview(input.scope);
-  if (preview.fingerprint !== input.fingerprint) {
-    throw new HttpError(409, "The bulk assignment preview is stale. Review it again before applying.");
-  }
-  const grouped = proposalsByGroup(input, preview);
-  if (grouped.size === 0) throw new HttpError(400, "Select at least one proposed assignment.");
+  const { grouped, applied, dropped } = proposalsByGroup(input, preview);
+  if (grouped.size === 0) throw new HttpError(409, "None of the selected assignments are available anymore. Build the preview again.");
 
   const batchId = randomUUID();
   const now = new Date();
@@ -903,7 +906,8 @@ export async function applyBulkScheduleAssignment(
       batchId,
       releaseAt: releaseAt.toISOString(),
       eventCount: grouped.size,
-      assignmentCount: input.proposals.length,
+      assignmentCount: applied,
+      droppedCount: dropped,
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
