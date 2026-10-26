@@ -56,6 +56,8 @@ import { createBulkScheduleAssignmentNotifications } from "@/lib/services/notifi
 import { unique } from "@/lib/utils";
 
 const MAX_BULK_EVENTS = 200;
+/** Runners-up offered per slot when staff change a proposed person in review. */
+const MAX_ALTERNATIVES = 3;
 
 const bulkShiftGroupSelect = {
   id: true,
@@ -585,7 +587,7 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
         const target = candidateTarget(slot, state.event.sportCode);
         const scores = scoreCandidatesForShift({ shift: target, candidates, now: new Date() });
         const eventHasTravelRoster = sportHasTravelRoster(travelRosterCounts, state.event.sportCode);
-        const chosen = scores.find((score) => {
+        const eligible = scores.filter((score) => {
           const candidate = candidatesById.get(score.userId);
           if (!candidate || usedUserIds.has(score.userId)) return false;
           // The sport roster is the pool, not a tiebreaker.
@@ -598,6 +600,7 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           if (!hasAreaFit(score) || score.blockingConflict) return false;
           return true;
         });
+        const [chosen, ...runnersUp] = eligible;
         if (!chosen) {
           skipped.push(buildSkippedSlot(slot, scores, candidatesById, usedUserIds, state.event.sportCode, {
             isHome: state.event.isHome,
@@ -627,6 +630,17 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           warnings: chosen.warnings,
           advisoryConflict: chosen.advisoryConflict,
           advisoryConflictNote: chosen.advisoryConflictNote,
+          alternatives: runnersUp.slice(0, MAX_ALTERNATIVES).map((score) => ({
+            userId: score.userId,
+            userName: candidatesById.get(score.userId)!.name ?? score.userId,
+            userRole: candidatesById.get(score.userId)!.role,
+            score: score.score,
+            bucket: score.bucket,
+            reasons: score.reasons,
+            warnings: score.warnings,
+            advisoryConflict: score.advisoryConflict,
+            advisoryConflictNote: score.advisoryConflictNote,
+          })),
         });
         appendTentativeAssignment(candidate, target);
       }
@@ -680,12 +694,16 @@ function proposalsByGroup(input: BulkAssignmentApplyInput, preview: BulkAssignme
     if (seen.has(proposal.proposalId)) throw new HttpError(400, "Each bulk assignment proposal may be selected only once.");
     seen.add(proposal.proposalId);
     const current = available.get(proposal.proposalId);
-    if (current
-      && current.shiftGroupId === proposal.shiftGroupId
-      && current.shiftId === proposal.shiftId
-      && current.eventId === proposal.eventId
-      && current.userId === proposal.userId) {
+    if (!current
+      || current.shiftGroupId !== proposal.shiftGroupId
+      || current.shiftId !== proposal.shiftId
+      || current.eventId !== proposal.eventId) continue;
+    // Staff may swap in one of the runners-up they were shown; any other person
+    // is a stale proposal.
+    if (proposal.userId === current.userId) {
       selected.push(current);
+    } else if (current.alternatives.some((alternative) => alternative.userId === proposal.userId)) {
+      selected.push({ ...current, userId: proposal.userId });
     }
   }
   const grouped = new Map<string, BulkAssignmentPreviewProposal[]>();

@@ -71,12 +71,9 @@ export type BulkAssignmentScope = z.infer<typeof bulkAssignmentScopeSchema>;
 type BulkAssignmentProposalInput = z.infer<typeof bulkAssignmentProposalSchema>;
 export type BulkAssignmentApplyInput = z.infer<typeof bulkAssignmentApplySchema>;
 
-export type BulkAssignmentPreviewProposal = BulkAssignmentProposalInput & {
-  eventSummary: string;
-  eventStartsAt: string;
-  eventSportCode: string | null;
-  area: ShiftArea;
-  workerType: "FT" | "ST";
+/** One person for a slot: the proposed pick, or a runner-up staff can swap in. */
+export type BulkAssignmentPerson = {
+  userId: string;
   userName: string;
   userRole: string;
   score: number;
@@ -85,6 +82,16 @@ export type BulkAssignmentPreviewProposal = BulkAssignmentProposalInput & {
   warnings: CandidateScoreSignal[];
   advisoryConflict: boolean;
   advisoryConflictNote: string | null;
+};
+
+export type BulkAssignmentPreviewProposal = BulkAssignmentProposalInput & BulkAssignmentPerson & {
+  eventSummary: string;
+  eventStartsAt: string;
+  eventSportCode: string | null;
+  area: ShiftArea;
+  workerType: "FT" | "ST";
+  /** The next best eligible people for this slot, best first. */
+  alternatives: BulkAssignmentPerson[];
 };
 
 export type BulkAssignmentPreviewSkipped = {

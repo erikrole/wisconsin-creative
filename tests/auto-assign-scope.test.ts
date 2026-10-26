@@ -31,6 +31,7 @@ function proposal(overrides: Partial<BulkAssignmentPreviewProposal>): BulkAssign
     warnings: [],
     advisoryConflict: false,
     advisoryConflictNote: null,
+    alternatives: [],
     ...overrides,
   };
 }

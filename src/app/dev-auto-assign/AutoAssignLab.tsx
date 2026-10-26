@@ -10,6 +10,21 @@ import type {
   BulkAssignmentPreviewResponse,
 } from "@/lib/bulk-schedule-assignment-types";
 
+const ALTERNATIVES: BulkAssignmentPreviewProposal["alternatives"] = [
+  ["Lena Ortiz", "Video is their main area", "Nothing else this week"],
+  ["Dev Patel", "Also works Video", "Fewer shifts than most this season"],
+].map(([userName, ...reasons]) => ({
+  userId: userName!,
+  userName: userName!,
+  userRole: "STUDENT",
+  score: 82,
+  bucket: "recommended" as const,
+  reasons: reasons.map((label, i) => ({ code: `alt${i}`, label: label!, weight: 20 - i })),
+  warnings: [],
+  advisoryConflict: false,
+  advisoryConflictNote: null,
+}));
+
 type Row = [area: BulkAssignmentPreviewProposal["area"], name: string, reasons: string[], warning?: string];
 
 function event(id: string, summary: string, startsAt: string, rows: Row[], open = rows.length): BulkAssignmentPreviewEvent {
@@ -45,6 +60,7 @@ function event(id: string, summary: string, startsAt: string, rows: Row[], open 
       warnings: warning ? [{ code: "upcoming_load", label: warning, weight: -12 }] : [],
       advisoryConflict: false,
       advisoryConflictNote: null,
+      alternatives: ALTERNATIVES.filter((person) => person.userName !== name),
     })),
   };
 }

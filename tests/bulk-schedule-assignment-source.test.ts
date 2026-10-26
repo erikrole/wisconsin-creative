@@ -28,6 +28,7 @@ describe("bulk schedule assignment contracts", () => {
     expect(service).toContain("isolationLevel: Prisma.TransactionIsolationLevel.Serializable");
     expect(service).toContain('source: "AUTO_FILL"');
     expect(service).toContain("droppedCount: dropped");
+    expect(service).toContain("current.alternatives.some((alternative) => alternative.userId === proposal.userId)");
     expect(service).toContain("enqueueRelease({ shiftGroupId, version: 1, now, batchId })");
     expect(applyRoute).toContain('requirePermission(user.role, "shift", "manage")');
     expect(applyRoute).toContain("bulkAssignmentApplySchema");

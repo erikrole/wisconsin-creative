@@ -176,6 +176,64 @@ function proposalReason(proposal: BulkAssignmentPreviewProposal) {
   return { tone: "neutral" as const, text: reasons.join(" · ") || (proposal.workerType === "ST" ? "Student" : "Staff") };
 }
 
+/** Swap a proposed person for one of the runners-up the preview offered for the slot. */
+function ChangePerson({
+  proposal,
+  current,
+  takenIds,
+  disabled,
+  onPick,
+}: {
+  proposal: BulkAssignmentPreviewProposal;
+  current: string;
+  takenIds: string[];
+  disabled: boolean;
+  onPick: (userId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (proposal.alternatives.length === 0) return null;
+  const people = [proposal, ...proposal.alternatives];
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-10 px-2 text-xs" disabled={disabled} aria-label={`Change ${proposal.area.toLowerCase()} person`}>
+          Change
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-1">
+        <ul className="flex flex-col">
+          {people.map((person) => {
+            const reason = proposalReason({ ...proposal, ...person });
+            const taken = takenIds.includes(person.userId);
+            return (
+              <li key={person.userId}>
+                <button
+                  type="button"
+                  disabled={taken}
+                  onClick={() => {
+                    onPick(person.userId);
+                    setOpen(false);
+                  }}
+                  className="flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-[var(--bg-surface)] disabled:opacity-40"
+                >
+                  <UserAvatar name={person.userName} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">{person.userName}</span>
+                    <span className={cn("block truncate text-xs", reason.tone === "warning" ? "text-[var(--orange-text)]" : "text-[var(--text-secondary)]")}>
+                      {taken ? "Already on this event" : reason.text}
+                    </span>
+                  </span>
+                  {person.userId === current ? <Check className="size-4 shrink-0" aria-hidden="true" /> : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function firstName(name: string) {
   return name.split(" ")[0] ?? name;
 }
@@ -259,6 +317,8 @@ export function AutoAssignDialog({
 
   const [preview, setPreview] = useState<BulkAssignmentPreviewResponse | null>(null);
   const [selectedProposalIds, setSelectedProposalIds] = useState<Set<string>>(new Set());
+  /** proposalId -> the runner-up staff swapped in during review. */
+  const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -399,6 +459,7 @@ export function AutoAssignDialog({
         return;
       }
       setPreview(json.data);
+      setSwaps({});
       setSelectedProposalIds(new Set(
         json.data.events
           .filter((event) => event.status === "ready")
@@ -411,12 +472,19 @@ export function AutoAssignDialog({
     }
   }, [scope]);
 
+  /** The proposal as staff currently see it: the pick, or the runner-up swapped in. */
+  const withSwap = useCallback((proposal: BulkAssignmentPreviewProposal): BulkAssignmentPreviewProposal => {
+    const swapped = proposal.alternatives.find((person) => person.userId === swaps[proposal.proposalId]);
+    return swapped ? { ...proposal, ...swapped } : proposal;
+  }, [swaps]);
+
   const selectedProposals = useMemo(
     () => preview?.events
       .filter((event) => event.status === "ready")
       .flatMap((event) => event.proposals)
-      .filter((proposal) => selectedProposalIds.has(proposal.proposalId)) ?? [],
-    [preview, selectedProposalIds],
+      .filter((proposal) => selectedProposalIds.has(proposal.proposalId))
+      .map(withSwap) ?? [],
+    [preview, selectedProposalIds, withSwap],
   );
   const selectedEventCount = useMemo(
     () => new Set(selectedProposals.map((proposal) => proposal.eventId)).size,
@@ -791,9 +859,10 @@ export function AutoAssignDialog({
                         const eventChecked = selectedCount === event.proposals.length
                           ? true
                           : selectedCount === 0 ? false : "indeterminate" as const;
+                        const shown = event.proposals.map(withSwap);
                         const proposals = focusPersonId
-                          ? event.proposals.filter((proposal) => proposal.userId === focusPersonId)
-                          : event.proposals;
+                          ? shown.filter((proposal) => proposal.userId === focusPersonId)
+                          : shown;
                         if (focusPersonId && proposals.length === 0) return null;
                         return (
                           <li key={event.eventId} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)]">
@@ -843,13 +912,22 @@ export function AutoAssignDialog({
                                         </span>
                                       </span>
                                     </span>
-                                    <Checkbox
+                                    <span className="flex items-center gap-1">
+                                      <ChangePerson
+                                        proposal={event.proposals.find((candidate) => candidate.proposalId === proposal.proposalId)!}
+                                        current={proposal.userId}
+                                        takenIds={shown.filter((other) => other.proposalId !== proposal.proposalId && selectedProposalIds.has(other.proposalId)).map((other) => other.userId)}
+                                        disabled={applying}
+                                        onPick={(userId) => setSwaps((current) => ({ ...current, [proposal.proposalId]: userId }))}
+                                      />
+                                      <Checkbox
                                         checked={included}
                                         disabled={applying}
                                         onCheckedChange={(checked) => toggleProposal(proposal.proposalId, checked === true)}
                                         aria-label={`Assign ${proposal.userName} to ${AREA_LABELS[proposal.area] ?? proposal.area} for ${event.summary}`}
                                         className="size-5"
                                       />
+                                    </span>
                                   </li>
                                 );
                               })}
