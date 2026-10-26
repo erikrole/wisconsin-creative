@@ -7,6 +7,7 @@ describe("licenses UI and privacy contracts", () => {
 
     expect(route).toContain("claim.userId === user.id");
     expect(route).toContain("userId: isOwnClaim ? claim.userId : null");
+    expect(route).toContain("id: isOwnClaim ? claim.user.id : claim.id");
     expect(route).toContain("name: claim.user.name");
     expect(route).toContain("avatarUrl: claim.user.avatarUrl");
     expect(route).toContain("occupantLabel: null");

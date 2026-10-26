@@ -479,7 +479,7 @@ describe("student Photo Mechanic response minimization", () => {
     expect(license.claims[0]).toEqual(expect.objectContaining({
       id: "claim-other",
       userId: null,
-      user: { name: "Other Student", avatarUrl: "https://example.com/private.jpg" },
+      user: { id: "claim-other", name: "Other Student", avatarUrl: "https://example.com/private.jpg" },
       occupantLabel: null,
     }));
     expect(license.claims[1]).toEqual(expect.objectContaining({
