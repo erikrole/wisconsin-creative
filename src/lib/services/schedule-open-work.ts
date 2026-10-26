@@ -4,6 +4,7 @@ import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES, allowsOverlappingShifts } from "@/lib/shift-constants";
 import {
   buildShiftAssignmentOverlapWhere,
+  inheritsMultiDayAllDayWindow,
   resolveEffectiveAssignmentWindow,
   resolveEffectiveShiftWindow,
   scheduleWindowsOverlap,
@@ -499,9 +500,15 @@ export async function pickupOpenShiftTx(tx: Prisma.TransactionClient, shiftId: s
         },
       },
     });
-    const hardConflict = conflictCandidates.find((assignment) =>
-      scheduleWindowsOverlap(window, resolveEffectiveAssignmentWindow(assignment))
-    );
+    // A multi-day all-day event (tournament) with no call times covers its whole
+    // span on paper; it is not a booking that blocks other events inside it.
+    const claimedSpansDays = inheritsMultiDayAllDayWindow({ shift });
+    const hardConflict = claimedSpansDays
+      ? undefined
+      : conflictCandidates.find((assignment) =>
+          !inheritsMultiDayAllDayWindow(assignment)
+          && scheduleWindowsOverlap(window, resolveEffectiveAssignmentWindow(assignment))
+        );
     if (hardConflict && !allowsOverlappingShifts(user.role)) {
       throw new HttpError(409, `User already has a shift during this time (${hardConflict.shift.area})`);
     }

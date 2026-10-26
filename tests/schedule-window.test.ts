@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildShiftAssignmentOverlapWhere,
+  inheritsMultiDayAllDayWindow,
   resolveEffectiveAssignmentWindow,
   resolveEffectiveShiftWindow,
   scheduleWindowDurationHours,
@@ -60,6 +61,21 @@ describe("schedule window helpers", () => {
       startsAt: new Date("2026-09-05T19:00:00.000Z"),
       endsAt: new Date("2026-09-05T20:00:00.000Z"),
     });
+  });
+
+  it("flags only call-time-less shifts on multi-day all-day events", () => {
+    const multiDay = {
+      startsAt: new Date("2026-11-04T00:00:00.000Z"),
+      endsAt: new Date("2026-11-13T00:00:00.000Z"),
+      allDay: true,
+    };
+    expect(inheritsMultiDayAllDayWindow({ shift: shift({ shiftGroup: { event: multiDay } }) })).toBe(true);
+    expect(inheritsMultiDayAllDayWindow({ shift: shift({ shiftGroup: { event: { ...multiDay, endsAt: new Date("2026-11-05T00:00:00.000Z") } } }) })).toBe(false);
+    expect(inheritsMultiDayAllDayWindow({
+      callStartsAt: new Date("2026-11-06T16:00:00.000Z"),
+      callEndsAt: new Date("2026-11-06T20:00:00.000Z"),
+      shift: shift({ shiftGroup: { event: multiDay } }),
+    })).toBe(false);
   });
 
   it("uses half-open overlap semantics and computes non-negative duration", () => {
