@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Bookings interaction-detail contracts", () => {
   it("keeps scope, view, creation, recovery, and pagination controls on the 40px baseline", () => {
-    const page = source("src/app/(app)/bookings/page.tsx");
+    const page = source("src/app/(app)/bookings/BookingsPageClient.tsx");
     const list = source("src/components/BookingListPage.tsx");
 
     expect(page.match(/className="h-10 px-3 text-xs"/g)).toHaveLength(2);
@@ -19,9 +19,7 @@ describe("Bookings interaction-detail contracts", () => {
     const sort = source("src/components/booking-list/SortHeader.tsx");
 
     expect(sort).toContain('aria-sort={isActive ? (dir === "asc" ? "ascending" : "descending") : "none"}');
-    expect(sort).toContain('<AnimatePresence initial={false} mode="popLayout">');
-    expect(sort).toContain('initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}');
-    expect(sort).toContain('transition={{ type: "spring", duration: 0.3, bounce: 0 }}');
+    expect(sort).toContain("<IconSwap swapKey=");
   });
 
   it("gives booking cards and mobile rows precise tactile feedback", () => {

@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-27",
+    "title": "Faster pages on slow connections",
+    "type": "improvement",
+    "summary": "Most pages download about 30% less code, and Home, Bookings and Staff now arrive with their content already in place, so they show up two to three times sooner on a weak connection.",
+    "details": [
+      "The Schedule page, the biggest one, loads about a third less, and its list draws only the layout for your screen, so a busy season opens noticeably sooner.",
+      "Dialogs like Auto assign, Add item and Invite people download only when you open them.",
+      "Tab underlines, fade-ins and small icon changes now play right away instead of waiting for the page to finish loading.",
+      "Home, Bookings and Staff no longer wait for a second round of loading before showing your gear, bookings and people."
+    ],
+    "pr": 714,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-27",
     "title": "Fix On shift now list",
     "type": "fixes",
     "summary": "The Staff page no longer shows people as on shift before their shift starts.",

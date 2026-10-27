@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import type { SortingState } from "@tanstack/react-table";
 import type { Asset } from "../columns";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";

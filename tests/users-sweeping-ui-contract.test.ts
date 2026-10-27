@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Users sweeping ownership contracts", () => {
   it("shows canonical roles and accessible sort state in the roster", () => {
-    const page = source("src/app/(app)/staff/page.tsx");
+    const page = source("src/app/(app)/staff/StaffPageClient.tsx");
     const row = source("src/app/(app)/staff/UserRow.tsx");
     const badge = source("src/app/(app)/staff/RoleBadge.tsx");
 
@@ -15,13 +15,13 @@ describe("Users sweeping ownership contracts", () => {
     expect(badge).toContain('role === "ADMIN" ? "STAFF"');
     expect(badge).toContain("publicDirectoryRole");
     expect(page).toContain('aria-sort={isAsc ? "ascending" : isDesc ? "descending" : "none"}');
-    expect(page).toContain('<AnimatePresence initial={false} mode="popLayout">');
+    expect(page).toContain("<IconSwap swapKey=");
     expect(page).toContain('<ArrowUp className="size-4 text-foreground"');
     expect(page).toContain('opacity-20 transition-opacity group-hover:opacity-50');
   });
 
   it("keeps the desktop roster compact and removes repetitive columns", () => {
-    const page = source("src/app/(app)/staff/page.tsx");
+    const page = source("src/app/(app)/staff/StaffPageClient.tsx");
     const row = source("src/app/(app)/staff/UserRow.tsx");
     const rail = source("src/components/OperationalStatusRail.tsx");
 
@@ -38,13 +38,13 @@ describe("Users sweeping ownership contracts", () => {
     expect(row).toContain("focus-visible:ring-[3px]");
     expect(row).toContain('bg-muted-foreground/40');
     expect(row).toContain('border border-muted-foreground/50');
-    expect(row).toContain('<time dateTime={lastActiveAt} className="tabular-nums">');
+    expect(row).toContain('<time dateTime={lastActiveAt} className="tabular-nums" suppressHydrationWarning>');
     expect(rail).toContain('detailsLabel = "Details"');
     expect(rail).toContain('`Hide ${detailsLabel.toLowerCase()}`');
   });
 
   it("derives student roster titles from primary area and keeps roster cleanup staff-only", () => {
-    const page = source("src/app/(app)/staff/page.tsx");
+    const page = source("src/app/(app)/staff/StaffPageClient.tsx");
     const row = source("src/app/(app)/staff/UserRow.tsx");
     const types = source("src/app/(app)/staff/types.ts");
 
@@ -57,7 +57,7 @@ describe("Users sweeping ownership contracts", () => {
   });
 
   it("uses the concise Add users command and omits the roster subtitle", () => {
-    const page = source("src/app/(app)/staff/page.tsx");
+    const page = source("src/app/(app)/staff/StaffPageClient.tsx");
     const dialog = source("src/components/onboarding/OnboardingDialog.tsx");
 
     expect(page).toContain('<PageHeader title={isCollaboratorDirectory ? "People" : "Staff"} className="mb-5">');
@@ -68,7 +68,7 @@ describe("Users sweeping ownership contracts", () => {
   });
 
   it("keeps onboarding direct and viewport-safe", () => {
-    const users = source("src/app/(app)/staff/page.tsx");
+    const users = source("src/app/(app)/staff/StaffPageClient.tsx");
     const status = source("src/app/(app)/staff/onboarding-status/page.tsx");
     const dialog = source("src/components/onboarding/OnboardingDialog.tsx");
 

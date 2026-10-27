@@ -56,7 +56,7 @@ describe("onboarding status page source wiring", () => {
   });
 
   it("links the status page from onboarding entry points", () => {
-    const users = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
+    const users = readFileSync("src/app/(app)/staff/StaffPageClient.tsx", "utf8");
     const allowedEmails = readFileSync("src/app/(app)/settings/allowed-emails/page.tsx", "utf8");
     const dialog = readFileSync("src/components/onboarding/OnboardingDialog.tsx", "utf8");
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { sanitizeText } from "./sanitize";
 import { isSportCode, normalizeSportCode } from "./sports";
 import { normalizeBookingTitle } from "./title-normalization";
-import { nullableProfilePhoneSchema } from "./profile-phone";
+import { nullableProfilePhoneSchema } from "./profile-phone-schema";
 import {
   MAX_BULK_QUANTITY_PER_LINE,
   MAX_BULK_SKU_LINES_PER_REQUEST,

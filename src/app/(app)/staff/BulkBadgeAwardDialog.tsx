@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ComponentType } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Award, BadgeCheck, Flame, Handshake, PackageCheck, ShieldCheck, Trophy, UserCheck, UsersRound } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {

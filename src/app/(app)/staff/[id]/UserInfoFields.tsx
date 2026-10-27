@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import type { UserDetail } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

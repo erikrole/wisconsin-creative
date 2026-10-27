@@ -74,7 +74,8 @@ describe("dashboard fast-count trust boundary", () => {
 
     const page = readFileSync("src/app/(app)/page.tsx", "utf8");
     expect(page).not.toContain("DASHBOARD_STATS_KEY");
-    expect(page).not.toContain("/api/dashboard/stats");
+    // The server render may read the counts for the first paint, but never seeds a payload with a count failure.
+    expect(page).toContain("!hasDashboardCountFailure(failures(stats.json))");
   });
 
   it("preserves trusted cached counts through invalidation failure, then recovers", async () => {

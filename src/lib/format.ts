@@ -109,7 +109,14 @@ export function formatDateShort(iso: string, allDay = false) {
   return calendarDate(iso, allDay).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    // All-day dates are already a local calendar day; real instants read in Central time.
+    ...(allDay ? {} : { timeZone: INSTITUTION_TZ }),
   });
+}
+
+/** "Mar 11" on the Central calendar, so the server (UTC) and the browser render the same text. */
+export function formatDateShortCentral(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: INSTITUTION_TZ });
 }
 
 /** "3:00 PM" */
@@ -117,6 +124,7 @@ export function formatTimeShort(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: INSTITUTION_TZ,
   });
 }
 
@@ -126,7 +134,7 @@ export function formatTimeShort(iso: string) {
  * runtime's, because the server renders in UTC and would otherwise file tonight's
  * 7 PM event under tomorrow. Client-safe, so it does not read `env`.
  */
-const INSTITUTION_TZ = "America/Chicago";
+export const INSTITUTION_TZ = "America/Chicago";
 const dayFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: INSTITUTION_TZ,
   year: "numeric",
@@ -137,6 +145,9 @@ function institutionDayNumber(date: Date): number {
   const parts = dayFormatter.formatToParts(date);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
   return Math.floor(Date.UTC(get("year"), get("month") - 1, get("day")) / 86_400_000);
+}
+function institutionYear(date: Date): number {
+  return Number(dayFormatter.formatToParts(date).find((p) => p.type === "year")?.value);
 }
 /** `YYYY-MM-DD` of an instant on the Central calendar, for file names and "today" keys. */
 export function institutionDateKey(date: Date = new Date()): string {
@@ -172,7 +183,8 @@ export function formatOperationalDateTime(
     dayLabel = date.toLocaleDateString("en-US", {
       month: options?.month ?? "long",
       day: "numeric",
-      ...(date.getFullYear() !== now.getFullYear() && { year: "numeric" }),
+      timeZone: INSTITUTION_TZ,
+      ...(institutionYear(date) !== institutionYear(now) && { year: "numeric" }),
     });
   }
 

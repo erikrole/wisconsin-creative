@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, ChevronDown, PackageCheck } from "lucide-react";
 import BookingDetailsSheet from "@/components/BookingDetailsSheet";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { shortcutContext } from "@/lib/a11y-resilience";
 

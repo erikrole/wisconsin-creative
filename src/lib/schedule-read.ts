@@ -64,7 +64,7 @@ export function buildScheduleUrls(
   timelineWindow?: ScheduleTimelineWindow | null,
 ) {
   const evParams = new URLSearchParams({ limit: "200" });
-  const sgParams = new URLSearchParams({ limit: "200" });
+  const sgParams = new URLSearchParams({ limit: "200", slim: "1" });
   const healthParams = new URLSearchParams();
   const automationParams = new URLSearchParams();
 
@@ -286,7 +286,7 @@ export function listKeysetEventsUrl(
 }
 
 function listGroupsUrl(sportFilter: string) {
-  const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE), slim: "1" });
   if (sportFilter) params.set("sportCode", sportFilter);
   return `/api/shift-groups?${params}`;
 }

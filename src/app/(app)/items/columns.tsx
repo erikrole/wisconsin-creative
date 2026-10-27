@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef, type RowData } from "@tanstack/react-table";
-import { AnimatePresence, motion } from "motion/react";
+import { IconSwap } from "@/components/ui/icon-swap";
 
 declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -296,15 +296,7 @@ export function getColumns(meta: ColumnMeta): ColumnDef<Asset>[] {
           aria-label={asset.isFavorited ? "Remove from favorites" : "Add to favorites"}
           aria-pressed={!!asset.isFavorited}
         >
-          <AnimatePresence initial={false} mode="popLayout">
-            <motion.span
-              key={asset.isFavorited ? "favorited" : "not-favorited"}
-              initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-              transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-              className="inline-flex items-center justify-center"
-            >
+          <IconSwap swapKey={asset.isFavorited ? "favorited" : "not-favorited"}>
               <Star
                 className={`size-4 ${
                   asset.isFavorited
@@ -313,8 +305,7 @@ export function getColumns(meta: ColumnMeta): ColumnDef<Asset>[] {
                 }`}
                 aria-hidden="true"
               />
-            </motion.span>
-          </AnimatePresence>
+            </IconSwap>
         </Button>
       );
     },

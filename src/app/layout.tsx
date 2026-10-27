@@ -3,12 +3,23 @@ import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import localFont from "next/font/local";
 import "@fontsource/barlow/400.css";
 import "@fontsource/barlow/500.css";
 import "@fontsource/barlow/600.css";
 import "@fontsource/barlow/700.css";
 import "./globals.css";
+
+// Same face as geist/font/mono, but not preloaded: the 70 KB file competed with the page's JavaScript on every
+// load, and monospace text is rare. It downloads when text first uses it.
+const GeistMono = localFont({
+  src: "../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2",
+  variable: "--font-geist-mono",
+  preload: false,
+  adjustFontFallback: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Roboto Mono", "Menlo", "Monaco", "Liberation Mono", "DejaVu Sans Mono", "Courier New", "monospace"],
+  weight: "100 900",
+});
 
 export const metadata: Metadata = {
   title: "Wisconsin Creative",

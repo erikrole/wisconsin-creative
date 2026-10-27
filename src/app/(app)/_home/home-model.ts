@@ -1,7 +1,7 @@
 /* Home: pure view-model builders. Everything the page shows is derived here so
    the dev preview and the live page render the same rows from the same rules. */
 
-import { formatCountdownCompact, formatDueLabel, formatOperationalDateTime, institutionDayOffset, isDueToday } from "@/lib/format";
+import { formatCountdownCompact, formatDueLabel, formatOperationalDateTime, institutionDateKey, institutionDayOffset, isDueToday } from "@/lib/format";
 import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
 import type { ShiftTradeAction } from "@/lib/shift-trade-actions";
 import { AREA_LABELS } from "@/types/areas";
@@ -133,14 +133,14 @@ export function isTeamRole(role: HomeRole | null) {
 }
 
 export function greeting(now: Date, name: string | null | undefined) {
-  const hour = now.getHours();
+  const hour = chicagoHour(now.toISOString());
   const part = hour < 5 ? "evening" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
   const first = name?.trim().split(/\s+/)[0];
   return first ? `Good ${part}, ${first}` : `Good ${part}`;
 }
 
 export function todayLabel(now: Date) {
-  return now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Chicago" });
 }
 
 function plural(count: number, one: string, many = `${one}s`) {
@@ -449,23 +449,23 @@ export function buildUpNext(data: DashboardData, now: Date): UpNextItem[] {
 }
 
 export function formatClock(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" });
 }
 
 /** Group key and heading for an Up next row: Today, Tomorrow, or "Fri, Oct 24". */
 export function dayHeading(iso: string, now: Date, allDay = false) {
-  const d = allDay ? utcCalendarDate(iso) : new Date(iso);
-  const diffDays = allDay
-    ? Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000)
-    : institutionDayOffset(d, now);
+  const d = new Date(iso);
+  let diffDays: number;
+  if (allDay) {
+    // An all-day date is the UTC calendar day it is stored as, compared with today's Central date.
+    const [year, month, day] = institutionDateKey(now).split("-").map(Number) as [number, number, number];
+    diffDays = Math.floor((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(year, month - 1, day)) / 86_400_000);
+  } else {
+    diffDays = institutionDayOffset(d, now);
+  }
   if (diffDays <= 0) return "Today";
   if (diffDays === 1) return "Tomorrow";
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function utcCalendarDate(iso: string) {
-  const d = new Date(iso);
-  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: allDay ? "UTC" : "America/Chicago" });
 }
 
 /* ── Gear and team ──────────────────────────────────────── */
@@ -476,9 +476,9 @@ export function shortDue(endsAt: string, now: Date) {
   if (end.getTime() <= now.getTime()) return formatCountdownCompact(endsAt, now);
   if (isDueToday(endsAt, now)) return `Due ${formatClock(endsAt)}`;
   if (end.getTime() - now.getTime() < 6 * 86_400_000) {
-    return `Due ${end.toLocaleDateString("en-US", { weekday: "short" })}`;
+    return `Due ${end.toLocaleDateString("en-US", { weekday: "short", timeZone: "America/Chicago" })}`;
   }
-  return `Due ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  return `Due ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Chicago" })}`;
 }
 
 export function gearRows(bookings: BookingSummary[], now: Date, showPerson: boolean): GearRow[] {

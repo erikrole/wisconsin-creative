@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { BarChart3Icon, ChevronDownIcon, CircleHelpIcon, ListChecksIcon, LockIcon, SearchIcon, SlidersHorizontalIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";

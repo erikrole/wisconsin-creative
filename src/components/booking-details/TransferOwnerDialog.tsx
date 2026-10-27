@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
-import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-snapshot-header";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { TRANSFER_DIALOG_CLASS, TRANSFER_HEADER_CLASS, TransferPicker, useTransferRoster } from "./TransferPicker";

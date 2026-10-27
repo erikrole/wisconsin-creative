@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Archive, ArchiveRestore, Pencil, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { AlertCircle, CalendarPlusIcon, CheckIcon, PencilIcon, PlusIcon, Trash2, XIcon } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

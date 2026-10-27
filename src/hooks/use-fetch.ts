@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { takeSeeded } from "@/components/SeedFetchCache";
+import { toast } from "@/lib/toast";
 import {
   classifyError,
   handleAuthRedirect,
@@ -69,6 +70,9 @@ async function fetchJson(url: string, returnTo?: string, signal?: AbortSignal): 
 export function useFetch<T = unknown>(options: UseFetchOptions<T>): UseFetchResult<T> {
   const { url, returnTo, refetchOnFocus = true, enabled = true, keepPreviousData = false, refetchOnMount } = options;
   const { transform } = options;
+  // A response the server just read replaces the mount refetch, so the page makes one read, not two.
+  const queryClient = useQueryClient();
+  const [seededAtMount] = useState(() => takeSeeded(queryClient, url));
 
   const {
     data,
@@ -86,7 +90,7 @@ export function useFetch<T = unknown>(options: UseFetchOptions<T>): UseFetchResu
       return (json.data ?? json) as T;
     },
     refetchOnWindowFocus: refetchOnFocus,
-    refetchOnMount,
+    refetchOnMount: seededAtMount ? false : refetchOnMount,
     enabled,
     placeholderData: keepPreviousData ? (previousData) => previousData : undefined,
   });

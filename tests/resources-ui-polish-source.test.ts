@@ -68,9 +68,7 @@ describe("Resources interaction-detail contracts", () => {
       "src/components/resources/MarkdownReader.tsx",
     ]) {
       const component = source(path);
-      expect(component).toContain('<AnimatePresence initial={false} mode="popLayout">');
-      expect(component).toContain('initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}');
-      expect(component).toContain('transition={{ type: "spring", duration: 0.3, bounce: 0 }}');
+      expect(component).toContain("<IconSwap swapKey=");
     }
   });
 

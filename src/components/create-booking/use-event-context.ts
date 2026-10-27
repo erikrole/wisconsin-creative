@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { eventBookingTitle } from "@/lib/booking-display-title";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   toLocalDateTimeValue,
   type CalendarEvent,

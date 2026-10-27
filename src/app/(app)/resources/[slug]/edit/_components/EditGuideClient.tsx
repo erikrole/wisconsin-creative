@@ -29,7 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useFetch } from "@/hooks/use-fetch";
 import { ResourceType, Role, ShiftArea } from "@/lib/client-enums";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";

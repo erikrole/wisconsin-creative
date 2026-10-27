@@ -2,10 +2,8 @@
 
 import * as React from "react"
 import { Tabs as TabsPrimitive } from "radix-ui"
-import { motion, useReducedMotion } from "motion/react"
 
 import { cn } from "@/lib/utils"
-import { springTransition } from "@/components/ui/motion"
 
 function Tabs({
   className,
@@ -26,7 +24,6 @@ function TabsList({
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
   const listRef = React.useRef<HTMLDivElement>(null)
-  const reduced = useReducedMotion()
   const [bar, setBar] = React.useState<{ left: number; width: number } | null>(
     null,
   )
@@ -78,13 +75,11 @@ function TabsList({
     >
       {children}
       {bar ? (
-        <motion.span
+        <span
           aria-hidden
           data-slot="tabs-indicator"
-          className="pointer-events-none absolute -bottom-px left-0 h-0.5 bg-primary"
-          initial={false}
-          animate={{ x: bar.left, width: bar.width }}
-          transition={springTransition(reduced)}
+          className="pointer-events-none absolute -bottom-px left-0 h-0.5 bg-primary transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+          style={{ transform: `translateX(${bar.left}px)`, width: bar.width }}
         />
       ) : null}
     </TabsPrimitive.List>

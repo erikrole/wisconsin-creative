@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -83,15 +82,11 @@ export function GearPicksBanner() {
  * picks query), so it grows open instead of shoving the page down in one jump.
  */
 function Reveal({ children }: { children: React.ReactNode }) {
-  const reduced = useReducedMotion();
   return (
-    <motion.div
-      initial={reduced ? false : { height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-      className="overflow-hidden"
-    >
-      <div className="pb-4">{children}</div>
-    </motion.div>
+    <div className="wc-reveal">
+      <div className="min-h-0 overflow-hidden">
+        <div className="pb-4">{children}</div>
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { m, useReducedMotion } from "motion/react";
 import { UserAvatar } from "@/components/UserAvatar";
 import type { WrappedCard, WrappedTone } from "@/lib/wrapped/recap";
 import { formatCount } from "@/lib/wrapped/format";
@@ -43,14 +43,14 @@ function useRollIn(target: number | undefined, durationMs = 900): number | undef
 function Rise({ delay = 0, children, className }: { delay?: number; children: React.ReactNode; className?: string }) {
   const reduced = useReducedMotion();
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={reduced ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : 0.45, delay: reduced ? 0 : delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -97,7 +97,7 @@ export function WrappedCardView({
       data-wrapped-card={card.id}
     >
       {/* One soft shape per card: enough to feel like a moment, not a poster. */}
-      <motion.div
+      <m.div
         aria-hidden="true"
         className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full opacity-40 blur-2xl"
         style={{ background: tone.glow }}
@@ -105,7 +105,7 @@ export function WrappedCardView({
         animate={{ scale: 1, opacity: 0.4 }}
         transition={{ duration: reduced ? 0 : 1.1, ease: [0.22, 1, 0.36, 1] }}
       />
-      <motion.div
+      <m.div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-32 -left-20 size-80 rounded-full opacity-25 blur-3xl"
         style={{ background: tone.glow }}
@@ -186,7 +186,7 @@ export function WrappedCardView({
                         </div>
                         {item.share !== undefined ? (
                           <div className="mt-1.5 h-2 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.22)" }} aria-hidden="true">
-                            <motion.div
+                            <m.div
                               className="h-full rounded-full"
                               style={{ background: tone.fg }}
                               initial={reduced ? false : { width: 0 }}

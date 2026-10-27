@@ -5,7 +5,8 @@ import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { createAuditEntry } from "@/lib/audit";
 import { normalizeWiscardNumber } from "@/lib/validation";
-import { normalizeProfilePhone, nullableProfilePhoneSchema, phoneAuditValue } from "@/lib/profile-phone";
+import { normalizeProfilePhone, phoneAuditValue } from "@/lib/profile-phone";
+import { nullableProfilePhoneSchema } from "@/lib/profile-phone-schema";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
 
 const putSchema = z.object({

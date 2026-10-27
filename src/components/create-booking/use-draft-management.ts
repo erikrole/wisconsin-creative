@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { toLocalDateTimeValue } from "../booking-list/types";
 import type { BulkSelection } from "@/components/EquipmentPicker";
 import type { BookingListConfig, CalendarEvent } from "../booking-list/types";

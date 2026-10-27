@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export const FOOTBALL_SPORT_CODE = "FB";
 
 export const FOOTBALL_GAMEDAY_KIT_ROLES = [
@@ -62,17 +60,3 @@ export function callingKitLabel(kit: { name: string; gamedayRole?: string | null
   if (kit.contents !== undefined) extras.push(kit.contents > 0 ? String(kit.contents) : "empty");
   return extras.length > 0 ? `${title} · ${extras.join(" · ")}` : title;
 }
-
-export const footballGamedayKitRoleSchema = z.enum(FOOTBALL_GAMEDAY_KIT_ROLES);
-
-export const optionalFootballGamedayKitRoleSchema = z.preprocess((value) => {
-  if (value === undefined || value === null) return undefined;
-  if (typeof value === "string" && value.trim() === "") return undefined;
-  return value;
-}, footballGamedayKitRoleSchema.optional());
-
-export const nullableFootballGamedayKitRoleSchema = z.preprocess((value) => {
-  if (value === undefined || value === null) return null;
-  if (typeof value === "string" && value.trim() === "") return null;
-  return value;
-}, footballGamedayKitRoleSchema.nullable());

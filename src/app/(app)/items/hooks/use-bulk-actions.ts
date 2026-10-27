@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { isBulkRowId } from "../lib/item-href";
 

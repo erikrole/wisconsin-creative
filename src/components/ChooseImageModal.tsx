@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { ExternalLinkIcon, ImageIcon, SearchIcon } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { Button } from "@/components/ui/button";
 import {

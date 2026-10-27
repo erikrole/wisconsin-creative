@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { classifyError, handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { collectLabelCatalog, type LabelCatalogPage } from "./label-catalog";
 

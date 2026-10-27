@@ -1,4 +1,5 @@
 import { ShiftArea, ShiftAssignmentSource, ShiftWorkerType } from "@prisma/client";
+import { MAX_ASSIGN_MANY, MAX_SLOTS_PER_AREA_CLASS } from "@/lib/working-schedule-limits";
 import { z } from "zod";
 import { CREW_HALVES, CREW_LABEL_MAX_LENGTH, normalizeCrewLabel } from "@/lib/crew-label";
 
@@ -295,11 +296,7 @@ export type WorkingScheduleSportTemplate = {
   }>;
 };
 
-/** Most open slots one multi-assign save can fill. */
-export const MAX_ASSIGN_MANY = 20;
-
-/** Most positions one area/class pair can hold in a single crew-size edit. */
-export const MAX_SLOTS_PER_AREA_CLASS = 12;
+export { MAX_ASSIGN_MANY, MAX_SLOTS_PER_AREA_CLASS };
 
 const slotCountTargetSchema = z.object({
   area: z.nativeEnum(ShiftArea),

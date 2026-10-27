@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import WelcomePage from "@/app/(app)/welcome/page";
 import { WelcomeDone } from "@/app/(app)/welcome/WelcomeDone";
 import { AvailabilitySetup } from "@/app/(app)/welcome/availability/AvailabilitySetup";

@@ -2,6 +2,7 @@
 
 import { formatDuration, getStatusVisual, type BookingItem } from "./types";
 import { cn } from "@/lib/utils";
+import { INSTITUTION_TZ, formatDateShortCentral } from "@/lib/format";
 import { BookingContextMenuWrapper, BookingOverflowMenu, type BookingMenuProps } from "./BookingContextMenu";
 import { ItemThumbnailStack } from "@/components/ItemThumbnailStack";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -13,12 +14,11 @@ import { PackageOpen } from "lucide-react";
 /* ───── Helpers ───── */
 
 function formatCardDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return formatDateShortCentral(iso);
 }
 
 function formatCardTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: INSTITUTION_TZ }).toLowerCase();
 }
 
 /* ───── Gear thumbnail stack ───── */

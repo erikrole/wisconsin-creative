@@ -5,7 +5,7 @@ import { applyPrintCommand, newPrintJob, remainingLabels, type PrintJob } from "
 import { Button } from "@/components/ui/button";
 import { Suspense, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import LabelsHelper from "@/app/(app)/labels/LabelsHelper";
 
 const asset = (id: string, assetTag: string, brand: string, model: string, category: string, location = "Camp Randall") => ({

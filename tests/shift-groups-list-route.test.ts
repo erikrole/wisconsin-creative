@@ -79,6 +79,23 @@ describe("GET /api/shift-groups", () => {
     expect(mocks.db.shiftGroup.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ where: {} }));
   });
 
+  it("keeps the whole group by default and drops bookkeeping only when the web asks for slim", async () => {
+    const full = group({ lastPublishedSnapshot: { big: true }, publishedAt: new Date(), createdAt: new Date() });
+    full.shifts[0]!.assignments[0] = { ...full.shifts[0]!.assignments[0]!, source: "MANUAL", createdAt: new Date() } as never;
+    mocks.db.shiftGroup.findMany.mockResolvedValue([full]);
+
+    const whole = (await (await list()).json()).data[0];
+    expect(whole.lastPublishedSnapshot).toEqual({ big: true });
+    expect(whole.shifts[0].assignments[0]).toMatchObject({ source: "MANUAL", userId: "ada" });
+
+    const slim = (await (await list("?slim=1")).json()).data[0];
+    expect(slim).not.toHaveProperty("lastPublishedSnapshot");
+    expect(slim).not.toHaveProperty("createdAt");
+    expect(slim.shifts[0].assignments[0]).not.toHaveProperty("source");
+    expect(slim).toMatchObject({ id: "g1", event: { id: "e1" }, coverage: { total: 2, filled: 1 }, publication: { status: "published" } });
+    expect(slim.shifts[0].assignments[0]).toMatchObject({ id: "a1", callNote: "Bring the gimbal", activeTrade: { id: "t1" } });
+  });
+
   it("adds coverage, board trades and only the viewer's own pending requests", async () => {
     const { data, total } = await (await list()).json();
 

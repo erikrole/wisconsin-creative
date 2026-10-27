@@ -54,7 +54,7 @@ import { badgeRarityVariant, getBadgeRarity, isHiddenUntilEarnedBadge, isPrivate
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { formatDateFull } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 type UserBadge = {
   /** The `BadgeDefinition` id. Not the award row -- see `awardId`. */

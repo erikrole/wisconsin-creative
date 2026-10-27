@@ -5,7 +5,7 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { getProfileCompletion, isCampusLoginEmail } from "@/lib/profile-completion";
-import { profilePhoneSchema } from "@/lib/profile-phone";
+import { profilePhoneSchema } from "@/lib/profile-phone-schema";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 import { onboardingGroupSchemas, onboardingSaveSchema } from "@/lib/onboarding-save";

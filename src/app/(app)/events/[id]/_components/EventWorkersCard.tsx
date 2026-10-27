@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

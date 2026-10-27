@@ -6,27 +6,35 @@ import { CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon } 
 import AppSidebar from "./Sidebar";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
 import { AppTopBar } from "@/components/AppTopBar";
-import { CommandPalette } from "@/components/CommandPalette";
 import { MobileTabBar, type MobileTabItem } from "@/components/MobileTabBar";
 import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
 import { useOnline } from "@/hooks/use-browser-state";
+import { runWhenIdle, useIdleReady } from "@/hooks/use-idle-ready";
 import { clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
-import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
+import { ProfileCompletionLoader } from "@/components/profile-completion/ProfileCompletionLoader";
+import { peekSeededKey } from "@/components/SeedFetchCache";
 import { dashboardStatsQueryOptions, dashboardStatsQueryKey, useDashboardStats } from "@/hooks/use-dashboard-data";
 import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
-import {
-  BadgeEarnedCelebration,
-  type EarnedBadgeReward,
-} from "@/components/badges/BadgeEarnedCelebration";
+import dynamic from "next/dynamic";
+import type { EarnedBadgeReward } from "@/components/badges/BadgeEarnedCelebration";
 import { RolePreviewBanner } from "@/components/RolePreviewControl";
+
+const BadgeEarnedCelebration = dynamic(
+  () => import("@/components/badges/BadgeEarnedCelebration").then((m) => m.BadgeEarnedCelebration),
+  { ssr: false },
+);
+const CommandPalette = dynamic(
+  () => import("@/components/CommandPalette").then((m) => m.CommandPalette),
+  { ssr: false },
+);
 
 type NotificationCountResponse = {
   unreadCount?: unknown;
@@ -244,7 +252,10 @@ export default function AppShell({
       await loadEarnedBadges();
     }
 
-    void refreshBadgeRewards().then(startSteadyPolling);
+    // Badges are ambient, so the first read waits for the page's own requests to settle.
+    const cancelFirstRead = runWhenIdle(() => {
+      if (!stopped) void refreshBadgeRewards().then(startSteadyPolling);
+    });
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
       // Coming back during the day refreshes immediately. Quiet hours stay paused
@@ -259,6 +270,7 @@ export default function AppShell({
 
     return () => {
       stopped = true;
+      cancelFirstRead();
       window.clearTimeout(pollTimer);
       controller.abort();
       document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -270,9 +282,14 @@ export default function AppShell({
   // Navigation shares the same fresh stats read as Home; simultaneous consumers
   // and booking invalidations join one request instead of hitting Neon twice.
   const badgeUserId = user?.id;
+  // Home's server render already read these counts, so the first visit does not read them again.
+  const firstStatsRead = useRef(true);
   useEffect(() => {
     if (!badgeUserId || isRestoring) return;
-    const controller = new AbortController();
+    if (firstStatsRead.current) {
+      firstStatsRead.current = false;
+      if (peekSeededKey(queryClient, dashboardStatsQueryKey(badgeUserId))) return;
+    }
     void queryClient.fetchQuery({
       ...dashboardStatsQueryOptions(badgeUserId),
       // Mutations on another route may have changed custody since the last read.
@@ -281,6 +298,12 @@ export default function AppShell({
     }).catch(() => {
       // The shared query retains the last trusted counts on failure.
     });
+  }, [pathname, badgeUserId, isRestoring, queryClient]);
+
+  const idleReady = useIdleReady();
+  useEffect(() => {
+    if (!badgeUserId || isRestoring || !idleReady) return;
+    const controller = new AbortController();
     async function loadNotifications() {
       try {
         const response = await fetch("/api/notifications/count", { signal: controller.signal });
@@ -295,7 +318,7 @@ export default function AppShell({
     }
     void loadNotifications();
     return () => { controller.abort(); };
-  }, [pathname, badgeUserId, isRestoring, queryClient]);
+  }, [pathname, badgeUserId, isRestoring, idleReady]);
 
   useEffect(() => {
     if (!badgeUserId) return;
@@ -323,6 +346,9 @@ export default function AppShell({
 
   // Command palette state
   const [cmdOpen, setCmdOpen] = useState(false);
+  // The palette's code loads on first open, then stays mounted for the exit animation.
+  const [cmdLoaded, setCmdLoaded] = useState(false);
+  if (cmdOpen && !cmdLoaded) setCmdLoaded(true);
 
   useEffect(() => {
     if (isCollaborator) return;
@@ -373,7 +399,7 @@ export default function AppShell({
       <a href="#main-content" className="absolute -top-[100px] left-4 z-[var(--z-sidebar)] px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-[var(--radius)] font-[var(--weight-semibold)] text-[var(--text-base)] no-underline transition-[top] duration-200 focus:top-4">Skip to content</a>
 
       {/* Command palette */}
-      {pathname !== "/welcome" && <ProfileCompletionWizard autoOpen={pathname !== "/"} />}
+      {pathname !== "/welcome" && <ProfileCompletionLoader autoOpen={pathname !== "/"} />}
 
       {earnedBadgeQueue[0] && (
         <BadgeEarnedCelebration
@@ -385,7 +411,7 @@ export default function AppShell({
       )}
 
 
-      {!isCollaborator && (
+      {!isCollaborator && (cmdOpen || cmdLoaded) && (
         <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} user={user} pathname={pathname} />
       )}
 

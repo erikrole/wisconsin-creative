@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Plus, Plane, Trash2, AlertCircle } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

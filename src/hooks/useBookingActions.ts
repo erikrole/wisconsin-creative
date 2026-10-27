@@ -3,11 +3,11 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { getBookingCancelCopy } from "@/hooks/booking-action-copy";
-import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-snapshot-header";
 import type { BookingDetail } from "@/components/booking-details/types";
 
 type ActionResult = { ok: boolean; error?: string };

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, SearchIcon, RotateCcw, SlidersHorizontalIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   ReportDataRegion,
   ReportEmptyState,

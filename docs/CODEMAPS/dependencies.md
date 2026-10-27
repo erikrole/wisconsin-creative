@@ -45,7 +45,6 @@
 | `remark-gfm` | `^4.0.1` |
 | `resend` | `^6.34.1` |
 | `sharp` | `0.35.5` |
-| `sonner` | `^2.0.8` |
 | `tailwind-merge` | `^3.7.0` |
 | `tailwindcss` | `^4.2.1` |
 | `tw-animate-css` | `^1.4.0` |
@@ -118,6 +117,7 @@
 - `lint`: `eslint .`
 - `lint:ci`: `eslint . --max-warnings=121`
 - `lint:summary`: `node scripts/lint-summary.mjs`
+- `measure:bundle`: `node scripts/measure-bundle.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
 - `preview:attach`: `node scripts/preview.mjs attach`

@@ -80,7 +80,7 @@ describe("bulk schedule assignment contracts", () => {
     // Gated on the staff/admin branch, not rendered for students.
     expect(schedulePage).toContain("AutoAssignDialog");
     expect(schedulePage).toContain("Auto assign");
-    expect(schedulePage).toContain("{isStaff && (\n        <AutoAssignDialog");
+    expect(schedulePage).toContain("{isStaff && everAutoAssign && (\n        <AutoAssignDialog");
     expect(schedulePage).toContain("initialSportCodes={data.filters.sportFilter");
   });
 

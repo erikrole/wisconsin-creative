@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { sportLabel } from "@/lib/sports";
 import { SPORT_CODES } from "@/lib/sports";
 import type { UserDetail, Location, Role, StudentYear } from "../types";

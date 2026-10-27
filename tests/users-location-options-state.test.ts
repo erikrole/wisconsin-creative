@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("users location options state", () => {
   it("does not silently treat failed form-options locations as no-location user data", () => {
-    const source = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
+    const source = readFileSync("src/app/(app)/staff/StaffPageClient.tsx", "utf8");
 
     expect(source).toContain("error: formOptionsError");
     expect(source).toContain("reload: reloadFormOptions");

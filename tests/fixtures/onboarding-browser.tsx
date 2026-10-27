@@ -6,7 +6,7 @@ import { ProfileCompletionWizard } from "@/components/profile-completion/Profile
 import { AvatarCropDialog } from "@/app/(app)/staff/[id]/AvatarCropDialog";
 import { useGettingStartedState } from "@/hooks/use-getting-started";
 import { uploadAvatarPhoto } from "@/lib/avatar-upload";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 function Checklist() {
   const { state, update, error } = useGettingStartedState(true);

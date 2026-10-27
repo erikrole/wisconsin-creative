@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIdleReady } from "@/hooks/use-idle-ready";
 import { AnnouncementDialog } from "@/components/announcements/AnnouncementDialog";
 import type { ActiveAnnouncement } from "@/lib/announcements";
 
@@ -19,10 +20,11 @@ const RECHECK_AFTER_MS = 30 * 60_000;
 export function AnnouncementSplash({ enabled }: { enabled: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const idleReady = useIdleReady();
 
   const { data } = useQuery<ActiveAnnouncement | null>({
     queryKey: QUERY_KEY,
-    enabled,
+    enabled: enabled && idleReady,
     staleTime: RECHECK_AFTER_MS,
     refetchOnWindowFocus: true,
     refetchOnReconnect: false,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
 import { MegaphoneIcon, RefreshCwIcon } from "lucide-react";
@@ -11,8 +13,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { cn } from "@/lib/utils";
-import { ComposeBlastDialog } from "./_components/ComposeBlastDialog";
 import { SEVERITY_VARIANT, SEVERITY_LABEL, type BlastSeverity } from "./_severity";
+
+const ComposeBlastDialog = dynamic(() => import("./_components/ComposeBlastDialog").then((mod) => mod.ComposeBlastDialog));
 
 type BlastRow = {
   id: string;
@@ -40,6 +43,7 @@ function relativeTime(iso: string): string {
 
 export default function BlastsPage() {
   const [composeOpen, setComposeOpen] = useState(false);
+  const everCompose = useEverOpen(composeOpen);
   const { data, loading, refreshing, error, reload } = useFetch<BlastRow[]>({
     url: "/api/blasts?limit=50",
     returnTo: "/blasts",
@@ -154,7 +158,9 @@ export default function BlastsPage() {
         </div>
       )}
 
-      <ComposeBlastDialog open={composeOpen} onOpenChange={setComposeOpen} onSent={reload} />
+      {everCompose && (
+        <ComposeBlastDialog open={composeOpen} onOpenChange={setComposeOpen} onSent={reload} />
+      )}
     </>
   );
 }

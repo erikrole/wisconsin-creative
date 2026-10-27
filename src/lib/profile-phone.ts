@@ -1,25 +1,10 @@
-import { z } from "zod";
-
-export const profilePhoneSchema = z.string()
-  .trim()
-  .max(18)
-  .refine(
-    (value) => normalizedPhoneDigits(value).length === 10,
-    "Enter a 10-digit phone number",
-  );
-
-export const nullableProfilePhoneSchema = z.preprocess(
-  (value) => typeof value === "string" && value.trim() === "" ? null : value,
-  profilePhoneSchema.nullable().optional(),
-);
-
 export function normalizeProfilePhone(value: string | null | undefined): string | null {
   if (value == null) return null;
   const digits = normalizedPhoneDigits(value);
   return digits.length === 10 ? formatPhoneDigits(digits) : null;
 }
 
-function normalizedPhoneDigits(value: string): string {
+export function normalizedPhoneDigits(value: string): string {
   const digits = value.replace(/\D/g, "");
   return digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
 }

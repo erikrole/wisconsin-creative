@@ -10,6 +10,13 @@ import { assignment, event, groupByDay } from "./fixtures/schedule-entries";
 // The whole Schedule list rendered from props. Scroll and layout behavior is
 // proven in Chromium by tests/browser/schedule-list.spec.ts.
 
+// The list mounts the table at desktop widths and the card list below, never both.
+const viewport = vi.hoisted(() => ({ desktop: true }));
+vi.mock("@/app/(app)/schedule/_components/ListViewTimeline", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/(app)/schedule/_components/ListViewTimeline")>()),
+  useDesktopScheduleList: () => viewport.desktop,
+}));
+
 type Props = ComponentProps<typeof ListView>;
 
 function render(entries: CalendarEntry[], overrides: Partial<Props> = {}) {
@@ -25,10 +32,14 @@ function render(entries: CalendarEntry[], overrides: Partial<Props> = {}) {
     expandedRowId: null, setExpandedRowId: () => undefined, onSelectGroup: () => undefined,
     ...overrides,
   };
-  return renderToStaticMarkup(
-    createElement(QueryClientProvider, { client: new QueryClient() },
-      createElement(TooltipProvider, null, createElement(ListView, props))),
-  );
+  // Both layouts, table first, so one assertion can read either.
+  return [true, false].map((desktop) => {
+    viewport.desktop = desktop;
+    return renderToStaticMarkup(
+      createElement(QueryClientProvider, { client: new QueryClient() },
+        createElement(TooltipProvider, null, createElement(ListView, props))),
+    );
+  }).join("");
 }
 
 /** Visible text in document order, so assertions read like the screen. */

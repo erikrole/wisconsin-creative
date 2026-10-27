@@ -26,22 +26,18 @@ import {
 } from "@/components/ui/sheet";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useScheduleData } from "@/hooks/use-schedule-data";
+import { useEverOpen } from "@/hooks/use-ever-open";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { preloadScheduleView } from "./_components/schedule-view-preload";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { ListView } from "./_components/ListView";
-import { NewEventSheet } from "./_components/NewEventSheet";
 import { ScheduleReadiness } from "./_components/ScheduleReadiness";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { CantWorkDialog } from "@/components/availability/CantWorkDialog";
-import { CollaboratorSchedule } from "./_components/CollaboratorSchedule";
-import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
 import type { Area } from "@/types/areas";
-import { ScheduleCrewSheet, type CrewTemplateSide } from "./_components/ScheduleCrewSheet";
+import type { CrewTemplateSide } from "./_components/ScheduleCrewSheet";
 import type { CalendarEntry } from "./_components/types";
-import { CombineEventsDialog } from "./_components/CombineEventsDialog";
 import {
   combinedScheduleSuggestionKey,
   suggestCombinedScheduleEventPairs,
@@ -60,6 +56,18 @@ const TradeBoard = dynamic(() => import("@/components/TradeBoard"), {
 const CalendarView = dynamic(
   () => import("./_components/CalendarView").then((m) => ({ default: m.CalendarView })),
 );
+// Dialogs and sheets download in the background after the schedule is usable.
+const loadAutoAssignDialog = () => import("@/components/schedule/AutoAssignDialog").then((m) => ({ default: m.AutoAssignDialog }));
+const loadCombineEventsDialog = () => import("./_components/CombineEventsDialog").then((m) => ({ default: m.CombineEventsDialog }));
+const loadNewEventSheet = () => import("./_components/NewEventSheet").then((m) => ({ default: m.NewEventSheet }));
+const loadScheduleCrewSheet = () => import("./_components/ScheduleCrewSheet").then((m) => ({ default: m.ScheduleCrewSheet }));
+const AutoAssignDialog = dynamic(loadAutoAssignDialog);
+const CombineEventsDialog = dynamic(loadCombineEventsDialog);
+const NewEventSheet = dynamic(loadNewEventSheet);
+const ScheduleCrewSheet = dynamic(loadScheduleCrewSheet);
+const CantWorkDialog = dynamic(() => import("@/components/availability/CantWorkDialog").then((m) => ({ default: m.CantWorkDialog })));
+const CollaboratorSchedule = dynamic(() => import("./_components/CollaboratorSchedule").then((m) => ({ default: m.CollaboratorSchedule })));
+
 const WeekView = dynamic(
   () => import("./_components/WeekView").then((m) => ({ default: m.WeekView })),
 );
@@ -90,6 +98,10 @@ function InternalSchedulePage() {
     const warm = () => {
       void preloadScheduleView("week");
       void preloadScheduleView("calendar");
+      void loadAutoAssignDialog();
+      void loadCombineEventsDialog();
+      void loadNewEventSheet();
+      void loadScheduleCrewSheet();
     };
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(warm);
@@ -122,6 +134,10 @@ function InternalSchedulePage() {
   const [combineInitialEventIds, setCombineInitialEventIds] = useState<readonly [string, string] | null>(null);
   const [dismissedSuggestionKeys, setDismissedSuggestionKeys] = useState<Set<string>>(() => new Set());
   const [selectedCrewEntryId, setSelectedCrewEntryId] = useState<string | null>(null);
+  const everAutoAssign = useEverOpen(autoAssignOpen);
+  const everCombine = useEverOpen(combineEventsOpen);
+  const everNewEvent = useEverOpen(newEventOpen);
+  const everCrewSheet = useEverOpen(Boolean(selectedCrewEntryId));
   const settingUpRef = useRef<Set<string>>(new Set());
   const [settingUpEventIds, setSettingUpEventIds] = useState<Set<string>>(() => new Set());
   const combineSuggestions = useMemo(
@@ -609,7 +625,7 @@ function InternalSchedulePage() {
         />
       )}
 
-      {isStaff && (
+      {isStaff && everCrewSheet && (
         <ScheduleCrewSheet
           entry={selectedCrewEntry}
           open={Boolean(selectedCrewEntry)}
@@ -633,7 +649,7 @@ function InternalSchedulePage() {
       )}
 
       {/* New Event sheet (staff/admin only) */}
-      {isStaff && (
+      {isStaff && everNewEvent && (
         <NewEventSheet
           open={newEventOpen}
           onOpenChange={setNewEventOpen}
@@ -641,7 +657,7 @@ function InternalSchedulePage() {
         />
       )}
 
-      {isStaff && (
+      {isStaff && everCombine && (
         <CombineEventsDialog
           open={combineEventsOpen}
           onOpenChange={(open) => {
@@ -657,7 +673,7 @@ function InternalSchedulePage() {
       )}
 
       {/* Auto assign (staff/admin only), seeded from the current schedule filters */}
-      {isStaff && (
+      {isStaff && everAutoAssign && (
         <AutoAssignDialog
           open={autoAssignOpen}
           onOpenChange={setAutoAssignOpen}

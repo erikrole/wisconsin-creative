@@ -9,7 +9,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/announcements`
 - APIs: `/api/announcements/[id]/dismiss`, `/api/announcements/[id]`, `/api/announcements/active`, `/api/announcements/history`, `/api/announcements/images`, `/api/announcements`
 - Services: _none matched_
-- Tests: `tests/announcements.test.ts`
+- Tests: `tests/announcements-route.test.ts`, `tests/announcements.test.ts`
 
 ## badges
 

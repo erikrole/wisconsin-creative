@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "motion/react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import { BellIcon, BellOffIcon, CalendarDaysIcon, MapPinIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
 import { PageHeader } from "@/components/PageHeader";
@@ -132,18 +132,9 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
                     loading={pendingFollowId === item.id}
                     onClick={() => void setFollowing(item, !item.isFollowing)}
                   >
-                    <AnimatePresence initial={false} mode="popLayout">
-                      <motion.span
-                        key={item.isFollowing ? "mute" : "follow"}
-                        initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-                        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-                        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-                        className="inline-flex items-center justify-center"
-                      >
+                    <IconSwap swapKey={item.isFollowing ? "mute" : "follow"}>
                         {item.isFollowing ? <BellOffIcon data-icon="inline-start" /> : <BellIcon data-icon="inline-start" />}
-                      </motion.span>
-                    </AnimatePresence>
+                      </IconSwap>
                     {item.isFollowing ? "Mute updates" : "Follow event"}
                   </Button>
                 )}

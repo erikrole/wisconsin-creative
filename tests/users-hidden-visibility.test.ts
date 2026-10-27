@@ -326,7 +326,7 @@ describe("hidden smoke user visibility", () => {
   });
 
   it("keeps /staff hidden-user opt-in behind the /api/me capability", () => {
-    const pageSource = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
+    const pageSource = readFileSync("src/app/(app)/staff/StaffPageClient.tsx", "utf8");
     const filtersSource = readFileSync("src/app/(app)/staff/UserFilters.tsx", "utf8");
 
     expect(pageSource).toContain("canViewHiddenUsers");

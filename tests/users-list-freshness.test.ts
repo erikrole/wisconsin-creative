@@ -76,7 +76,7 @@ describe("Users list freshness", () => {
     const detailPage = readFileSync("src/app/(app)/staff/[id]/page.tsx", "utf8");
     const infoTab = readFileSync("src/app/(app)/staff/[id]/UserInfoTab.tsx", "utf8");
     const settingsProfile = readFileSync("src/app/(app)/settings/profile/page.tsx", "utf8");
-    const usersPage = readFileSync("src/app/(app)/staff/page.tsx", "utf8");
+    const usersPage = readFileSync("src/app/(app)/staff/StaffPageClient.tsx", "utf8");
 
     expect(detailPage).toContain("syncCachedUserLists(queryClient, id, { active: newActive })");
     expect(infoTab).toContain("syncCachedUserLists(queryClient, user.id, cachePatch)");

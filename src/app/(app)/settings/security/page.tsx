@@ -2,7 +2,7 @@
 
 import { useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { browserSupportsWebAuthn, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON } from "@simplewebauthn/server";
 import { KeyRound, Loader2, Monitor, Trash2 } from "lucide-react";

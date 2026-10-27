@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState, type ReactNode } from "react";
 import { useUrlState, serializeOptionalString } from "@/hooks/use-url-state";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   ArchiveIcon,
   AlertTriangleIcon,

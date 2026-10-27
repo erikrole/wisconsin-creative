@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ITEM_CHANGE_SYNC_EVENT, type ItemChangeSyncEventDetail } from "@/hooks/use-item-change-sync";
 import {
