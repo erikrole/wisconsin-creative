@@ -825,7 +825,7 @@ export function ListView({
         ) : (
           <>
             {/* ── Desktop: timeline table ── */}
-            <div className={desktopList ? undefined : "hidden"}>
+            {desktopList && <div>
               {isTimeline && (
                 <TimelineStart
                   truncated={timelineTruncated}
@@ -915,10 +915,10 @@ export function ListView({
                 onLoadNewer={onLoadNewer}
               />
             )}
-          </div>
+          </div>}
 
           {/* ── Mobile: card list ── */}
-          <div className={desktopList ? "hidden" : "flex flex-col"}>
+          {!desktopList && <div className="flex flex-col">
             {isTimeline && (
               <TimelineStart
                 truncated={timelineTruncated}
@@ -1127,7 +1127,7 @@ export function ListView({
                 onLoadNewer={onLoadNewer}
               />
             )}
-          </div>
+          </div>}
           </>
         )}
       </div>
