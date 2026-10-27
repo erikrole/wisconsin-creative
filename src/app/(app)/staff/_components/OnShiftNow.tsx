@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useFetch } from "@/hooks/use-fetch";
-import { formatTimeShort } from "@/lib/format";
 import { AREA_COLORS, AREA_LABELS } from "../types";
 
 type OnShiftPerson = {
@@ -12,7 +11,7 @@ type OnShiftPerson = {
   avatarUrl: string | null;
   area: string;
   event: string;
-  endsAt: string;
+  endsAtLabel: string;
 };
 
 /**
@@ -48,7 +47,7 @@ export default function OnShiftNow({ enabled }: { enabled: boolean }) {
                 <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
                   <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ background: AREA_COLORS[person.area] ?? "#b9bbc6" }} />
                   <span className="truncate">
-                    {AREA_LABELS[person.area] ?? person.area} · until {formatTimeShort(person.endsAt)}
+                    {AREA_LABELS[person.area] ?? person.area} · until {person.endsAtLabel}
                   </span>
                 </span>
                 <span className="block truncate text-[11px] text-muted-foreground/80">{person.event}</span>
