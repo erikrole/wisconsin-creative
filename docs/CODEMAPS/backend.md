@@ -225,6 +225,7 @@
 | `src/lib/cron.ts` | 35 |
 | `src/lib/crypto.ts` | 17 |
 | `src/lib/csv.ts` | 17 |
+| `src/lib/dashboard-keys.ts` | 40 |
 | `src/lib/dashboard-payload.ts` | 376 |
 | `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
@@ -243,7 +244,7 @@
 | `src/lib/football-gameday-kits-schema.ts` | 17 |
 | `src/lib/football-gameday-kits.ts` | 63 |
 | `src/lib/football-results.ts` | 233 |
-| `src/lib/format.ts` | 321 |
+| `src/lib/format.ts` | 333 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
@@ -350,6 +351,7 @@
 | `src/lib/search-result-title.ts` | 13 |
 | `src/lib/secret-box.ts` | 54 |
 | `src/lib/serialization.ts` | 47 |
+| `src/lib/server-seed.ts` | 25 |
 | `src/lib/settled.ts` | 23 |
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 200 |
@@ -372,6 +374,7 @@
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 43 |
 | `src/lib/title-normalization.ts` | 117 |
+| `src/lib/toast.ts` | 53 |
 | `src/lib/unavailable-times.ts` | 185 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |

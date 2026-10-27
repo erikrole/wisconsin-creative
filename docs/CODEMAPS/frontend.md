@@ -177,7 +177,7 @@
 | `src/components/schedule/AutoAssignDialog.tsx` | 1079 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1055 |
 | `src/components/TradeBoard.tsx` | 940 |
-| `src/components/BookingListPage.tsx` | 921 |
+| `src/components/BookingListPage.tsx` | 932 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/Sidebar.tsx` | 803 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
@@ -189,8 +189,8 @@
 | `src/components/CommandPalette.tsx` | 588 |
 | `src/components/ActivityTimeline.tsx` | 586 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
+| `src/components/AppShell.tsx` | 459 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
-| `src/components/AppShell.tsx` | 442 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/ui/chart.tsx` | 387 |
 | `src/components/resources/MarkdownReader.tsx` | 369 |
@@ -212,14 +212,15 @@
 | `src/hooks/use-browser-state.ts` | 23 |
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 58 |
-| `src/hooks/use-dashboard-data.ts` | 244 |
+| `src/hooks/use-dashboard-data.ts` | 226 |
 | `src/hooks/use-ever-open.ts` | 9 |
-| `src/hooks/use-fetch.ts` | 112 |
+| `src/hooks/use-fetch.ts` | 116 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |
 | `src/hooks/use-gear-picks.ts` | 47 |
 | `src/hooks/use-getting-started.ts` | 108 |
 | `src/hooks/use-hydrated.ts` | 13 |
+| `src/hooks/use-idle-ready.ts` | 20 |
 | `src/hooks/use-item-cache-invalidation.ts` | 18 |
 | `src/hooks/use-item-change-sync.ts` | 90 |
 | `src/hooks/use-last-audit.ts` | 69 |
