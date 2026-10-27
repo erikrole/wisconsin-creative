@@ -4,7 +4,7 @@ import { useEverOpen } from "@/hooks/use-ever-open";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
 import { OperationalRowActions } from "@/components/OperationalRowActions";

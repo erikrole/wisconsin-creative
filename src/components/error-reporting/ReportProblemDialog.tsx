@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ChevronRightIcon, PaperclipIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

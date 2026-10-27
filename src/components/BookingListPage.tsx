@@ -4,7 +4,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 const BookingDetailsSheet = lazy(() => import("@/components/BookingDetailsSheet"));
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { SkeletonTable } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";

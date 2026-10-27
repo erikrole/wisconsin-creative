@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AlertTriangle, PencilLine, RefreshCcw } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { QrCodeImage } from "@/components/QrCodeImage";
 import { Button } from "@/components/ui/button";

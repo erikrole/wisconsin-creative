@@ -3,7 +3,7 @@
 import { useEverOpen } from "@/hooks/use-ever-open";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useFetch } from "@/hooks/use-fetch";

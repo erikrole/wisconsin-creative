@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useScheduleData } from "@/hooks/use-schedule-data";
 import { useEverOpen } from "@/hooks/use-ever-open";
 import { ScheduleFilters } from "./_components/ScheduleFilters";

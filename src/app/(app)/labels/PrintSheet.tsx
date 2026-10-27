@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Check, Download, FileDown, Minus, Pencil, Plus, RotateCcw, X, ZoomIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

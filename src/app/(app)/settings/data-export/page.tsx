@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { handleAuthRedirect, isAbortError } from "@/lib/errors";

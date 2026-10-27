@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Download, ExternalLink, Play, Trash2, Upload } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";

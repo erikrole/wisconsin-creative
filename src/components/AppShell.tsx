@@ -15,7 +15,7 @@ import { useOnline } from "@/hooks/use-browser-state";
 import { runWhenIdle, useIdleReady } from "@/hooks/use-idle-ready";
 import { clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";

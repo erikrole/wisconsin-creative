@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { MegaphoneIcon, UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

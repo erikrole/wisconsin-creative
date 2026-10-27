@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { FilterChip } from "@/components/FilterChip";
 import {

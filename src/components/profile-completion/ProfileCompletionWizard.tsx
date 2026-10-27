@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, m, useReducedMotion, type Variants } from "motion/react";
 import { AlertCircleIcon, ArrowLeftIcon, ArrowRightIcon, CameraIcon, CheckIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { MotionProvider } from "@/components/MotionProvider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

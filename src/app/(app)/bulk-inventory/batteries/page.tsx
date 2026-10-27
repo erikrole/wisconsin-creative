@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Download, Info, MoreHorizontal, Plus, RefreshCw, SlidersHorizontal, Tag, Wrench } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { UserAvatar } from "@/components/UserAvatar";

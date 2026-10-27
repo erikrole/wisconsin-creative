@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import MetricCard from "../MetricCard";
 import { Badge } from "@/components/ui/badge";
 import {

@@ -9,7 +9,7 @@ import {
   ChevronRightIcon,
   LoaderCircleIcon,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { formatCalendarEventDateRange, eventSpansMultipleDays } from "@/lib/calendar-event-dates";

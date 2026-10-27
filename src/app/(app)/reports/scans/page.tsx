@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { formatDateTime } from "@/lib/format";
 import MetricCard from "../MetricCard";
 import { Badge } from "@/components/ui/badge";

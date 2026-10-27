@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { formatDateFull } from "@/lib/format";
 import MetricCard from "../MetricCard";
 import { Badge } from "@/components/ui/badge";

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, isAbortError } from "@/lib/errors";
 import { syncUrl } from "@/lib/url-sync";

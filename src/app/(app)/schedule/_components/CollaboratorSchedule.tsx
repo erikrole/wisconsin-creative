@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconSwap } from "@/components/ui/icon-swap";
 import { BellIcon, BellOffIcon, CalendarDaysIcon, MapPinIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
 import { PageHeader } from "@/components/PageHeader";

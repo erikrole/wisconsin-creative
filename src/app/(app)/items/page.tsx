@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RowSelectionState, VisibilityState } from "@tanstack/react-table";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   AlertDialog,
   AlertDialogAction,

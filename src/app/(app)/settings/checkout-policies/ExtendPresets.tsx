@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFetch } from "@/hooks/use-fetch";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

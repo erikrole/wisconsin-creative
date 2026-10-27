@@ -3,7 +3,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";

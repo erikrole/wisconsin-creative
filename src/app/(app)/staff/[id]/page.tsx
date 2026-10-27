@@ -16,7 +16,7 @@ import UserAvailabilityTab from "./UserAvailabilityTab";
 import UserBadgesTab from "./UserBadgesTab";
 import UserGearTab, { useProfileGearPicks } from "./UserGearTab";
 import { BadgeMedallion } from "@/components/badges/BadgeMedallion";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { UserAvatar } from "@/components/UserAvatar";

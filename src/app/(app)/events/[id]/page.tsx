@@ -7,7 +7,7 @@ import { MergeIcon, UnlinkIcon, WifiOff, AlertTriangle } from "lucide-react";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { formatTimeShort } from "@/lib/format";
 import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
 import { venueToneFromIsHome } from "@/lib/venue-tone";

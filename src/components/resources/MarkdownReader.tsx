@@ -18,7 +18,7 @@ import { Children, isValidElement, useMemo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { IconSwap } from "@/components/ui/icon-swap";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { headingId, isCopyFenceLanguage, markdownHeadingId, markdownHeadingText } from "@/lib/guide-content";
 import { isKeyboardShortcut, splitShortcutKeys, spokenShortcut } from "@/lib/guide-keyboard";

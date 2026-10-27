@@ -5,7 +5,7 @@ import { CheckIcon, CopyIcon } from "lucide-react";
 import { IconSwap } from "@/components/ui/icon-swap";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const COPY_RESET_MS = 1600;
 

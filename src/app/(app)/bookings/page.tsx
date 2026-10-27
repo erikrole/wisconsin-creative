@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BookingListPage, { type BookingListConfig, type BookingItem, type ContextMenuExtra } from "@/components/BookingListPage";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LayoutGridIcon, ListIcon } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";

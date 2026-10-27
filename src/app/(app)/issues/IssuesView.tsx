@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ChevronRightIcon, MailIcon, SearchIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
