@@ -25,7 +25,7 @@ export type TeamStudent = {
 export function addDays(dateKey: string, days: number): string {
   const d = new Date(`${dateKey}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+  return d.toISOString().split("T")[0]!;
 }
 
 /** Monday of the week containing `dateKey`. */

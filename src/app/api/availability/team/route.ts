@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
 
-const dateKey = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
+// @db.Date columns are calendar days stored at UTC midnight, not instants.
+const dateKey = (d: Date | null) => d?.toISOString().split("T")[0] ?? null;
 
 /**
  * Every active student worker with their availability blocks, for the Staff
