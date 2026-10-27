@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-27",
+    "title": "Calmer event titles on Schedule",
+    "type": "improvement",
+    "summary": "Event names in the Schedule list are plain text again instead of bright blue, so the page reads quieter and the game info stands out.",
+    "details": [
+      "Titles underline when you hover them, the same as before.",
+      "The small label under a title, like Exhibition, is now a soft gray."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-27",
     "title": "Faster pages on slow connections",
     "type": "improvement",
     "summary": "Most pages download about 30% less code, and Home, Bookings and Staff now arrive with their content already in place, so they show up two to three times sooner on a weak connection.",
