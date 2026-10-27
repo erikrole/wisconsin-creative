@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/toast";
 import {
   hasDashboardCountFailure,
@@ -10,44 +10,10 @@ import {
   type DashboardStatsResponse,
 } from "@/app/(app)/dashboard-types";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { DASHBOARD_STATS_KEY, dashboardQueryKey, dashboardStatsQueryKey, normalizeDashboard } from "@/lib/dashboard-keys";
+export { DASHBOARD_STATS_KEY, dashboardQueryKey, dashboardStatsQueryKey };
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
-
-const DASHBOARD_KEY = ["dashboard"] as const;
-export const DASHBOARD_STATS_KEY = ["dashboard-stats"] as const;
-const UNRESOLVED_USER_KEY = "unresolved";
-
-export function dashboardQueryKey(userId: string | null) {
-  return [...DASHBOARD_KEY, userId ?? UNRESOLVED_USER_KEY] as const;
-}
-
-export function dashboardStatsQueryKey(userId: string | null) {
-  return [...DASHBOARD_STATS_KEY, userId ?? UNRESOLVED_USER_KEY] as const;
-}
-
-/** Normalize partial API responses with safe defaults */
-function normalizeDashboard(d: DashboardData): DashboardData {
-  d.myCheckouts = d.myCheckouts ?? { total: 0, overdue: 0, items: [] };
-  d.myCheckouts.overdue = d.myCheckouts.overdue ?? 0;
-  d.myCheckouts.items = d.myCheckouts.items ?? [];
-  d.teamCheckouts = d.teamCheckouts ?? { total: 0, overdue: 0, items: [] };
-  d.teamCheckouts.items = d.teamCheckouts.items ?? [];
-  d.teamReservations = d.teamReservations ?? { total: 0, items: [] };
-  d.teamReservations.items = d.teamReservations.items ?? [];
-  d.pendingPickups = d.pendingPickups ?? { total: 0, items: [] };
-  d.pendingPickups.items = d.pendingPickups.items ?? [];
-  d.staleReservations = d.staleReservations ?? { total: 0, items: [] };
-  d.staleReservations.items = d.staleReservations.items ?? [];
-  d.upcomingEvents = d.upcomingEvents ?? [];
-  d.myReservations = d.myReservations ?? [];
-  d.overdueItems = d.overdueItems ?? [];
-  d.drafts = d.drafts ?? [];
-  d.myShifts = d.myShifts ?? [];
-  d.myEventWork = d.myEventWork ?? [];
-  d.flaggedItems = d.flaggedItems ?? [];
-  d.lostBulkUnits = d.lostBulkUnits ?? [];
-  d.stats = d.stats ?? { checkedOut: 0, overdue: 0, reserved: 0, dueToday: 0 };
-  return d;
-}
+import { peekSeededKey, takeSeededKey } from "@/components/SeedFetchCache";
 
 async function fetchDashboard(signal?: AbortSignal): Promise<DashboardData> {
   const res = await fetch("/api/dashboard", { signal });
@@ -85,12 +51,27 @@ export function dashboardStatsQueryOptions(userId: string | null) {
   };
 }
 
+/**
+ * Mount refetch for a query the server may have just read. The check runs when the observer mounts, after
+ * the whole page has rendered and seeded the cache, and the mark outlives the first mount by a few seconds
+ * because Home can hydrate a beat after the shell does.
+ */
+function useMountRefetch(queryClient: QueryClient, key: readonly unknown[]) {
+  useEffect(() => {
+    const timer = setTimeout(() => takeSeededKey(queryClient, key), 10_000);
+    return () => clearTimeout(timer);
+  }, [queryClient, key]);
+  return () => (peekSeededKey(queryClient, key) ? false : "always" as const);
+}
+
 export function useDashboardStats() {
+  const queryClient = useQueryClient();
   const userId = useAuthenticatedQueryUserId();
+  const refetchOnMount = useMountRefetch(queryClient, dashboardStatsQueryKey(userId));
   return useQuery({
     ...dashboardStatsQueryOptions(userId),
     enabled: Boolean(userId),
-    refetchOnMount: "always",
+    refetchOnMount,
     refetchOnWindowFocus: true,
   });
 }
@@ -129,6 +110,7 @@ export function useDashboardData(): UseDashboardDataResult {
   const queryClient = useQueryClient();
   const userId = useAuthenticatedQueryUserId();
   const dashboardKey = useMemo(() => dashboardQueryKey(userId), [userId]);
+  const refetchOnMount = useMountRefetch(queryClient, dashboardKey);
 
   // Full payload — heavy queries, 5-minute stale time
   const {
@@ -143,7 +125,7 @@ export function useDashboardData(): UseDashboardDataResult {
     queryFn: ({ signal }) => fetchDashboard(signal),
     enabled: Boolean(userId),
     staleTime: 5 * 60_000,
-    refetchOnMount: "always",
+    refetchOnMount,
   });
 
   // Fast stats — single SQL query, 60-second stale time, refetch on window focus

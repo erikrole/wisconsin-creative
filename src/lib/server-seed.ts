@@ -3,6 +3,9 @@ import type { NextResponse } from "next/server";
 /** A JSON response the server read for a page, keyed by the API URL the browser would have requested. */
 export type FetchSeed = { url: string; json: unknown; fetchedAt: number };
 
+/** A value for a query key, already in the shape that query's function returns. */
+export type QuerySeed = { key: readonly unknown[]; data: unknown; fetchedAt: number };
+
 type ApiHandler = (req: Request, ctx: { params: Promise<Record<string, string>> }) => Promise<NextResponse>;
 
 /**

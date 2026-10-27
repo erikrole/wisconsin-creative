@@ -20,6 +20,7 @@ import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
 import { ProfileCompletionLoader } from "@/components/profile-completion/ProfileCompletionLoader";
+import { peekSeededKey } from "@/components/SeedFetchCache";
 import { dashboardStatsQueryOptions, dashboardStatsQueryKey, useDashboardStats } from "@/hooks/use-dashboard-data";
 import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
 import dynamic from "next/dynamic";
@@ -281,8 +282,14 @@ export default function AppShell({
   // Navigation shares the same fresh stats read as Home; simultaneous consumers
   // and booking invalidations join one request instead of hitting Neon twice.
   const badgeUserId = user?.id;
+  // Home's server render already read these counts, so the first visit does not read them again.
+  const firstStatsRead = useRef(true);
   useEffect(() => {
     if (!badgeUserId || isRestoring) return;
+    if (firstStatsRead.current) {
+      firstStatsRead.current = false;
+      if (peekSeededKey(queryClient, dashboardStatsQueryKey(badgeUserId))) return;
+    }
     void queryClient.fetchQuery({
       ...dashboardStatsQueryOptions(badgeUserId),
       // Mutations on another route may have changed custody since the last read.

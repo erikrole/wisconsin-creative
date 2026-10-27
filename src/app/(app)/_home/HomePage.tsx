@@ -58,10 +58,14 @@ import {
 
 const BookingDetailsSheet = lazy(() => import("@/components/BookingDetailsSheet"));
 
-export default function HomePage() {
+/**
+ * `serverNow` is the instant the server rendered at. With it the first render shows the server's own copy
+ * of the page (and counts down from that instant) instead of waiting out hydration for the device clock.
+ */
+export default function HomePage({ serverNow }: { serverNow?: string }) {
   const { data: user, isLoading } = useCurrentUser();
   const hydrated = useHydrated();
-  if (isLoading || !hydrated) return <HomeSkeleton />;
+  if (isLoading || (!hydrated && !serverNow)) return <HomeSkeleton />;
   if (user?.role === "COLLABORATOR") {
     return (
       <CollaboratorHome
@@ -71,17 +75,19 @@ export default function HomePage() {
       />
     );
   }
-  return <InternalHome name={user?.name ?? null} readOnly={Boolean(user?.preview?.readOnly)} />;
+  return <InternalHome name={user?.name ?? null} readOnly={Boolean(user?.preview?.readOnly)} serverNow={serverNow} />;
 }
 
 /* ── Shared plumbing ────────────────────────────────────── */
 
-function useMinuteClock() {
-  const [now, setNow] = useState(() => new Date());
+function useMinuteClock(serverNow?: string) {
+  const [now, setNow] = useState(() => (serverNow ? new Date(serverNow) : new Date()));
   useEffect(() => {
+    // The server's instant matched the HTML; the device clock takes over right after hydration.
+    if (serverNow) setNow(new Date());
     const interval = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [serverNow]);
   return now;
 }
 
@@ -255,7 +261,7 @@ function slotOf<T>(query: { data?: T; isError: boolean; refetch: () => unknown }
 
 /* ── Students, staff and admins ─────────────────────────── */
 
-function InternalHome({ name, readOnly }: { name: string | null; readOnly: boolean }) {
+function InternalHome({ name, readOnly, serverNow }: { name: string | null; readOnly: boolean; serverNow?: string }) {
   const {
     data,
     fastStats,
@@ -267,7 +273,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
     loadData,
   } = useDashboardData();
   const bookingSync = useBookingChangeSync();
-  const now = useMinuteClock();
+  const now = useMinuteClock(serverNow);
   const { selectedBookingId, setSelectedBookingId, reviewingReportId, setReviewingReportId, reviewingLost, setReviewingLost, onTarget } = useBookingTargets();
   const reviewing = data?.flaggedItems.find((f) => f.id === reviewingReportId) ?? null;
 

@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 describe("booking real-time sync source contract", () => {
-  it("forces the persisted dashboard payload to refetch on mount", () => {
+  it("forces the persisted dashboard payload to refetch on mount, except one the server just read", () => {
     const hook = source("src/hooks/use-dashboard-data.ts");
 
-    expect(hook).toMatch(/queryKey:\s*dashboardKey,[\s\S]*?refetchOnMount:\s*"always"/);
+    expect(hook).toMatch(/queryKey:\s*dashboardKey,[\s\S]*?refetchOnMount,/);
+    expect(hook).toContain('peekSeededKey(queryClient, key) ? false : "always"');
     expect(hook).toContain("enabled: Boolean(userId)");
   });
 
   it("forces the dashboard stats overlay to refetch on mount", () => {
     const hook = source("src/hooks/use-dashboard-data.ts");
 
-    expect(hook).toMatch(/\.\.\.dashboardStatsQueryOptions\(userId\),[\s\S]*?refetchOnMount:\s*"always"/);
+    expect(hook).toMatch(/\.\.\.dashboardStatsQueryOptions\(userId\),[\s\S]*?refetchOnMount,/);
   });
 
   it("forces booking detail cache to verify server truth on mount", () => {
