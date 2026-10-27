@@ -27,7 +27,7 @@ describe("list state preservation source contracts", () => {
   });
 
   it("keeps the complete Bookings list context in App Router history", () => {
-    const page = source("src/app/(app)/bookings/page.tsx");
+    const page = source("src/app/(app)/bookings/BookingsPageClient.tsx");
     const list = source("src/components/BookingListPage.tsx");
     const filters = source("src/components/booking-list/BookingFilters.tsx");
 

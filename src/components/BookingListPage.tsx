@@ -43,6 +43,7 @@ import {
   type FormUser,
   type Location,
   type ListResponse,
+  type InitialBookingList,
 } from "./booking-list";
 import type { TabKey as BookingSheetSection } from "./booking-details/types";
 import { useHydrated } from "@/hooks/use-browser-state";
@@ -59,6 +60,7 @@ type BookingListPageProps = {
   enableBookingChangeSync?: boolean;
   initialHighlight?: string | null;
   initialSheetTab?: BookingSheetSection | null;
+  initialList?: InitialBookingList | null;
 };
 
 type MergePreviewData = {
@@ -101,6 +103,7 @@ export default function BookingListPage({
   enableBookingChangeSync = true,
   initialHighlight,
   initialSheetTab,
+  initialList,
 }: BookingListPageProps) {
   const confirm = useConfirm();
   const urlParams = useSearchParams();
@@ -232,8 +235,16 @@ export default function BookingListPage({
     return `${config.apiBase}?${params}`;
   }, [page, search, sort, statusFilter, sportFilter, locationFilter, userFilter, specialFilter, config.apiBase, config.activeOnly, config.pastOnly, config.hasSportFilter, defaultStatusFiltersKey]);
 
+  // The server read this list while rendering the page. It seeds the cache once (never over data already
+  // there) and replaces the mount refetch, so the page still makes a single database read.
+  const [seedList] = useState(() =>
+    initialList && !queryClient.getQueryData(["bookingList", config.kind, initialList.url]) ? initialList : null);
+  const seeded = seedList && seedList.url === listUrl ? seedList : null;
+
   const { data: listData, isLoading: loading, isError, refetch } = useQuery<ListResponse>({
     queryKey: ["bookingList", config.kind, listUrl],
+    initialData: seeded?.data,
+    initialDataUpdatedAt: seeded?.fetchedAt,
     queryFn: async ({ signal }) => {
       const res = await fetch(listUrl, { signal });
       if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
@@ -244,7 +255,7 @@ export default function BookingListPage({
       }
       return json;
     },
-    refetchOnMount: "always",
+    refetchOnMount: seeded ? false : "always",
     refetchOnWindowFocus: true,
   });
   const reload = async () => { await refetch(); };
@@ -267,7 +278,7 @@ export default function BookingListPage({
   const loadError: false | "network" | "server" = isError && !listData
     ? (typeof navigator !== "undefined" && !navigator.onLine ? "network" : "server")
     : false;
-  const showInitialSkeleton = !clientReady || (loading && !listData);
+  const showInitialSkeleton = (!clientReady && !seeded) || (loading && !listData);
 
   /** Optimistic update helper — mutates the cached list data */
   const setItems = (updater: BookingItem[] | ((prev: BookingItem[]) => BookingItem[])) => {

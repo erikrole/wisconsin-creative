@@ -114,7 +114,7 @@ describe("listBookings status filters", () => {
   });
 
   it("wires the Checkouts tab default to checked-out and pending-pickup work", () => {
-    const component = source("src/app/(app)/bookings/page.tsx");
+    const component = source("src/app/(app)/bookings/BookingsPageClient.tsx");
     expect(component).toContain('defaultStatusFilters: isPastScope ? [] : ["OPEN", "PENDING_PICKUP"]');
     expect(component).not.toContain('defaultStatusFilter: isPastScope ? "" : "OPEN"');
   });

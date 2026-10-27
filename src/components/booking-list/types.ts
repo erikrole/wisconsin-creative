@@ -5,6 +5,7 @@ import type { TabKey as BookingSheetSection } from "@/components/booking-details
 import type { BookingKind } from "@/lib/booking-actions";
 import { bookingStatusVisual, type BookingStatusVisual } from "@/lib/booking-status-display";
 import { roundUpToQuarterHour } from "@/lib/quarter-hour";
+import { INSTITUTION_TZ } from "@/lib/format";
 
 /* ───── Types ───── */
 
@@ -46,6 +47,9 @@ export type CalendarEvent = {
 export type AvailableAsset = PickerAsset;
 export type BulkSkuOption = PickerBulkSku;
 export type ListResponse = { data: BookingItem[]; total: number; limit: number; offset: number };
+
+/** A list the server already read while rendering the page; `url` is the API request it answers. */
+export type InitialBookingList = { url: string; data: ListResponse; fetchedAt: number };
 
 export type StatusOption = { value: string; label: string };
 
@@ -97,10 +101,12 @@ export type SortDir = "asc" | "desc";
 
 export function formatDateCol(iso: string) {
   const d = new Date(iso);
+  // Central time on the server and in the browser, so server-rendered rows match what hydrates.
+  const timeZone = INSTITUTION_TZ;
   return {
-    date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    time: d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase(),
-    day: d.toLocaleDateString("en-US", { weekday: "short" }),
+    date: d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone }),
+    time: d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone }).toLowerCase(),
+    day: d.toLocaleDateString("en-US", { weekday: "short", timeZone }),
   };
 }
 

@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Bookings interaction-detail contracts", () => {
   it("keeps scope, view, creation, recovery, and pagination controls on the 40px baseline", () => {
-    const page = source("src/app/(app)/bookings/page.tsx");
+    const page = source("src/app/(app)/bookings/BookingsPageClient.tsx");
     const list = source("src/components/BookingListPage.tsx");
 
     expect(page.match(/className="h-10 px-3 text-xs"/g)).toHaveLength(2);

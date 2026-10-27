@@ -112,6 +112,11 @@ export function formatDateShort(iso: string, allDay = false) {
   });
 }
 
+/** "Mar 11" on the Central calendar, so the server (UTC) and the browser render the same text. */
+export function formatDateShortCentral(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: INSTITUTION_TZ });
+}
+
 /** "3:00 PM" */
 export function formatTimeShort(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
@@ -126,7 +131,7 @@ export function formatTimeShort(iso: string) {
  * runtime's, because the server renders in UTC and would otherwise file tonight's
  * 7 PM event under tomorrow. Client-safe, so it does not read `env`.
  */
-const INSTITUTION_TZ = "America/Chicago";
+export const INSTITUTION_TZ = "America/Chicago";
 const dayFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: INSTITUTION_TZ,
   year: "numeric",

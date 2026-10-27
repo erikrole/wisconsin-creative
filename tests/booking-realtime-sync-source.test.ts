@@ -21,10 +21,10 @@ describe("booking real-time sync source contract", () => {
     expect(hook).toMatch(/queryKey,[\s\S]*?refetchOnMount:\s*"always"/);
   });
 
-  it("forces shared booking lists to verify server truth on mount", () => {
+  it("forces shared booking lists to verify server truth on mount, except a list the server just read", () => {
     const list = source("src/components/BookingListPage.tsx");
 
-    expect(list).toMatch(/queryKey:\s*\["bookingList", config\.kind, listUrl\],[\s\S]*?refetchOnMount:\s*"always"/);
+    expect(list).toMatch(/queryKey:\s*\["bookingList", config\.kind, listUrl\],[\s\S]*?refetchOnMount:\s*seeded \? false : "always"/);
   });
 
   it("polls the lightweight booking change signal instead of the heavy dashboard route", () => {
@@ -53,7 +53,7 @@ describe("booking real-time sync source contract", () => {
 
   it("wires booking change sync into dashboard and the shared booking list", () => {
     const dashboard = source("src/app/(app)/_home/HomePage.tsx");
-    const bookings = source("src/app/(app)/bookings/page.tsx");
+    const bookings = source("src/app/(app)/bookings/BookingsPageClient.tsx");
     const list = source("src/components/BookingListPage.tsx");
 
     expect(dashboard).toContain('import { useBookingChangeSync } from "@/hooks/use-booking-change-sync"');
