@@ -84,9 +84,12 @@ function useMinuteClock(serverNow?: string) {
   const [now, setNow] = useState(() => (serverNow ? new Date(serverNow) : new Date()));
   useEffect(() => {
     // The server's instant matched the HTML; the device clock takes over right after hydration.
-    if (serverNow) setNow(new Date());
+    const first = serverNow ? setTimeout(() => setNow(new Date()), 0) : undefined;
     const interval = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
   }, [serverNow]);
   return now;
 }
