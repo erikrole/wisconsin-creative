@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-27",
+    "title": "Faster pages on slow connections",
+    "type": "improvement",
+    "summary": "Most pages download about 30% less code, so they open sooner on phones and weak Wi-Fi.",
+    "details": [
+      "The Schedule page, the biggest one, loads about a third less.",
+      "Dialogs like Auto assign, Add item and Invite people download only when you open them.",
+      "Tab underlines, fade-ins and small icon changes now play right away instead of waiting for the page to finish loading."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-26",
     "title": "Fix false shift conflict when claiming",
     "type": "fixes",

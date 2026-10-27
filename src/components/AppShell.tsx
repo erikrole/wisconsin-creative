@@ -6,7 +6,6 @@ import { CalendarDaysIcon, UserIcon, HouseIcon, CameraIcon, ClipboardListIcon } 
 import AppSidebar from "./Sidebar";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
 import { AppTopBar } from "@/components/AppTopBar";
-import { CommandPalette } from "@/components/CommandPalette";
 import { MobileTabBar, type MobileTabItem } from "@/components/MobileTabBar";
 import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -19,14 +18,21 @@ import { toast } from "sonner";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { isBackgroundPollingPaused } from "@/hooks/use-operational-polling-activity";
 import { NOTIFICATION_COUNT_CHANGED_EVENT } from "@/lib/notification-count-sync";
-import { ProfileCompletionWizard } from "@/components/profile-completion/ProfileCompletionWizard";
+import { ProfileCompletionLoader } from "@/components/profile-completion/ProfileCompletionLoader";
 import { dashboardStatsQueryOptions, dashboardStatsQueryKey, useDashboardStats } from "@/hooks/use-dashboard-data";
 import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
-import {
-  BadgeEarnedCelebration,
-  type EarnedBadgeReward,
-} from "@/components/badges/BadgeEarnedCelebration";
+import dynamic from "next/dynamic";
+import type { EarnedBadgeReward } from "@/components/badges/BadgeEarnedCelebration";
 import { RolePreviewBanner } from "@/components/RolePreviewControl";
+
+const BadgeEarnedCelebration = dynamic(
+  () => import("@/components/badges/BadgeEarnedCelebration").then((m) => m.BadgeEarnedCelebration),
+  { ssr: false },
+);
+const CommandPalette = dynamic(
+  () => import("@/components/CommandPalette").then((m) => m.CommandPalette),
+  { ssr: false },
+);
 
 type NotificationCountResponse = {
   unreadCount?: unknown;
@@ -323,6 +329,9 @@ export default function AppShell({
 
   // Command palette state
   const [cmdOpen, setCmdOpen] = useState(false);
+  // The palette's code loads on first open, then stays mounted for the exit animation.
+  const [cmdLoaded, setCmdLoaded] = useState(false);
+  if (cmdOpen && !cmdLoaded) setCmdLoaded(true);
 
   useEffect(() => {
     if (isCollaborator) return;
@@ -373,7 +382,7 @@ export default function AppShell({
       <a href="#main-content" className="absolute -top-[100px] left-4 z-[var(--z-sidebar)] px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-[var(--radius)] font-[var(--weight-semibold)] text-[var(--text-base)] no-underline transition-[top] duration-200 focus:top-4">Skip to content</a>
 
       {/* Command palette */}
-      {pathname !== "/welcome" && <ProfileCompletionWizard autoOpen={pathname !== "/"} />}
+      {pathname !== "/welcome" && <ProfileCompletionLoader autoOpen={pathname !== "/"} />}
 
       {earnedBadgeQueue[0] && (
         <BadgeEarnedCelebration
@@ -385,7 +394,7 @@ export default function AppShell({
       )}
 
 
-      {!isCollaborator && (
+      {!isCollaborator && (cmdOpen || cmdLoaded) && (
         <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} user={user} pathname={pathname} />
       )}
 

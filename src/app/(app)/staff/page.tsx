@@ -1,7 +1,9 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import EmptyState from "@/components/EmptyState";
 import type { Location, Role, SortKey, ListResponse } from "./types";
 import { AREA_COLORS, AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
@@ -10,8 +12,6 @@ import RoleTabs from "./RoleTabs";
 import OnShiftNow from "./_components/OnShiftNow";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import UserFilters from "./UserFilters";
-import BulkBadgeAwardDialog from "./BulkBadgeAwardDialog";
-import OnboardingDialog from "@/components/onboarding/OnboardingDialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +34,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { RosterRelatedLinks } from "./_components/RosterRelatedLinks";
 import { useAdjustState } from "@/hooks/use-synced-draft";
+
+const BulkBadgeAwardDialog = dynamic(() => import("./BulkBadgeAwardDialog"));
+
+const OnboardingDialog = dynamic(() => import("@/components/onboarding/OnboardingDialog"));
 
 const LIMIT = 50;
 const ROLE_VALUES = new Set<string>(["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"]);
@@ -162,15 +166,7 @@ function SortableHead({
         aria-label={`Sort by ${label}${isAsc ? " descending" : isDesc ? " clear sorting" : " ascending"}`}
       >
         {label}
-        <AnimatePresence initial={false} mode="popLayout">
-          <motion.span
-            key={isAsc ? "ascending" : isDesc ? "descending" : "unsorted"}
-            initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-            className="ml-1 inline-flex items-center justify-center"
-          >
+        <IconSwap swapKey={isAsc ? "ascending" : isDesc ? "descending" : "unsorted"} className="ml-1">
             {isAsc ? (
               <ArrowUp className="size-4 text-foreground" aria-hidden="true" />
             ) : isDesc ? (
@@ -178,8 +174,7 @@ function SortableHead({
             ) : (
               <ArrowUpDown className="size-3.5 opacity-20 transition-opacity group-hover:opacity-50 group-focus-visible:opacity-50" aria-hidden="true" />
             )}
-          </motion.span>
-        </AnimatePresence>
+          </IconSwap>
       </Button>
     </TableHead>
   );
@@ -292,7 +287,9 @@ export default function UsersPage() {
 
   // UI
   const [showCreate, setShowCreate] = useState(false);
+  const everCreate = useEverOpen(showCreate);
   const [showBulkAward, setShowBulkAward] = useState(false);
+  const everBulkAward = useEverOpen(showBulkAward);
   const didMountRef = useRef(false);
 
   useAdjustState([onboardRequested], () => {
@@ -507,23 +504,27 @@ export default function UsersPage() {
       </PageHeader>
 
       {/* Onboarding Dialog */}
-      <OnboardingDialog
-        open={showCreate}
-        onOpenChange={(open) => {
-          setShowCreate(open);
-          if (!open && onboardRequested) setOnboardRequested(false);
-        }}
-        currentUserRole={currentUserRole}
-        onInvitesChanged={() => reload()}
-      />
+      {everCreate && (
+        <OnboardingDialog
+          open={showCreate}
+          onOpenChange={(open) => {
+            setShowCreate(open);
+            if (!open && onboardRequested) setOnboardRequested(false);
+          }}
+          currentUserRole={currentUserRole}
+          onInvitesChanged={() => reload()}
+        />
+      )}
 
-      <BulkBadgeAwardDialog
-        open={showBulkAward}
-        onOpenChange={setShowBulkAward}
-        targetCount={bulkAwardTargetCount}
-        filterSummary={bulkAwardFilterSummary}
-        filters={bulkAwardFilters}
-      />
+      {everBulkAward && (
+        <BulkBadgeAwardDialog
+          open={showBulkAward}
+          onOpenChange={setShowBulkAward}
+          targetCount={bulkAwardTargetCount}
+          filterSummary={bulkAwardFilterSummary}
+          filters={bulkAwardFilters}
+        />
+      )}
 
       {/* Users List */}
       <div className="flex flex-col gap-3">

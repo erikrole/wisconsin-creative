@@ -174,12 +174,12 @@
 | `src/components/resources/BrandAssetLibrary.tsx` | 1828 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
-| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1046 |
-| `src/components/schedule/AutoAssignDialog.tsx` | 1041 |
+| `src/components/schedule/AutoAssignDialog.tsx` | 1079 |
+| `src/components/profile-completion/ProfileCompletionWizard.tsx` | 1055 |
 | `src/components/TradeBoard.tsx` | 940 |
 | `src/components/BookingListPage.tsx` | 921 |
 | `src/components/EquipmentPicker.tsx` | 898 |
-| `src/components/Sidebar.tsx` | 798 |
+| `src/components/Sidebar.tsx` | 803 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
@@ -190,10 +190,10 @@
 | `src/components/ActivityTimeline.tsx` | 586 |
 | `src/components/booking-details/BookingHeader.tsx` | 494 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
+| `src/components/AppShell.tsx` | 442 |
 | `src/components/ui/heatmap.tsx` | 434 |
-| `src/components/AppShell.tsx` | 433 |
 | `src/components/ui/chart.tsx` | 387 |
-| `src/components/resources/MarkdownReader.tsx` | 378 |
+| `src/components/resources/MarkdownReader.tsx` | 369 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 355 |
 | `src/components/FormCombobox.tsx` | 352 |
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 349 |
@@ -213,6 +213,7 @@
 | `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 58 |
 | `src/hooks/use-dashboard-data.ts` | 244 |
+| `src/hooks/use-ever-open.ts` | 9 |
 | `src/hooks/use-fetch.ts` | 112 |
 | `src/hooks/use-form-options.ts` | 32 |
 | `src/hooks/use-form-submit.ts` | 188 |

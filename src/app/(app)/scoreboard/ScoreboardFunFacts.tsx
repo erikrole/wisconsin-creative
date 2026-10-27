@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { funFactWindow, type ScoreboardFunFact } from "@/lib/scoreboard-fun-facts";
@@ -35,7 +35,7 @@ export function ScoreboardFunFacts({
       <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
         <AnimatePresence mode="popLayout" initial={false}>
           {visible.map((fact, index) => (
-            <motion.li
+            <m.li
               key={`${fact.id}-${page}`}
               initial={reduced ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -58,7 +58,7 @@ export function ScoreboardFunFacts({
                   </span>
                 ) : null}
               </button>
-            </motion.li>
+            </m.li>
           ))}
         </AnimatePresence>
       </ul>

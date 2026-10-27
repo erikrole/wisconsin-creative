@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { MotionConfig } from "motion/react";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import AppShell from "@/components/AppShell";
@@ -42,41 +41,37 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const pathname = (await headers()).get("x-pathname")?.split("?")[0];
     if (pathname !== "/welcome") redirect("/welcome");
     return (
-      <MotionConfig reducedMotion="user">
-        <QueryProvider userId={user.id}>
-          <TooltipProvider>
-            <OfflineBanner />
-            <main className="min-h-dvh px-5 py-6 sm:px-8">{children}</main>
-            <Toaster position="top-right" duration={4000} />
-          </TooltipProvider>
-        </QueryProvider>
-      </MotionConfig>
+      <QueryProvider userId={user.id}>
+        <TooltipProvider>
+          <OfflineBanner />
+          <main className="min-h-dvh px-5 py-6 sm:px-8">{children}</main>
+          <Toaster position="top-right" duration={4000} />
+        </TooltipProvider>
+      </QueryProvider>
     );
   }
   const defaultSidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   return (
-    <MotionConfig reducedMotion="user">
-      <QueryProvider userId={user.id}>
-        <ConfirmProvider>
-          <TooltipProvider>
-            <ReportProblemProvider>
-              {!user.preview && <ProductUsageTracker />}
-              {!user.preview && <ErrorReporter />}
-              <OfflineBanner />
-              <AnnouncementSplash enabled={!user.preview && user.role !== "COLLABORATOR"} />
-              <AppShell
-                initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
-                defaultSidebarOpen={defaultSidebarOpen}
-              >
-                <WebMCPProvider initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }} />
-                {children}
-              </AppShell>
-            </ReportProblemProvider>
-          </TooltipProvider>
-          <Toaster position="top-right" duration={4000} />
-        </ConfirmProvider>
-      </QueryProvider>
-    </MotionConfig>
+    <QueryProvider userId={user.id}>
+      <ConfirmProvider>
+        <TooltipProvider>
+          <ReportProblemProvider>
+            {!user.preview && <ProductUsageTracker />}
+            {!user.preview && <ErrorReporter />}
+            <OfflineBanner />
+            <AnnouncementSplash enabled={!user.preview && user.role !== "COLLABORATOR"} />
+            <AppShell
+              initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
+              defaultSidebarOpen={defaultSidebarOpen}
+            >
+              <WebMCPProvider initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }} />
+              {children}
+            </AppShell>
+          </ReportProblemProvider>
+        </TooltipProvider>
+        <Toaster position="top-right" duration={4000} />
+      </ConfirmProvider>
+    </QueryProvider>
   );
 }

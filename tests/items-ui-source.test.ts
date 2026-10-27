@@ -45,9 +45,7 @@ describe("Items design-language contracts", () => {
     const table = source("src/app/(app)/items/data-table.tsx");
 
     expect(table).toContain('aria-sort={canSort ? (sorted === "asc" ? "ascending"');
-    expect(table).toContain('<AnimatePresence initial={false} mode="popLayout">');
-    expect(table).toContain('initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}');
-    expect(table).toContain('transition={{ type: "spring", duration: 0.3, bounce: 0 }}');
+    expect(table).toContain("<IconSwap swapKey=");
     expect(table).not.toContain('onClick={canSort ? header.column.getToggleSortingHandler() : undefined}');
   });
 
@@ -94,7 +92,7 @@ describe("Items design-language contracts", () => {
     const columns = source("src/app/(app)/items/columns.tsx");
 
     expect(table).toContain("transition-[background-color,scale] active:scale-[0.96]");
-    expect(columns).toContain('key={asset.isFavorited ? "favorited" : "not-favorited"}');
+    expect(columns).toContain('swapKey={asset.isFavorited ? "favorited" : "not-favorited"}');
     expect(columns).toContain("outline-black/10 dark:outline-white/10");
   });
 });

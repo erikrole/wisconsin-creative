@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { getBookingCancelCopy } from "@/hooks/booking-action-copy";
-import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-snapshot-header";
 import type { BookingDetail } from "@/components/booking-details/types";
 
 type ActionResult = { ok: boolean; error?: string };

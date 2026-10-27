@@ -1,7 +1,9 @@
 import { HttpError } from "@/lib/http";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-snapshot-header";
+
+export { BOOKING_SNAPSHOT_HEADER };
 
 const STALE_BOOKING_MESSAGE = "This booking was modified by someone else. Please refresh and try again.";
-export const BOOKING_SNAPSHOT_HEADER = "X-Booking-Updated-At";
 
 function secondPrecision(value: Date | string) {
   const timestamp = new Date(value).getTime();

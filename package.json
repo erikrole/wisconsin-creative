@@ -90,6 +90,7 @@
     "build:app": "node scripts/run-next.mjs build:app",
     "migrate": "node scripts/prisma-migrate-deploy.mjs",
     "analyze": "node scripts/run-next.mjs analyze",
+    "measure:bundle": "node scripts/measure-bundle.mjs",
     "start": "node scripts/run-next.mjs start",
     "lint": "eslint .",
     "lint:ci": "eslint . --max-warnings=121",

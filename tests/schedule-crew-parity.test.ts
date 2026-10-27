@@ -23,7 +23,7 @@ describe("Schedule crew management parity", () => {
     expect(week).toContain('<Link href={`/events/${entry.id}`} className={wrapClass}>');
     expect(calendar).toContain('<Link href={`/events/${entry.id}`} className={chipClass}>');
     expect(calendar).toContain('<Link href={`/events/${entry.id}`} className={className}>');
-    expect(page).toContain("{isStaff && (");
+    expect(page).toContain("{isStaff && everCrewSheet && (");
     expect(page).toContain("<ScheduleCrewSheet");
   });
 

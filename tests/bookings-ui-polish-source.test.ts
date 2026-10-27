@@ -19,9 +19,7 @@ describe("Bookings interaction-detail contracts", () => {
     const sort = source("src/components/booking-list/SortHeader.tsx");
 
     expect(sort).toContain('aria-sort={isActive ? (dir === "asc" ? "ascending" : "descending") : "none"}');
-    expect(sort).toContain('<AnimatePresence initial={false} mode="popLayout">');
-    expect(sort).toContain('initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}');
-    expect(sort).toContain('transition={{ type: "spring", duration: 0.3, bounce: 0 }}');
+    expect(sort).toContain("<IconSwap swapKey=");
   });
 
   it("gives booking cards and mobile rows precise tactile feedback", () => {

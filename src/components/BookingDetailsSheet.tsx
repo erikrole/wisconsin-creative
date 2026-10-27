@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
-import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-snapshot-header";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import EmptyState from "@/components/EmptyState";

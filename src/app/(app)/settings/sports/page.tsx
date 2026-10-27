@@ -1,5 +1,7 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,8 +15,9 @@ import NonGameScheduleCard from "./NonGameScheduleCard";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsGroup, SettingsRow } from "../_components/SettingsGroup";
 import EmptyState from "@/components/EmptyState";
-import { SportSetupWizard } from "@/components/schedule/SportSetupWizard";
 import type { SportSetupResponse } from "@/lib/services/sport-setup";
+
+const SportSetupWizard = dynamic(() => import("@/components/schedule/SportSetupWizard").then((mod) => mod.SportSetupWizard));
 
 type RebaseSummary = {
   groupsCreated: number;
@@ -54,6 +57,7 @@ export default function SportsSettingsPage() {
   };
   const [saving, setSaving] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const everWizard = useEverOpen(wizardOpen);
   const [wizardSportCode, setWizardSportCode] = useState<string | null>(null);
   // Policy, roster, and travel are read from the same endpoint the wizard
   // writes through, so this page cannot drift from what the wizard shows.
@@ -340,15 +344,17 @@ export default function SportsSettingsPage() {
         </SettingsRow>
       </SettingsGroup>
 
-      <SportSetupWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        startAtSportCode={wizardSportCode}
-        onCompleted={() => {
-          reload();
-          reloadSportSetup();
-        }}
-      />
+      {everWizard && (
+        <SportSetupWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          startAtSportCode={wizardSportCode}
+          onCompleted={() => {
+            reload();
+            reloadSportSetup();
+          }}
+        />
+      )}
 
       <div id="sports">
         <ShiftConfigTable

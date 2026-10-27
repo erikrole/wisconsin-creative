@@ -4,10 +4,12 @@ import {
   callingKitLabel,
   compareFootballGamedayKits,
   footballGamedayKitRoleLabel,
+} from "@/lib/football-gameday-kits";
+import {
   footballGamedayKitRoleSchema,
   nullableFootballGamedayKitRoleSchema,
   optionalFootballGamedayKitRoleSchema,
-} from "@/lib/football-gameday-kits";
+} from "@/lib/football-gameday-kits-schema";
 
 describe("football gameday kit jobs", () => {
   it("names the eight video jobs Slow 1 through Roam 4", () => {

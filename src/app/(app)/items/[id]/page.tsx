@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 const BookingDetailsSheet = dynamic(() => import("@/components/BookingDetailsSheet"), { ssr: false });
+const NewItemSheet = dynamic(() => import("../new-item-sheet").then((mod) => mod.NewItemSheet));
 const ItemInsightsTab = dynamic(() => import("./ItemInsightsTab"), { ssr: false });
 import EmptyState from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +12,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { FadeUp } from "@/components/ui/motion";
-import ChooseImageModal from "@/components/ChooseImageModal";
 import ItemInfoCard from "./ItemInfoTab";
 import { OperationalOverview, CalendarTab, SettingsTab } from "./ItemBookingsTab";
 import ActivityFeed from "./ItemHistoryTab";
@@ -28,8 +28,10 @@ import { ItemPurchasePanel } from "./_components/ItemPurchasePanel";
 import { BulkSkuDetailExperience } from "../../bulk-inventory/[id]/BulkSkuDetailExperience";
 import { BULK_ID_PREFIX } from "../lib/item-href";
 import type { AssetDetail } from "./types";
-import { NewItemSheet } from "../new-item-sheet";
+import { useEverOpen } from "@/hooks/use-ever-open";
 import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
+
+const ChooseImageModal = dynamic(() => import("@/components/ChooseImageModal"));
 
 /* ── Tab Definitions ──────────────────────────────────────── */
 
@@ -92,7 +94,9 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
   );
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const everImageModal = useEverOpen(imageModalOpen);
   const [addAnotherOpen, setAddAnotherOpen] = useState(false);
+  const everAddAnotherOpen = useEverOpen(addAnotherOpen);
   const [reportOpen, setReportOpen] = useState(false);
   useItemChangeSync();
   const invalidateItemCatalog = useInvalidateItemCatalog();
@@ -361,25 +365,29 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
         onUpdated={loadAsset}
       />
 
-      <ChooseImageModal
-        mode="persisted"
-        open={imageModalOpen}
-        onClose={() => setImageModalOpen(false)}
-        uploadEndpoint={`/api/assets/${asset.id}/image`}
-        currentImageUrl={asset.imageUrl}
-        searchQuery={buildImageSearchSeed(asset)}
-        onImageChanged={(newUrl) => setAsset((prev) => prev ? { ...prev, imageUrl: newUrl } : prev)}
-      />
+      {everImageModal && (
+        <ChooseImageModal
+          mode="persisted"
+          open={imageModalOpen}
+          onClose={() => setImageModalOpen(false)}
+          uploadEndpoint={`/api/assets/${asset.id}/image`}
+          currentImageUrl={asset.imageUrl}
+          searchQuery={buildImageSearchSeed(asset)}
+          onImageChanged={(newUrl) => setAsset((prev) => prev ? { ...prev, imageUrl: newUrl } : prev)}
+        />
+      )}
 
-      <NewItemSheet
-        open={addAnotherOpen}
-        onOpenChange={setAddAnotherOpen}
-        locations={locations}
-        departments={departments}
-        categories={categories}
-        sourceAssetId={asset.id}
-        onCreated={invalidateItemCatalog}
-      />
+      {everAddAnotherOpen && (
+        <NewItemSheet
+          open={addAnotherOpen}
+          onOpenChange={setAddAnotherOpen}
+          locations={locations}
+          departments={departments}
+          categories={categories}
+          sourceAssetId={asset.id}
+          onCreated={invalidateItemCatalog}
+        />
+      )}
       </div>
     </FadeUp>
   );

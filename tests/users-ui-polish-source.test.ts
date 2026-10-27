@@ -21,9 +21,7 @@ describe("Users interaction-detail contracts", () => {
   it("animates sort-state icons without replaying them on initial render", () => {
     const page = source("src/app/(app)/staff/page.tsx");
 
-    expect(page).toContain('<AnimatePresence initial={false} mode="popLayout">');
-    expect(page).toContain('initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}');
-    expect(page).toContain('transition={{ type: "spring", duration: 0.3, bounce: 0 }}');
+    expect(page).toContain("<IconSwap swapKey=");
   });
 
   it("gives roster avatars neutral outlines and mobile cards tactile keyboard feedback", () => {

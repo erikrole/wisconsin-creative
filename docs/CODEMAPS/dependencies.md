@@ -118,6 +118,7 @@
 - `lint`: `eslint .`
 - `lint:ci`: `eslint . --max-warnings=121`
 - `lint:summary`: `node scripts/lint-summary.mjs`
+- `measure:bundle`: `node scripts/measure-bundle.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
 - `preview:attach`: `node scripts/preview.mjs attach`

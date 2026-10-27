@@ -15,7 +15,7 @@ describe("Users sweeping ownership contracts", () => {
     expect(badge).toContain('role === "ADMIN" ? "STAFF"');
     expect(badge).toContain("publicDirectoryRole");
     expect(page).toContain('aria-sort={isAsc ? "ascending" : isDesc ? "descending" : "none"}');
-    expect(page).toContain('<AnimatePresence initial={false} mode="popLayout">');
+    expect(page).toContain("<IconSwap swapKey=");
     expect(page).toContain('<ArrowUp className="size-4 text-foreground"');
     expect(page).toContain('opacity-20 transition-opacity group-hover:opacity-50');
   });

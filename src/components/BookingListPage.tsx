@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
-import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-snapshot-header";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { filterSupportedReservationPickupLocations } from "@/lib/reservation-pickup-locations";
 import { useCurrentUser } from "@/hooks/use-current-user";

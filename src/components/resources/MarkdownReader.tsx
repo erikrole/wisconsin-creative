@@ -17,7 +17,7 @@ import type { ReactNode } from "react";
 import { Children, isValidElement, useMemo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AnimatePresence, motion } from "motion/react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import { toast } from "sonner";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { headingId, isCopyFenceLanguage, markdownHeadingId, markdownHeadingText } from "@/lib/guide-content";
@@ -108,18 +108,9 @@ function CopyReferenceButton({ text }: { text: string }) {
       onClick={copy}
       aria-label={copied ? "Copied" : "Copy reference"}
     >
-      <AnimatePresence initial={false} mode="popLayout">
-        <motion.span
-          key={copied ? "copied" : "copy"}
-          initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-          className="inline-flex items-center justify-center"
-        >
+      <IconSwap swapKey={copied ? "copied" : "copy"}>
           {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-        </motion.span>
-      </AnimatePresence>
+        </IconSwap>
       <span>{copied ? "Copied" : "Copy"}</span>
     </button>
   );

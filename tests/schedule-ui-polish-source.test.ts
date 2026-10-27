@@ -118,8 +118,6 @@ describe("Schedule interaction-detail contracts", () => {
   it("cross-fades collaborator follow-state icons without animating initial render", () => {
     const collaborator = source("src/app/(app)/schedule/_components/CollaboratorSchedule.tsx");
 
-    expect(collaborator).toContain('<AnimatePresence initial={false} mode="popLayout">');
-    expect(collaborator).toContain('initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}');
-    expect(collaborator).toContain('transition={{ type: "spring", duration: 0.3, bounce: 0 }}');
+    expect(collaborator).toContain("<IconSwap swapKey=");
   });
 });

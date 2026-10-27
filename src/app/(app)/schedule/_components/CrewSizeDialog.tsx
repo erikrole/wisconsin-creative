@@ -14,11 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FRESH_SCOPE_CLASS } from "@/lib/fonts/fresh";
-import {
-  MAX_SLOTS_PER_AREA_CLASS,
-  type WorkingSchedulePayload,
-  type WorkingScheduleSportTemplate,
-} from "@/lib/schedule-working-copy";
+import type { WorkingSchedulePayload, WorkingScheduleSportTemplate } from "@/lib/schedule-working-copy";
+import { MAX_SLOTS_PER_AREA_CLASS } from "@/lib/working-schedule-limits";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { sportLabel } from "@/lib/sports";
 import { AREA_LABELS } from "@/types/areas";

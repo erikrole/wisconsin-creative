@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { normalizeProfilePhone, profilePhoneSchema } from "@/lib/profile-phone";
+import { normalizeProfilePhone } from "@/lib/profile-phone";
+import { profilePhoneSchema } from "@/lib/profile-phone-schema";
 
 export const ONBOARDING_GROUP_FIELDS = {
   EMAIL: ["athleticsEmail"],

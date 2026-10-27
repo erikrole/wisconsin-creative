@@ -1,5 +1,7 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -43,12 +45,14 @@ import {
   BULK_ASSIGNMENT_WORKER_SCOPE_LABELS,
   MAX_BULK_ASSIGNMENT_SPORTS,
   summarizeAssignmentPeople,
-  type BulkAssignmentPreviewEvent,
-  type BulkAssignmentPreviewProposal,
-  type BulkAssignmentPreviewResponse,
-  type BulkAssignmentPreviewSkipped,
-  type BulkAssignmentScope,
-  type BulkAssignmentWorkerScope,
+} from "@/lib/bulk-schedule-assignment-shared";
+import type {
+  BulkAssignmentPreviewEvent,
+  BulkAssignmentPreviewProposal,
+  BulkAssignmentPreviewResponse,
+  BulkAssignmentPreviewSkipped,
+  BulkAssignmentScope,
+  BulkAssignmentWorkerScope,
 } from "@/lib/bulk-schedule-assignment-types";
 import {
   ASSIGNMENT_PERIODS,
@@ -64,7 +68,8 @@ import { FRESH_SCOPE_CLASS } from "@/lib/fonts/fresh";
 import { cn } from "@/lib/utils";
 import { SportRosterPreview } from "./SportRosterPreview";
 import { PendingAssignmentBatches, usePendingAssignmentBatches } from "./PendingAssignmentBatches";
-import { SportSetupWizard } from "./SportSetupWizard";
+
+const SportSetupWizard = dynamic(() => import("./SportSetupWizard").then((mod) => mod.SportSetupWizard));
 
 /** A caller-supplied window shown as an extra period option (the month grid). */
 export type AutoAssignCustomWindow = {
@@ -314,6 +319,7 @@ export function AutoAssignDialog({
   );
   const [sportPickerOpen, setSportPickerOpen] = useState(false);
   const [wizardSportCode, setWizardSportCode] = useState<string | null>(null);
+  const everWizard = useEverOpen(wizardSportCode !== null);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
   const [showBlockedEvents, setShowBlockedEvents] = useState(false);
 
@@ -1054,17 +1060,19 @@ export function AutoAssignDialog({
         </DialogFooter>
       </DialogContent>
 
-      <SportSetupWizard
-        open={wizardSportCode !== null}
-        onOpenChange={(next) => { if (!next) setWizardSportCode(null); }}
-        startAtSportCode={wizardSportCode}
-        onCompleted={() => {
-          void queryClient.invalidateQueries({ queryKey: ["schedule", "sport-roster"] });
-          setPreview(null);
-          setSelectedProposalIds(new Set());
-          setStep("scope");
-        }}
-      />
+      {everWizard && (
+        <SportSetupWizard
+          open={wizardSportCode !== null}
+          onOpenChange={(next) => { if (!next) setWizardSportCode(null); }}
+          startAtSportCode={wizardSportCode}
+          onCompleted={() => {
+            void queryClient.invalidateQueries({ queryKey: ["schedule", "sport-roster"] });
+            setPreview(null);
+            setSelectedProposalIds(new Set());
+            setStep("scope");
+          }}
+        />
+      )}
     </Dialog>
   );
 }

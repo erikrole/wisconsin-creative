@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import { rowKeyActivates } from "@/lib/a11y-resilience";
-import { AnimatePresence, motion } from "motion/react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import {
   type ColumnDef,
   type SortingState,
@@ -340,15 +340,7 @@ export function DataTable({
                             aria-label={`Sort by ${String(header.column.columnDef.header)} ${sorted === "asc" ? "descending" : "ascending"}`}
                           >
                             {flexRender(header.column.columnDef.header, header.getContext())}
-                            <AnimatePresence initial={false} mode="popLayout">
-                              <motion.span
-                                key={sorted || "unsorted"}
-                                initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-                                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                                exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-                                transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-                                className="inline-flex items-center justify-center"
-                              >
+                            <IconSwap swapKey={sorted || "unsorted"}>
                                 {sorted === "asc" ? (
                                   <ArrowUp className="size-3.5 text-foreground" aria-hidden="true" />
                                 ) : sorted === "desc" ? (
@@ -356,8 +348,7 @@ export function DataTable({
                                 ) : (
                                   <ArrowUpDown className="size-3.5 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
                                 )}
-                              </motion.span>
-                            </AnimatePresence>
+                              </IconSwap>
                           </Button>
                         ) : (
                           <div className="flex h-10 items-center gap-1">

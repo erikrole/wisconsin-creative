@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { m, useReducedMotion } from "motion/react";
 import { ArrowLeftRight, GitCompareArrows } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ function MirroredStat({ stat }: { stat: Stat }) {
       </div>
       <div className="mt-1 grid grid-cols-2 gap-1" aria-hidden="true">
         <div className="flex h-1.5 justify-end overflow-hidden rounded-full bg-muted">
-          <motion.div
+          <m.div
             className="h-full rounded-full"
             style={{ background: leftWins ? "var(--accent)" : "var(--text-muted)" }}
             initial={false}
@@ -48,7 +48,7 @@ function MirroredStat({ stat }: { stat: Stat }) {
           />
         </div>
         <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
-          <motion.div
+          <m.div
             className="h-full rounded-full"
             style={{ background: rightWins ? "var(--accent)" : "var(--text-muted)" }}
             initial={false}
