@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Users interaction-detail contracts", () => {
   it("keeps directory commands, sort controls, recovery, and pagination on the 40px baseline", () => {
-    const page = source("src/app/(app)/staff/page.tsx");
+    const page = source("src/app/(app)/staff/StaffPageClient.tsx");
 
     expect(page).toContain('className="group -ml-3 h-10');
     expect(page).not.toContain('className="group -ml-3 h-8"');
@@ -19,7 +19,7 @@ describe("Users interaction-detail contracts", () => {
   });
 
   it("animates sort-state icons without replaying them on initial render", () => {
-    const page = source("src/app/(app)/staff/page.tsx");
+    const page = source("src/app/(app)/staff/StaffPageClient.tsx");
 
     expect(page).toContain("<IconSwap swapKey=");
   });

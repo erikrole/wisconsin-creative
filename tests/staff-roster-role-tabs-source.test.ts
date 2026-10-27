@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 const source = (path: string) => readFileSync(path, "utf8");
 
 describe("Staff roster role tabs and photo grid", () => {
-  const page = source("src/app/(app)/staff/page.tsx");
+  const page = source("src/app/(app)/staff/StaffPageClient.tsx");
   const filters = source("src/app/(app)/staff/UserFilters.tsx");
   const tabs = source("src/app/(app)/staff/RoleTabs.tsx");
 

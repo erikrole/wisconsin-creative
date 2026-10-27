@@ -44,7 +44,7 @@ describe("User profile overhaul contracts", () => {
   });
 
   it("adds related jumps from roster and profile without changing route URLs", () => {
-    const roster = source("src/app/(app)/staff/page.tsx");
+    const roster = source("src/app/(app)/staff/StaffPageClient.tsx");
     const related = source("src/app/(app)/staff/_components/RosterRelatedLinks.tsx");
     const profileRelated = source("src/app/(app)/staff/[id]/_components/ProfileRelatedLinks.tsx");
 
