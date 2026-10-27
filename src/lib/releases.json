@@ -16,6 +16,21 @@
     ]
   },
   {
+    "date": "2026-10-27",
+    "title": "Fix On shift now list",
+    "type": "fixes",
+    "summary": "The Staff page no longer shows people as on shift before their shift starts.",
+    "details": [
+      "Games with no set time yet no longer put the whole crew on shift the night before.",
+      "A personal or slot call time now decides when someone counts as on shift.",
+      "Students and staff both show, and the end time uses Madison time."
+    ],
+    "pr": 715,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-26",
     "title": "Fix false shift conflict when claiming",
     "type": "fixes",
