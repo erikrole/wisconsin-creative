@@ -12,6 +12,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
 import { useOnline } from "@/hooks/use-browser-state";
+import { runWhenIdle, useIdleReady } from "@/hooks/use-idle-ready";
 import { clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { toast } from "sonner";
@@ -250,7 +251,10 @@ export default function AppShell({
       await loadEarnedBadges();
     }
 
-    void refreshBadgeRewards().then(startSteadyPolling);
+    // Badges are ambient, so the first read waits for the page's own requests to settle.
+    const cancelFirstRead = runWhenIdle(() => {
+      if (!stopped) void refreshBadgeRewards().then(startSteadyPolling);
+    });
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
       // Coming back during the day refreshes immediately. Quiet hours stay paused
@@ -265,6 +269,7 @@ export default function AppShell({
 
     return () => {
       stopped = true;
+      cancelFirstRead();
       window.clearTimeout(pollTimer);
       controller.abort();
       document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -278,7 +283,6 @@ export default function AppShell({
   const badgeUserId = user?.id;
   useEffect(() => {
     if (!badgeUserId || isRestoring) return;
-    const controller = new AbortController();
     void queryClient.fetchQuery({
       ...dashboardStatsQueryOptions(badgeUserId),
       // Mutations on another route may have changed custody since the last read.
@@ -287,6 +291,12 @@ export default function AppShell({
     }).catch(() => {
       // The shared query retains the last trusted counts on failure.
     });
+  }, [pathname, badgeUserId, isRestoring, queryClient]);
+
+  const idleReady = useIdleReady();
+  useEffect(() => {
+    if (!badgeUserId || isRestoring || !idleReady) return;
+    const controller = new AbortController();
     async function loadNotifications() {
       try {
         const response = await fetch("/api/notifications/count", { signal: controller.signal });
@@ -301,7 +311,7 @@ export default function AppShell({
     }
     void loadNotifications();
     return () => { controller.abort(); };
-  }, [pathname, badgeUserId, isRestoring, queryClient]);
+  }, [pathname, badgeUserId, isRestoring, idleReady]);
 
   useEffect(() => {
     if (!badgeUserId) return;
