@@ -771,7 +771,7 @@ private struct AvailabilityEditorSheet: View {
     }
 }
 
-private enum AvailabilityEditorKind: String, CaseIterable, Identifiable {
+enum AvailabilityEditorKind: String, CaseIterable, Identifiable {
     case weekly = "WEEKLY"
     case adHoc = "AD_HOC"
 
@@ -779,7 +779,7 @@ private enum AvailabilityEditorKind: String, CaseIterable, Identifiable {
     var label: String { self == .weekly ? "Weekly" : "One-time" }
 }
 
-private enum AvailabilityEditorIntent: String, CaseIterable, Identifiable {
+enum AvailabilityEditorIntent: String, CaseIterable, Identifiable {
     case cannotWork = "CANNOT_WORK"
     case prefer = "PREFER"
     case dislike = "DISLIKE"
@@ -833,12 +833,12 @@ private enum AvailabilityEditorIntent: String, CaseIterable, Identifiable {
     }
 }
 
-private struct AvailabilityIntentMetadata {
+struct AvailabilityIntentMetadata {
     let label: String
     let tone: StatusTone
 }
 
-private extension AvailabilityBlock {
+extension AvailabilityBlock {
     var normalizedKind: String { kind ?? "WEEKLY" }
     var normalizedIntent: String { intent ?? "CANNOT_WORK" }
     var normalizedStatus: String { status ?? "APPROVED" }

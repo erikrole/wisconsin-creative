@@ -130,6 +130,7 @@ SidebarWebDestinationView.swift        |                             | exempt-ti
 NotificationSettingsView.swift         | profile                     | audit
 AccountSecuritySettingsView.swift      | profile                     | audit
 AvailabilityView.swift                 | schedule                    | audit
+TeamAvailabilityView.swift              | schedule                    | audit
 AccountAvatar.swift                    |                             | exempt-shared
 ScanPrePromptView.swift                | scan                        | audit
 PushPrePromptView.swift                | profile                     | audit

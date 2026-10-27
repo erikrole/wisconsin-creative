@@ -179,6 +179,8 @@ enum AppRuntimeMode {
         case itemDetail = "item-detail"
         case userDetail = "user-detail"
         case availability
+        /// Staff Team Availability grid against in-code students; no API.
+        case teamAvailability = "team-availability"
         case gearPicks = "gear-picks"
         case sharedLogins = "shared-logins"
         case announcementImages = "announcement-images"
