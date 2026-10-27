@@ -27,6 +27,39 @@ function applyEventWindowFilter(
   }
 }
 
+/** The schedule list's view of a group: no snapshot, audit timestamps or row bookkeeping. */
+function slimShiftGroup(g: {
+  id: string; eventId: string; notes: string | null; archivedAt: Date | null;
+  event: { id: string; startsAt: Date };
+  shifts: { id: string; area: unknown; workerType: unknown; startsAt: Date; endsAt: Date; callStartsAt: Date | null; callEndsAt: Date | null; notes: string | null; viewerRequest: unknown;
+    assignments: { id: string; status: unknown; user: unknown; activeTrade: unknown; callStartsAt: Date | null; callEndsAt: Date | null; callNote: string | null; crewLabel: string | null; crewHalf: unknown; hasConflict: boolean; conflictNote: string | null; acknowledgedAt: Date | null; acknowledgedById: string | null }[] }[];
+  publication: unknown; hasWorkingCopy: boolean | undefined; claimsPaused: boolean; autoReleaseAt: string | null | undefined; autoReleaseError: string | null | undefined; coverage: unknown;
+}) {
+  return {
+    id: g.id,
+    eventId: g.eventId,
+    notes: g.notes,
+    archivedAt: g.archivedAt,
+    event: { id: g.event.id, startsAt: g.event.startsAt },
+    shifts: g.shifts.map((s) => ({
+      id: s.id, area: s.area, workerType: s.workerType, startsAt: s.startsAt, endsAt: s.endsAt,
+      callStartsAt: s.callStartsAt, callEndsAt: s.callEndsAt, notes: s.notes, viewerRequest: s.viewerRequest,
+      assignments: s.assignments.map((a) => ({
+        id: a.id, status: a.status, user: a.user, activeTrade: a.activeTrade,
+        callStartsAt: a.callStartsAt, callEndsAt: a.callEndsAt, callNote: a.callNote,
+        crewLabel: a.crewLabel, crewHalf: a.crewHalf, hasConflict: a.hasConflict, conflictNote: a.conflictNote,
+        acknowledgedAt: a.acknowledgedAt, acknowledgedById: a.acknowledgedById,
+      })),
+    })),
+    publication: g.publication,
+    hasWorkingCopy: g.hasWorkingCopy,
+    claimsPaused: g.claimsPaused,
+    autoReleaseAt: g.autoReleaseAt,
+    autoReleaseError: g.autoReleaseError,
+    coverage: g.coverage,
+  };
+}
+
 export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "shift", "view");
 
@@ -176,6 +209,9 @@ export const GET = withAuth(async (req, { user }) => {
     };
   });
 
+  // The web schedule asks for `slim=1`: only the fields it renders. The default shape is unchanged
+  // for the iPhone app and every other reader.
+  if (url.searchParams.get("slim") === "1") return ok({ data: data.map(slimShiftGroup), total });
   return ok({ data, total });
 });
 
