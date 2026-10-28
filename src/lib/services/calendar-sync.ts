@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditEntriesTx } from "@/lib/audit";
+import { healFullDayShiftWindows } from "@/lib/services/shift-generation";
 import type { CalendarEventResult, CalendarEventSite, CalendarEventStatus } from "@prisma/client";
 import {
   buildVenueSearchText,
@@ -733,6 +734,14 @@ export async function syncCalendarSource(sourceId: string): Promise<SyncResult> 
         });
       }
     }
+  }
+
+  // Crews generated while a game was date-only keep a full-day window once
+  // the feed adds the real time.
+  try {
+    await healFullDayShiftWindows();
+  } catch (err) {
+    console.error("[calendar-sync] Failed to heal full-day shift windows", err);
   }
 
   // ── Phase 4: Update source metadata ──

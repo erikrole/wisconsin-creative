@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-28",
+    "title": "Fix call times on newly timed games",
+    "type": "fixes",
+    "summary": "Games that got their real time after being listed by date only now show the right crew times.",
+    "details": [
+      "Crews no longer keep a leftover all-day window like 6:00 PM – 6:00 PM once the game has a time.",
+      "This stops false schedule conflicts that blocked students from claiming other games the same day."
+    ],
+    "pr": 718,
+    "platforms": [
+      "Web",
+      "iOS"
+    ]
+  },
+  {
     "date": "2026-10-27",
     "title": "Faster pages on slow connections",
     "type": "improvement",
