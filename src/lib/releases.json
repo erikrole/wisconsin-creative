@@ -8,6 +8,7 @@
       "Open the checkout and tap Add items, then search and pick the item.",
       "The item is due back with the rest of the checkout, and the activity log records who added it."
     ],
+    "pr": 721,
     "platforms": [
       "Web"
     ]
