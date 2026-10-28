@@ -8,6 +8,7 @@
       "Crews no longer keep a leftover all-day window like 6:00 PM – 6:00 PM once the game has a time.",
       "This stops false schedule conflicts that blocked students from claiming other games the same day."
     ],
+    "pr": 718,
     "platforms": [
       "Web",
       "iOS"
