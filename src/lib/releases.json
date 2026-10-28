@@ -8,7 +8,7 @@
       "Removing an item from a reservation no longer re-checks everything else on it, so a case with several items in maintenance can be trimmed down.",
       "When a kiosk pickup is blocked, it now names the item and who has it instead of saying \"Availability conflict\"."
     ],
-    "pr": 0,
+    "pr": 719,
     "platforms": [
       "Web"
     ]
