@@ -652,7 +652,10 @@ export async function healFullDayShiftWindows(now = new Date()): Promise<number>
       shiftGroup: { select: { event: { select: { sportCode: true, startsAt: true, endsAt: true } } } },
     },
   });
-  const stale = shifts.filter((shift) => isFullDayBoundaryWindow(shift));
+  const stale = shifts.filter((shift) => isFullDayBoundaryWindow({
+    startsAt: shift.startsAt.toISOString(),
+    endsAt: shift.endsAt.toISOString(),
+  }));
   if (stale.length === 0) return 0;
 
   const sportCodes = unique(stale.flatMap((shift) => shift.shiftGroup.event.sportCode ?? []));
