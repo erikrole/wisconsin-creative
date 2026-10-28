@@ -1,7 +1,7 @@
 [
   {
     "date": "2026-10-28",
-    "title": "Fix wrong call times on newly timed games",
+    "title": "Fix call times on newly timed games",
     "type": "fixes",
     "summary": "Games that got their real time after being listed by date only now show the right crew times.",
     "details": [
