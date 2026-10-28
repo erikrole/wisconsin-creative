@@ -1,7 +1,7 @@
 [
   {
     "date": "2026-10-28",
-    "title": "Admins can add gear to an active checkout",
+    "title": "Admins can add gear to checkouts",
     "type": "feature",
     "summary": "Admins can now add an available item to a checkout that is already out, without going to a kiosk.",
     "details": [
