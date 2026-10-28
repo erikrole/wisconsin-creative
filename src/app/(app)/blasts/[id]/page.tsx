@@ -2,7 +2,7 @@
 
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ArrowLeftIcon, BanIcon, RefreshCwIcon } from "lucide-react";
 import { BreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { PageHeader } from "@/components/PageHeader";

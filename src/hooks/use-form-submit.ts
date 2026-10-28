@@ -8,7 +8,7 @@ import {
   parseErrorMessage,
   parseJsonSafely,
 } from "@/lib/errors";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 export type FormState = "idle" | "submitting" | "success" | "error";
 

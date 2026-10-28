@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
 describe("booking real-time sync source contract", () => {
-  it("forces the persisted dashboard payload to refetch on mount", () => {
+  it("forces the persisted dashboard payload to refetch on mount, except one the server just read", () => {
     const hook = source("src/hooks/use-dashboard-data.ts");
 
-    expect(hook).toMatch(/queryKey:\s*dashboardKey,[\s\S]*?refetchOnMount:\s*"always"/);
+    expect(hook).toMatch(/queryKey:\s*dashboardKey,[\s\S]*?refetchOnMount,/);
+    expect(hook).toContain('peekSeededKey(queryClient, key) ? false : "always"');
     expect(hook).toContain("enabled: Boolean(userId)");
   });
 
   it("forces the dashboard stats overlay to refetch on mount", () => {
     const hook = source("src/hooks/use-dashboard-data.ts");
 
-    expect(hook).toMatch(/\.\.\.dashboardStatsQueryOptions\(userId\),[\s\S]*?refetchOnMount:\s*"always"/);
+    expect(hook).toMatch(/\.\.\.dashboardStatsQueryOptions\(userId\),[\s\S]*?refetchOnMount,/);
   });
 
   it("forces booking detail cache to verify server truth on mount", () => {
@@ -21,10 +22,10 @@ describe("booking real-time sync source contract", () => {
     expect(hook).toMatch(/queryKey,[\s\S]*?refetchOnMount:\s*"always"/);
   });
 
-  it("forces shared booking lists to verify server truth on mount", () => {
+  it("forces shared booking lists to verify server truth on mount, except a list the server just read", () => {
     const list = source("src/components/BookingListPage.tsx");
 
-    expect(list).toMatch(/queryKey:\s*\["bookingList", config\.kind, listUrl\],[\s\S]*?refetchOnMount:\s*"always"/);
+    expect(list).toMatch(/queryKey:\s*\["bookingList", config\.kind, listUrl\],[\s\S]*?refetchOnMount:\s*seeded \? false : "always"/);
   });
 
   it("polls the lightweight booking change signal instead of the heavy dashboard route", () => {
@@ -53,7 +54,7 @@ describe("booking real-time sync source contract", () => {
 
   it("wires booking change sync into dashboard and the shared booking list", () => {
     const dashboard = source("src/app/(app)/_home/HomePage.tsx");
-    const bookings = source("src/app/(app)/bookings/page.tsx");
+    const bookings = source("src/app/(app)/bookings/BookingsPageClient.tsx");
     const list = source("src/components/BookingListPage.tsx");
 
     expect(dashboard).toContain('import { useBookingChangeSync } from "@/hooks/use-booking-change-sync"');

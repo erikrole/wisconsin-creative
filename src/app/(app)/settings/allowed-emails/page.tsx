@@ -1,11 +1,12 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
-import OnboardingDialog from "@/components/onboarding/OnboardingDialog";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -27,6 +28,8 @@ import { handleAuthRedirect, classifyError, isAbortError, parseErrorMessage } fr
 import { cn } from "@/lib/utils";
 import { SettingsGroup } from "../_components/SettingsGroup";
 import { SettingsPageShell } from "../SettingsPageShell";
+
+const OnboardingDialog = dynamic(() => import("@/components/onboarding/OnboardingDialog"));
 
 type AllowedEmail = {
   id: string;
@@ -88,6 +91,7 @@ export default function AllowedEmailsPage() {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const everOnboarding = useEverOpen(showOnboarding);
   const filters = [
     { value: "all", label: "All", count: totalAll },
     { value: "unclaimed", label: "Pending", count: totalPending },
@@ -208,12 +212,14 @@ export default function AllowedEmailsPage() {
         })}
       </div>
 
-      <OnboardingDialog
-        open={showOnboarding}
-        onOpenChange={setShowOnboarding}
-        currentUserRole={currentUserRole}
-        onInvitesChanged={() => reload()}
-      />
+      {everOnboarding && (
+        <OnboardingDialog
+          open={showOnboarding}
+          onOpenChange={setShowOnboarding}
+          currentUserRole={currentUserRole}
+          onInvitesChanged={() => reload()}
+        />
+      )}
 
       <SettingsGroup>
         {items.length === 0 ? (

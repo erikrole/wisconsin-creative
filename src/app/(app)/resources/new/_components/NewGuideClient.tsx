@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useFetch } from "@/hooks/use-fetch";
 import type { GuideListItem } from "@/lib/guides";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";

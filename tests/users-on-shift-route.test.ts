@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { shiftAssignment: { findMany: vi.fn() } } }));
@@ -14,17 +14,32 @@ function call() {
   return GET(new Request("https://app.example.com/api/users/on-shift"), { params: Promise.resolve({}) });
 }
 
-function row(id: string, name: string, endsAt: string) {
+const NOW = new Date("2026-10-18T21:00:00Z");
+
+function row(id: string, name: string, endsAt: string, extra: { allDay?: boolean; startsAt?: string; call?: [string, string] } = {}) {
   return {
+    callStartsAt: null,
+    callEndsAt: null,
     user: { id, name, avatarUrl: null },
-    shift: { area: "PHOTO", endsAt: new Date(endsAt), shiftGroup: { event: { summary: "Volleyball vs. Purdue" } } },
+    shift: {
+      area: "PHOTO",
+      startsAt: new Date(extra.startsAt ?? "2026-10-18T20:00:00Z"),
+      endsAt: new Date(endsAt),
+      callStartsAt: extra.call ? new Date(extra.call[0]) : null,
+      callEndsAt: extra.call ? new Date(extra.call[1]) : null,
+      shiftGroup: { event: { summary: "Volleyball vs. Purdue", allDay: extra.allDay ?? false, startsAt: new Date(extra.startsAt ?? "2026-10-18T20:00:00Z"), endsAt: new Date(endsAt) } },
+    },
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers();
+  vi.setSystemTime(NOW);
   vi.mocked(requireAuth).mockResolvedValue(viewer);
 });
+
+afterEach(() => vi.useRealTimers());
 
 describe("GET /api/users/on-shift", () => {
   it("only asks for confirmed assignments on published, current shifts", async () => {
@@ -34,8 +49,6 @@ describe("GET /api/users/on-shift", () => {
     const where = vi.mocked(db.shiftAssignment.findMany).mock.calls[0]?.[0]?.where as { status: unknown; user: unknown; shift: { shiftGroup: unknown; startsAt: { lte: unknown }; endsAt: { gte: unknown } } };
     expect(where.status).toEqual({ in: ["DIRECT_ASSIGNED", "APPROVED"] });
     expect(where.shift.shiftGroup).toEqual({ publishedAt: { not: null }, archivedAt: null });
-    expect(where.shift.startsAt.lte).toBeInstanceOf(Date);
-    expect(where.shift.endsAt.gte).toBeInstanceOf(Date);
     expect(where.user).toEqual({ active: true, hiddenFromRoster: false });
   });
 
@@ -47,9 +60,20 @@ describe("GET /api/users/on-shift", () => {
     ] as never);
     const body = await (await call()).json();
     expect(body.data).toEqual([
-      { id: "p1", name: "Maya Chen", avatarUrl: null, area: "PHOTO", event: "Volleyball vs. Purdue", endsAt: "2026-10-18T22:00:00.000Z" },
-      { id: "p2", name: "Ben Ortiz", avatarUrl: null, area: "PHOTO", event: "Volleyball vs. Purdue", endsAt: "2026-10-18T23:30:00.000Z" },
+      { id: "p1", name: "Maya Chen", avatarUrl: null, area: "PHOTO", event: "Volleyball vs. Purdue", endsAt: "2026-10-18T22:00:00.000Z", endsAtLabel: "5:00 PM" },
+      { id: "p2", name: "Ben Ortiz", avatarUrl: null, area: "PHOTO", event: "Volleyball vs. Purdue", endsAt: "2026-10-18T23:30:00.000Z", endsAtLabel: "6:30 PM" },
     ]);
+  });
+
+  it("skips all-day events with no call time and shifts that have not started", async () => {
+    vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([
+      row("a", "All Day", "2026-10-19T00:00:00Z", { allDay: true, startsAt: "2026-10-18T00:00:00Z" }),
+      row("b", "Later Tonight", "2026-10-19T03:00:00Z", { startsAt: "2026-10-19T00:00:00Z" }),
+      row("c", "Called In", "2026-10-19T03:00:00Z", { allDay: true, startsAt: "2026-10-18T00:00:00Z", call: ["2026-10-18T20:00:00Z", "2026-10-18T23:00:00Z"] }),
+    ] as never);
+    const body = await (await call()).json();
+    expect(body.data.map((p: { id: string }) => p.id)).toEqual(["c"]);
+    expect(body.data[0].endsAtLabel).toBe("6:00 PM");
   });
 
   it("is closed to collaborators", async () => {

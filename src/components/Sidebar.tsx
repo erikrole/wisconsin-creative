@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
@@ -56,7 +57,6 @@ import { SidebarToolsFlyout } from "@/components/SidebarToolsFlyout";
 import { ALL_TOOLS_HREF, toolsForRole } from "@/lib/web-tools";
 import { SIDEBAR_APPS, linksForRole } from "@/lib/sidebar-links";
 import type { QuickLinkDto } from "@/lib/quick-links";
-import { SidebarCustomizeDialog } from "@/components/SidebarCustomizeDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,6 +80,11 @@ import {
 import { resolveActiveShellHref } from "@/lib/shell-navigation";
 import { chromeFont } from "@/lib/chrome-font";
 import { cn } from "@/lib/utils";
+
+const SidebarCustomizeDialog = dynamic(
+  () => import("@/components/SidebarCustomizeDialog").then((m) => m.SidebarCustomizeDialog),
+  { ssr: false },
+);
 
 type NavItem = {
   label: string;
@@ -779,7 +784,7 @@ export default function AppSidebar({
               </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SidebarCustomizeDialog
+          {customizeOpen && <SidebarCustomizeDialog
             open={customizeOpen}
             onOpenChange={setCustomizeOpen}
             groups={visibleGroups}
@@ -788,7 +793,7 @@ export default function AppSidebar({
             hiddenHrefs={hiddenHrefs}
             onHiddenChange={accountPrefs.setHidden}
             className={chromeFont.className}
-          />
+          />}
         </SidebarFooter>
       )}
       </div>

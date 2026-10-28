@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { MotionProvider } from "@/components/MotionProvider";
 import { useSearchParams } from "next/navigation";
 import { WrappedPlayer, type WrappedSlide } from "../(app)/wrapped/WrappedPlayer";
 import { WRAPPED_SCENARIOS, wrappedScenario, type WrappedScenario } from "@/lib/wrapped/stress-fixtures";
@@ -22,7 +23,11 @@ function Lab() {
       </div>
     );
   }
-  return <WrappedPlayer key={scenario} slides={slides} person={{ name: recap.person.name, avatarUrl: null }} onClose={() => undefined} />;
+  return (
+    <MotionProvider>
+      <WrappedPlayer key={scenario} slides={slides} person={{ name: recap.person.name, avatarUrl: null }} onClose={() => undefined} />
+    </MotionProvider>
+  );
 }
 
 export default function WrappedLab() {

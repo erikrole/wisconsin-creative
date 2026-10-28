@@ -26,7 +26,7 @@ import {
   PackageOpen,
   RefreshCw,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { statusBadgeVariant, statusLabel, urgencyBadgeClassName } from "./helpers";
 import type { BookingChangeSyncStatus } from "@/hooks/use-booking-change-sync";
 import type { BookingDetail } from "./types";

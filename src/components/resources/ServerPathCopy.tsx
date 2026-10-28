@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const COPY_RESET_MS = 1600;
 
@@ -44,22 +44,13 @@ export function ServerPathCopy({ path }: { path: string }) {
       )}
       title={path}
     >
-      <AnimatePresence initial={false} mode="popLayout">
-        <motion.span
-          key={copied ? "copied" : "copy"}
-          initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-          className="inline-flex items-center justify-center"
-        >
+      <IconSwap swapKey={copied ? "copied" : "copy"}>
           {copied ? (
             <CheckIcon data-icon="inline-start" aria-hidden="true" />
           ) : (
             <CopyIcon data-icon="inline-start" aria-hidden="true" />
           )}
-        </motion.span>
-      </AnimatePresence>
+        </IconSwap>
       <span className="min-w-0 flex-1 truncate text-left">{path}</span>
       <span
         className={cn(

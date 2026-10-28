@@ -3,7 +3,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
@@ -58,10 +58,14 @@ import {
 
 const BookingDetailsSheet = lazy(() => import("@/components/BookingDetailsSheet"));
 
-export default function HomePage() {
+/**
+ * `serverNow` is the instant the server rendered at. With it the first render shows the server's own copy
+ * of the page (and counts down from that instant) instead of waiting out hydration for the device clock.
+ */
+export default function HomePage({ serverNow }: { serverNow?: string }) {
   const { data: user, isLoading } = useCurrentUser();
   const hydrated = useHydrated();
-  if (isLoading || !hydrated) return <HomeSkeleton />;
+  if (isLoading || (!hydrated && !serverNow)) return <HomeSkeleton />;
   if (user?.role === "COLLABORATOR") {
     return (
       <CollaboratorHome
@@ -71,17 +75,22 @@ export default function HomePage() {
       />
     );
   }
-  return <InternalHome name={user?.name ?? null} readOnly={Boolean(user?.preview?.readOnly)} />;
+  return <InternalHome name={user?.name ?? null} readOnly={Boolean(user?.preview?.readOnly)} serverNow={serverNow} />;
 }
 
 /* ── Shared plumbing ────────────────────────────────────── */
 
-function useMinuteClock() {
-  const [now, setNow] = useState(() => new Date());
+function useMinuteClock(serverNow?: string) {
+  const [now, setNow] = useState(() => (serverNow ? new Date(serverNow) : new Date()));
   useEffect(() => {
+    // The server's instant matched the HTML; the device clock takes over right after hydration.
+    const first = serverNow ? setTimeout(() => setNow(new Date()), 0) : undefined;
     const interval = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
+  }, [serverNow]);
   return now;
 }
 
@@ -255,7 +264,7 @@ function slotOf<T>(query: { data?: T; isError: boolean; refetch: () => unknown }
 
 /* ── Students, staff and admins ─────────────────────────── */
 
-function InternalHome({ name, readOnly }: { name: string | null; readOnly: boolean }) {
+function InternalHome({ name, readOnly, serverNow }: { name: string | null; readOnly: boolean; serverNow?: string }) {
   const {
     data,
     fastStats,
@@ -267,7 +276,7 @@ function InternalHome({ name, readOnly }: { name: string | null; readOnly: boole
     loadData,
   } = useDashboardData();
   const bookingSync = useBookingChangeSync();
-  const now = useMinuteClock();
+  const now = useMinuteClock(serverNow);
   const { selectedBookingId, setSelectedBookingId, reviewingReportId, setReviewingReportId, reviewingLost, setReviewingLost, onTarget } = useBookingTargets();
   const reviewing = data?.flaggedItems.find((f) => f.id === reviewingReportId) ?? null;
 

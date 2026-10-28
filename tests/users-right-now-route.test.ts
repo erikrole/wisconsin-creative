@@ -96,6 +96,26 @@ describe("GET /api/users/[id]/right-now", () => {
     ]);
   });
 
+  it("is not live on an all-day event with no call time, but is inside a call window", async () => {
+    const now = Date.now();
+    const shift = (call: boolean) => ({
+      callStartsAt: null,
+      callEndsAt: null,
+      shift: {
+        area: "PHOTO",
+        startsAt: new Date(now - 5 * hour),
+        endsAt: new Date(now + 5 * hour),
+        callStartsAt: call ? new Date(now - hour) : null,
+        callEndsAt: call ? new Date(now + hour) : null,
+        shiftGroup: { event: { summary: "Basketball", allDay: true, startsAt: new Date(now - 5 * hour), endsAt: new Date(now + 5 * hour), location: null } },
+      },
+    });
+    vi.mocked(db.shiftAssignment.findFirst).mockResolvedValue(shift(false) as never);
+    expect((await (await call("u1")).json()).data.nextShift.live).toBe(false);
+    vi.mocked(db.shiftAssignment.findFirst).mockResolvedValue(shift(true) as never);
+    expect((await (await call("u1")).json()).data.nextShift.live).toBe(true);
+  });
+
   it("returns empty values when nothing is scheduled or out", async () => {
     const body = await (await call("u1")).json();
     expect(body.data).toEqual({

@@ -16,7 +16,9 @@ import { FadeUp } from "@/components/ui/motion";
 import { useAssignmentGrid } from "@/hooks/use-assignment-grid";
 import { AssignmentGrid } from "./AssignmentGrid";
 import { WorkloadPanel } from "./WorkloadPanel";
-import { AutoAssignDialog, type AutoAssignCustomWindow } from "@/components/schedule/AutoAssignDialog";
+import dynamic from "next/dynamic";
+import type { AutoAssignCustomWindow } from "@/components/schedule/AutoAssignDialog";
+import { useEverOpen } from "@/hooks/use-ever-open";
 import { SPORT_CODES } from "@/lib/sports";
 import { AREAS, AREA_LABELS, type Area } from "@/types/areas";
 import { cn } from "@/lib/utils";
@@ -29,11 +31,14 @@ import {
 } from "@/lib/assignment-conflict-review";
 import { useSyncedDraft } from "@/hooks/use-synced-draft";
 
+const AutoAssignDialog = dynamic(() => import("@/components/schedule/AutoAssignDialog").then((mod) => mod.AutoAssignDialog));
+
 export function AssignPageClient() {
   const router = useRouter();
   const grid = useAssignmentGrid();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const everAutoAssign = useEverOpen(autoAssignOpen);
   // A focused person may not work the next month; start each month unfocused.
   const [focusUserId, setFocusUserId] = useSyncedDraft(grid.month, (): string | null => null);
 
@@ -249,15 +254,17 @@ export function AssignPageClient() {
         onViewSchedule={() => router.push("/schedule")}
       />
 
-      <AutoAssignDialog
-        open={autoAssignOpen}
-        onOpenChange={setAutoAssignOpen}
-        initialSportCodes={scopeSportCodes}
-        initialArea={scopeArea}
-        initialPeriod="custom"
-        customWindow={monthWindow}
-        onApplied={() => grid.refetch()}
-      />
+      {everAutoAssign && (
+        <AutoAssignDialog
+          open={autoAssignOpen}
+          onOpenChange={setAutoAssignOpen}
+          initialSportCodes={scopeSportCodes}
+          initialArea={scopeArea}
+          initialPeriod="custom"
+          customWindow={monthWindow}
+          onApplied={() => grid.refetch()}
+        />
+      )}
     </FadeUp>
   );
 }

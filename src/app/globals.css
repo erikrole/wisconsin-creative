@@ -1679,6 +1679,71 @@ a[data-slot="button"]:hover {
   }
 }
 
+/* ===== Entrance animations ===== */
+/* Used by FadeUp, PageTransition, ScaleIn and StaggerList in ui/motion.tsx. */
+
+@keyframes wc-rise {
+  from { opacity: 0; transform: translateY(var(--wc-rise-distance, 6px)); }
+}
+
+@keyframes wc-scale {
+  from { opacity: 0; transform: scale(0.96); }
+}
+
+.wc-enter-rise {
+  animation: wc-rise 200ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.wc-enter-rise-page {
+  --wc-rise-distance: 8px;
+}
+
+.wc-enter-scale {
+  animation: wc-scale 200ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.wc-toast {
+  animation: wc-toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes wc-toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+
+@keyframes wc-reveal {
+  from { grid-template-rows: 0fr; opacity: 0; }
+}
+
+@keyframes wc-icon-swap {
+  from { opacity: 0; transform: scale(0.25); filter: blur(4px); }
+}
+
+.wc-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: wc-reveal 280ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.wc-icon-swap {
+  animation: wc-icon-swap 250ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+.wc-enter-stagger > * {
+  --wc-rise-distance: 4px;
+  animation: wc-rise 150ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: 0.6s;
+}
+.wc-enter-stagger > :nth-child(1) { animation-delay: 0ms; }
+.wc-enter-stagger > :nth-child(2) { animation-delay: 50ms; }
+.wc-enter-stagger > :nth-child(3) { animation-delay: 100ms; }
+.wc-enter-stagger > :nth-child(4) { animation-delay: 150ms; }
+.wc-enter-stagger > :nth-child(5) { animation-delay: 200ms; }
+.wc-enter-stagger > :nth-child(6) { animation-delay: 250ms; }
+.wc-enter-stagger > :nth-child(7) { animation-delay: 300ms; }
+.wc-enter-stagger > :nth-child(8) { animation-delay: 350ms; }
+.wc-enter-stagger > :nth-child(9) { animation-delay: 400ms; }
+.wc-enter-stagger > :nth-child(10) { animation-delay: 450ms; }
+
 /* ===== Dashboard Animations ===== */
 
 @keyframes dash-fade-up {

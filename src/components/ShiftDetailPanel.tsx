@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";

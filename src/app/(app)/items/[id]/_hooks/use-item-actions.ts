@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import type { AssetDetail } from "../types";

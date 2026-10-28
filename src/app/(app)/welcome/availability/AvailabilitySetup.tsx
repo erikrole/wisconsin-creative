@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { CalendarPlusIcon, PlusIcon, XIcon } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { Button } from "@/components/ui/button";

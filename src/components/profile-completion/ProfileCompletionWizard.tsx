@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
+import { AnimatePresence, m, useReducedMotion, type Variants } from "motion/react";
 import { AlertCircleIcon, ArrowLeftIcon, ArrowRightIcon, CameraIcon, CheckIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { MotionProvider } from "@/components/MotionProvider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,7 @@ type ProfileCompletionWizardProps = {
   presentation?: "dialog" | "page";
 };
 
-export function ProfileCompletionWizard({
+function ProfileCompletionWizardContent({
   onComplete,
   onSnooze,
   autoOpen = true,
@@ -928,7 +929,7 @@ export function ProfileCompletionWizard({
           <header className="space-y-1 px-5 pt-6 sm:px-8">
             <div className="grid">
               <AnimatePresence initial={false} custom={stepMotionContext}>
-                <motion.div
+                <m.div
                   key={`heading-${step}`}
                   custom={stepMotionContext}
                   variants={STEP_TRANSITION_VARIANTS}
@@ -939,7 +940,7 @@ export function ProfileCompletionWizard({
                 >
                   <h2 className="text-xl">{copy.title}</h2>
                   <p className="text-sm text-[var(--text-secondary)]">{copy.description}</p>
-                </motion.div>
+                </m.div>
               </AnimatePresence>
             </div>
           </header>
@@ -947,7 +948,7 @@ export function ProfileCompletionWizard({
           <div className="flex min-h-[260px] flex-col gap-5 px-5 py-6 sm:px-8">
             <div className="relative grid flex-1">
               <AnimatePresence initial={false} custom={stepMotionContext}>
-                <motion.div
+                <m.div
                   key={`body-${step}`}
                   custom={stepMotionContext}
                   variants={STEP_TRANSITION_VARIANTS}
@@ -957,7 +958,7 @@ export function ProfileCompletionWizard({
                   className="col-start-1 row-start-1"
                 >
                   {stepFields}
-                </motion.div>
+                </m.div>
               </AnimatePresence>
             </div>
             {error && (
@@ -993,7 +994,7 @@ export function ProfileCompletionWizard({
           />
           <div className="grid w-full">
             <AnimatePresence initial={false} custom={stepMotionContext}>
-              <motion.div
+              <m.div
                 key={`heading-${step}`}
                 custom={stepMotionContext}
                 variants={STEP_TRANSITION_VARIANTS}
@@ -1004,7 +1005,7 @@ export function ProfileCompletionWizard({
               >
                 <DialogTitle>{copy.title}</DialogTitle>
                 <DialogDescription>{copy.description}{isOptionalStep ? " Optional — you can add this later from your profile." : ""}</DialogDescription>
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
         </DialogHeader>
@@ -1012,7 +1013,7 @@ export function ProfileCompletionWizard({
         <DialogBody className="flex min-h-0 flex-col gap-5 py-5 sm:min-h-[300px]">
           <div className="relative grid flex-1">
             <AnimatePresence initial={false} custom={stepMotionContext}>
-              <motion.div
+              <m.div
                 key={`body-${step}`}
                 custom={stepMotionContext}
                 variants={STEP_TRANSITION_VARIANTS}
@@ -1022,7 +1023,7 @@ export function ProfileCompletionWizard({
                 className="col-start-1 row-start-1"
               >
                 {stepFields}
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
 
@@ -1041,5 +1042,13 @@ export function ProfileCompletionWizard({
       </DialogContent>
       {cropDialog}
     </Dialog>
+  );
+}
+
+export function ProfileCompletionWizard(props: ProfileCompletionWizardProps) {
+  return (
+    <MotionProvider>
+      <ProfileCompletionWizardContent {...props} />
+    </MotionProvider>
   );
 }

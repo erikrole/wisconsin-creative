@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Download, PlusIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";

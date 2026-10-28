@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, LayoutGroup, m, useReducedMotion } from "motion/react";
 import { ArrowUpRight, ChevronDown, GitCompareArrows } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -172,7 +172,7 @@ export function ScoreboardLeaderboard({
           const share = max > 0 && !unranked ? (metricValue(metrics, sort) / max) * 100 : 0;
           const panelId = `scoreboard-person-${person.userId}`;
           return (
-            <motion.li
+            <m.li
               key={person.userId}
               layout={reduced ? false : "position"}
               transition={ROW_SPRING}
@@ -203,7 +203,7 @@ export function ScoreboardLeaderboard({
                     ) : null}
                   </span>
                   <span className="mt-1 block h-1 w-full max-w-64 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                    <motion.span
+                    <m.span
                       className="block h-full rounded-full"
                       style={{ background: sort === "events" ? "var(--accent)" : WIN_FILL }}
                       initial={false}
@@ -238,7 +238,7 @@ export function ScoreboardLeaderboard({
               </button>
               <AnimatePresence initial={false}>
                 {expanded ? (
-                  <motion.div
+                  <m.div
                     id={panelId}
                     key="detail"
                     initial={reduced ? false : { height: 0, opacity: 0 }}
@@ -253,10 +253,10 @@ export function ScoreboardLeaderboard({
                       href={hrefForPerson(person.userId)}
                       onCompare={() => onCompare(person.userId)}
                     />
-                  </motion.div>
+                  </m.div>
                 ) : null}
               </AnimatePresence>
-            </motion.li>
+            </m.li>
           );
         })}
       </ol>

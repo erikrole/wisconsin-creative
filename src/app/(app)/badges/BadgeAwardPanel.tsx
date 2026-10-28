@@ -1,8 +1,9 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import { createElement, useMemo, useState } from "react";
 import { Award, Info, RefreshCw, Search, UsersRound, X } from "lucide-react";
-import BulkBadgeAwardDialog from "../staff/BulkBadgeAwardDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import type { UserRow } from "../staff/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,6 +18,8 @@ import { badgeIcon } from "@/components/badges/badge-artwork";
 import { formatBadgeCategoryLabel } from "@/lib/badges/display";
 import { MAX_BULK_BADGE_TARGETS } from "@/lib/request-limits";
 import { cn } from "@/lib/utils";
+
+const BulkBadgeAwardDialog = dynamic(() => import("../staff/BulkBadgeAwardDialog"));
 
 type BadgeDefinition = {
   id: string;
@@ -56,6 +59,7 @@ export default function BadgeAwardPanel({
   const [search, setSearch] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showAwardDialog, setShowAwardDialog] = useState(false);
+  const everAwardDialog = useEverOpen(showAwardDialog);
 
   const {
     data: catalog,
@@ -377,13 +381,15 @@ export default function BadgeAwardPanel({
         )}
       </section>
 
-      <BulkBadgeAwardDialog
-        open={showAwardDialog}
-        onOpenChange={setShowAwardDialog}
-        targetCount={targetCount}
-        filterSummary={selectionSummary}
-        userIds={selectedUserIds}
-      />
+      {everAwardDialog && (
+        <BulkBadgeAwardDialog
+          open={showAwardDialog}
+          onOpenChange={setShowAwardDialog}
+          targetCount={targetCount}
+          filterSummary={selectionSummary}
+          userIds={selectedUserIds}
+        />
+      )}
     </div>
   );
 }

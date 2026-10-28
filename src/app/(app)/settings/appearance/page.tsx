@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { SettingsPageShell } from "../SettingsPageShell";
 import { SettingsGroup } from "../_components/SettingsGroup";

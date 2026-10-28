@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BellIcon, CheckCheckIcon, Settings2Icon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { chromeFont } from "@/lib/chrome-font";

@@ -26,7 +26,7 @@ describe("kiosk-only web affordance contract", () => {
 
   it("keeps reservation conversion and web return controls out of active UI surfaces", () => {
     const dashboardColumn = source("src/app/(app)/_home/HomeView.tsx");
-    const bookingsPage = source("src/app/(app)/bookings/page.tsx");
+    const bookingsPage = source("src/app/(app)/bookings/BookingsPageClient.tsx");
     const detail = source("src/app/(app)/bookings/BookingDetailPage.tsx");
     const sheet = source("src/components/BookingDetailsSheet.tsx");
 

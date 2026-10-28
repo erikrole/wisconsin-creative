@@ -9,7 +9,7 @@ describe("profile completion web wiring", () => {
   const banner = readFileSync("src/app/(app)/dashboard/profile-completion-banner.tsx", "utf8");
 
   it("mounts one responsive returning-user wizard in authenticated web chrome", () => {
-    expect(shell).toContain('pathname !== "/welcome" && <ProfileCompletionWizard autoOpen={pathname !== "/"} />');
+    expect(shell).toContain('pathname !== "/welcome" && <ProfileCompletionLoader autoOpen={pathname !== "/"} />');
     expect(wizard).not.toContain('matchMedia("(min-width: 768px)")');
     expect(wizard).toContain('if (!data) return null;');
     expect(wizard).toContain("max-h-[calc(100dvh-1rem)]");
@@ -65,7 +65,7 @@ describe("profile completion web wiring", () => {
   });
 
   it("connects wizard steps with restrained directional motion", () => {
-    expect(wizard).toContain('import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react"');
+    expect(wizard).toContain('import { AnimatePresence, m, useReducedMotion, type Variants } from "motion/react"');
     expect(wizard).toContain("type StepDirection = -1 | 1");
     expect(wizard).toContain("const reduceMotion = Boolean(useReducedMotion())");
     expect(wizard).toContain("setStepDirection(direction)");

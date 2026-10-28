@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableHead } from "@/components/ui/table";
@@ -35,15 +35,7 @@ export function SortHeader({ label, sortKey, currentSort, onSort }: {
         aria-label={`Sort by ${label} ${!isActive || dir === "desc" ? "ascending" : "descending"}`}
       >
         {label}
-        <AnimatePresence initial={false} mode="popLayout">
-          <motion.span
-            key={isActive ? dir : "unsorted"}
-            initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-            className="inline-flex items-center justify-center"
-          >
+        <IconSwap swapKey={isActive ? String(dir) : "unsorted"}>
             {!isActive ? (
               <ArrowUpDownIcon className="size-3.5 opacity-20 transition-opacity group-hover:opacity-50 group-focus-visible:opacity-50" aria-hidden="true" />
             ) : dir === "asc" ? (
@@ -51,8 +43,7 @@ export function SortHeader({ label, sortKey, currentSort, onSort }: {
             ) : (
               <ArrowDownIcon className="size-4 text-foreground" aria-hidden="true" />
             )}
-          </motion.span>
-        </AnimatePresence>
+          </IconSwap>
       </Button>
     </TableHead>
   );

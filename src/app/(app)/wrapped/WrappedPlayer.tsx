@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, Download, LayoutGrid, Pause, Play, RotateCcw, Share, X } from "lucide-react";
 import type { WrappedCard } from "@/lib/wrapped/recap";
 import { cn } from "@/lib/utils";
@@ -206,7 +206,7 @@ export function WrappedPlayer({
           aria-label={`Card ${index + 1} of ${slides.length}`}
         >
           <AnimatePresence initial={false} custom={direction} mode="popLayout">
-            <motion.div
+            <m.div
               key={`${slide.section}-${slide.card.id}`}
               className="absolute inset-0"
               custom={direction}
@@ -216,7 +216,7 @@ export function WrappedPlayer({
               transition={{ duration: reduced ? 0.12 : 0.42, ease: [0.22, 1, 0.36, 1] }}
             >
               <WrappedCardView card={slide.card} section={slide.section} person={person} />
-            </motion.div>
+            </m.div>
           </AnimatePresence>
         </div>
 
@@ -288,7 +288,7 @@ export function WrappedPlayer({
 
         <AnimatePresence>
           {showGrid ? (
-            <motion.div
+            <m.div
               className="absolute inset-0 z-20 overflow-y-auto bg-[#0b0c10]/95 p-5 pt-6 backdrop-blur"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -327,7 +327,7 @@ export function WrappedPlayer({
                   );
                 })}
               </ul>
-            </motion.div>
+            </m.div>
           ) : null}
         </AnimatePresence>
       </div>

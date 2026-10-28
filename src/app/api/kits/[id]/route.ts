@@ -4,7 +4,7 @@ import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/
 import { sanitizeCollaboratorKitDetail } from "@/lib/collaborator-gear";
 import { attachKitMemberAvailability } from "@/lib/services/kit-member-availability";
 import { getKitDetail, updateKit, deleteKit } from "@/lib/services/kits";
-import { nullableFootballGamedayKitRoleSchema } from "@/lib/football-gameday-kits";
+import { nullableFootballGamedayKitRoleSchema } from "@/lib/football-gameday-kits-schema";
 import { nullableSportCodeSchema } from "@/lib/validation";
 import { z } from "zod";
 

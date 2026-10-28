@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AlertCircle, Check, ImageIcon, MoreHorizontal, Plus, Search } from "lucide-react";
 import { StaggerList, StaggerItem } from "@/components/ui/motion";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import type { BookingDetail, SerializedItem, BulkItem } from "@/components/booking-details/types";
 import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
 import {

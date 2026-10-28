@@ -4,7 +4,7 @@ import { parsePagination } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { summarizeKitListAvailability } from "@/lib/services/kit-list-availability";
 import { createKit, listKits, suggestFootballGamedayKit } from "@/lib/services/kits";
-import { optionalFootballGamedayKitRoleSchema } from "@/lib/football-gameday-kits";
+import { optionalFootballGamedayKitRoleSchema } from "@/lib/football-gameday-kits-schema";
 import { optionalSportCodeSchema } from "@/lib/validation";
 import { z } from "zod";
 

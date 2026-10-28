@@ -3,11 +3,6 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
-import {
-  createWebMcpTools,
-  getWebMcpContext,
-  registerWebMcpTools,
-} from "@/lib/webmcp-tools";
 
 export default function WebMCPProvider({ initialUser }: { initialUser: CurrentUser }) {
   const router = useRouter();
@@ -20,19 +15,21 @@ export default function WebMCPProvider({ initialUser }: { initialUser: CurrentUs
   }, [pathname]);
 
   useEffect(() => {
-    if (!user) return;
-    const context = getWebMcpContext();
-    if (!context) return;
+    if (!user || !("modelContext" in document || "modelContext" in navigator)) return;
 
+    // Only browsers that expose WebMCP download the tool definitions.
     const controller = new AbortController();
-    const tools = createWebMcpTools({
-      user,
-      getPathname: () => pathnameRef.current,
-      getTitle: () => document.title,
-      navigate: (href) => router.push(href),
+    void import("@/lib/webmcp-tools").then(({ createWebMcpTools, getWebMcpContext, registerWebMcpTools }) => {
+      const context = getWebMcpContext();
+      if (!context || controller.signal.aborted) return;
+      const tools = createWebMcpTools({
+        user,
+        getPathname: () => pathnameRef.current,
+        getTitle: () => document.title,
+        navigate: (href) => router.push(href),
+      });
+      return registerWebMcpTools(context, tools, controller.signal);
     });
-
-    void registerWebMcpTools(context, tools, controller.signal);
     return () => controller.abort();
   }, [router, user]);
 

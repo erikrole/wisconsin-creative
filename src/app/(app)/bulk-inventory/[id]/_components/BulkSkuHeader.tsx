@@ -1,5 +1,7 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
 import { MapPin, RefreshCw, Settings } from "lucide-react";
@@ -7,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AssetImage } from "@/components/AssetImage";
 import { DetailPageHeader } from "@/components/DetailPageHeader";
-import ChooseImageModal from "@/components/ChooseImageModal";
 import type { BulkSkuDetail } from "../types";
+
+const ChooseImageModal = dynamic(() => import("@/components/ChooseImageModal"));
 
 export function BulkSkuHeader({
   sku,
@@ -26,6 +29,7 @@ export function BulkSkuHeader({
   operationsHref?: string;
 }) {
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const everImageModal = useEverOpen(imageModalOpen);
   const activeUnitCount = sku.trackByNumber
     ? sku.units.filter((unit) => unit.status !== "RETIRED").length
     : sku.onHand;
@@ -100,7 +104,7 @@ export function BulkSkuHeader({
         }
       />
 
-      {canEdit && (
+      {canEdit && everImageModal && (
         <ChooseImageModal
           mode="persisted"
           open={imageModalOpen}

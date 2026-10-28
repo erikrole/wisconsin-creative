@@ -17,6 +17,52 @@
     ]
   },
   {
+    "date": "2026-10-28",
+    "title": "Fix call times on newly timed games",
+    "type": "fixes",
+    "summary": "Games that got their real time after being listed by date only now show the right crew times.",
+    "details": [
+      "Crews no longer keep a leftover all-day window like 6:00 PM – 6:00 PM once the game has a time.",
+      "This stops false schedule conflicts that blocked students from claiming other games the same day."
+    ],
+    "pr": 718,
+    "platforms": [
+      "Web",
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-27",
+    "title": "Faster pages on slow connections",
+    "type": "improvement",
+    "summary": "Most pages download about 30% less code, and Home, Bookings and Staff now arrive with their content already in place, so they show up two to three times sooner on a weak connection.",
+    "details": [
+      "The Schedule page, the biggest one, loads about a third less, and its list draws only the layout for your screen, so a busy season opens noticeably sooner.",
+      "Dialogs like Auto assign, Add item and Invite people download only when you open them.",
+      "Tab underlines, fade-ins and small icon changes now play right away instead of waiting for the page to finish loading.",
+      "Home, Bookings and Staff no longer wait for a second round of loading before showing your gear, bookings and people."
+    ],
+    "pr": 714,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-27",
+    "title": "Fix On shift now list",
+    "type": "fixes",
+    "summary": "The Staff page no longer shows people as on shift before their shift starts.",
+    "details": [
+      "Games with no set time yet no longer put the whole crew on shift the night before.",
+      "A personal or slot call time now decides when someone counts as on shift.",
+      "Students and staff both show, and the end time uses Madison time."
+    ],
+    "pr": 715,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-26",
     "title": "Fix false shift conflict when claiming",
     "type": "fixes",

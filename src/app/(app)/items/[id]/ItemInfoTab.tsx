@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
 import { Card } from "@/components/ui/card";

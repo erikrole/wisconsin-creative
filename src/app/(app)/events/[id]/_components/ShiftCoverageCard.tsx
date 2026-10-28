@@ -1,9 +1,10 @@
 "use client";
 
+import { useEverOpen } from "@/hooks/use-ever-open";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { AlertTriangleIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,8 @@ import {
   crewSlotState,
 } from "@/components/shift-detail/crew-row";
 import { useNow } from "@/hooks/use-now";
+
+const AutoAssignDialog = dynamic(() => import("@/components/schedule/AutoAssignDialog").then((mod) => mod.AutoAssignDialog));
 
 const AREAS = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"] as const;
 
@@ -68,6 +71,7 @@ export function ShiftCoverageCard({
   const groupId = shiftGroup.id;
   const eventHasEnded = new Date(eventEndsAt).getTime() <= now;
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const everAutoAssign = useEverOpen(autoAssignOpen);
 
   const shiftsByArea = useMemo(() => {
     const map: Record<string, Shift[]> = {};
@@ -291,7 +295,7 @@ export function ShiftCoverageCard({
           />
         ) : crewTable}
 
-        {isStaffOrAdmin && (
+        {isStaffOrAdmin && everAutoAssign && (
           <AutoAssignDialog
             open={autoAssignOpen}
             onOpenChange={setAutoAssignOpen}

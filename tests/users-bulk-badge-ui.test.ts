@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("Users bulk badge award UI", () => {
   it("exposes the action from the admin Users directory and passes the active roster scope", () => {
-    const page = source("src/app/(app)/staff/page.tsx");
+    const page = source("src/app/(app)/staff/StaffPageClient.tsx");
     const dialog = source("src/app/(app)/staff/BulkBadgeAwardDialog.tsx");
 
     expect(page).toContain('currentUserRole === "ADMIN"');

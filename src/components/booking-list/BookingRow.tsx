@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDateShort } from "@/lib/format";
+import { formatDateShortCentral } from "@/lib/format";
 import { formatDateCol, formatDuration, getStatusVisual, type BookingItem } from "./types";
 import { BookingContextMenuWrapper, BookingOverflowMenu, type BookingMenuProps } from "./BookingContextMenu";
 import { GearAvatarStack } from "./BookingCard";
@@ -234,7 +234,7 @@ export function BookingMobileCard({
         className="pointer-events-none relative z-0 flex flex-wrap items-center gap-1 text-muted-foreground/55"
         style={{ fontFamily: "var(--font-mono)", fontSize: "11px" }}
       >
-        <span className="tabular-nums">{formatDateShort(item.startsAt)} – {formatDateShort(item.endsAt)}</span>
+        <span className="tabular-nums">{formatDateShortCentral(item.startsAt)} – {formatDateShortCentral(item.endsAt)}</span>
         <span aria-hidden="true">·</span>
         {item.custodyScope === "SHARED" ? (
           <span className="inline-flex items-center gap-1">

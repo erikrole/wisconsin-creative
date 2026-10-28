@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AREA_COLORS, AREA_LABELS, graduatesThisAcademicYear, type UserRow as UserRowType } from "./types";
 import RoleBadge from "./RoleBadge";
-import { formatRelativeTime } from "@/lib/format";
+import { INSTITUTION_TZ, formatRelativeTime } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +36,7 @@ function isActiveNow(lastActiveAt: string | null): boolean {
 function lastActiveTitle(lastActiveAt: string | null): string | undefined {
   if (!lastActiveAt) return undefined;
   return new Date(lastActiveAt).toLocaleString("en-US", {
+    timeZone: INSTITUTION_TZ,
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -121,7 +122,7 @@ function LastActiveValue({ lastActiveAt }: { lastActiveAt: string | null }) {
   return (
     <span className="inline-flex items-center gap-2 text-muted-foreground">
       <span className="size-1.5 rounded-full bg-muted-foreground/40" aria-hidden="true" />
-      <time dateTime={lastActiveAt} className="tabular-nums">
+      <time dateTime={lastActiveAt} className="tabular-nums" suppressHydrationWarning>
         {lastActiveLabel(lastActiveAt)}
       </time>
     </span>
@@ -214,7 +215,7 @@ function UserQuickView({ user }: { user: UserRowType }) {
           {details.map((row) => (
             <div key={row.label} className="contents">
               <dt className="text-muted-foreground">{row.label}</dt>
-              <dd className="truncate">{row.value}</dd>
+              <dd className="truncate" suppressHydrationWarning>{row.value}</dd>
             </div>
           ))}
         </dl>
@@ -339,7 +340,7 @@ export const UserMobileCard = memo(function UserMobileCard({ user, showRole = tr
               {metaParts.map((part, index) => (
                 <span key={`${part}-${index}`} className="contents">
                   {index > 0 && <span>&middot;</span>}
-                  <span className="truncate">{part}</span>
+                  <span className="truncate" suppressHydrationWarning>{part}</span>
                 </span>
               ))}
             </div>

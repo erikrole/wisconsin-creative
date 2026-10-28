@@ -5,7 +5,7 @@ import { ArrowLeft, Eye, ImagePlus, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { AnnouncementCard } from "@/components/announcements/AnnouncementCard";
 import { AnnouncementDialog } from "@/components/announcements/AnnouncementDialog";
@@ -25,7 +25,7 @@ import {
   type AnnouncementKindValue,
   type AnnouncementState,
 } from "@/lib/announcements";
-import { releases } from "@/lib/releases";
+import type { Release } from "@/lib/releases";
 
 export type Draft = {
   id: string | null;
@@ -125,7 +125,11 @@ export function Composer({ initial, onClose, onSaved }: { initial: Draft; onClos
   const [error, setError] = useState<string | null>(null);
   // Updates go through the latest draft, so an upload that finishes while you type never undoes your typing.
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
-  const recent = useMemo(() => releases.slice(0, 8), []);
+  // The release list is large, so it loads on its own instead of with this page.
+  const [recent, setRecent] = useState<Release[]>([]);
+  useEffect(() => {
+    void import("@/lib/releases").then((mod) => setRecent(mod.releases.slice(0, 8)));
+  }, []);
   const blocks = useMemo(() => parseAnnouncementBody(draft.body), [draft.body]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const errors = attempt ? validate(draft, initial, attempt === "publish") : {};
