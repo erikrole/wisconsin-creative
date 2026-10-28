@@ -17,7 +17,8 @@ import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { withSerializationRetry } from "@/lib/serialization";
 import { createAuditEntryTx, lookupActorRole } from "@/lib/audit";
-import { checkAvailability } from "@/lib/services/availability";
+import { checkAvailability, type AvailabilityResult } from "@/lib/services/availability";
+import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import { loadKitEquipmentPlan } from "@/lib/services/kits";
 import {
   ACTIVE_BULK_UNIT_ALLOCATION_WHERE,
@@ -485,7 +486,12 @@ export async function createBooking(input: CreateBookingInput) {
           });
 
           if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
-            throw new HttpError(409, "Availability conflict", availability);
+            // A kiosk pickup shows this text on the counter, so name the item
+            // and who holds it instead of a bare "Availability conflict".
+            const message = input.sourceReservationPickup
+              ? await pickupAvailabilityMessage(tx, availability)
+              : "Availability conflict";
+            throw new HttpError(409, message, availability);
           }
 
           // Reservation intent stays BOOKED until custody is proven. Kiosk
@@ -1091,4 +1097,18 @@ export async function createBooking(input: CreateBookingInput) {
   } catch (error) {
     handleBookingMutationRace(error);
   }
+}
+
+async function pickupAvailabilityMessage(
+  tx: Prisma.TransactionClient,
+  availability: Pick<AvailabilityResult, "conflicts" | "shortages" | "unavailableAssets">,
+) {
+  const assetId = availability.unavailableAssets[0]?.assetId ?? availability.conflicts[0]?.assetId;
+  const bulkSkuId = availability.shortages[0]?.bulkSkuId;
+  const [asset, sku] = await Promise.all([
+    assetId ? tx.asset.findUnique({ where: { id: assetId }, select: { name: true, assetTag: true } }) : null,
+    !assetId && bulkSkuId ? tx.bulkSku.findUnique({ where: { id: bulkSkuId }, select: { name: true } }) : null,
+  ]);
+  const name = asset?.name || asset?.assetTag || sku?.name || "An item";
+  return kioskAvailabilityBlockMessage(availability, name);
 }
