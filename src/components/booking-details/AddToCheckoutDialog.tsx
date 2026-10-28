@@ -99,7 +99,7 @@ export function AddToCheckoutDialog({
                   <p className="truncate text-sm font-medium">{asset.name || asset.assetTag}</p>
                   <p className="truncate text-xs text-muted-foreground">{asset.assetTag}</p>
                 </div>
-                <Button type="button" size="sm" variant="outline" disabled={!!addingId} onClick={() => add(asset)}>
+                <Button type="button" size="sm" variant="outline" className="h-10" disabled={!!addingId} onClick={() => add(asset)}>
                   {addingId === asset.id ? "Adding..." : "Add"}
                 </Button>
               </li>
