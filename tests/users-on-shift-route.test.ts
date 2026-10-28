@@ -16,7 +16,7 @@ function call() {
 
 const NOW = new Date("2026-10-18T21:00:00Z");
 
-function row(id: string, name: string, endsAt: string, extra: { allDay?: boolean; startsAt?: string; call?: [string, string] } = {}) {
+function row(id: string, name: string, endsAt: string, extra: { allDay?: boolean; startsAt?: string; call?: [string, string]; event?: [string, string] } = {}) {
   return {
     callStartsAt: null,
     callEndsAt: null,
@@ -27,7 +27,7 @@ function row(id: string, name: string, endsAt: string, extra: { allDay?: boolean
       endsAt: new Date(endsAt),
       callStartsAt: extra.call ? new Date(extra.call[0]) : null,
       callEndsAt: extra.call ? new Date(extra.call[1]) : null,
-      shiftGroup: { event: { summary: "Volleyball vs. Purdue", allDay: extra.allDay ?? false, startsAt: new Date(extra.startsAt ?? "2026-10-18T20:00:00Z"), endsAt: new Date(endsAt) } },
+      shiftGroup: { event: { summary: "Volleyball vs. Purdue", allDay: extra.allDay ?? false, startsAt: new Date(extra.event?.[0] ?? extra.startsAt ?? "2026-10-18T20:00:00Z"), endsAt: new Date(extra.event?.[1] ?? endsAt) } },
     },
   };
 }
@@ -74,6 +74,17 @@ describe("GET /api/users/on-shift", () => {
     const body = await (await call()).json();
     expect(body.data.map((p: { id: string }) => p.id)).toEqual(["c"]);
     expect(body.data[0].endsAtLabel).toBe("6:00 PM");
+  });
+
+  it("uses the game's own time when the crew still holds a stale full-day window", async () => {
+    // Timed game later tonight; the shift kept the midnight-to-midnight window it was made with.
+    const stale = { startsAt: "2026-10-18T00:00:00Z", event: ["2026-10-19T00:00:00Z", "2026-10-19T02:30:00Z"] as [string, string] };
+    vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([row("a", "Early", "2026-10-19T00:00:00Z", stale)] as never);
+    expect((await (await call()).json()).data).toEqual([]);
+
+    vi.setSystemTime(new Date("2026-10-19T00:30:00Z"));
+    vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([row("a", "Early", "2026-10-19T00:00:00Z", stale)] as never);
+    expect((await (await call()).json()).data.map((p: { id: string }) => p.id)).toEqual(["a"]);
   });
 
   it("is closed to collaborators", async () => {

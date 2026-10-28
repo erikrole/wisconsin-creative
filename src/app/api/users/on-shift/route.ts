@@ -2,7 +2,7 @@ import { Role, ShiftAssignmentStatus } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { formatAppTime } from "@/lib/app-time";
-import { resolveEffectiveAssignmentWindow } from "@/lib/schedule-window";
+import { liveAssignmentWindow } from "@/lib/schedule-window";
 import { ok } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
 
@@ -52,11 +52,8 @@ export const GET = withAuth(async (_req, { user }) => {
 
   const live = rows
     .map((row) => {
-      const hasCall =
-        (row.callStartsAt && row.callEndsAt) || (row.shift.callStartsAt && row.shift.callEndsAt);
-      if (row.shift.shiftGroup.event.allDay && !hasCall) return null;
-      const window = resolveEffectiveAssignmentWindow(row);
-      return window.startsAt <= now && window.endsAt >= now ? { row, endsAt: window.endsAt } : null;
+      const window = liveAssignmentWindow(row);
+      return window && window.startsAt <= now && window.endsAt >= now ? { row, endsAt: window.endsAt } : null;
     })
     .filter((entry) => entry !== null)
     .sort((a, b) => a.endsAt.getTime() - b.endsAt.getTime());

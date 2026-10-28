@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { accountableCheckoutWhere, isPastGrace, onTimeRate } from "@/lib/on-time-rate";
 import { requireRole } from "@/lib/rbac";
-import { resolveEffectiveAssignmentWindow } from "@/lib/schedule-window";
+import { liveAssignmentWindow } from "@/lib/schedule-window";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
 
 /**
@@ -113,15 +113,10 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   const activeLate = overdue.filter((b) => isPastGrace(b.endsAt, now, policies.gracePeriodHours)).length;
 
   const shift = assignment?.shift ?? null;
-  // Live means inside the person's real call window. An all-day event with no call time has no
-  // clock yet, so it is never live (its stored window is the whole date span).
-  const hasCall =
-    assignment &&
-    ((assignment.callStartsAt && assignment.callEndsAt) || (shift?.callStartsAt && shift.callEndsAt));
-  const callWindow = assignment ? resolveEffectiveAssignmentWindow(assignment) : null;
+  // Live means inside the person's real window (see liveAssignmentWindow).
+  const callWindow = assignment ? liveAssignmentWindow(assignment) : null;
   const live =
     !!callWindow &&
-    !(shift?.shiftGroup.event.allDay && !hasCall) &&
     callWindow.startsAt <= now &&
     callWindow.endsAt >= now;
   return ok({
