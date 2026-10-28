@@ -702,6 +702,13 @@ extension APIClient {
         return resp.data
     }
 
+    /// Every active student with their availability blocks. ADMIN/STAFF only.
+    func teamAvailability() async throws -> [TeamAvailabilityStudent] {
+        let req = request(path: "/api/availability/team")
+        let resp: TeamAvailabilityResponse = try await perform(req)
+        return resp.data
+    }
+
     func createAvailabilityBlock(
         userId: String,
         kind: String = "WEEKLY",

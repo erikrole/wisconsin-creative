@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-28",
+    "title": "Team availability for staff",
+    "type": "feature",
+    "summary": "Staff can now see when every student can't work, week by week, on one page.",
+    "details": [
+      "New Availability tab under Staff shows each student and each day of the week.",
+      "Pending requests show dashed so they are easy to spot.",
+      "Click a student to open their full availability.",
+      "On iPhone, staff get a Team Availability screen under Users with a day picker."
+    ],
+    "pr": 713,
+    "platforms": [
+      "Web",
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-28",
     "title": "Remove broken gear from a kiosk pickup",
     "type": "fixes",
     "summary": "Gear that went into maintenance no longer blocks removing other items, or picking up the rest of a case.",

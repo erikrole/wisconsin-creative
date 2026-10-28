@@ -121,6 +121,10 @@ struct PerformanceTestRootView: View {
             NavigationStack { UserDetailHarnessBody() }
         case .availability:
             NavigationStack { AvailabilityHarnessBody() }
+        case .teamAvailability:
+            NavigationStack {
+                TeamAvailabilityView(fixture: TeamAvailabilityFixtures.students, initialDay: TeamAvailabilityFixtures.day)
+            }
         case .gearPicks:
             GearPicksView()
         case .sharedLogins:
@@ -4698,3 +4702,39 @@ extension ScheduleFixtureAPI {
 }
 
 #endif
+
+
+/// Canned students for the Team Availability capture. Monday 2026-10-26.
+enum TeamAvailabilityFixtures {
+    static let day = "2026-10-26"
+
+    private static func block(
+        _ id: String, _ intent: String, dow: Int, _ start: String, _ end: String,
+        status: String = "APPROVED", allDay: Bool = false
+    ) -> AvailabilityBlock {
+        AvailabilityBlock(
+            id: id, kind: "WEEKLY", intent: intent, status: status, dayOfWeek: dow, date: nil,
+            dateEndsOn: nil, allDay: allDay, startsAt: start, endsAt: end, label: nil,
+            semesterLabel: nil, semesterStartsOn: nil, semesterEndsOn: nil, reviewNote: nil
+        )
+    }
+
+    static let students: [TeamAvailabilityStudent] = [
+        TeamAvailabilityStudent(id: "s1", name: "Avery Nakamura", avatarUrl: nil, blocks: [
+            block("a1", "CANNOT_WORK", dow: 1, "09:00", "10:15"),
+            block("a2", "CANNOT_WORK", dow: 1, "13:00", "14:15"),
+            block("a3", "PREFER", dow: 1, "17:00", "21:00"),
+        ]),
+        TeamAvailabilityStudent(id: "s2", name: "Jordan Ellis", avatarUrl: nil, blocks: [
+            block("b1", "DISLIKE", dow: 1, "18:00", "22:00"),
+            block("b2", "CANNOT_WORK", dow: 1, "11:00", "12:30", status: "PENDING"),
+        ]),
+        TeamAvailabilityStudent(id: "s3", name: "Maya Brandt", avatarUrl: nil, blocks: [
+            block("c1", "CANNOT_WORK", dow: 3, "09:00", "10:00"),
+        ]),
+        TeamAvailabilityStudent(id: "s4", name: "Theo Lindqvist", avatarUrl: nil, blocks: []),
+        TeamAvailabilityStudent(id: "s5", name: "Priya Raman", avatarUrl: nil, blocks: [
+            block("d1", "TIME_OFF", dow: 1, "00:00", "23:59", allDay: true),
+        ]),
+    ]
+}

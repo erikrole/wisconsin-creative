@@ -114,6 +114,11 @@ struct UsersView: View {
         session.currentUser?.role == "COLLABORATOR"
     }
 
+    /// Team availability reads every student's blocks; the API is ADMIN/STAFF only.
+    private var isStaffViewer: Bool {
+        session.currentUser?.role == "STAFF" || session.currentUser?.role == "ADMIN"
+    }
+
     var body: some View {
         // Apple's recommended pattern for binding to an @Observable model:
         // shadow `vm` with a @Bindable wrapper for the duration of body so
@@ -142,6 +147,15 @@ struct UsersView: View {
                 .onChange(of: vm.selectedRole) { Task { await vm.load(reset: true) } }
                 .onChange(of: vm.includeInactive) { Task { await vm.load(reset: true) } }
                 .toolbar {
+                    if isStaffViewer {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            NavigationLink {
+                                TeamAvailabilityView()
+                            } label: {
+                                Label("Team Availability", systemImage: "calendar.badge.clock")
+                            }
+                        }
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         filterMenu
                     }

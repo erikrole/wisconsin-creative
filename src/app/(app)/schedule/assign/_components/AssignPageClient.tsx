@@ -22,7 +22,7 @@ import { useEverOpen } from "@/hooks/use-ever-open";
 import { SPORT_CODES } from "@/lib/sports";
 import { AREAS, AREA_LABELS, type Area } from "@/types/areas";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, FilterIcon, SparklesIcon } from "lucide-react";
+import { CalendarOffIcon, ChevronLeft, ChevronRight, FilterIcon, SparklesIcon } from "lucide-react";
 import { FRESH_SCOPE_CLASS } from "@/lib/fonts/fresh";
 import {
   filterEventsByAssignmentReview,
@@ -104,6 +104,10 @@ export function AssignPageClient() {
         <Button variant="outline" className="h-10" onClick={() => router.push("/schedule")}>
           <ChevronLeft className="size-4" />
           Schedule
+        </Button>
+        <Button variant="outline" className="h-10" onClick={() => router.push("/staff/availability")}>
+          <CalendarOffIcon className="size-4" />
+          Availability
         </Button>
         <Button className="h-10" onClick={() => setAutoAssignOpen(true)} disabled={grid.loading}>
           <SparklesIcon className="size-4" />

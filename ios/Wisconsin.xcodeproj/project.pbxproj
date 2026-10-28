@@ -51,6 +51,7 @@
 		2127E8FF340C558E288B43E7 /* BlastHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB4E32967E7E27BF878BA9 /* BlastHistoryTests.swift */; };
 		21806351E0E51FB5D0200F7F /* SemanticTones.swift in Sources */ = {isa = PBXBuildFile; fileRef = D670C3FF7EA66807225FD6FD /* SemanticTones.swift */; };
 		22682418CE8FC843F3E2B1F3 /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = E1FC7879594025684FC876D1 /* Markdown */; };
+		22D041D7FCE28586FE9405CA /* TeamAvailabilityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF44F8F4A7BFC6952DF476B /* TeamAvailabilityModels.swift */; };
 		237DD2AF7BCC2631721C737C /* CreateBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F3FA2D4C06E966E6BA030B /* CreateBookingSheet.swift */; };
 		2516A89A0CD4284023B38A28 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74157D1DF3F4EF9F53F70494 /* ScheduleView.swift */; };
 		2643D99B273EB3DA3E3D35A7 /* QuarterHourTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F3B72469F3E6BFC5B50CE5 /* QuarterHourTimePicker.swift */; };
@@ -303,6 +304,7 @@
 		F6C3CB5B72354D4B24ADBC83 /* SignatureCaptureHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820C8D2A474163996E7B76EF /* SignatureCaptureHarness.swift */; };
 		F6E0C3F7CF7197546DFADD59 /* ScheduleQuickFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4654A0A61430D64DD8A38F71 /* ScheduleQuickFilterBar.swift */; };
 		F7ACA92034120AFA8C31E7CB /* ScoreboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D02DDA55619A77B76789C2 /* ScoreboardModels.swift */; };
+		F80B3BF2CC24B8BD40E2710C /* TeamAvailabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895CA971F93870AFEB61A7F7 /* TeamAvailabilityView.swift */; };
 		F8198BB80C4CB84C0C12ED6A /* FloatingSearchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E89852F4DC85939BA9A8AA /* FloatingSearchButton.swift */; };
 		FBCE9485C52357F314061D25 /* ReservationDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4461DC62BDB05085191DB129 /* ReservationDraftStoreTests.swift */; };
 		FC55F8C00EAB32F578B178F0 /* ItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80CA4880F08046F8E23F079B /* ItemDetailView.swift */; };
@@ -390,6 +392,7 @@
 		180AF28376E70B61036C413D /* BrandAssetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandAssetModels.swift; sourceTree = "<group>"; };
 		1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityWidget.swift; sourceTree = "<group>"; };
 		1D01A74B3493AEA820E5EA67 /* DamageCaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DamageCaseModels.swift; sourceTree = "<group>"; };
+		1DF44F8F4A7BFC6952DF476B /* TeamAvailabilityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamAvailabilityModels.swift; sourceTree = "<group>"; };
 		1EA7A7E4A31E909C59D8B15F /* EventTravelModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTravelModels.swift; sourceTree = "<group>"; };
 		21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearTrackerRouteTests.swift; sourceTree = "<group>"; };
 		2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
@@ -507,6 +510,7 @@
 		88359DA91B20AF9CC95ACAB5 /* SignaturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignaturesView.swift; sourceTree = "<group>"; };
 		88F162C9B5233CB44C35E9E5 /* WisconsinLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WisconsinLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingEventViews.swift; sourceTree = "<group>"; };
+		895CA971F93870AFEB61A7F7 /* TeamAvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamAvailabilityView.swift; sourceTree = "<group>"; };
 		89F3793202C8507234E6488F /* AnnouncementSplashSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementSplashSheet.swift; sourceTree = "<group>"; };
 		8B792FF3569918A5A54D8693 /* CurrentDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentDay.swift; sourceTree = "<group>"; };
 		8C6B12C97D45B058A9E678BB /* FlatSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlatSurface.swift; sourceTree = "<group>"; };
@@ -893,6 +897,7 @@
 				EC21A466188CE0D3011728F2 /* ShiftTradeModels.swift */,
 				48D7690AD904EE50A56F00D7 /* SignatureModels.swift */,
 				71BC538ACF5211A8F3BFEAE6 /* SoftwareLoginModels.swift */,
+				1DF44F8F4A7BFC6952DF476B /* TeamAvailabilityModels.swift */,
 				BBF64A22034D00E6567A8A98 /* TeamBadgeModels.swift */,
 			);
 			path = Models;
@@ -1112,6 +1117,7 @@
 				D1BC4D99E28B3664BCC8C004 /* SharedLoginsView.swift */,
 				B76322B9A6F0D5B70487D0F2 /* SidebarWebDestinationView.swift */,
 				B425D3A009C027DDB54447BE /* StaffRightNow.swift */,
+				895CA971F93870AFEB61A7F7 /* TeamAvailabilityView.swift */,
 				5BC8F02A51293AC16BA8E3E7 /* TeamBadgesView.swift */,
 				9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */,
 				6B64F325136AF7626ECECE8C /* UserDetailView.swift */,
@@ -1724,6 +1730,8 @@
 				617342117832FB9352D3188A /* SpotlightIndexer.swift in Sources */,
 				D7139E67373631BEE29AD753 /* StaffRightNow.swift in Sources */,
 				1E84624B222CD81665D2EC79 /* StatusPill.swift in Sources */,
+				22D041D7FCE28586FE9405CA /* TeamAvailabilityModels.swift in Sources */,
+				F80B3BF2CC24B8BD40E2710C /* TeamAvailabilityView.swift in Sources */,
 				787D92C62F7AAA641D3A515B /* TeamBadgeModels.swift in Sources */,
 				DB69859A01C14ACE5396D325 /* TeamBadgesView.swift in Sources */,
 				A54251B23959BB25AA633FB8 /* TeamScoreboardView.swift in Sources */,
