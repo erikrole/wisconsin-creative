@@ -112,7 +112,7 @@ export function EventRows({
                 <>
                   <Link
                     href={`/events/${entry.id}`}
-                    className="flex min-h-10 items-center truncate rounded-sm text-sm font-semibold outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex min-h-10 items-center truncate rounded-sm text-sm font-semibold text-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {titleParts.title}
                   </Link>
@@ -132,7 +132,7 @@ export function EventRows({
                       <Badge variant="secondary" size="sm">{formatCalendarEventDateRange(entry)}</Badge>
                     )}
                     {titleParts.detail && <span className="truncate">{titleParts.detail}</span>}
-                    {entry.subtitle && <span className="truncate font-medium text-primary/70">{entry.subtitle}</span>}
+                    {entry.subtitle && <span className="truncate font-medium text-muted-foreground">{entry.subtitle}</span>}
                   </div>
                 </>
               ),
