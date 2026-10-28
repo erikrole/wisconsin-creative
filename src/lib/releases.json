@@ -1,6 +1,19 @@
 [
   {
     "date": "2026-10-28",
+    "title": "Admins can add gear to an active checkout",
+    "type": "feature",
+    "summary": "Admins can now add an available item to a checkout that is already out, without going to a kiosk.",
+    "details": [
+      "Open the checkout and tap Add items, then search and pick the item.",
+      "The item is due back with the rest of the checkout, and the activity log records who added it."
+    ],
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
     "title": "On shift now follows game time",
     "type": "fixes",
     "summary": "The Staff page no longer lists crews hours before a game that was added without a time.",

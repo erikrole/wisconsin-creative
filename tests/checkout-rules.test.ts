@@ -173,6 +173,13 @@ describe("getAllowedActions", () => {
     expect(actions).not.toContain("checkin");
     expect(actions).not.toContain("open");
     expect(actions).toContain("manage-custody");
+    expect(actions).toContain("add-items");
+  });
+
+  it("limits add-items to admins on OPEN checkouts", () => {
+    expect(getAllowedBookingActions(staff, makeCheckout("OPEN"))).not.toContain("add-items");
+    expect(getAllowedBookingActions(owner, makeCheckout("OPEN"))).not.toContain("add-items");
+    expect(getAllowedBookingActions(admin, makeCheckout("BOOKED"))).not.toContain("add-items");
   });
 
   it("returns correct actions for BOOKED checkout as owner", () => {

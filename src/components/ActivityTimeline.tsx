@@ -163,6 +163,7 @@ const ACTION_COLORS: Record<string, ActionColorKey> = {
   kiosk_checkin: "green",
   kiosk_checkout_updated: "blue",
   kiosk_checkout_item_added: "amber",
+  checkout_item_added: "amber",
   kiosk_checkout_item_removed: "amber",
   partial_bulk_checkin: "amber",
   pending_pickup_expired: "rose",

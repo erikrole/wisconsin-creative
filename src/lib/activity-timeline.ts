@@ -497,6 +497,8 @@ export function describeAction(
       return `${reportPrefix}Updated the checkout at a kiosk`;
     case "kiosk_checkout_item_added":
       return `${reportPrefix}Added ${auditItemName(entry.afterJson) ?? "an item"} at ${kioskLocationPhrase(entry.afterJson)}`;
+    case "checkout_item_added":
+      return `${reportPrefix}Added ${auditItemName(entry.afterJson) ?? "an item"} to the active checkout`;
     case "kiosk_checkout_item_removed":
       return `${reportPrefix}Removed ${auditItemName(entry.beforeJson) ?? "an item"} at ${kioskLocationPhrase(entry.beforeJson)}`;
     case "partial_bulk_checkin":

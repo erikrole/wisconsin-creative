@@ -23,6 +23,7 @@ import {
  * | cancel   | staff+/owner | staff+/owner | staff+/owner   | ✗             | ✗         | ✗         |
  * | checkin  | ✗            | ✗            | ✗              | kiosk only    | ✗         | ✗         |
  * | force-complete | ✗       | ✗            | ✗              | admin only    | ✗         | ✗         |
+ * | add-items | ✗        | ✗            | ✗              | admin only    | ✗         | ✗         |
  * | duplicate | ✗       | ✗            | ✗              | ✗             | staff+/owner | ✗     |
  * | transfer-owner | staff+/owner | staff+/owner | staff+/owner | staff+/owner | ✗         | ✗         |
  * | open     | ✗            | staff+/owner | ✗              | ✗             | ✗         | ✗         |
