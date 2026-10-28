@@ -719,12 +719,25 @@ export async function updateReservation(
       }
 
       if (updatesEquipment || updatesWindow) {
+        // A plan-only edit changes custody of the lines it adds or grows. Gear
+        // already on the plan was cleared when it was reserved, so it must not
+        // block an edit that removes something else (a kit item that went
+        // into maintenance after booking has to be removable).
+        const plannedBySku = new Map(existing.bulkItems.map((item) => [item.bulkSkuId, item.plannedQuantity]));
+        const existingAssetIds = new Set(existing.serializedItems.map((item) => item.assetId));
+        const checkAssetIds = updatesWindow ? remainingAssetIds : remainingAssetIds.filter((id) => !existingAssetIds.has(id));
+        const checkBulkItems = updatesWindow
+          ? remainingBulkItems
+          : remainingBulkItems.filter((item) => {
+              const next = bulkItems.find((candidate) => candidate.bulkSkuId === item.bulkSkuId)?.quantity ?? 0;
+              return next > (plannedBySku.get(item.bulkSkuId) ?? 0);
+            });
         const availability = await checkAvailability(tx, {
           locationId: nextLocationId,
           startsAt: nextStartsAt,
           endsAt: nextEndsAt,
-          serializedAssetIds: remainingAssetIds,
-          bulkItems: remainingBulkItems,
+          serializedAssetIds: checkAssetIds,
+          bulkItems: checkBulkItems,
           excludeBookingId: bookingId,
           bookingKind: "RESERVATION",
           forCollaborator: nextRequester?.role === Role.COLLABORATOR,

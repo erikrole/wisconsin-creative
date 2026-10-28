@@ -18,6 +18,20 @@
   },
   {
     "date": "2026-10-28",
+    "title": "Remove broken gear from a kiosk pickup",
+    "type": "fixes",
+    "summary": "Gear that went into maintenance no longer blocks removing other items, or picking up the rest of a case.",
+    "details": [
+      "Removing an item from a reservation no longer re-checks everything else on it, so a case with several items in maintenance can be trimmed down.",
+      "When a kiosk pickup is blocked, it now names the item and who has it instead of saying \"Availability conflict\"."
+    ],
+    "pr": 719,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
     "title": "Fix call times on newly timed games",
     "type": "fixes",
     "summary": "Games that got their real time after being listed by date only now show the right crew times.",
@@ -29,6 +43,20 @@
     "platforms": [
       "Web",
       "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-27",
+    "title": "Calmer event titles on Schedule",
+    "type": "improvement",
+    "summary": "Event names in the Schedule list are plain text again instead of bright blue, so the page reads quieter and the game info stands out.",
+    "details": [
+      "Titles underline when you hover them, the same as before.",
+      "The small label under a title, like Exhibition, is now a soft gray."
+    ],
+    "pr": 717,
+    "platforms": [
+      "Web"
     ]
   },
   {
