@@ -262,6 +262,30 @@ describe("updateReservation", () => {
     });
   });
 
+  it("does not re-check gear already on the plan when an edit only removes an item", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(makeExistingReservation({
+      serializedItems: [{ assetId: "a-1" }, { assetId: "a-2" }],
+    }));
+
+    await updateReservation("r-1", "actor-1", { serializedAssetIds: ["a-1"] });
+
+    expect(checkAvailability).toHaveBeenCalledWith(
+      mockTx,
+      expect.objectContaining({ serializedAssetIds: [], bulkItems: [] })
+    );
+  });
+
+  it("checks only the newly added item when an edit adds gear", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(makeExistingReservation());
+
+    await updateReservation("r-1", "actor-1", { serializedAssetIds: ["a-1", "a-2"] });
+
+    expect(checkAvailability).toHaveBeenCalledWith(
+      mockTx,
+      expect.objectContaining({ serializedAssetIds: ["a-2"] })
+    );
+  });
+
   it("throws 409 on availability conflict", async () => {
     mockTx.booking.findUnique.mockResolvedValue(makeExistingReservation());
     vi.mocked(checkAvailability).mockResolvedValueOnce({

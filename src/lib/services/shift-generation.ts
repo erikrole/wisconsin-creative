@@ -1,6 +1,7 @@
 import { Prisma, ShiftArea, ShiftWorkerType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sportDefaultShiftWindow } from "@/lib/schedule-defaults";
+import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
 import { getNonGameScheduleDefaults } from "@/lib/services/non-game-schedule-defaults";
 import { unique } from "@/lib/utils";
 
@@ -625,4 +626,50 @@ export async function rebaseUpcomingShiftsForSportCodes(
 
     return summary;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+/**
+ * Calendar feeds often list a game date-only first and add the time later.
+ * Sync updates the event but not its crew, so slots keep the full-day window
+ * they were generated with. Move those slots (no explicit call time) onto the
+ * event's real timed window.
+ */
+export async function healFullDayShiftWindows(now = new Date()): Promise<number> {
+  const shifts = await db.shift.findMany({
+    where: {
+      callStartsAt: null,
+      callEndsAt: null,
+      shiftGroup: {
+        archivedAt: null,
+        event: { allDay: false, startsAt: { gte: now }, status: { not: "CANCELLED" } },
+      },
+    },
+    select: {
+      id: true,
+      workerType: true,
+      startsAt: true,
+      endsAt: true,
+      shiftGroup: { select: { event: { select: { sportCode: true, startsAt: true, endsAt: true } } } },
+    },
+  });
+  const stale = shifts.filter((shift) => isFullDayBoundaryWindow({
+    startsAt: shift.startsAt.toISOString(),
+    endsAt: shift.endsAt.toISOString(),
+  }));
+  if (stale.length === 0) return 0;
+
+  const sportCodes = unique(stale.flatMap((shift) => shift.shiftGroup.event.sportCode ?? []));
+  const configs = await db.sportConfig.findMany({ where: { sportCode: { in: sportCodes } } });
+  const configByCode = new Map(configs.map((config) => [config.sportCode, config]));
+
+  await db.$transaction(stale.map((shift) => {
+    const event = shift.shiftGroup.event;
+    const config = event.sportCode ? configByCode.get(event.sportCode) : undefined;
+    const window = shift.workerType === "ST" && config ? sportDefaultShiftWindow(event, config) : event;
+    return db.shift.update({
+      where: { id: shift.id },
+      data: { startsAt: window.startsAt, endsAt: window.endsAt },
+    });
+  }));
+  return stale.length;
 }
