@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-28",
+    "title": "On shift now follows game time",
+    "type": "fixes",
+    "summary": "The Staff page no longer lists crews hours before a game that was added without a time.",
+    "details": [
+      "Crews that kept an old all-day window now use the game's real start and end until calendar sync catches up.",
+      "The same rule applies to the live badge on a person's profile."
+    ],
+    "pr": 720,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
     "title": "Team availability for staff",
     "type": "feature",
     "summary": "Staff can now see when every student can't work, week by week, on one page.",

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { normalizeAllDayToUtcMidnight } from "@/lib/app-time";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
 
 type ScheduleWindow = {
   startsAt: Date;
@@ -89,6 +90,25 @@ export function inheritsMultiDayAllDayWindow(
   if (!event?.allDay) return false;
   const { startsAt, endsAt } = resolveEffectiveShiftWindow(assignment.shift);
   return endsAt.getTime() - startsAt.getTime() > DAY_MS;
+}
+
+/**
+ * The window to test "is this person working right now" against, or null when there is no clock
+ * time to test. Call times win. An all-day event with none has no clock, so it is null. A timed
+ * event whose crew still holds the full-day window it was generated with (the game got its time
+ * later and calendar sync has not retimed the crew yet) uses the event's own times instead.
+ */
+export function liveAssignmentWindow(assignment: ScheduleAssignmentTiming): ScheduleWindow | null {
+  if (completeCallWindow(assignment) || completeCallWindow(assignment.shift)) {
+    return resolveEffectiveAssignmentWindow(assignment);
+  }
+  const event = eventTimingForShift(assignment.shift);
+  if (event?.allDay) return null;
+  const { startsAt, endsAt } = assignment.shift;
+  if (event && isFullDayBoundaryWindow({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() })) {
+    return { startsAt: event.startsAt, endsAt: event.endsAt };
+  }
+  return { startsAt, endsAt };
 }
 
 /** Schedule intervals use half-open overlap semantics: [start, end). */
