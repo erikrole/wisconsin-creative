@@ -496,9 +496,17 @@ struct ShiftAssignmentRecord: Codable, Identifiable {
     /// payloads decode.
     let crewLabel: String?
     let crewHalf: String?
+    /// Every position label ("SLOW1" first half, "CAM3" second half). Older
+    /// payloads omit it and fall back to crewLabel / crewHalf.
+    let crewTags: [CrewTagRecord]?
+
+    struct CrewTagRecord: Codable {
+        let label: String?
+        let half: String?
+    }
 
     enum CodingKeys: String, CodingKey {
-        case id, status, user, activeTrade, crewLabel, crewHalf
+        case id, status, user, activeTrade, crewLabel, crewHalf, crewTags
     }
 
     init(from decoder: Decoder) throws {
@@ -509,6 +517,7 @@ struct ShiftAssignmentRecord: Codable, Identifiable {
         activeTrade = try c.decodeIfPresent(ActiveTradeRef.self, forKey: .activeTrade)
         crewLabel = try c.decodeIfPresent(String.self, forKey: .crewLabel)
         crewHalf = try c.decodeIfPresent(String.self, forKey: .crewHalf)
+        crewTags = try c.decodeIfPresent([CrewTagRecord].self, forKey: .crewTags)
     }
 
     init(
@@ -517,7 +526,8 @@ struct ShiftAssignmentRecord: Codable, Identifiable {
         user: ShiftWorker,
         activeTrade: ActiveTradeRef? = nil,
         crewLabel: String? = nil,
-        crewHalf: String? = nil
+        crewHalf: String? = nil,
+        crewTags: [CrewTagRecord]? = nil
     ) {
         self.id = id
         self.status = status
@@ -525,20 +535,25 @@ struct ShiftAssignmentRecord: Codable, Identifiable {
         self.activeTrade = activeTrade
         self.crewLabel = crewLabel
         self.crewHalf = crewHalf
+        self.crewTags = crewTags
     }
 
     var isOnTradeBoard: Bool { activeTrade != nil }
 
-    /// "SLOW1 · 1st half", or whichever part is set; nil when neither is.
+    /// "SLOW1 · 1st half, CAM3 · 2nd half"; nil when no label is set.
     var crewTagText: String? {
-        let label = crewLabel?.trimmingCharacters(in: .whitespaces)
-        let half: String? = switch crewHalf {
-        case "FIRST": "1st half"
-        case "SECOND": "2nd half"
-        default: nil
+        let tags = crewTags ?? [CrewTagRecord(label: crewLabel, half: crewHalf)]
+        let texts: [String] = tags.compactMap { tag in
+            let label = tag.label?.trimmingCharacters(in: .whitespaces)
+            let half: String? = switch tag.half {
+            case "FIRST": "1st half"
+            case "SECOND": "2nd half"
+            default: nil
+            }
+            let parts = [label, half].compactMap { $0 }.filter { !$0.isEmpty }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
-        let parts = [label, half].compactMap { $0 }.filter { !$0.isEmpty }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        return texts.isEmpty ? nil : texts.joined(separator: ", ")
     }
 }
 
@@ -587,6 +602,7 @@ struct WorkingScheduleAssignment: Codable {
     let callNote: String?
     let crewLabel: String?
     let crewHalf: String?
+    let crewTags: [ShiftAssignmentRecord.CrewTagRecord]?
     let activeTradeId: String?
     let bookingCount: Int
 }
@@ -683,7 +699,8 @@ struct WorkingScheduleEditor: Codable, Identifiable {
                     user: worker,
                     activeTrade: trade,
                     crewLabel: draftAssignment.crewLabel,
-                    crewHalf: draftAssignment.crewHalf
+                    crewHalf: draftAssignment.crewHalf,
+                    crewTags: draftAssignment.crewTags
                 )
             }
             return EventShift(

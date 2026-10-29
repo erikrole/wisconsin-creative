@@ -23,3 +23,32 @@ export function crewTagText(
   const parts = [label?.trim() || null, crewHalfLabel(half)].filter(Boolean);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
+
+export const MAX_CREW_TAGS = 4;
+
+/** One position label and the part of the event it covers (null = the whole event). */
+export type CrewTagValue = { label: string | null; half: CrewHalf | null };
+
+/** Drop empty tags and cap the list. The first tag is mirrored to the legacy crewLabel/crewHalf columns. */
+export function normalizeCrewTags(tags: ReadonlyArray<CrewTagValue> | null | undefined): CrewTagValue[] {
+  return (tags ?? [])
+    .map((tag) => ({ label: normalizeCrewLabel(tag.label), half: tag.half ?? null }))
+    .filter((tag) => tag.label !== null || tag.half !== null)
+    .slice(0, MAX_CREW_TAGS);
+}
+
+/** The assignment's tags, falling back to the single label/half saved before multiple tags existed. */
+export function crewTagsOf(assignment: {
+  crewTags?: unknown;
+  crewLabel?: string | null;
+  crewHalf?: CrewHalf | null;
+}): CrewTagValue[] {
+  if (Array.isArray(assignment.crewTags)) return normalizeCrewTags(assignment.crewTags as CrewTagValue[]);
+  return normalizeCrewTags([{ label: assignment.crewLabel ?? null, half: assignment.crewHalf ?? null }]);
+}
+
+/** Two tags clash when they share a label (ignoring case) and cover overlapping parts of the event. */
+export function crewTagsClash(a: CrewTagValue, b: CrewTagValue): boolean {
+  if (!a.label || !b.label || a.label.toLowerCase() !== b.label.toLowerCase()) return false;
+  return a.half === null || b.half === null || a.half === b.half;
+}

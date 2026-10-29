@@ -32,7 +32,7 @@ function slimShiftGroup(g: {
   id: string; eventId: string; notes: string | null; archivedAt: Date | null;
   event: { id: string; startsAt: Date };
   shifts: { id: string; area: unknown; workerType: unknown; startsAt: Date; endsAt: Date; callStartsAt: Date | null; callEndsAt: Date | null; notes: string | null; viewerRequest: unknown;
-    assignments: { id: string; status: unknown; user: unknown; activeTrade: unknown; callStartsAt: Date | null; callEndsAt: Date | null; callNote: string | null; crewLabel: string | null; crewHalf: unknown; hasConflict: boolean; conflictNote: string | null; acknowledgedAt: Date | null; acknowledgedById: string | null }[] }[];
+    assignments: { id: string; status: unknown; user: unknown; activeTrade: unknown; callStartsAt: Date | null; callEndsAt: Date | null; callNote: string | null; crewLabel: string | null; crewHalf: unknown; crewTags: unknown; hasConflict: boolean; conflictNote: string | null; acknowledgedAt: Date | null; acknowledgedById: string | null }[] }[];
   publication: unknown; hasWorkingCopy: boolean | undefined; pendingReview: unknown; claimsPaused: boolean; autoReleaseAt: string | null | undefined; autoReleaseError: string | null | undefined; coverage: unknown;
 }) {
   return {
@@ -47,7 +47,7 @@ function slimShiftGroup(g: {
       assignments: s.assignments.map((a) => ({
         id: a.id, status: a.status, user: a.user, activeTrade: a.activeTrade,
         callStartsAt: a.callStartsAt, callEndsAt: a.callEndsAt, callNote: a.callNote,
-        crewLabel: a.crewLabel, crewHalf: a.crewHalf, hasConflict: a.hasConflict, conflictNote: a.conflictNote,
+        crewLabel: a.crewLabel, crewHalf: a.crewHalf, crewTags: a.crewTags, hasConflict: a.hasConflict, conflictNote: a.conflictNote,
         acknowledgedAt: a.acknowledgedAt, acknowledgedById: a.acknowledgedById,
       })),
     })),

@@ -32,6 +32,20 @@
   },
   {
     "date": "2026-10-29",
+    "title": "Different position labels for each half",
+    "type": "improvement",
+    "summary": "On the Schedule, one person can now carry several position labels, such as SLOW1 for the first half and CAM3 for the second.",
+    "details": [
+      "Open a person's label on the crew editor and tap Add another; pick Full game, 1st half or 2nd half for each.",
+      "Every label shows next to their name on the Schedule and the event page."
+    ],
+    "pr": 733,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
     "title": "Schedule changes show up within seconds",
     "type": "improvement",
     "summary": "When someone adds or removes a person on a shift, everyone with the Schedule open sees it within about ten seconds, with no refresh.",

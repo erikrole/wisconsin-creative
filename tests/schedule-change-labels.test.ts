@@ -85,7 +85,7 @@ describe("working-copy edits", () => {
     ["unassign", undefined, "assignment_removed", "Removed worker"],
     ["convertAndReplace", undefined, "assignment_updated", "Replaced worker"],
     ["setCallWindowForAll", undefined, "assignment_updated", "Updated call time"],
-    ["setCrewLabel", undefined, "assignment_updated", "Updated position label"],
+    ["setCrewTags", undefined, "assignment_updated", "Updated position label"],
     ["adjustSlots", -1, "shift_deleted", "Removed shift"],
     ["adjustSlots", 1, "shift_created", "Added shift"],
     ["removeSlot", undefined, "shift_deleted", "Removed shift"],
