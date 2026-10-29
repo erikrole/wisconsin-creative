@@ -8,6 +8,7 @@ import EmptyState from "@/components/EmptyState";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
+import { BulkOnboardingDialog } from "./BulkOnboardingDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
 import { formatDateFull, formatRelativeTime } from "@/lib/format";
 import { PROFILE_FIELD_LABELS } from "@/lib/profile-completion";
@@ -136,6 +138,8 @@ const ROW_GRID = "md:grid md:grid-cols-[minmax(0,1.4fr)_150px_minmax(0,1fr)_minm
 export default function OnboardingStatusPage() {
   const confirm = useConfirm();
   const [query, setQuery] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const { data: me } = useCurrentUser();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [emailingId, setEmailingId] = useState<string | null>(null);
@@ -439,6 +443,7 @@ export default function OnboardingStatusPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {bulkOpen && <BulkOnboardingDialog students={accounts.filter((a) => a.role === "STUDENT")} onClose={() => setBulkOpen(false)} />}
       <PageHeader
         title="Onboarding Status"
         description="Track invitations and account readiness. New people sign in at the app login with their invited email, set a password, then finish Welcome setup."
@@ -446,6 +451,7 @@ export default function OnboardingStatusPage() {
         <Button variant="ghost" size="icon" className="size-10" onClick={reload} disabled={loading} aria-label="Refresh onboarding status">
           <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
+        {me?.role === "ADMIN" && <Button variant="outline" onClick={() => setBulkOpen(true)}>Tick a step for a group</Button>}
         <Button asChild variant="outline">
           <Link href="/settings/allowed-emails">Allowed emails</Link>
         </Button>

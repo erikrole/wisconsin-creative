@@ -46,6 +46,23 @@
   },
   {
     "date": "2026-10-29",
+    "title": "Onboarding checklist on student profiles",
+    "type": "feature",
+    "summary": "Admins can see on each student's profile how far they are through onboarding, and tick off the in-person steps.",
+    "details": [
+      "Photo, phone, student details, sizes, class schedule, guides, app install, notifications and first checkout fill in by themselves, with the date each happened.",
+      "Slack, Asana, computer login, Adobe, building access, orientation and gear training are ticked by an admin and show who did it and when.",
+      "Wiscard is shown but optional. Nothing is emailed to the student.",
+      "Each admin step can show who to contact and a note, and admins can tick a step for a whole group at once.",
+      "Adobe access finishes itself once they claim an Adobe license."
+    ],
+    "pr": 734,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
     "title": "Schedule changes show up within seconds",
     "type": "improvement",
     "summary": "When someone adds or removes a person on a shift, everyone with the Schedule open sees it within about ten seconds, with no refresh.",
