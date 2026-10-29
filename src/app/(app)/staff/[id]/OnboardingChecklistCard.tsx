@@ -36,7 +36,7 @@ function NoteButton({ row, busy, onSave }: { row: OnboardingRow; busy: boolean; 
           onSubmit={(event) => { event.preventDefault(); onSave(draft); setOpen(false); }}
         >
           <Input value={draft} maxLength={ONBOARDING_NOTE_MAX} onChange={(event) => setDraft(event.target.value)} aria-label={`${row.label} note`} autoFocus />
-          <Button type="submit" size="sm" disabled={busy}>Save</Button>
+          <Button type="submit" disabled={busy}>Save</Button>
         </form>
       </PopoverContent>
     </Popover>
