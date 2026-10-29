@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { BriefcaseBusinessIcon, MailIcon, MapPinIcon, PhoneIcon, SlackIcon, UsersIcon } from "lucide-react";
+import { BriefcaseBusinessIcon, MailIcon, MapPinIcon, PhoneIcon, UsersIcon } from "lucide-react";
+import { SlackIcon } from "@/components/icons/slack-icon";
 import EmptyState from "@/components/EmptyState";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
