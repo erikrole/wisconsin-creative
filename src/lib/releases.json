@@ -9,8 +9,7 @@
       "A swapped or removed item keeps those events in its own history, and swaps name both items.",
       "Edits show what changed (old value to new value) instead of raw data.",
       "Password changes and signing out other devices are now recorded.",
-      "Reports > Audit has Area and Person filters, and its charts use the same wording as the log.",
-      "Kits have a History card for staff and admins.",
+      "Reports > Audit has Area and Person filters, and kits have a History card for staff and admins.",
       "All dates and times in the activity log and across the app show in Central time."
     ],
     "pr": 724,
