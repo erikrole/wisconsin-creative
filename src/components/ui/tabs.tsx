@@ -78,7 +78,7 @@ function TabsList({
         <span
           aria-hidden
           data-slot="tabs-indicator"
-          className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-primary transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+          className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-[var(--brand-red,var(--wi-red))] transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
           style={{ transform: `translateX(${bar.left}px)`, width: bar.width }}
         />
       ) : null}
@@ -94,7 +94,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "min-h-10 cursor-pointer px-4 py-2.5 text-base font-medium text-muted-foreground transition-[color,border-color] duration-200 border-b-2 border-transparent -mb-px hover:text-foreground data-[state=active]:text-foreground data-[state=active]:border-primary group-data-[indicator]/tabs-list:data-[state=active]:border-transparent data-[state=active]:font-semibold rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
+        "min-h-10 cursor-pointer px-4 py-2.5 text-base font-medium text-muted-foreground transition-[color,border-color] duration-200 border-b-2 border-transparent -mb-px hover:text-foreground data-[state=active]:text-foreground data-[state=active]:border-[var(--brand-red,var(--wi-red))] group-data-[indicator]/tabs-list:data-[state=active]:border-transparent data-[state=active]:font-semibold rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
