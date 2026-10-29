@@ -86,6 +86,7 @@
 | `/signatures/[id]` | `src/app/(app)/signatures/[id]/page.tsx` |
 | `/signatures` | `src/app/(app)/signatures/page.tsx` |
 | `/staff/[id]` | `src/app/(app)/staff/[id]/page.tsx` |
+| `/staff/availability` | `src/app/(app)/staff/availability/page.tsx` |
 | `/staff/onboarding-status` | `src/app/(app)/staff/onboarding-status/page.tsx` |
 | `/staff/org-chart` | `src/app/(app)/staff/org-chart/page.tsx` |
 | `/staff` | `src/app/(app)/staff/page.tsx` |
@@ -116,6 +117,7 @@
 | `/dev-labels` | `src/app/dev-labels/page.tsx` |
 | `/dev-settings` | `src/app/dev-settings/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
+| `/dev-team-availability` | `src/app/dev-team-availability/page.tsx` |
 | `/dev-trade-board` | `src/app/dev-trade-board/page.tsx` |
 | `/dev-transfer` | `src/app/dev-transfer/page.tsx` |
 | `/dev-welcome` | `src/app/dev-welcome/page.tsx` |
@@ -186,9 +188,9 @@
 | `src/components/ui/sidebar.tsx` | 708 |
 | `src/components/schedule/SportSetupWizard.tsx` | 682 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 630 |
+| `src/components/ActivityTimeline.tsx` | 592 |
 | `src/components/CommandPalette.tsx` | 588 |
-| `src/components/ActivityTimeline.tsx` | 586 |
-| `src/components/booking-details/BookingHeader.tsx` | 494 |
+| `src/components/booking-details/BookingHeader.tsx` | 496 |
 | `src/components/AppShell.tsx` | 459 |
 | `src/components/event-editor/EventEditorFields.tsx` | 452 |
 | `src/components/ui/heatmap.tsx` | 434 |
@@ -206,7 +208,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/hooks/booking-action-copy.ts` | 22 |
+| `src/hooks/booking-action-copy.ts` | 24 |
 | `src/hooks/use-assignment-grid.ts` | 223 |
 | `src/hooks/use-booking-change-sync.ts` | 174 |
 | `src/hooks/use-browser-state.ts` | 23 |
@@ -229,9 +231,9 @@
 | `src/hooks/use-onboarding-save.ts` | 249 |
 | `src/hooks/use-operational-polling-activity.ts` | 156 |
 | `src/hooks/use-profile-completion.ts` | 83 |
-| `src/hooks/use-schedule-data.ts` | 780 |
+| `src/hooks/use-schedule-data.ts` | 776 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-synced-draft.ts` | 37 |
 | `src/hooks/use-url-state.ts` | 129 |
-| `src/hooks/useBookingActions.ts` | 297 |
+| `src/hooks/useBookingActions.ts` | 298 |
 | `src/hooks/useBookingDetail.ts` | 70 |

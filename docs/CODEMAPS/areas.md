@@ -111,7 +111,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_KITS.md`
 - Pages: `/kits/[id]`, `/kits`
-- APIs: `/api/kiosk/kits/[id]`, `/api/kiosk/kits`, `/api/kits/[id]/bulk-members`, `/api/kits/[id]/clone`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
+- APIs: `/api/kiosk/kits/[id]`, `/api/kiosk/kits`, `/api/kits/[id]/activity`, `/api/kits/[id]/bulk-members`, `/api/kits/[id]/clone`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
 - Services: `src/lib/services/kits.ts`
 - Tests: `tests/football-gameday-kits.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`, `tests/kiosk-kits-and-heartbeat-report.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list-route.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service-writes.test.ts`
 
@@ -151,15 +151,15 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_REPORTS.md`
 - Pages: `/reports/audit`, `/reports/badges`, `/reports/bulk-losses`, `/reports/checkouts`, `/reports/overdue`, `/reports`, `/reports/scans`, `/reports/usage`
-- APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/reports`, `/api/checkin-reports/[id]/dismiss`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`
+- APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/reports`, `/api/checkin-reports/[id]/dismiss`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit/actors`, `/api/reports/audit`
 - Services: `src/lib/services/checkin-item-reports.ts`, `src/lib/services/checkout-reports.ts`, `src/lib/services/error-reports.ts`, `src/lib/services/inventory-loss-reports.ts`, `src/lib/services/reports.ts`, `src/lib/services/scan-audit-reports.ts`
-- Tests: `tests/asset-condition-reports.test.ts`, `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/booking-reports-route.test.ts`, `tests/calendar-sync-audit.test.ts`
+- Tests: `tests/asset-condition-reports.test.ts`, `tests/audit-actions-contract.test.ts`, `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/booking-reports-route.test.ts`
 
 ## reservations
 
 - Doc: `docs/AREA_RESERVATIONS.md`
 - Pages: `/bookings`, `/reservations/[id]`, `/reservations/new`, `/reservations`, `/settings/bookings`
-- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]/reports`, `/api/bookings/[id]/reuse-plan`, `/api/bookings/[id]`
+- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/items`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]/reports`, `/api/bookings/[id]/reuse-plan`
 - Services: `src/lib/services/bookings-checkin.ts`, `src/lib/services/bookings-helpers.ts`, `src/lib/services/bookings-lifecycle-shared.ts`, `src/lib/services/bookings-lifecycle.ts`, `src/lib/services/bookings-queries.ts`, `src/lib/services/bookings.ts`
 - Tests: `tests/bookings-ui-polish-source.test.ts`, `tests/ios-bookings-empty-state.test.ts`, `tests/ios-bookings-power-filters.test.ts`
 
@@ -176,7 +176,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Doc: `docs/AREA_SCAN.md`
 - Pages: `/reports/scans`
 - APIs: `/api/checkouts/[id]/checkin-scan`, `/api/checkouts/[id]/scan-status`, `/api/checkouts/[id]/scan`, `/api/checkouts/[id]/start-scan-session`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/scan`, `/api/kiosk/pickup/[id]/scan`, `/api/kiosk/resolve-scan`, `/api/kiosk/scan-lookup`, `/api/reports/scans`
-- Services: `src/lib/services/bulk-unit-scans.ts`, `src/lib/services/kiosk-scan.ts`, `src/lib/services/scan-audit-reports.ts`, `src/lib/services/scans.ts`
+- Services: `src/lib/services/activity-scans.ts`, `src/lib/services/bulk-unit-scans.ts`, `src/lib/services/kiosk-scan.ts`, `src/lib/services/scan-audit-reports.ts`, `src/lib/services/scans.ts`
 - Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/bulk-unit-scan-edges.test.ts`, `tests/checkout-scan-status-access.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`
 
 ## search
