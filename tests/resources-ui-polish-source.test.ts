@@ -18,21 +18,21 @@ describe("Resources interaction-detail contracts", () => {
     expect(page).not.toContain("hover:shadow-sm");
     expect(page).toContain("group-hover:translate-x-0.5 group-hover:text-foreground");
     expect(page).toContain("hover:no-underline");
-    expect(page).toContain("resource-featured");
-    expect(page).toContain("resource-tile");
-    expect(page).toContain("resource-index-row");
-    expect(page).toContain("resource-mark");
+    expect(page).toContain("resource-card");
+    expect(page).toContain("resource-row");
+    expect(page).toContain("resource-topic");
+    expect(page).toContain("ServerPathCopy");
   });
 
   it("keeps guide surfaces title-first with a one-line purpose", () => {
     const page = source("src/app/(app)/resources/page.tsx");
-    const guideSurfaces = page.slice(page.indexOf("function GuideCard"), page.indexOf("function SectionHeader"));
+    const guideSurfaces = page.slice(page.indexOf("function GuideCard"), page.indexOf("function GuideResults"));
 
     expect(guideSurfaces).toContain("guide.title");
     expect(guideSurfaces).toContain("guide.summary");
-    expect(guideSurfaces).toContain("resource-featured-summary");
-    expect(guideSurfaces).toContain("resource-tile-summary");
-    expect(guideSurfaces).toContain("resource-index-summary");
+    expect(guideSurfaces).toContain("resource-card-summary");
+    expect(guideSurfaces).toContain("resource-row-summary");
+    expect(guideSurfaces).toContain("FreshnessLabel");
     expect(guideSurfaces).toContain("line-clamp-1");
     expect(guideSurfaces).not.toContain("audienceLabel");
     expect(guideSurfaces).not.toContain("guide.author.name");

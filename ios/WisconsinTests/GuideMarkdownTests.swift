@@ -401,3 +401,50 @@ struct GuideMarkdownTests {
         #expect(headings == [1, 2, 2])
     }
 }
+
+/// The iOS half of `tests/guide-freshness.test.ts`: the same labels and the
+/// same 180-day review window as the web library.
+struct GuideFreshnessTests {
+    private let now = ISO8601DateFormatter().date(from: "2026-10-21T12:00:00Z")!
+
+    private func iso(daysAgo days: Int) -> String {
+        ISO8601DateFormatter().string(from: now.addingTimeInterval(-Double(days) * 86_400))
+    }
+
+    private func guide(verifiedDaysAgo: Int?, updatedDaysAgo: Int) throws -> GuideListItem {
+        let verified = verifiedDaysAgo.map { "\"\(iso(daysAgo: $0))\"" } ?? "null"
+        let json = """
+        {
+          "id": "g1", "title": "Guide", "slug": "guide", "type": "SOP", "category": "SOPs",
+          "lastVerifiedAt": \(verified), "updatedAt": "\(iso(daysAgo: updatedDaysAgo))",
+          "author": { "id": "a1", "name": "Erik" }
+        }
+        """
+        return try JSONDecoder().decode(GuideListItem.self, from: Data(json.utf8))
+    }
+
+    @Test func prefersTheVerificationDateOverTheLastEdit() throws {
+        let freshness = try guide(verifiedDaysAgo: 6, updatedDaysAgo: 1).freshness(now: now)
+        #expect(freshness == GuideFreshness(label: "Verified 6 days ago", stale: false, verified: true))
+    }
+
+    @Test func fallsBackToTheLastEdit() throws {
+        #expect(try guide(verifiedDaysAgo: nil, updatedDaysAgo: 21).freshness(now: now).label == "Updated 3 weeks ago")
+    }
+
+    @Test func asksForReviewAfterTheWindow() throws {
+        let stale = try guide(verifiedDaysAgo: GuideFreshness.staleAfterDays + 1, updatedDaysAgo: 2).freshness(now: now)
+        #expect(stale == GuideFreshness(label: "Needs review", stale: true, verified: true))
+        #expect(try guide(verifiedDaysAgo: nil, updatedDaysAgo: GuideFreshness.staleAfterDays).freshness(now: now).stale == false)
+    }
+
+    @Test func readsNaturallyAcrossRanges() {
+        let ago = { (days: Double) in now.addingTimeInterval(-days * 86_400) }
+        #expect(guideRelativeDays(from: ago(0), now: now) == "today")
+        #expect(guideRelativeDays(from: ago(1), now: now) == "yesterday")
+        #expect(guideRelativeDays(from: ago(13), now: now) == "13 days ago")
+        #expect(guideRelativeDays(from: ago(45), now: now) == "6 weeks ago")
+        #expect(guideRelativeDays(from: ago(90), now: now) == "3 months ago")
+        #expect(guideRelativeDays(from: ago(400), now: now) == "a year ago")
+    }
+}

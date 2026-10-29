@@ -283,6 +283,8 @@ export async function updateGuide(
     featured?: boolean;
     featuredRank?: number | null;
     published?: boolean;
+    /** Stamp the guide as checked and still correct, by this editor, now. */
+    markVerified?: boolean;
     expectedUpdatedAt?: string;
   },
   editorRole: Role,
@@ -347,6 +349,7 @@ export async function updateGuide(
       ...(patch.featured !== undefined && { featured: patch.featured }),
       ...(shouldUpdateFeaturedRank && { featuredRank: nextFeaturedRank }),
       ...(patch.published !== undefined && { published: patch.published }),
+      ...(patch.markVerified && { lastVerifiedAt: new Date(), lastVerifiedById: editorId }),
     },
     include: {
       author: { select: { id: true, name: true } },

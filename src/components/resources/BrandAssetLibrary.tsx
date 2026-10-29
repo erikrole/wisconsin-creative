@@ -2,11 +2,11 @@
 
 /* eslint-disable @next/next/no-img-element -- private authenticated asset URLs cannot use next/image's public optimizer path. */
 
+import { useAdjustState } from "@/hooks/use-synced-draft";
 import {
   ArrowDownUpIcon,
   ArrowUpIcon,
   CheckCircle2Icon,
-  ChevronDownIcon,
   ChevronRightIcon,
   Clock3Icon,
   DownloadIcon,
@@ -19,8 +19,10 @@ import {
   HistoryIcon,
   HomeIcon,
   ImageIcon,
+  LayoutGridIcon,
   LinkIcon,
   ListFilterIcon,
+  ListIcon,
   Loader2Icon,
   PlusIcon,
   RefreshCwIcon,
@@ -272,6 +274,8 @@ function recentStorageKey(): string {
   return "wisconsin-creative.resource-assets.recent";
 }
 
+const LAYOUT_STORAGE_KEY = "resources:brand-assets:layout";
+
 function AssetIcon({ kind, className }: { kind: ResourceAssetKind; className?: string }) {
   const Icon = kind === ResourceAssetKind.PHOTO
     ? ImageIcon
@@ -289,18 +293,18 @@ function AssetIcon({ kind, className }: { kind: ResourceAssetKind; className?: s
   return <Icon className={cn("size-4", className)} aria-hidden="true" />;
 }
 
-function FontSpecimen({ asset, compact = false }: { asset: AssetSummary; compact?: boolean }) {
+function FontSpecimen({ asset, compact = false, tile = false }: { asset: AssetSummary; compact?: boolean; tile?: boolean }) {
   const version = asset.currentVersion;
   if (!version || !isFontPreviewable(version.contentType)) return null;
-  if (compact && version.sizeBytes > MAX_INLINE_FONT_BYTES) return <AssetIcon kind={asset.kind} />;
+  if ((compact || tile) && version.sizeBytes > MAX_INLINE_FONT_BYTES) return <AssetIcon kind={asset.kind} className={tile ? "size-8" : undefined} />;
   const family = `resource-asset-font-${asset.id.replace(/[^a-zA-Z0-9]/g, "")}`;
   return (
-    <div className={cn("min-w-0 overflow-hidden", compact ? "text-lg" : "w-full") }>
+    <div className={cn("min-w-0 overflow-hidden", compact ? "text-lg" : "w-full", tile && "text-center")}>
       <style>{`@font-face{font-family:"${family}";src:url("${assetHref(asset.id, version.id)}") format("${fontFormat(version.contentType)}");font-display:swap;font-weight:400;font-style:normal}`}</style>
-      <span className={cn("block truncate", compact ? "text-lg" : "text-5xl sm:text-6xl")} style={{ fontFamily: `"${family}"` }}>
-        Aa Bb Cc 123
+      <span className={cn("block truncate", tile ? "px-4 text-4xl" : compact ? "text-lg" : "text-5xl sm:text-6xl")} style={{ fontFamily: `"${family}"` }}>
+        {tile ? "Aa Bb" : "Aa Bb Cc 123"}
       </span>
-      {!compact && <p className="mt-3 text-sm text-muted-foreground">The font is previewed in-browser and is not installed on your device.</p>}
+      {!compact && !tile && <p className="mt-3 text-sm text-muted-foreground">The font is previewed in-browser and is not installed on your device.</p>}
     </div>
   );
 }
@@ -387,12 +391,12 @@ function NewFolderDialog({
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  useAdjustState([open], () => {
     if (open) {
       setName("");
       setSaving(false);
     }
-  }, [open]);
+  });
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1088,8 +1092,8 @@ function LibraryRail({
         {canManage && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="mb-4 h-14 w-full justify-start rounded-xl px-4 text-base shadow-xs">
-                <PlusIcon className="size-5" aria-hidden="true" />
+              <Button className="mb-4 h-10 w-full justify-start px-3">
+                <PlusIcon className="size-4" aria-hidden="true" />
                 New
               </Button>
             </DropdownMenuTrigger>
@@ -1196,6 +1200,134 @@ function FolderCard({ folder, onOpen }: { folder: FolderSummary; onOpen: () => v
   );
 }
 
+type AssetHandlers = {
+  onHistory: () => void;
+  onPreview: () => void;
+  onReplace: () => void;
+  onToggleFavorite: () => void;
+  onCopyLink: () => void;
+  onUse: () => void;
+};
+
+/** The file itself where the browser can draw it, otherwise its kind's icon. */
+function AssetThumb({ asset, compact = false }: { asset: AssetSummary; compact?: boolean }) {
+  const current = asset.currentVersion;
+  if (current && isImagePreviewable(current.contentType) && current.sizeBytes <= MAX_THUMBNAIL_BYTES) {
+    return <img src={assetHref(asset.id, current.id)} alt="" loading="lazy" className={cn("size-full object-contain", !compact && "p-4")} />;
+  }
+  if (current && isFontPreviewable(current.contentType)) return <FontSpecimen asset={asset} compact={compact} tile={!compact} />;
+  return <AssetIcon kind={asset.kind} className={compact ? undefined : "size-8"} />;
+}
+
+function AssetActions({
+  asset,
+  canManage,
+  onHistory,
+  onPreview,
+  onReplace,
+  onCopyLink,
+  onUse,
+}: Omit<AssetHandlers, "onToggleFavorite"> & { asset: AssetSummary; canManage: boolean }) {
+  const current = asset.currentVersion;
+  const canOpenInline = Boolean(current && isBrowserViewable(current.contentType));
+  return (
+    <OperationalRowActions label={`Actions for ${asset.name}`}>
+      {current && (
+        <DropdownMenuItem onSelect={() => { onUse(); onPreview(); }}>
+          <EyeIcon /> {isPreviewable(current.contentType) ? "Preview" : "Open details"}
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuItem onSelect={() => { onUse(); onHistory(); }}>
+        <HistoryIcon /> History <span className="ml-auto text-xs text-muted-foreground">{asset.versionCount}</span>
+      </DropdownMenuItem>
+      {current && (
+        <DropdownMenuItem asChild>
+          <a
+            href={assetHref(asset.id, undefined, !canOpenInline)}
+            onClick={onUse}
+            {...(canOpenInline ? { target: "_blank", rel: "noreferrer" } : {})}
+          >
+            {canOpenInline ? <FileTextIcon /> : <DownloadIcon />}
+            {canOpenInline ? "Open full preview" : "Download"}
+          </a>
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuItem onSelect={onCopyLink}>
+        <LinkIcon /> Copy internal link
+      </DropdownMenuItem>
+      {canManage && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={onReplace}>
+            <ArrowUpIcon /> New version
+          </DropdownMenuItem>
+        </>
+      )}
+    </OperationalRowActions>
+  );
+}
+
+function FavoriteButton({ asset, favorite, onToggle }: { asset: AssetSummary; favorite: boolean; onToggle: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-10"
+      onClick={onToggle}
+      aria-label={favorite ? `Remove ${asset.name} from favorites` : `Favorite ${asset.name}`}
+      aria-pressed={favorite}
+    >
+      <StarIcon className={cn(favorite && "fill-[var(--yellow-text)] text-[var(--yellow-text)]")} />
+    </Button>
+  );
+}
+
+/**
+ * Grid tile: brand files are visual, so the preview leads and the name,
+ * kind and version sit quietly underneath, the way a photo library reads.
+ */
+function AssetTile({
+  asset,
+  canManage,
+  favorite,
+  showLocation,
+  ...handlers
+}: AssetHandlers & { asset: AssetSummary; canManage: boolean; favorite: boolean; showLocation: boolean }) {
+  const current = asset.currentVersion;
+  const open = () => { handlers.onUse(); handlers.onPreview(); };
+  return (
+    <li className="brand-tile group">
+      <div className="brand-tile-actions" data-favorite={favorite || undefined}>
+        <FavoriteButton asset={asset} favorite={favorite} onToggle={handlers.onToggleFavorite} />
+        <AssetActions asset={asset} canManage={canManage} {...handlers} />
+      </div>
+      <button
+        type="button"
+        onClick={open}
+        className="brand-tile-preview focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        aria-label={`${current && isPreviewable(current.contentType) ? "Preview" : "Open details for"} ${asset.name}`}
+      >
+        <AssetThumb asset={asset} />
+      </button>
+      <div className="min-w-0 px-3 pb-3 pt-2.5">
+        <button
+          type="button"
+          onClick={open}
+          className="block w-full min-w-0 rounded-md text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          aria-label={`Open ${asset.name}`}
+        >
+          <span className="block truncate text-sm font-bold text-foreground">{asset.name}</span>
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+            {RESOURCE_ASSET_KIND_LABELS[asset.kind]}
+            {current ? ` · ${formatBytes(current.sizeBytes)} · ${versionLabel(current)}` : " · No file yet"}
+            {showLocation && ` · ${folderDisplayPath(asset.folder.path)}`}
+          </span>
+        </button>
+      </div>
+    </li>
+  );
+}
+
 function AssetRow({
   asset,
   canManage,
@@ -1220,7 +1352,6 @@ function AssetRow({
   onUse: () => void;
 }) {
   const current = asset.currentVersion;
-  const canOpenInline = Boolean(current && isBrowserViewable(current.contentType));
 
   return (
     <TableRow striped={false} className="group">
@@ -1232,13 +1363,7 @@ function AssetRow({
             onClick={() => { onUse(); onPreview(); }}
             aria-label={`${current && isPreviewable(current.contentType) ? "Preview" : "Open details for"} ${asset.name}`}
           >
-            {current && isImagePreviewable(current.contentType) && current.sizeBytes <= MAX_THUMBNAIL_BYTES ? (
-              <img src={assetHref(asset.id, current.id)} alt="" loading="lazy" className="size-full object-contain" />
-            ) : current && isFontPreviewable(current.contentType) ? (
-              <FontSpecimen asset={asset} compact />
-            ) : (
-              <AssetIcon kind={asset.kind} />
-            )}
+            <AssetThumb asset={asset} compact />
           </button>
           <button
             type="button"
@@ -1266,49 +1391,16 @@ function AssetRow({
       </TableCell>
       <TableCell className="w-px text-right">
         <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="size-10"
-            onClick={onToggleFavorite}
-            aria-label={favorite ? `Remove ${asset.name} from favorites` : `Favorite ${asset.name}`}
-            aria-pressed={favorite}
-          >
-            <StarIcon className={cn(favorite && "fill-[var(--yellow-text)] text-[var(--yellow-text)]")} />
-          </Button>
-          <OperationalRowActions label={`Actions for ${asset.name}`}>
-            {current && (
-              <DropdownMenuItem onSelect={() => { onUse(); onPreview(); }}>
-                <EyeIcon /> {isPreviewable(current.contentType) ? "Preview" : "Open details"}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={() => { onUse(); onHistory(); }}>
-              <HistoryIcon /> History <span className="ml-auto text-xs text-muted-foreground">{asset.versionCount}</span>
-            </DropdownMenuItem>
-            {current && (
-              <DropdownMenuItem asChild>
-                <a
-                  href={assetHref(asset.id, undefined, !canOpenInline)}
-                  onClick={onUse}
-                  {...(canOpenInline ? { target: "_blank", rel: "noreferrer" } : {})}
-                >
-                  {canOpenInline ? <FileTextIcon /> : <DownloadIcon />}
-                  {canOpenInline ? "Open full preview" : "Download"}
-                </a>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={onCopyLink}>
-              <LinkIcon /> Copy internal link
-            </DropdownMenuItem>
-            {canManage && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={onReplace}>
-                  <ArrowUpIcon /> New version
-                </DropdownMenuItem>
-              </>
-            )}
-          </OperationalRowActions>
+          <FavoriteButton asset={asset} favorite={favorite} onToggle={onToggleFavorite} />
+          <AssetActions
+            asset={asset}
+            canManage={canManage}
+            onHistory={onHistory}
+            onPreview={onPreview}
+            onReplace={onReplace}
+            onCopyLink={onCopyLink}
+            onUse={onUse}
+          />
         </div>
       </TableCell>
     </TableRow>
@@ -1338,6 +1430,24 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
   const dragDepthRef = useRef(0);
   const [previewAsset, setPreviewAsset] = useState<AssetSummary | null>(null);
   const [historyAsset, setHistoryAsset] = useState<AssetSummary | null>(null);
+  const [layoutMode, setLayoutMode] = useState<"grid" | "list">("grid");
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(LAYOUT_STORAGE_KEY) === "list") setLayoutMode("list");
+    } catch {
+      // Storage can be blocked; the grid is the default either way.
+    }
+  }, []);
+
+  const changeLayoutMode = (mode: "grid" | "list") => {
+    setLayoutMode(mode);
+    try {
+      window.localStorage.setItem(LAYOUT_STORAGE_KEY, mode);
+    } catch {
+      // Only costs remembering the choice on this device.
+    }
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearchQuery(search), 250);
@@ -1390,8 +1500,9 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
 
   const isFavorite = (asset: AssetSummary) => favoriteOverrides[asset.id] ?? asset.isFavorite;
   const hasDiscoveryFilters = Boolean(search.trim() || searchQuery.trim() || kindFilter !== "ALL" || favoriteOnly || scope === "all");
-  const filterCount = (scope === "all" ? 1 : 0) + (kindFilter !== "ALL" ? 1 : 0) + (favoriteOnly ? 1 : 0);
-  const hasAppliedFilters = filterCount > 0 || sort !== "name";
+  // File kind lives in the visible chip row, so the popover only counts the rest.
+  const filterCount = (scope === "all" ? 1 : 0) + (favoriteOnly ? 1 : 0);
+  const hasAppliedFilters = filterCount > 0 || kindFilter !== "ALL" || sort !== "name";
 
   const clearDiscoveryFilters = () => {
     setSearch("");
@@ -1642,7 +1753,7 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="h-10 pl-9"
+                className="h-10 rounded-[10px] bg-card pl-9"
                 placeholder="Search in Brand assets"
                 aria-label="Search brand assets"
               />
@@ -1685,16 +1796,6 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor="brand-asset-kind-filter">File kind</Label>
-                      <Select value={kindFilter} onValueChange={(value) => setKindFilter(value as "ALL" | ResourceAssetKind)}>
-                        <SelectTrigger id="brand-asset-kind-filter" className="h-10" aria-label="Filter by file kind"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ALL">All file kinds</SelectItem>
-                          {RESOURCE_ASSET_KIND_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
                     <label className="flex min-h-10 items-center justify-between gap-3 rounded-md border border-border/70 px-3 text-sm">
                       <span className="flex items-center gap-2"><StarIcon className={cn(favoriteOnly && "fill-[var(--yellow-text)] text-[var(--yellow-text)]")} aria-hidden="true" /> Favorites only</span>
                       <input
@@ -1718,14 +1819,47 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
                   Clear
                 </Button>
               )}
+              <div className="resource-segmented shrink-0" role="group" aria-label="Layout">
+                {([
+                  ["grid", "Grid", LayoutGridIcon],
+                  ["list", "List", ListIcon],
+                ] as const).map(([mode, label, Icon]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className="resource-segment resource-segment-icon"
+                    aria-label={label}
+                    aria-pressed={layoutMode === mode}
+                    onClick={() => changeLayoutMode(mode)}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
             </div>
+          </div>
+
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Filter by file kind">
+            {([{ value: "ALL", label: "All" }, ...RESOURCE_ASSET_KIND_OPTIONS] as { value: "ALL" | ResourceAssetKind; label: string }[]).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={kindFilter === option.value}
+                onClick={() => setKindFilter(option.value)}
+                className={cn(
+                  "guide-chip shrink-0 transition-[background-color,color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]",
+                  kindFilter === option.value && "guide-chip-on",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
 
           {showFolders && (
             <section className="flex flex-col gap-3" aria-labelledby="brand-asset-folder-heading">
               <div className="flex items-center gap-2">
-                <ChevronDownIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-                <h2 id="brand-asset-folder-heading" className="text-sm font-semibold tracking-tight">{folderId ? "Folders" : "Suggested folders"}</h2>
+                <h2 id="brand-asset-folder-heading" className="resource-kicker">{folderId ? "Folders" : "Suggested folders"}</h2>
               </div>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {libraryData.folders.map((folder) => (
@@ -1738,8 +1872,7 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
           <section className="flex flex-col gap-3" aria-labelledby="brand-asset-file-heading">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-baseline gap-2">
-                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <h2 id="brand-asset-file-heading" className="text-sm font-semibold tracking-tight">{fileHeading}</h2>
+                <h2 id="brand-asset-file-heading" className="resource-kicker">{fileHeading}</h2>
                 <span className="text-xs text-muted-foreground">{fileCountLabel}</span>
               </div>
               {library.refreshing && <RefreshCwIcon className="size-4 animate-spin text-muted-foreground" aria-label="Refreshing files" />}
@@ -1757,8 +1890,26 @@ export function BrandAssetLibrary({ canManage }: { canManage: boolean }) {
                   />
                 </CardContent>
               </Card>
+            ) : layoutMode === "grid" ? (
+              <ul className="brand-grid">
+                {displayAssets.map((asset) => (
+                  <AssetTile
+                    key={asset.id}
+                    asset={asset}
+                    canManage={canManage}
+                    favorite={isFavorite(asset)}
+                    showLocation={showingGlobalResults}
+                    onHistory={() => openHistory(asset)}
+                    onPreview={() => openPreview(asset)}
+                    onReplace={() => { setPendingFiles([]); setReplaceAsset(asset); setUploadDialogOpen(true); }}
+                    onToggleFavorite={() => void toggleFavorite(asset)}
+                    onCopyLink={() => void copyAssetLink(asset)}
+                    onUse={() => rememberRecent(asset)}
+                  />
+                ))}
+              </ul>
             ) : (
-              <div className="overflow-hidden rounded-md border border-border/80 bg-card">
+              <div className="overflow-hidden rounded-xl border border-border bg-card">
                 <Table>
                   <TableHeader sticky={false}>
                     <TableRow striped={false} className="bg-muted/30 hover:bg-muted/30">

@@ -101,4 +101,16 @@ describe("Brand asset experience source contracts", () => {
     expect(component).toContain("initialFiles");
     expect(component).toContain("openedLinkRef");
   });
+
+  it("leads with a preview grid, keeps the table as a list option, and filters kinds in the open", () => {
+    const component = source("src/components/resources/BrandAssetLibrary.tsx");
+
+    expect(component).toContain("function AssetTile");
+    expect(component).toContain('<ul className="brand-grid">');
+    expect(component).toContain("LAYOUT_STORAGE_KEY");
+    expect(component).toContain('aria-label="Filter by file kind"');
+    expect(component).not.toContain('htmlFor="brand-asset-kind-filter"');
+    // Rows and tiles share one actions menu so the two layouts cannot drift.
+    expect(component.match(/<OperationalRowActions/g)).toHaveLength(1);
+  });
 });

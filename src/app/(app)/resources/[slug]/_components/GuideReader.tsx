@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ResourceType } from "@/lib/client-enums";
-import { ArrowLeftIcon, ArrowRightIcon, PencilIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeftIcon, ArrowRightIcon, BadgeCheckIcon, LinkIcon, PencilIcon } from "lucide-react";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { MarkdownReader } from "@/components/resources/MarkdownReader";
 import { useFetch } from "@/hooks/use-fetch";
+import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { legacyGuideMarkdown, markdownHeadings, omitDuplicateLeadHeading } from "@/lib/guide-content";
 import { inferResourceTypeFromCategory, RESOURCE_TYPE_LABELS } from "@/lib/guide-categories";
+import { guideFreshness } from "@/lib/guide-freshness";
 import type { GuideListItem } from "@/lib/guides";
 import { buildSectionNav, type SectionNav } from "@/lib/resource-search";
 import { cn } from "@/lib/utils";
+import { resourceTypeHref } from "../../filters";
 
 type Guide = {
   id: string;
@@ -24,6 +28,8 @@ type Guide = {
   published: boolean;
   content: unknown;
   author: { id: string; name: string };
+  lastVerifiedAt: Date | string | null;
+  lastVerifiedBy: { id: string; name: string } | null;
   updatedAt: Date | string;
 };
 
@@ -72,47 +78,46 @@ function TableOfContents({ items, activeId }: { items: TocItem[]; activeId: stri
   if (items.length === 0) return null;
 
   return (
-    <nav aria-label="On this page" className="guide-toc-column hidden min-h-0 self-stretch xl:block">
-      <div className="guide-toc">
-        <p className="guide-toc-label">On this page</p>
-        <div ref={listRef} className="guide-toc-list">
-          <span
-            aria-hidden="true"
-            className={cn("guide-toc-indicator", indicator.ready && "guide-toc-indicator-ready")}
-            style={{
-              transform: `translateY(${indicator.y}px)`,
-              height: indicator.height,
-            }}
-          />
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              data-toc-id={item.id}
-              onClick={() => scrollToHeading(item.id)}
-              className={cn(
-                "guide-toc-link outline-none transition-[color,scale] hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
-                item.level === 3 && "guide-toc-link-h3",
-                activeId === item.id && "guide-toc-link-active",
-              )}
-            >
-              {item.text}
-            </button>
-          ))}
-        </div>
+    <nav aria-label="On this page" className="min-h-0">
+      <p className="guide-side-label">On this page</p>
+      <div ref={listRef} className="guide-toc-list">
+        <span
+          aria-hidden="true"
+          className={cn("guide-toc-indicator", indicator.ready && "guide-toc-indicator-ready")}
+          style={{
+            transform: `translateY(${indicator.y}px)`,
+            height: indicator.height,
+          }}
+        />
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            data-toc-id={item.id}
+            onClick={() => scrollToHeading(item.id)}
+            className={cn(
+              "guide-toc-link outline-none transition-[color,scale] hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
+              item.level === 3 && "guide-toc-link-h3",
+              activeId === item.id && "guide-toc-link-active",
+            )}
+          >
+            {item.text}
+          </button>
+        ))}
       </div>
     </nav>
   );
 }
 
 function SiblingNav({ nav }: { nav: SectionNav }) {
-  if (nav.siblings.length === 0) return null;
+  // The rail keeps its column even when empty so the article never shifts left.
+  if (nav.siblings.length === 0) return <div className="guide-rail hidden lg:block" aria-hidden="true" />;
 
   return (
-    <nav aria-label="In this section" className="hidden shrink-0 self-stretch 2xl:block 2xl:w-[220px]">
+    <nav aria-label="In this section" className="guide-rail hidden min-h-0 self-stretch lg:block">
       <div className="guide-section-nav">
-        <p className="guide-section-nav-label">
-          {nav.typeLabel ?? "In this section"}
+        <p className="guide-side-label">
+          {nav.typeLabel ? `In ${nav.typeLabel}` : "In this section"}
         </p>
         <div className="guide-section-nav-list">
           {nav.siblings.map((item) => (
@@ -140,18 +145,18 @@ function PrevNext({ nav }: { nav: SectionNav }) {
   return (
     <nav
       aria-label="Section pagination"
-      className="mt-2 grid gap-3 border-t border-border pt-6 sm:grid-cols-2"
+      className="grid gap-3 border-t border-border pt-7 sm:grid-cols-2"
     >
       {nav.prev ? (
         <Link
           href={`/resources/${nav.prev.slug}`}
-          className="flex min-h-11 flex-col gap-1 rounded-lg border p-4 outline-none transition-[background-color,border-color,scale] hover:border-foreground/30 hover:bg-muted/40 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-11 flex-col gap-1 rounded-xl p-3 outline-none transition-[background-color,scale] hover:bg-muted active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <ArrowLeftIcon className="size-3.5" aria-hidden="true" />
             Previous
           </span>
-          <span className="line-clamp-1 text-sm font-medium text-foreground">{nav.prev.title}</span>
+          <span className="line-clamp-1 text-[0.9375rem] font-bold text-foreground">{nav.prev.title}</span>
         </Link>
       ) : (
         <span className="hidden sm:block" aria-hidden="true" />
@@ -159,18 +164,95 @@ function PrevNext({ nav }: { nav: SectionNav }) {
       {nav.next ? (
         <Link
           href={`/resources/${nav.next.slug}`}
-          className="flex min-h-11 flex-col items-end gap-1 rounded-lg border p-4 text-right outline-none transition-[background-color,border-color,scale] hover:border-foreground/30 hover:bg-muted/40 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-11 flex-col items-end gap-1 rounded-xl p-3 text-right outline-none transition-[background-color,scale] hover:bg-muted active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             Next
             <ArrowRightIcon className="size-3.5" aria-hidden="true" />
           </span>
-          <span className="line-clamp-1 text-sm font-medium text-foreground">{nav.next.title}</span>
+          <span className="line-clamp-1 text-[0.9375rem] font-bold text-foreground">{nav.next.title}</span>
         </Link>
       ) : (
         <span className="hidden sm:block" aria-hidden="true" />
       )}
     </nav>
+  );
+}
+
+function GuideActions({
+  guideId,
+  slug,
+  canEdit,
+  stacked,
+}: {
+  guideId: string;
+  slug: string;
+  canEdit: boolean;
+  stacked?: boolean;
+}) {
+  const router = useRouter();
+  const [verifying, setVerifying] = useState(false);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/resources/${slug}`);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Could not copy the link");
+    }
+  };
+
+  const markVerified = async () => {
+    if (verifying) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`/api/resources/${guideId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markVerified: true }),
+      });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) {
+        toast.error(await parseErrorMessage(res, "Could not mark this guide verified"));
+        return;
+      }
+      toast.success("Marked as verified");
+      router.refresh();
+    } catch {
+      toast.error("Network error. Try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  return (
+    <div className={cn("flex flex-wrap gap-2", stacked && "grid grid-cols-2")}>
+      {canEdit && (
+        <Button asChild variant="outline" size="sm" className="h-10 shrink-0">
+          <Link href={`/resources/${slug}/edit`}>
+            <PencilIcon data-icon="inline-start" />
+            Edit
+          </Link>
+        </Button>
+      )}
+      <Button type="button" variant="outline" size="sm" className="h-10 shrink-0" onClick={copyLink}>
+        <LinkIcon data-icon="inline-start" />
+        Copy link
+      </Button>
+      {canEdit && (
+        <Button
+          type="button"
+          size="sm"
+          className={cn("h-10 shrink-0", stacked && "col-span-2")}
+          onClick={markVerified}
+          loading={verifying}
+          disabled={verifying}
+        >
+          <BadgeCheckIcon data-icon="inline-start" />
+          Mark verified
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -229,64 +311,56 @@ export function GuideReader({ guide, canEdit, slug }: Props) {
   const hasToC = headings.length >= 2;
   const guideType = guide.type ?? inferResourceTypeFromCategory(guide.category);
   const typeLabel = RESOURCE_TYPE_LABELS[guideType];
+  const freshness = guideFreshness(guide);
+  const verifiedBy = freshness.verified && !freshness.stale ? guide.lastVerifiedBy?.name : null;
 
   return (
-    <div className="guide-reader-shell mx-auto flex w-full max-w-[1440px] justify-center gap-10 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <SiblingNav nav={sectionNav} />
-
-      <div className="flex w-full min-w-0 max-w-[1120px] flex-col gap-8">
-      <div>
-        <Link
-          href="/resources"
-          className="inline-flex min-h-10 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground outline-none transition-[color,scale] hover:text-foreground active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ArrowLeftIcon className="size-3.5" />
-          All guides
+    <div className="guide-reader-shell mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+      <nav aria-label="Breadcrumb" className="mb-7 flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Link href="/resources" className="rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          Resources
         </Link>
-      </div>
+        <span aria-hidden="true">/</span>
+        <Link href={resourceTypeHref(guideType)} className="rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          {typeLabel}
+        </Link>
+      </nav>
 
-      <div className="guide-reader-header flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 max-w-4xl flex-col gap-3">
-          <h1 className="guide-reader-title">{guide.title}</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">{typeLabel}</Badge>
-            {guide.category && guide.category !== typeLabel && (
-              <Badge variant="outline">{guide.category}</Badge>
-            )}
-            {!guide.published && (
-              <Badge variant="outline" className="text-[10px]">Draft</Badge>
-            )}
-            <span className="text-xs text-muted-foreground">
-              Updated{" "}
-              {new Date(guide.updatedAt).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          </div>
+      <div className="guide-reader-grid">
+        <SiblingNav nav={sectionNav} />
+
+        <div className="flex min-w-0 flex-col gap-8">
+          <header className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="resource-pill">{typeLabel}</span>
+              {guide.category && guide.category !== typeLabel && (
+                <span className="resource-pill resource-pill-draft">{guide.category}</span>
+              )}
+              {!guide.published && <span className="resource-pill resource-pill-draft">Draft</span>}
+              <span className={cn("resource-freshness", freshness.stale && "resource-freshness-stale")}>
+                {freshness.label}
+                {verifiedBy ? ` by ${verifiedBy}` : ""}
+              </span>
+            </div>
+            <h1 className="guide-reader-title">{guide.title}</h1>
+            <div className="xl:hidden">
+              <GuideActions guideId={guide.id} slug={slug} canEdit={canEdit} />
+            </div>
+          </header>
+
+          <article className="guide-article min-w-0">
+            <MarkdownReader markdown={markdown || "_No content yet._"} />
+          </article>
+
+          <PrevNext nav={sectionNav} />
         </div>
-        {canEdit && (
-          <Button asChild variant="outline" size="sm" className="h-10 shrink-0">
-            <Link href={`/resources/${slug}/edit`}>
-              <PencilIcon data-icon="inline-start" />
-              Edit
-            </Link>
-          </Button>
-        )}
-      </div>
 
-      <div className={cn("guide-reader-grid", hasToC && "xl:grid xl:grid-cols-[minmax(0,860px)_220px] xl:gap-12")}>
-        <article className="guide-article min-w-0">
-          <MarkdownReader markdown={markdown || "_No content yet._"} />
-        </article>
-
-        {hasToC && (
-          <TableOfContents items={headings} activeId={activeHeadingId} />
-        )}
-      </div>
-
-      <PrevNext nav={sectionNav} />
+        <aside className="guide-toc-column hidden min-h-0 self-stretch xl:block">
+          <div className="guide-toc">
+            <GuideActions guideId={guide.id} slug={slug} canEdit={canEdit} stacked />
+            {hasToC && <TableOfContents items={headings} activeId={activeHeadingId} />}
+          </div>
+        </aside>
       </div>
     </div>
   );
