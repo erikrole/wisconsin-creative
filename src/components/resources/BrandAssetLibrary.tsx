@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- private authenticated asset URLs cannot use next/image's public optimizer path. */
 
+import { useAdjustState } from "@/hooks/use-synced-draft";
 import {
   ArrowDownUpIcon,
   ArrowUpIcon,
@@ -390,12 +391,12 @@ function NewFolderDialog({
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  useAdjustState([open], () => {
     if (open) {
       setName("");
       setSaving(false);
     }
-  }, [open]);
+  });
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

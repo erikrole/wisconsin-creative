@@ -36,22 +36,13 @@ export function ServerPathCopy({ path, label }: { path: string; label?: string }
   };
 
   const icon = (
-    <AnimatePresence initial={false} mode="popLayout">
-      <motion.span
-        key={copied ? "copied" : "copy"}
-        initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-        exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-        className="inline-flex items-center justify-center"
-      >
-        {copied ? (
-          <CheckIcon className="size-4" aria-hidden="true" />
-        ) : (
-          <CopyIcon className="size-4" aria-hidden="true" />
-        )}
-      </motion.span>
-    </AnimatePresence>
+    <IconSwap swapKey={copied ? "copied" : "copy"}>
+      {copied ? (
+        <CheckIcon className="size-4" aria-hidden="true" />
+      ) : (
+        <CopyIcon className="size-4" aria-hidden="true" />
+      )}
+    </IconSwap>
   );
 
   if (label) {
