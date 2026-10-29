@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PersonWeek } from "@/app/(app)/schedule/_components/PersonWeekView";
 import type { CalendarEntry } from "@/app/(app)/schedule/_components/types";
 import { addDays, weekStartOf, type TeamBlock, type TeamStudent } from "@/lib/team-availability";
@@ -47,16 +48,32 @@ const students: TeamStudent[] = [
   { id: "5", name: "Morgan Diaz", avatarUrl: null, blocks: [] },
 ];
 
+const ev = (id: string, summary: string, sportCode: string, opponent: string, isHome: boolean) => ({ id, summary, allDay: false, sportCode, opponent, isHome, site: isHome ? "HOME" : "AWAY" });
+const allShifts = [
+  { id: "x1", status: "APPROVED", crewLabel: "Camera 1", area: "PHOTO", startsAt: at(1, "18:00"), endsAt: at(1, "22:00"), event: ev("e1", "Men's Hockey vs Minnesota", "MHOCKEY", "Minnesota", true) },
+  { id: "x2", status: "APPROVED", crewLabel: "Sideline", area: "PHOTO", startsAt: at(5, "11:00"), endsAt: at(5, "19:00"), event: ev("e3", "Football vs Ohio State", "FB", "Ohio State", true) },
+  { id: "x3", status: "REQUESTED", crewLabel: null, area: "PHOTO", startsAt: at(12, "18:00"), endsAt: at(12, "21:00"), event: ev("e5", "Volleyball vs Purdue", "VB", "Purdue", true) },
+  { id: "x4", status: "APPROVED", crewLabel: "Camera 2", area: "PHOTO", startsAt: at(-6, "18:00"), endsAt: at(-6, "21:00"), event: ev("e6", "Women's Basketball vs Iowa", "WBB", "Iowa", true) },
+  { id: "x5", status: "APPROVED", crewLabel: null, area: "PHOTO", startsAt: at(-13, "13:00"), endsAt: at(-13, "18:00"), event: ev("e7", "Football at Rutgers", "FB", "Rutgers", false) },
+].reverse().sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+
 export function PersonWeekLab() {
+  const [client] = useState(() => {
+    const c = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    c.setQueryData(["fetch", "/api/users/1/shifts"], { data: allShifts });
+    return c;
+  });
   const [weekStart, setWeekStart] = useState(() => new Date(`${monday}T12:00:00`));
   return (
-    <PersonWeek
-      students={students}
-      entries={entries}
-      weekStart={weekStart}
-      setWeekStart={setWeekStart}
-      loading={false}
-      onOpenCrew={() => {}}
-    />
+    <QueryClientProvider client={client}>
+      <PersonWeek
+        students={students}
+        entries={entries}
+        weekStart={weekStart}
+        setWeekStart={setWeekStart}
+        loading={false}
+        onOpenCrew={() => {}}
+      />
+    </QueryClientProvider>
   );
 }

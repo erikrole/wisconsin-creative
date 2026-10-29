@@ -6,6 +6,7 @@
     "summary": "Staff can switch the Schedule week to By person: one row per student with their shifts, hours and can't-work times for each day.",
     "details": [
       "Tap a name for their week: shifts, hours against the team average, trades and availability.",
+      "All shifts shows every shift they have been on, upcoming and past.",
       "A shift that overlaps a time the student can't work is flagged.",
       "Students with no shifts stay in the list so you can see who is free."
     ],
