@@ -36,7 +36,7 @@ describe("describeAction fixed wording", () => {
     ["cleared_maintenance", "Cleared maintenance status"],
     ["duplicated", "Duplicated this item"],
     ["qr_generated", "Generated new QR code"],
-    ["admin_override", "Admin override"],
+    ["admin_override", "Overrode a scan check"],
     ["auto_escalation", "System auto-escalated overdue notification"],
     ["cron_notification", "System sent scheduled notification"],
     ["auto_complete", "System auto-completed"],

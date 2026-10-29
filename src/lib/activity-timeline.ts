@@ -348,8 +348,12 @@ export function describeAction(
       return `${reportPrefix}Duplicated ${target}`;
     case "qr_generated":
       return `${reportPrefix}Generated new QR code`;
-    case "admin_override":
-      return `${reportPrefix}Admin override`;
+    case "admin_override": {
+      const reason = typeof entry.afterJson?.reason === "string" ? entry.afterJson.reason.trim() : "";
+      return reason
+        ? `${reportPrefix}Overrode a scan check: ${reason}`
+        : `${reportPrefix}Overrode a scan check`;
+    }
     case "auto_escalation":
       return "System auto-escalated overdue notification";
     case "cron_notification":
@@ -561,10 +565,12 @@ function describeFieldChange(
   key: string,
   before: unknown,
   after: unknown,
+  entityType?: string,
 ): FieldChange | null {
   if (HIDDEN_FIELDS.has(key)) return null;
 
-  const label = FIELD_LABELS[key] || key;
+  // "Item name" only fits items; a kit or person rename reads "Name".
+  const label = key === "name" && entityType && entityType !== "asset" ? "Name" : FIELD_LABELS[key] || key;
 
   // For ID fields, show "set" / "removed" / "changed" instead of raw IDs
   if (ID_FIELDS.has(key)) {
@@ -669,7 +675,7 @@ export function getFieldChanges(entry: AuditEntry): FieldChange[] {
     .map((k) => {
       const b = (entry.beforeJson as Record<string, unknown>)?.[k];
       const a = (entry.afterJson as Record<string, unknown>)?.[k];
-      return describeFieldChange(k, b, a);
+      return describeFieldChange(k, b, a, entry.entityType);
     })
     .filter((c): c is FieldChange => c !== null);
 }
@@ -800,6 +806,7 @@ export function getChainedChange(entry: RenderEntry): ChainedChange | null {
       key,
       (e.beforeJson as Record<string, unknown> | null)?.[key],
       (e.afterJson as Record<string, unknown> | null)?.[key],
+      e.entityType,
     );
     if (!change) continue;
     label = change.label;

@@ -128,6 +128,16 @@ describe("getFieldChanges", () => {
     ]);
   });
 
+  it("calls a kit rename a name change, not an item name change", () => {
+    const changes = getFieldChanges(entry("updated", {
+      entityType: "kit",
+      beforeJson: { name: "Old kit" },
+      afterJson: { name: "New kit" },
+    }));
+
+    expect(changes).toEqual([{ label: "Name", from: "Old kit", to: "New kit", mono: false }]);
+  });
+
   it("formats dates and booleans, and strips the protocol from links", () => {
     const changes = getFieldChanges(entry("update", {
       beforeJson: { endsAt: "2026-10-24T22:00:00.000Z", linkUrl: "https://www.sony.com/a7" },
