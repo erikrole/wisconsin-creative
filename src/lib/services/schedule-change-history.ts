@@ -228,7 +228,7 @@ function workingScheduleActionMeta(row: AuditRow): { kind: ScheduleChangeKind; l
     case "setCallWindow":
     case "setCallWindowForAll":
       return { kind: "assignment_updated", label: "Updated call time", detail: "Working copy" };
-    case "setCrewLabel":
+    case "setCrewTags":
       return { kind: "assignment_updated", label: "Updated position label", detail: "Working copy" };
     case "adjustSlots": {
       const delta = numberValue(command.delta);

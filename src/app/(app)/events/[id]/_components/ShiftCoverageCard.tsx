@@ -18,6 +18,7 @@ import type { ShiftGroupSummary } from "../_utils";
 import { shiftWorkerLabel, shiftWorkerLabelForProfile } from "@/lib/shift-display";
 import { effectiveCallWindow, isInheritedFullDayCallWindow, type EffectiveCallWindow } from "@/lib/shift-call-windows";
 import { CrewTag } from "@/components/shift-detail/CrewTag";
+import { crewTagsOf } from "@/lib/crew-label";
 import { cn } from "@/lib/utils";
 import {
   CREW_ROW_GROUP,
@@ -107,7 +108,7 @@ export function ShiftCoverageCard({
               size="sm"
             />
             <span className="min-w-0 truncate text-sm">{activeAssignment.user.name}</span>
-            <CrewTag label={activeAssignment.crewLabel} half={activeAssignment.crewHalf} />
+            <CrewTag tags={crewTagsOf(activeAssignment)} />
           </span>
           {activeAssignment.hasConflict && (
             <span className="flex items-center gap-1 pl-8 text-[11px] text-[var(--orange-text)]">

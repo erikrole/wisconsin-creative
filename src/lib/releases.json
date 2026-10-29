@@ -1,5 +1,81 @@
 [
   {
+    "date": "2026-10-30",
+    "title": "Approve trades right on the Schedule",
+    "type": "improvement",
+    "summary": "Admins now see a \"to review\" button on any event with a claimed trade or an open-slot request, and can approve or decline it without leaving the Schedule.",
+    "details": [
+      "Works on every row of the Schedule list, on desktop and phone.",
+      "One button covers all the trades and requests for that event.",
+      "Approving is paused while an event has unreleased crew edits, same as before."
+    ],
+    "pr": 732,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
+    "title": "See the Schedule by person",
+    "type": "feature",
+    "summary": "Staff can switch the Schedule week to By person: one row per student with their shifts, hours and can't-work times for each day.",
+    "details": [
+      "Tap a name for their week: shifts, hours against the team average, trades and availability.",
+      "All shifts shows every shift they have been on, upcoming and past.",
+      "A shift that overlaps a time the student can't work is flagged.",
+      "Students with no shifts stay in the list so you can see who is free."
+    ],
+    "pr": 731,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Different position labels for each half",
+    "type": "improvement",
+    "summary": "On the Schedule, one person can now carry several position labels, such as SLOW1 for the first half and CAM3 for the second.",
+    "details": [
+      "Open a person's label on the crew editor and tap Add another; pick Full game, 1st half or 2nd half for each.",
+      "Every label shows next to their name on the Schedule and the event page."
+    ],
+    "pr": 733,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Onboarding checklist on student profiles",
+    "type": "feature",
+    "summary": "Admins can see on each student's profile how far they are through onboarding, and tick off the in-person steps.",
+    "details": [
+      "Photo, phone, student details, sizes, class schedule, guides, app install, notifications and first checkout fill in by themselves, with the date each happened.",
+      "Slack, Asana, computer login, Adobe, building access, orientation and gear training are ticked by an admin and show who did it and when.",
+      "Wiscard is shown but optional. Nothing is emailed to the student.",
+      "Each admin step can show who to contact and a note, and admins can tick a step for a whole group at once.",
+      "Adobe access finishes itself once they claim an Adobe license."
+    ],
+    "pr": 734,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Schedule changes show up within seconds",
+    "type": "improvement",
+    "summary": "When someone adds or removes a person on a shift, everyone with the Schedule open sees it within about ten seconds, with no refresh.",
+    "details": [
+      "Covers shift assignments, trades, crew edits and publishing.",
+      "The page checks quietly only while you are looking at it and pauses when you step away."
+    ],
+    "pr": 730,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-29",
     "title": "Cleaner Shared logins, plus Wi-Fi",
     "type": "improvement",

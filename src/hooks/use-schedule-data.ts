@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useScheduleLiveSync } from "@/hooks/use-schedule-live-sync";
 import type { CalendarEntry } from "@/app/(app)/schedule/_components/types";
 import { getMonday, LS_VIEW_MODE, LS_MY_SHIFTS } from "@/app/(app)/schedule/_components/types";
 import {
@@ -698,6 +699,12 @@ export function useScheduleData(): UseScheduleDataResult {
     if (canViewSourceStatus) tasks.push(refetchSources());
     await Promise.allSettled(tasks);
   }, [canViewScheduleHealth, canViewSourceStatus, refetchSchedule, refetchScheduleAutomation, refetchScheduleHealth, refetchSources]);
+
+  useScheduleLiveSync(() => {
+    const tasks: Promise<unknown>[] = [refetchSchedule(), refetchTrades()];
+    if (canViewScheduleHealth) tasks.push(refetchScheduleHealth(), refetchScheduleAutomation());
+    return Promise.allSettled(tasks);
+  });
 
   return {
     entries: visibleEntries,

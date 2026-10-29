@@ -203,6 +203,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
             callNote: activeAssignment.callNote,
             crewLabel: activeAssignment.crewLabel,
             crewHalf: activeAssignment.crewHalf,
+            crewTags: activeAssignment.crewTags,
             linkedBookingId: linkedBooking?.id ?? null,
             linkedBookingStatus: linkedBooking?.status ?? null,
           }

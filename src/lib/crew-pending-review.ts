@@ -12,6 +12,8 @@ export type PendingCrewClaim = {
   hasConflict: boolean;
   conflictNote: string | null;
   user: PendingCrewReviewUser;
+  /** Set where the claim is listed outside its slot, so the row can say which one. */
+  area?: string;
 };
 
 export type PendingCrewTrade = {
@@ -21,6 +23,7 @@ export type PendingCrewTrade = {
   notes: string | null;
   claimedBy: PendingCrewReviewUser | null;
   postedBy: PendingCrewReviewUser;
+  area?: string;
 };
 
 /** Open-slot claims belong on empty live slots, not a draft assignment that replaced them. */

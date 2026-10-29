@@ -10,7 +10,8 @@ const workingEditor = source("src/app/(app)/schedule/_components/WorkingCrewEdit
 describe("Schedule crew management parity", () => {
   it("routes every staff Week and Calendar event into the shared crew sheet", () => {
     expect(page).toContain("canManageCrew={isStaff}");
-    expect(page.match(/onOpenCrew={openCrewSheet}/g)).toHaveLength(2);
+    // Week, Week by person and Calendar.
+    expect(page.match(/onOpenCrew={openCrewSheet}/g)).toHaveLength(3);
     expect(week).toContain("const canManageCrew = isStaff;");
     expect(week).toContain("onClick={() => onOpenCrew(entry)}");
     expect(calendar).toContain("if (canManageCrew)");

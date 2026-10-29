@@ -191,15 +191,15 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_SETTINGS.md`
 - Pages: `/settings/allowed-emails`, `/settings/announcements`, `/settings/app-activity`, `/settings/appearance`, `/settings/audit`, `/settings/bookings`, `/settings/calendar-sources`, `/settings/categories`
-- APIs: `/api/settings/app-activity`, `/api/settings/checkout-policies`, `/api/settings/escalation`, `/api/settings/extend-presets`, `/api/settings/non-game-schedule`, `/api/settings/reservation-rules`
+- APIs: `/api/settings/app-activity`, `/api/settings/checkout-policies`, `/api/settings/escalation`, `/api/settings/extend-presets`, `/api/settings/non-game-schedule`, `/api/settings/onboarding-guide`, `/api/settings/reservation-rules`
 - Services: _none matched_
 - Tests: `tests/ios-settings-detail-menus.test.ts`, `tests/ios-settings-first-class.test.ts`, `tests/settings-allowed-emails-display.test.ts`, `tests/settings-calendar-sources-load-state.test.ts`, `tests/settings-kiosk-devices-location-state.test.ts`, `tests/settings-locations-accessibility.test.ts`, `tests/settings-route-role-gate.test.ts`, `tests/settings-routes.test.ts`
 
 ## shifts
 
 - Doc: `docs/AREA_SHIFTS.md`
-- Pages: `/schedule/assign`, `/schedule`
-- APIs: `/api/my-shifts`, `/api/schedule/automation`, `/api/schedule/bulk-assignment/apply`, `/api/schedule/bulk-assignment/batches/[id]/cancel`, `/api/schedule/bulk-assignment/batches`, `/api/schedule/bulk-assignment/preview`, `/api/schedule/export`, `/api/schedule/health`, `/api/schedule/open-work`, `/api/schedule/published/[id]/follow`
+- Pages: `/schedule/assign`, `/schedule`, `/dev-person-schedule`, `/dev-schedule-review`
+- APIs: `/api/my-shifts`, `/api/schedule/automation`, `/api/schedule/bulk-assignment/apply`, `/api/schedule/bulk-assignment/batches/[id]/cancel`, `/api/schedule/bulk-assignment/batches`, `/api/schedule/bulk-assignment/preview`, `/api/schedule/export`, `/api/schedule/health`, `/api/schedule/live`, `/api/schedule/open-work`
 - Services: `src/lib/services/bulk-schedule-assignment.ts`, `src/lib/services/collaborator-schedule.ts`, `src/lib/services/combined-schedule-events.ts`, `src/lib/services/non-game-schedule-defaults.ts`, `src/lib/services/reservation-schedule.ts`, `src/lib/services/schedule-automation.ts`, `src/lib/services/schedule-call-time-sync.ts`, `src/lib/services/schedule-change-history.ts`
 - Tests: `tests/badge-shift-breadth.test.ts`, `tests/bulk-schedule-assignment-source.test.ts`, `tests/bulk-schedule-assignment.test.ts`, `tests/collaborator-schedule-follow.test.ts`, `tests/combined-schedule-event-suggestions.test.ts`, `tests/combined-schedule-events-projection.test.ts`, `tests/combined-schedule-events-source.test.ts`, `tests/combined-schedule-events.test.ts`
 
@@ -222,10 +222,10 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 ## users
 
 - Doc: `docs/AREA_USERS.md`
-- Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/staff/onboarding-status`
-- APIs: `/api/allowed-emails/[id]/resend`, `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`
+- Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/staff/onboarding-status`, `/dev-onboarding-checklist`
+- APIs: `/api/allowed-emails/[id]/resend`, `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/onboarding-checklist/bulk`, `/api/profile`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`, `src/lib/services/onboarding-readiness.ts`
-- Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/ios-profile-refresh-keeps-data.test.ts`, `tests/me-profile-route.test.ts`, `tests/onboarding-dialog-source.test.ts`
+- Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/ios-profile-refresh-keeps-data.test.ts`, `tests/me-profile-route.test.ts`, `tests/onboarding-checklist.test.ts`
 
 ## youtube
 

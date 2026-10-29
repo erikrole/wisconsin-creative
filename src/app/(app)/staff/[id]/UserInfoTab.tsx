@@ -30,6 +30,7 @@ import { useAdjustState } from "@/hooks/use-synced-draft";
 import { type ApiEnvelope, userPatchUrl, userListCachePatch } from "./user-info-helpers";
 import { TextInputField, SelectInputField, DateInputField, DirectReportField, SizesRow, BirthdayField, WiscardFields } from "./UserInfoFields";
 import { ProfileGlanceCard, MyHoursCard, CalendarSubscriptionCard } from "./UserInfoCards";
+import { OnboardingChecklistCard } from "./OnboardingChecklistCard";
 
 type CollaboratorPolicyOption = {
   id: string;
@@ -500,6 +501,7 @@ export default function UserInfoTab({
 
       <div className="flex flex-col gap-4">
       <ProfileGlanceCard user={user} />
+      {isAdmin && targetIsStudent && <OnboardingChecklistCard userId={user.id} />}
       <Card id="assignments" className="scroll-mt-16 rounded-xl shadow-xs">
         <CardHeader>
           <CardTitle className="text-base font-black tracking-tight">Assignments</CardTitle>
