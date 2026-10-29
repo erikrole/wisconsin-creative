@@ -1717,6 +1717,25 @@
   },
   {
     "date": "2026-10-21",
+    "title": "A redesigned Resources library",
+    "type": "improvement",
+    "summary": "Guides and Brand assets have a cleaner, calmer layout that puts the right guide or file in front of you faster.",
+    "details": [
+      "Resources opens with a big search, For you guides picked for your role and area, quick tools like the Media Drive path, topics with counts, and recently updated guides.",
+      "Every guide shows how fresh it is. Editors can mark a guide verified, and guides untouched for six months say Needs review.",
+      "Reading a guide keeps related guides on the left and the contents on the right, with Edit, Copy link and Mark verified close at hand.",
+      "Writing a guide now feels like a document: a big title, the editor, and a quiet settings panel for type, audience and featuring.",
+      "Brand assets opens as a grid of previews, with one-tap file-kind filters and a list view if you prefer it.",
+      "On iPhone, Guides opens with For you and Recently updated, and every guide shows the same freshness as the web."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 568
+  },
+  {
+    "date": "2026-10-21",
     "title": "Damage and loss, tracked",
     "type": "feature",
     "summary": "Report a problem with any item, any time, and staff get one page to follow every damaged or missing item through to an outcome.",

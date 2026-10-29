@@ -143,4 +143,33 @@ describe("guide service", () => {
       featuredRank: null,
     });
   });
+
+  it("stamps the verifier and time when an editor marks a guide verified", async () => {
+    vi.mocked(db.resource.findUnique).mockResolvedValue(currentGuide() as never);
+    vi.mocked(db.resource.update).mockResolvedValue({} as never);
+
+    await updateGuide("guide-1", { markVerified: true }, Role.STAFF, "author-1");
+
+    const updateCall = vi.mocked(db.resource.update).mock.calls[0]?.[0];
+    expect(updateCall?.data).toMatchObject({ lastVerifiedById: "author-1" });
+    expect(updateCall?.data?.lastVerifiedAt).toBeInstanceOf(Date);
+  });
+
+  it("leaves verification alone on an ordinary save", async () => {
+    vi.mocked(db.resource.findUnique).mockResolvedValue(currentGuide() as never);
+    vi.mocked(db.resource.update).mockResolvedValue({} as never);
+
+    await updateGuide("guide-1", { title: "Camera setup" }, Role.ADMIN, "admin-1");
+
+    const updateCall = vi.mocked(db.resource.update).mock.calls[0]?.[0];
+    expect(updateCall?.data).not.toHaveProperty("lastVerifiedAt");
+    expect(updateCall?.data).not.toHaveProperty("lastVerifiedById");
+  });
+
+  it("keeps staff from verifying someone else's guide", async () => {
+    vi.mocked(db.resource.findUnique).mockResolvedValue(currentGuide() as never);
+
+    await expect(updateGuide("guide-1", { markVerified: true }, Role.STAFF, "someone-else")).rejects.toMatchObject({ status: 403 });
+    expect(db.resource.update).not.toHaveBeenCalled();
+  });
 });

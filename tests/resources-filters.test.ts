@@ -3,6 +3,7 @@ import {
   parseResourceFilter,
   parseResourceLayout,
   parseResourceSort,
+  resourceTypeHref,
 } from "@/app/(app)/resources/filters";
 
 function params(query: string) {
@@ -40,5 +41,12 @@ describe("resources URL filters", () => {
     expect(parseResourceLayout("cards")).toBe("cards");
     expect(parseResourceLayout("unknown")).toBe("cards");
     expect(parseResourceFilter(params("layout=list&view=media-drive"))).toBe("media-drive");
+  });
+
+  it("links a guide type back to the library filter that lists it", () => {
+    expect(resourceTypeHref("SOP")).toBe("/resources?filter=sop");
+    expect(resourceTypeHref("HOW_TO")).toBe("/resources?filter=how-to");
+    expect(parseResourceFilter(params(resourceTypeHref("MEDIA_DRIVE").split("?")[1] ?? ""))).toBe("media-drive");
+    expect(resourceTypeHref("UNKNOWN")).toBe("/resources");
   });
 });

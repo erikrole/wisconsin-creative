@@ -17,29 +17,15 @@ import type { ComponentType } from "react";
 import type { MDXEditorMethods } from "@mdxeditor/editor";
 import { ResourceType, Role, ShiftArea } from "@/lib/client-enums";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/lib/toast";
 import { useFetch } from "@/hooks/use-fetch";
 import type { GuideListItem } from "@/lib/guides";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
   defaultCategoryForResourceType,
   GUIDE_CATEGORY_SUGGESTIONS,
-  RESOURCE_TYPE_DESCRIPTIONS,
-  RESOURCE_TYPE_LABELS,
-  RESOURCE_TYPE_OPTIONS,
 } from "@/lib/guide-categories";
-import { GuideTargetingControls } from "@/components/resources/GuideTargetingControls";
+import { GuideEditorLayout } from "@/components/resources/GuideEditorLayout";
+import { GuideSettingsPanel } from "@/components/resources/GuideSettingsPanel";
 import { MarkdownEditor } from "@/components/resources/MarkdownEditor";
 import {
   AlertDialog,
@@ -52,7 +38,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { PageHeader } from "@/components/PageHeader";
 
 type GuideTemplate = {
   id: string;
@@ -515,131 +500,83 @@ export function NewGuideClient() {
     }
   }
 
+  const backLabel = (
+    <>
+      <ArrowLeftIcon data-icon="inline-start" />
+      Resources
+    </>
+  );
+
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
-      <PageHeader
-        title="New guide"
-        description="Create one focused workflow, reference, or operating guide."
-      >
-        {dirty ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10">
-                <ArrowLeftIcon data-icon="inline-start" />
-                Back to Resources
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Discard this new guide?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  The title, targeting, and guide content entered here have not been saved.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep editing</AlertDialogCancel>
-                <AlertDialogAction onClick={() => router.push("/resources")}>Discard guide</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          <Button asChild variant="outline" size="sm" className="h-10">
-            <Link href="/resources">
-              <ArrowLeftIcon data-icon="inline-start" />
-              Back to Resources
-            </Link>
-          </Button>
-        )}
-      </PageHeader>
-
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {GUIDE_TEMPLATES.map((template) => {
-          const Icon = template.icon;
-          return (
-            <Button
-              key={template.id}
-              type="button"
-              variant="outline"
-              className="h-auto justify-start gap-3 p-3 text-left"
-              onClick={() => applyTemplate(template)}
-              disabled={submitting}
-            >
-              <Icon data-icon="inline-start" />
-              <span className="min-w-0 text-sm font-medium">{template.label}</span>
+    <GuideEditorLayout
+      back={dirty ? (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-10 px-2">
+              {backLabel}
             </Button>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            placeholder="e.g. Emergency contacts and escalation numbers"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard this new guide?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The title, settings, and guide content entered here have not been saved.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep editing</AlertDialogCancel>
+              <AlertDialogAction onClick={() => router.push("/resources")}>Discard guide</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : (
+        <Button asChild variant="ghost" size="sm" className="h-10 px-2">
+          <Link href="/resources">{backLabel}</Link>
+        </Button>
+      )}
+      status={dirty ? "New guide · not saved yet" : "New guide"}
+      actions={(
+        <>
+          <Button
+            onClick={() => submit(false)}
+            variant="outline"
+            className="h-10"
             disabled={submitting}
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="guide-type">Guide focus</Label>
-            <Select value={type} onValueChange={(value) => updateType(value as ResourceType)} disabled={submitting}>
-              <SelectTrigger id="guide-type" className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Guide focus</SelectLabel>
-                  {RESOURCE_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {RESOURCE_TYPE_LABELS[option]}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground text-pretty">
-              {RESOURCE_TYPE_DESCRIPTIONS[type]}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="category">Category</Label>
-            <Input
-              id="category"
-              placeholder="e.g. Contacts, Media Drive, Server Paths, SOPs"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              list="guide-category-suggestions"
-              disabled={submitting}
-            />
-            {existingCategories.length > 0 && (
-              <datalist id="guide-category-suggestions">
-                {existingCategories.map((cat) => (
-                  <option key={cat} value={cat} />
-                ))}
-              </datalist>
-            )}
+            loading={submitting}
+          >
+            Save draft
+          </Button>
+          <Button className="h-10" onClick={() => submit(true)} disabled={submitting} loading={submitting}>
+            Publish
+          </Button>
+        </>
+      )}
+      title={title}
+      onTitleChange={setTitle}
+      disabled={submitting}
+      beforeEditor={!markdown.trim() ? (
+        <div className="flex flex-col gap-2.5">
+          <p className="text-sm text-muted-foreground">Start from a template, or just start writing below.</p>
+          <div className="flex flex-wrap gap-2">
+            {GUIDE_TEMPLATES.map((template) => {
+              const Icon = template.icon;
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  className="guide-chip transition-[background-color,color,scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]"
+                  onClick={() => applyTemplate(template)}
+                  disabled={submitting}
+                >
+                  <Icon className="size-3.5" aria-hidden="true" />
+                  {template.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
-
-      <GuideTargetingControls
-        featured={featured}
-        featuredRank={featuredRank}
-        targetRoles={targetRoles}
-        targetAreas={targetAreas}
-        disabled={submitting}
-        onFeaturedChange={setFeatured}
-        onFeaturedRankChange={setFeaturedRank}
-        onTargetRolesChange={setTargetRoles}
-        onTargetAreasChange={setTargetAreas}
-      />
-
-      <div className="min-h-[600px] overflow-hidden rounded-lg border">
+      ) : null}
+      editor={(
         <MarkdownEditor
           ref={editorRef}
           markdown={markdown}
@@ -647,25 +584,29 @@ export function NewGuideClient() {
             if (!initialMarkdownNormalize) setMarkdown(value);
           }}
           imageUploadHandler={uploadFile}
-          contentEditableClassName="min-h-[560px] px-6 py-5 focus:outline-none"
+          contentEditableClassName="min-h-[520px] py-5 focus:outline-none"
           className="guide-mdx-editor"
           readOnly={submitting}
         />
-      </div>
-
-      <div className="sticky bottom-3 flex flex-wrap items-center justify-end gap-3 rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur">
-        <Button
-          onClick={() => submit(false)}
-          variant="outline"
+      )}
+      settings={(
+        <GuideSettingsPanel
+          type={type}
+          category={category}
+          categorySuggestions={existingCategories}
+          featured={featured}
+          featuredRank={featuredRank}
+          targetRoles={targetRoles}
+          targetAreas={targetAreas}
           disabled={submitting}
-          loading={submitting}
-        >
-          Save draft
-        </Button>
-        <Button onClick={() => submit(true)} disabled={submitting} loading={submitting}>
-          Publish
-        </Button>
-      </div>
-    </div>
+          onTypeChange={updateType}
+          onCategoryChange={setCategory}
+          onFeaturedChange={setFeatured}
+          onFeaturedRankChange={setFeaturedRank}
+          onTargetRolesChange={setTargetRoles}
+          onTargetAreasChange={setTargetAreas}
+        />
+      )}
+    />
   );
 }
