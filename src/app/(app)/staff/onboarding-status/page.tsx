@@ -631,7 +631,7 @@ function InviteRow({
               <DropdownMenuItem onClick={onEmail} disabled={emailing}><Send className="size-4" />{emailing ? "Sending..." : "Email login link"}</DropdownMenuItem>
               <DropdownMenuItem onClick={onCopy}><Copy className="size-4" />Copy app login link</DropdownMenuItem>
               <DropdownMenuItem asChild><Link href={loginHref} target="_blank" rel="noreferrer"><ExternalLink className="size-4" />Open app login</Link></DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onRemove} disabled={deleting}>
+              <DropdownMenuItem variant="destructive" onClick={onRemove} disabled={deleting}>
                 <Trash2 className="size-4" />{deleting ? "Removing..." : "Remove pending invite"}
               </DropdownMenuItem>
             </>
