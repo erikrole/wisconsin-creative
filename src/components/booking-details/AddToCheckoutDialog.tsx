@@ -57,7 +57,7 @@ export function AddToCheckoutDialog({
     if (addingId) return;
     setAddingId(asset.id);
     try {
-      const res = await fetch(`/api/bookings/${bookingId}/add-items`, {
+      const res = await fetch(`/api/bookings/${bookingId}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assetId: asset.id }),

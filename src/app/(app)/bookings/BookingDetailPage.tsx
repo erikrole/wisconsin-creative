@@ -67,7 +67,7 @@ export default function BookingDetailPage({
   const { booking, loading, reloading, error, reload, patchLocal } = useBookingDetail(id);
 
   // Actions
-  const actions = useBookingActions(id, kind, reload, booking?.updatedAt);
+  const actions = useBookingActions(id, kind, reload, booking?.updatedAt, booking?.status === "OPEN");
   const bookingSync = useBookingChangeSync();
 
   // Extend panel state
@@ -207,7 +207,7 @@ export default function BookingDetailPage({
   const canEditEvents = canEdit;
   // Ready-for-pickup (and draft) reservations take new items; active checkouts change gear at the kiosk (admins can also add from here).
   const canAddItems = canEdit && kind === "RESERVATION" && (booking?.status === "BOOKED" || booking?.status === "DRAFT");
-  const canAddToCheckout = kind === "CHECKOUT" && allowedActions.includes("add-items");
+  const canAddToCheckout = kind === "CHECKOUT" && allowedActions.includes("edit-items");
   const isOpen = booking?.status === "OPEN";
   const isActive = isOpen || booking?.status === "BOOKED";
   const kioskHandoffLabel =

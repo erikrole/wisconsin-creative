@@ -56,6 +56,7 @@ export function useBookingActions(
   kind: "CHECKOUT" | "RESERVATION",
   onSuccess: () => void,
   updatedAt?: string | null,
+  isOut = false,
 ) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -75,7 +76,7 @@ export function useBookingActions(
   }
 
   const cancel = useCallback(async () => {
-    const copy = getBookingCancelCopy(kind);
+    const copy = getBookingCancelCopy(kind, undefined, isOut);
     const ok = await confirm({
       title: copy.title,
       message: copy.message,
@@ -95,7 +96,7 @@ export function useBookingActions(
     } finally {
       guardEnd();
     }
-  }, [bookingId, kind, confirm, onSuccess]);
+  }, [bookingId, kind, isOut, confirm, onSuccess]);
 
   const extend = useCallback(
     async (endsAt: string) => {

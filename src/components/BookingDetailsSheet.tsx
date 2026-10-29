@@ -390,7 +390,7 @@ export default function BookingDetailsSheet({
   async function handleCancel() {
     if (!booking || cancelBusyRef.current) return;
     const typeLabel = booking.kind === "RESERVATION" ? "reservation" : "checkout";
-    const copy = getBookingCancelCopy(booking.kind, booking.title);
+    const copy = getBookingCancelCopy(booking.kind, booking.title, booking.kind === "CHECKOUT" && booking.status === "OPEN");
     const ok = await confirm({
       title: copy.title,
       message: copy.message,

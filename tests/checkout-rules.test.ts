@@ -106,7 +106,11 @@ describe("canPerformBookingAction", () => {
   describe("OPEN state", () => {
     const booking = makeCheckout("OPEN");
 
-    for (const actor of [admin, staff, owner]) {
+    it("lets admin cancel an OPEN checkout", () => {
+      expect(canPerformBookingAction(admin, booking, "cancel").allowed).toBe(true);
+    });
+
+    for (const actor of [staff, owner]) {
       it(`denies ${actor.role.toLowerCase()} normal cancellation while custody is OPEN`, () => {
         const result = canPerformBookingAction(actor, booking, "cancel");
         expect(result.allowed).toBe(false);
@@ -173,13 +177,13 @@ describe("getAllowedActions", () => {
     expect(actions).not.toContain("checkin");
     expect(actions).not.toContain("open");
     expect(actions).toContain("manage-custody");
-    expect(actions).toContain("add-items");
+    expect(actions).toContain("edit-items");
   });
 
-  it("limits add-items to admins on OPEN checkouts", () => {
-    expect(getAllowedBookingActions(staff, makeCheckout("OPEN"))).not.toContain("add-items");
-    expect(getAllowedBookingActions(owner, makeCheckout("OPEN"))).not.toContain("add-items");
-    expect(getAllowedBookingActions(admin, makeCheckout("BOOKED"))).not.toContain("add-items");
+  it("limits edit-items to admins on OPEN checkouts", () => {
+    expect(getAllowedBookingActions(staff, makeCheckout("OPEN"))).not.toContain("edit-items");
+    expect(getAllowedBookingActions(owner, makeCheckout("OPEN"))).not.toContain("edit-items");
+    expect(getAllowedBookingActions(admin, makeCheckout("BOOKED"))).not.toContain("edit-items");
   });
 
   it("returns correct actions for BOOKED checkout as owner", () => {

@@ -1,7 +1,7 @@
 export type BookingKind = "CHECKOUT" | "RESERVATION";
 export type BookingStatus = "DRAFT" | "BOOKED" | "PENDING_PICKUP" | "OPEN" | "COMPLETED" | "CANCELLED";
 
-export type CheckoutAction = "edit" | "extend" | "cancel" | "checkin" | "open" | "force-complete" | "nudge" | "duplicate" | "transfer-owner" | "manage-custody" | "add-items";
+export type CheckoutAction = "edit" | "extend" | "cancel" | "checkin" | "open" | "force-complete" | "nudge" | "duplicate" | "transfer-owner" | "manage-custody" | "edit-items";
 export type ReservationAction = "edit" | "extend" | "cancel" | "convert" | "duplicate" | "force-checkout" | "close-remaining" | "transfer-owner";
 export type BookingAction = CheckoutAction | ReservationAction | "view";
 
@@ -30,8 +30,8 @@ type ActionOptions = {
   includeServerActions?: boolean;
 };
 
-const CLIENT_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "open", "duplicate", "transfer-owner", "manage-custody", "add-items"];
-const SERVER_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "checkin", "open", "force-complete", "nudge", "duplicate", "transfer-owner", "manage-custody", "add-items"];
+const CLIENT_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "open", "duplicate", "transfer-owner", "manage-custody", "edit-items"];
+const SERVER_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "checkin", "open", "force-complete", "nudge", "duplicate", "transfer-owner", "manage-custody", "edit-items"];
 const CLIENT_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "duplicate", "transfer-owner"];
 const SERVER_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "convert", "duplicate", "force-checkout", "close-remaining", "transfer-owner"];
 const COLLABORATOR_RESERVATION_ACTION_CAPABILITIES: Partial<Record<"edit" | "extend" | "cancel", string>> = {
@@ -45,7 +45,7 @@ const STATE_ACTIONS: Record<BookingKind, Record<BookingStatus, Set<string>>> = {
     DRAFT: new Set(["edit", "cancel", "transfer-owner"]),
     BOOKED: new Set(["edit", "extend", "cancel", "open", "transfer-owner", "manage-custody"]),
     PENDING_PICKUP: new Set(["edit", "cancel", "transfer-owner", "manage-custody"]),
-    OPEN: new Set(["edit", "extend", "force-complete", "nudge", "transfer-owner", "manage-custody", "add-items"]),
+    OPEN: new Set(["edit", "extend", "cancel", "force-complete", "nudge", "transfer-owner", "manage-custody", "edit-items"]),
     COMPLETED: new Set(["duplicate"]),
     CANCELLED: new Set(),
   },
@@ -141,10 +141,14 @@ export function canPerformBookingAction(
       : { allowed: false, reason: "Only admins can force-complete a checkout" };
   }
 
-  if (action === "add-items") {
+  if (action === "edit-items") {
     return actor.role === "ADMIN"
       ? { allowed: true }
-      : { allowed: false, reason: "Only admins can add items to an active checkout" };
+      : { allowed: false, reason: "Only admins can change items on an active checkout" };
+  }
+
+  if (action === "cancel" && resolvedKind === "CHECKOUT" && booking.status === "OPEN" && actor.role !== "ADMIN") {
+    return { allowed: false, reason: `Action "cancel" is not available in OPEN state` };
   }
 
   if (action === "force-checkout") {

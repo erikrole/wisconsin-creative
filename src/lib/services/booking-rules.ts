@@ -20,10 +20,10 @@ import {
  * |----------|-------------|-------------|----------------|---------------|-----------|-----------|
  * | edit     | staff+/owner | staff+/owner | staff+/owner   | staff+/owner  | ✗         | ✗         |
  * | extend   | ✗            | staff+/owner | ✗              | staff+/owner  | ✗         | ✗         |
- * | cancel   | staff+/owner | staff+/owner | staff+/owner   | ✗             | ✗         | ✗         |
+ * | cancel   | staff+/owner | staff+/owner | staff+/owner   | admin only    | ✗         | ✗         |
  * | checkin  | ✗            | ✗            | ✗              | kiosk only    | ✗         | ✗         |
  * | force-complete | ✗       | ✗            | ✗              | admin only    | ✗         | ✗         |
- * | add-items | ✗        | ✗            | ✗              | admin only    | ✗         | ✗         |
+ * | edit-items | ✗        | ✗            | ✗              | admin only    | ✗         | ✗         |
  * | duplicate | ✗       | ✗            | ✗              | ✗             | staff+/owner | ✗     |
  * | transfer-owner | staff+/owner | staff+/owner | staff+/owner | staff+/owner | ✗         | ✗         |
  * | open     | ✗            | staff+/owner | ✗              | ✗             | ✗         | ✗         |

@@ -407,6 +407,29 @@ export async function removeActiveCheckoutItem(
   },
 ): Promise<MutationResult> {
   const { actor, booking, kiosk, target } = args;
+  return removeItemFromActiveCheckout(tx, {
+    actor,
+    booking,
+    target,
+    locationId: kiosk.locationId,
+    auditAction: "kiosk_checkout_item_removed",
+    audit: { kioskDeviceId: kiosk.kioskId, kioskName: kiosk.name },
+  });
+}
+
+/** Return one item's custody without a scan; shared by the kiosk and the admin web remove. */
+export async function removeItemFromActiveCheckout(
+  tx: Prisma.TransactionClient,
+  args: {
+    actor: { id: string; role: Role };
+    booking: EditableCheckout;
+    target: ActiveItemTarget;
+    locationId: string;
+    auditAction: string;
+    audit: Record<string, string>;
+  },
+): Promise<MutationResult> {
+  const { actor, booking, target, locationId, auditAction, audit } = args;
   const actorId = actor.id;
   if ("assetId" in target) {
     const item = await tx.bookingSerializedItem.findUnique({
@@ -428,13 +451,12 @@ export async function removeActiveCheckoutItem(
       actorRole: actor.role,
       entityType: "booking",
       entityId: booking.id,
-      action: "kiosk_checkout_item_removed",
+      action: auditAction,
       before: {
         assetId: target.assetId,
         tagName: item.asset.assetTag,
         itemName: item.asset.assetTag,
-        kioskDeviceId: kiosk.kioskId,
-        kioskName: kiosk.name,
+        ...audit,
       },
     });
 
@@ -487,7 +509,7 @@ export async function removeActiveCheckoutItem(
   });
 
   await upsertBulkBalancesAndMovements(tx, {
-    locationId: kiosk.locationId,
+    locationId,
     bookingId: booking.id,
     actorUserId: actorId,
     kind: BulkMovementKind.CHECKIN,
@@ -499,14 +521,13 @@ export async function removeActiveCheckoutItem(
     actorRole: actor.role,
     entityType: "booking",
     entityId: booking.id,
-    action: "kiosk_checkout_item_removed",
+    action: auditAction,
     before: {
       bulkSkuId: allocation.bulkSkuUnit.bulkSkuId,
       unitNumber: allocation.bulkSkuUnit.unitNumber,
       itemName: `${allocation.bulkSkuUnit.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber}`,
-      stockLocationId: kiosk.locationId,
-      kioskDeviceId: kiosk.kioskId,
-      kioskName: kiosk.name,
+      stockLocationId: locationId,
+      ...audit,
     },
   });
 
