@@ -372,7 +372,7 @@ export default function AuditReportPage() {
       </ReportMetricGrid>
 
       {(data.byAction?.length > 0 || data.byEntityType?.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
           {data.byAction?.length > 0 && <LazyActionBreakdownChart byAction={data.byAction} />}
           {data.byEntityType?.length > 0 && <LazyEntityTypeBreakdownChart byEntityType={data.byEntityType} />}
         </div>
