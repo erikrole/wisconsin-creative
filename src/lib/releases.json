@@ -1,6 +1,19 @@
 [
   {
     "date": "2026-10-28",
+    "title": "One tab underline",
+    "type": "fixes",
+    "summary": "Tab bars on item, bookings, licenses and bulk inventory pages now show a single underline under the active tab.",
+    "details": [
+      "A second, shorter red underline no longer sits on top of the blue one."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
     "title": "Trades tab and calmer link colors",
     "type": "improvement",
     "summary": "Trades now live in their own tab on Schedule, and links and body text are neutral instead of blue.",
