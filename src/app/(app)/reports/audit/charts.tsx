@@ -8,7 +8,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { REPORT_BAR_COLOR, ReportChartCard } from "../report-ui";
-import { auditSentence } from "@/lib/audit-actions";
+import { describeAction } from "@/lib/activity-timeline";
 
 function humanize(value: string) {
   const spaced = value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[._-]+/g, " ").toLowerCase().trim();
@@ -20,7 +20,9 @@ function truncate(label: string) {
 }
 
 function formatAction(action: string) {
-  return truncate(auditSentence(action, undefined) ?? humanize(action));
+  // "item" context words the action without an actor, the way a chart label needs it.
+  const entry = { id: action, action, createdAt: "", beforeJson: null, afterJson: null, actor: null };
+  return truncate(describeAction(entry, "", "item", "a record"));
 }
 
 function formatEntityType(entityType: string) {

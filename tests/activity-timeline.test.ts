@@ -161,6 +161,14 @@ describe("getFieldChanges", () => {
   it("only diffs actions that are edits", () => {
     expect(getFieldChanges(entry("created", { afterJson: { name: "New" } }))).toEqual([]);
   });
+
+  it("diffs other actions on the fields they saved before and after", () => {
+    expect(getFieldChanges(entry("calendar_event_updated", {
+      entityType: "calendar_event",
+      beforeJson: { summary: "Volleyball vs Iowa", location: "Field House" },
+      afterJson: { summary: "Volleyball vs Iowa (moved)", source: "manual" },
+    }))).toEqual([{ label: "Summary", from: "Volleyball vs Iowa", to: "Volleyball vs Iowa (moved)", mono: false }]);
+  });
 });
 
 describe("isPhantomEntry", () => {

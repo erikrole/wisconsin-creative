@@ -412,7 +412,7 @@ export function describeAction(
       // "Updated their shoe size" instead of "Updated their profile" + 1 pill.
       const fields = entry.afterJson ? Object.keys(entry.afterJson).filter((k) => !HIDDEN_FIELDS.has(k)) : [];
       if (fields.length === 1) {
-        const label = (FIELD_LABELS[fields[0]!] ?? fields[0]!).toLowerCase(); // length === 1 guard above
+        const label = fieldLabel(fields[0]!).toLowerCase(); // length === 1 guard above
         return `${reportPrefix}Updated their ${label}`;
       }
       if (fields.length > 1) {
@@ -559,6 +559,13 @@ function getEquipmentCounts(
 
 /* ── Field change description ── */
 
+/** "shoeSize" -> "Shoe size" for fields without a curated label. */
+function fieldLabel(key: string): string {
+  if (FIELD_LABELS[key]) return FIELD_LABELS[key]!;
+  const spaced = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/_/g, " ").toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 type FieldChange = { label: string; from: string; to: string; mono?: boolean };
 
 function describeFieldChange(
@@ -570,7 +577,7 @@ function describeFieldChange(
   if (HIDDEN_FIELDS.has(key)) return null;
 
   // "Item name" only fits items; a kit or person rename reads "Name".
-  const label = key === "name" && entityType && entityType !== "asset" ? "Name" : FIELD_LABELS[key] || key;
+  const label = key === "name" && entityType && entityType !== "asset" ? "Name" : fieldLabel(key);
 
   // For ID fields, show "set" / "removed" / "changed" instead of raw IDs
   if (ID_FIELDS.has(key)) {
@@ -667,7 +674,16 @@ const DIFF_ACTIONS = new Set([
 ]);
 
 export function getFieldChanges(entry: AuditEntry): FieldChange[] {
-  if (!DIFF_ACTIONS.has(entry.action) || !entry.afterJson) return [];
+  if (!entry.afterJson) return [];
+  // Any other action that saved both sides is an edit too: diff only the fields it recorded on both.
+  if (!DIFF_ACTIONS.has(entry.action)) {
+    const before = entry.beforeJson;
+    if (!before) return [];
+    return Object.keys(entry.afterJson)
+      .filter((k) => k in before)
+      .map((k) => describeFieldChange(k, before[k], entry.afterJson![k], entry.entityType))
+      .filter((c): c is FieldChange => c !== null);
+  }
   // Some routes (e.g. role_changed) don't always write a `before` payload —
   // the field-change describer handles missing `before` as "set"/"empty"
   // gracefully so we still render the new value as a pill.
@@ -798,7 +814,7 @@ export function getChainedChange(entry: RenderEntry): ChainedChange | null {
 
   const ordered = [...chain].reverse();
   const values: string[] = [];
-  let label = FIELD_LABELS[key] || key;
+  let label = fieldLabel(key);
   let mono = false;
   for (let i = 0; i < ordered.length; i++) {
     const e = ordered[i]!;
