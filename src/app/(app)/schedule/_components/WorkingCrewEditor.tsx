@@ -1038,6 +1038,9 @@ export function WorkingCrewEditor({
                         <span className="min-w-0 truncate text-sm">{user?.name ?? "Assigned worker"}</span>
                         <CrewTagEditor
                           tags={crewTagsOf(slot.assignment)}
+                          othersTags={data.schedule.slots.flatMap((other) => other.key === slot.key || !other.assignment
+                            ? []
+                            : [{ name: userById.get(other.assignment.userId)?.name ?? "Someone", tags: crewTagsOf(other.assignment) }])}
                           personName={user?.name ?? "assigned worker"}
                           disabled={actionsDisabled}
                           revealClassName={CREW_ROW_REVEAL}

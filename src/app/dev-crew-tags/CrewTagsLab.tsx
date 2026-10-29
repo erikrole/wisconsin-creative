@@ -19,6 +19,7 @@ export default function CrewTagsLab() {
           <span>{person.name}</span>
           <CrewTagEditor
             tags={person.tags}
+            othersTags={crew.filter((_, i) => i !== index).map((o) => ({ name: o.name, tags: o.tags }))}
             personName={person.name}
             disabled={false}
             onSave={(tags) => setCrew((rows) => rows.map((row, i) => (i === index ? { ...row, tags } : row)))}

@@ -5,7 +5,7 @@ import {
   workingSchedulePayloadSchema,
   type WorkingSchedulePayload,
 } from "@/lib/schedule-working-copy";
-import { crewTagText, crewTagsOf, normalizeCrewLabel } from "@/lib/crew-label";
+import { crewTagText, crewTagsClash, crewTagsOf, normalizeCrewLabel } from "@/lib/crew-label";
 
 function assignedPayload(): WorkingSchedulePayload {
   return {
@@ -117,7 +117,7 @@ describe("crew label", () => {
     )).toThrow("WORKING_SLOT_NOT_ASSIGNED");
   });
 
-  it("drops the tag when a different person is assigned", () => {
+  it("keeps the position labels when a different person takes the slot", () => {
     const tagged = applyWorkingScheduleCommand(
       assignedPayload(),
       { type: "setCrewTags", slotKey: "shift-1", tags: [{ label: "SLOW1", half: "FIRST" }] },
@@ -129,8 +129,13 @@ describe("crew label", () => {
       () => "unused",
     );
     expect(replaced.slots[0]!.assignment?.userId).toBe("user-2");
-    expect(replaced.slots[0]!.assignment?.crewLabel).toBeNull();
-    expect(replaced.slots[0]!.assignment?.crewHalf).toBeNull();
+    expect(replaced.slots[0]!.assignment?.crewTags).toEqual([{ label: "SLOW1", half: "FIRST" }]);
+  });
+
+  it("flags the same label on overlapping parts of the event only", () => {
+    expect(crewTagsClash({ label: "SLOW1", half: "FIRST" }, { label: "slow1", half: null })).toBe(true);
+    expect(crewTagsClash({ label: "SLOW1", half: "FIRST" }, { label: "SLOW1", half: "SECOND" })).toBe(false);
+    expect(crewTagsClash({ label: "SLOW1", half: null }, { label: "CAM3", half: null })).toBe(false);
   });
 
   it("still parses drafts saved before labels existed", () => {

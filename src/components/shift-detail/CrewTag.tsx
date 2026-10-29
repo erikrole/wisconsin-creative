@@ -10,6 +10,7 @@ import {
   CREW_LABEL_MAX_LENGTH,
   MAX_CREW_TAGS,
   crewTagText,
+  crewTagsClash,
   normalizeCrewTags,
   type CrewHalf,
   type CrewTagValue,
@@ -55,8 +56,11 @@ export function CrewTagEditor({
   personName,
   disabled,
   revealClassName,
+  othersTags = [],
   onSave,
 }: {
+  /** Labels already on the rest of this event's crew, offered as suggestions and checked for clashes. */
+  othersTags?: Array<{ name: string; tags: CrewTagValue[] }>;
   tags: CrewTagValue[];
   personName: string;
   disabled: boolean;
@@ -80,6 +84,12 @@ export function CrewTagEditor({
     onSave(normalizeCrewTags(draft.map((row) => ({ label: row.label, half: row.half === "ALL" ? null : row.half }))));
     setOpen(false);
   }
+
+  const draftTags = draft.map((row) => ({ label: normalizeCrewTags([{ label: row.label, half: null }])[0]?.label ?? null, half: row.half === "ALL" ? null : row.half }));
+  const clash = othersTags.find((other) => other.tags.some((t) => draftTags.some((d) => crewTagsClash(d, t))));
+  const suggestions = [...new Set(othersTags.flatMap((other) => other.tags.map((t) => t.label)).filter((l): l is string => Boolean(l)))]
+    .filter((l) => !draft.some((row) => row.label.trim().toLowerCase() === l.toLowerCase()))
+    .slice(0, 6);
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -159,6 +169,30 @@ export function CrewTagEditor({
             </div>
           ))}
         </div>
+        {suggestions.length > 0 && (
+          <div className="flex flex-wrap gap-1" aria-label="Labels used on this crew">
+            {suggestions.map((label) => (
+              <button
+                key={label}
+                type="button"
+                className={cn(TAG_CLASS, "h-6 px-2 hover:bg-accent")}
+                onClick={() => setDraft((rows) => {
+                  const blank = rows.findIndex((row) => !row.label.trim());
+                  return blank === -1
+                    ? [...rows.slice(0, MAX_CREW_TAGS - 1), { label, half: "ALL" as const }]
+                    : rows.map((row, i) => (i === blank ? { ...row, label } : row));
+                })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {clash && (
+          <p className="text-xs text-[var(--orange-text)]" role="status">
+            {clash.name} already has that label for the same part of the event.
+          </p>
+        )}
         {draft.length < MAX_CREW_TAGS && (
           <Button
             type="button"

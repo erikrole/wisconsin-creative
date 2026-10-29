@@ -566,9 +566,6 @@ export function applyWorkingScheduleCommand(
       callStartsAt: null,
       callEndsAt: null,
       callNote: null,
-      crewLabel: null,
-      crewHalf: null,
-      crewTags: [],
       activeTradeId: null,
       bookingCount: 0,
     };

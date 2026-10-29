@@ -46,3 +46,9 @@ export function crewTagsOf(assignment: {
   if (Array.isArray(assignment.crewTags)) return normalizeCrewTags(assignment.crewTags as CrewTagValue[]);
   return normalizeCrewTags([{ label: assignment.crewLabel ?? null, half: assignment.crewHalf ?? null }]);
 }
+
+/** Two tags clash when they share a label (ignoring case) and cover overlapping parts of the event. */
+export function crewTagsClash(a: CrewTagValue, b: CrewTagValue): boolean {
+  if (!a.label || !b.label || a.label.toLowerCase() !== b.label.toLowerCase()) return false;
+  return a.half === null || b.half === null || a.half === b.half;
+}
