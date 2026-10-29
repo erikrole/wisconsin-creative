@@ -20,7 +20,7 @@ import { AlertCircle, Check, ImageIcon, MoreHorizontal, Plus, Search } from "luc
 import { StaggerList, StaggerItem } from "@/components/ui/motion";
 import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { AdminOnlyTag } from "@/components/booking-details/AdminOnlyTag";
+import { AdminOnlyLabel } from "@/components/booking-details/AdminOnlyLabel";
 import { isAdminOnlyAction } from "@/lib/booking-action-policy";
 import type { BookingDetail, SerializedItem, BulkItem } from "@/components/booking-details/types";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -303,8 +303,7 @@ export default function BookingEquipmentTab({
                 {onAddItems && (
                   <Button type="button" variant="outline" size="sm" className="h-10" onClick={onAddItems}>
                     <Plus className="size-4" />
-                    Add items
-                    {isCheckout && isAdminOnlyAction("edit-items", booking.status) && <AdminOnlyTag />}
+                    {isCheckout && isAdminOnlyAction("edit-items", booking.status) ? <AdminOnlyLabel>Add items</AdminOnlyLabel> : "Add items"}
                   </Button>
                 )}
               </div>
@@ -578,8 +577,7 @@ function SerializedRow({
             </DropdownMenuItem>
             {canRemove && item.allocationStatus === "active" && (
               <DropdownMenuItem variant="destructive" onSelect={onRemove}>
-                Remove from checkout
-                <AdminOnlyTag />
+                <AdminOnlyLabel>Remove from checkout</AdminOnlyLabel>
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

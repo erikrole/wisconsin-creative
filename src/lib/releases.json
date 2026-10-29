@@ -8,7 +8,7 @@
       "Open the checkout and tap Add items, then search and pick an available item.",
       "Use the menu on an item row to remove it. Taking off the last item closes the checkout.",
       "Cancel is now available on an active checkout. Everything on it is released as returned without a scan.",
-      "Admin-only actions carry a small Admin tag.",
+      "Admin-only actions are shown in a red-to-violet gradient.",
       "Each change is recorded in the activity log."
     ],
     "pr": 721,
