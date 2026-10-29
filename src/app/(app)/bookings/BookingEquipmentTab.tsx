@@ -19,8 +19,11 @@ import {
 import { AlertCircle, Check, ImageIcon, MoreHorizontal, Plus, Search } from "lucide-react";
 import { StaggerList, StaggerItem } from "@/components/ui/motion";
 import { toast } from "@/lib/toast";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { AdminOnlyLabel } from "@/components/booking-details/AdminOnlyLabel";
+import { isAdminOnlyAction } from "@/lib/booking-action-policy";
 import type { BookingDetail, SerializedItem, BulkItem } from "@/components/booking-details/types";
-import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
   availabilityConflictMessage,
   availabilityRiskBadgeLabel,
@@ -93,6 +96,35 @@ export default function BookingEquipmentTab({
   const canAssignItemHolders = isCheckout
     && booking.status === "OPEN"
     && (booking.allowedActions ?? []).includes("manage-custody");
+
+  const confirm = useConfirm();
+  const canRemoveItems = isCheckout
+    && booking.status === "OPEN"
+    && (booking.allowedActions ?? []).includes("edit-items");
+
+  async function removeItem(item: SerializedItem) {
+    const name = item.asset.name || item.asset.assetTag;
+    const ok = await confirm({
+      title: "Remove from checkout?",
+      message: `${name} is marked returned without a scan.`,
+      confirmLabel: "Remove",
+      variant: "danger",
+    });
+    if (!ok) return;
+    const res = await fetch(`/api/bookings/${booking.id}/items`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assetId: item.asset.id }),
+    });
+    if (handleAuthRedirect(res)) return;
+    if (!res.ok) {
+      toast.error(await parseErrorMessage(res, "Could not remove this item"));
+      return;
+    }
+    const json = await parseJsonSafely<{ data?: BookingDetail }>(res);
+    if (json?.data) onBookingUpdated(json.data);
+    toast.success(`${name} removed`);
+  }
 
   const itemCount = booking.serializedItems.length + booking.bulkItems.length;
 
@@ -271,7 +303,7 @@ export default function BookingEquipmentTab({
                 {onAddItems && (
                   <Button type="button" variant="outline" size="sm" className="h-10" onClick={onAddItems}>
                     <Plus className="size-4" />
-                    Add items
+                    {isCheckout && isAdminOnlyAction("edit-items", booking.status) ? <AdminOnlyLabel>Add items</AdminOnlyLabel> : "Add items"}
                   </Button>
                 )}
               </div>
@@ -361,6 +393,8 @@ export default function BookingEquipmentTab({
                   currentEndsAt={booking.endsAt}
                   canAssignHolder={canAssignItemHolders}
                   onAssignHolder={() => setHolderItem(item)}
+                  canRemove={canRemoveItems}
+                  onRemove={() => void removeItem(item)}
                 />
               </StaggerItem>
             ))}
@@ -413,6 +447,8 @@ function SerializedRow({
   currentEndsAt,
   canAssignHolder,
   onAssignHolder,
+  canRemove,
+  onRemove,
 }: {
   item: SerializedItem;
   isCheckout: boolean;
@@ -424,6 +460,8 @@ function SerializedRow({
   currentEndsAt: string;
   canAssignHolder: boolean;
   onAssignHolder: () => void;
+  canRemove: boolean;
+  onRemove: () => void;
 }) {
   const returned = item.allocationStatus === "returned";
   const pickedUp = isReservation && item.allocationStatus === "picked_up";
@@ -537,6 +575,11 @@ function SerializedRow({
             <DropdownMenuItem asChild>
               <Link href={`/items/${item.asset.id}`}>View item</Link>
             </DropdownMenuItem>
+            {canRemove && item.allocationStatus === "active" && (
+              <DropdownMenuItem variant="destructive" onSelect={onRemove}>
+                <AdminOnlyLabel>Remove from checkout</AdminOnlyLabel>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

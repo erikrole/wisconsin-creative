@@ -48,6 +48,23 @@
   },
   {
     "date": "2026-10-28",
+    "title": "Admins can manage active checkouts",
+    "type": "feature",
+    "summary": "Admins can now add or remove gear on, or cancel, a checkout that is already out, without going to a kiosk.",
+    "details": [
+      "Open the checkout and tap Add items, then search and pick an available item.",
+      "Use the menu on an item row to remove it. Taking off the last item closes the checkout.",
+      "Cancel is now available on an active checkout. Everything on it is released as returned without a scan.",
+      "Admin-only actions are shown in a red-to-violet gradient.",
+      "Each change is recorded in the activity log."
+    ],
+    "pr": 721,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
     "title": "On shift now follows game time",
     "type": "fixes",
     "summary": "The Staff page no longer lists crews hours before a game that was added without a time.",

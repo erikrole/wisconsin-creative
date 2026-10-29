@@ -67,7 +67,7 @@ describe("POST /api/bookings/[id]/cancel", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(mocks.cancelBooking).toHaveBeenCalledWith("booking-1", "maya");
+    expect(mocks.cancelBooking).toHaveBeenCalledWith("booking-1", "maya", { allowActiveCheckout: false });
     expect(body.data).toMatchObject({ id: "booking-1", status: "CANCELLED" });
     expect(Array.isArray(body.data.allowedActions)).toBe(true);
     expect(body.data.allowedActions).not.toContain("cancel");
@@ -89,11 +89,10 @@ describe("POST /api/bookings/[id]/cancel", () => {
     const res = await cancel();
 
     expect(res.status).toBe(200);
-    expect(mocks.cancelBooking).toHaveBeenCalledWith("booking-1", "staff-1");
+    expect(mocks.cancelBooking).toHaveBeenCalledWith("booking-1", "staff-1", { allowActiveCheckout: false });
   });
 
   it.each([
-    ["an open checkout (gear is out; it must be returned)", BookingKind.CHECKOUT, BookingStatus.OPEN],
     ["a completed checkout", BookingKind.CHECKOUT, BookingStatus.COMPLETED],
     ["an already cancelled reservation", BookingKind.RESERVATION, BookingStatus.CANCELLED],
   ])("refuses to cancel %s", async (_label, kind, status) => {
@@ -104,6 +103,18 @@ describe("POST /api/bookings/[id]/cancel", () => {
 
     expect(res.status).toBe(403);
     expect(mocks.cancelBooking).not.toHaveBeenCalled();
+  });
+
+  it("lets an admin cancel an open checkout but not staff", async () => {
+    mocks.findBooking.mockResolvedValue(row({ kind: BookingKind.CHECKOUT, status: BookingStatus.OPEN }));
+
+    mocks.requireAuth.mockResolvedValue(authUser(Role.STAFF, "staff-1"));
+    expect((await cancel()).status).toBe(403);
+    expect(mocks.cancelBooking).not.toHaveBeenCalled();
+
+    mocks.requireAuth.mockResolvedValue(authUser(Role.ADMIN, "erik"));
+    expect((await cancel()).status).toBe(200);
+    expect(mocks.cancelBooking).toHaveBeenCalledWith("booking-1", "erik", { allowActiveCheckout: true });
   });
 
   it("answers 404 for a missing booking", async () => {
@@ -132,7 +143,7 @@ describe("POST /api/bookings/[id]/cancel", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(mocks.cancelBooking).toHaveBeenCalledWith("booking-1", "maya");
+    expect(mocks.cancelBooking).toHaveBeenCalledWith("booking-1", "maya", { allowActiveCheckout: false });
     expect(body.data.requester).toEqual({ id: "maya", name: "Maya", avatarUrl: null });
     expect(body.data).not.toHaveProperty("auditLogs");
   });
