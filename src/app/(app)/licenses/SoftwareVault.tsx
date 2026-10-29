@@ -700,7 +700,7 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
       <h2 id="shared-logins-title" className="sr-only">Shared logins</h2>
       <div className="flex flex-wrap items-center gap-2">
         {activeRecords.length > SEARCH_THRESHOLD ? (
-          <div className="relative min-w-0 flex-1 sm:max-w-xs">
+          <div className="relative min-w-48 flex-1 sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
               type="search"
@@ -712,7 +712,7 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
             />
           </div>
         ) : (
-          <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+          <p className="min-w-56 flex-1 text-sm text-muted-foreground">
             <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
             Encrypted. Reveals are logged.
           </p>
