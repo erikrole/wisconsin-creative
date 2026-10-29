@@ -35,11 +35,16 @@ export type OnboardingChecklist = { rows: OnboardingRow[]; done: number; total: 
 /** Everything the server looks up for one student; the checklist is a pure function of it. */
 export type OnboardingFacts = {
   profile: Parameters<typeof getProfileCompletion>[0];
-  signedIn: boolean;
-  hasClassSchedule: boolean;
-  hasIosApp: boolean;
-  hasPush: boolean;
-  hasCheckout: boolean;
+  /** When each thing first happened, or null if it hasn't. */
+  signedInAt: Date | null;
+  classScheduleAt: Date | null;
+  iosAppAt: Date | null;
+  pushAt: Date | null;
+  checkoutAt: Date | null;
+  /** When they claimed an Adobe license code, which finishes the manual Adobe step by itself. */
+  adobeAt: Date | null;
+  /** Whether they opened the guides from their own Getting started card. */
+  readGuides: boolean;
   checks: OnboardingChecks;
   guide: OnboardingGuide;
   /** Who ticked each manual step, by user id. */
@@ -106,21 +111,24 @@ export function applyOnboardingCheck(
 
 export function buildOnboardingChecklist(facts: OnboardingFacts): OnboardingChecklist {
   const { completeByField: field } = getProfileCompletion(facts.profile);
-  const auto = (key: string, label: string, done: boolean, optional = false): OnboardingRow =>
-    ({ key, label, done, manual: false, optional, doneAt: null, doneBy: null, note: null, contact: null, hint: null });
+  const auto = (key: string, label: string, at: Date | null | boolean, optional = false): OnboardingRow =>
+    ({ key, label, done: Boolean(at), manual: false, optional, doneAt: at instanceof Date ? at.toISOString() : null, doneBy: null, note: null, contact: null, hint: null });
   const rows: OnboardingRow[] = [
-    auto("signed_in", "Signed in", facts.signedIn),
+    auto("signed_in", "Signed in", facts.signedInAt),
     auto("photo", "Profile photo", field.photo),
     auto("phone", "Phone number", field.personalPhone),
     auto("student", "Year and graduation", field.studentYear && field.anticipatedGraduation),
     auto("sizes", "Apparel sizes", field.clothingSize && field.shoeSize),
     auto("wiscard", "Wiscard", field.wiscard, true),
-    auto("class_schedule", "Class schedule", facts.hasClassSchedule),
-    auto("app", "iPhone app installed", facts.hasIosApp),
-    auto("notifications", "Notifications on", facts.hasPush),
-    auto("checkout", "First checkout", facts.hasCheckout),
+    auto("class_schedule", "Class schedule", facts.classScheduleAt),
+    auto("app", "iPhone app installed", facts.iosAppAt),
+    auto("notifications", "Notifications on", facts.pushAt),
+    auto("guides", "Read the guides", facts.readGuides),
+    auto("checkout", "First checkout", facts.checkoutAt),
     ...ONBOARDING_MANUAL_STEPS.map((step): OnboardingRow => {
       const check = facts.checks[step];
+      const autoAt = step === "adobe" && !check ? facts.adobeAt : null;
+      if (autoAt) return { ...auto(step, ONBOARDING_STEP_LABELS[step], autoAt), contact: null, hint: null };
       return {
         key: step, label: ONBOARDING_STEP_LABELS[step], done: Boolean(check), manual: true, optional: false,
         doneAt: check?.at ?? null, doneBy: check ? (facts.names[check.by] ?? null) : null,

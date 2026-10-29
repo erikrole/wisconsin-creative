@@ -7,7 +7,7 @@ import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
@@ -43,7 +43,7 @@ function NoteButton({ row, busy, onSave }: { row: OnboardingRow; busy: boolean; 
   );
 }
 
-function GuideDialog({ rows, onClose, onSave, busy }: {
+export function GuideDialog({ rows, onClose, onSave, busy }: {
   rows: OnboardingRow[];
   onClose: () => void;
   onSave: (guide: Record<string, { contact: string; note: string }>) => void;
@@ -53,8 +53,12 @@ function GuideDialog({ rows, onClose, onSave, busy }: {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
-        <DialogTitle>Who to contact</DialogTitle>
-        <DialogDescription>Shown on every student&apos;s checklist.</DialogDescription>
+        <DialogHeader>
+          <div>
+            <DialogTitle>Who to contact</DialogTitle>
+            <DialogDescription>Shown on every student&apos;s checklist.</DialogDescription>
+          </div>
+        </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {rows.map((row) => {
             const current = draft[row.key] ?? { contact: "", note: "" };
@@ -155,7 +159,7 @@ export function OnboardingChecklistView({
               {row.doneAt && (
                 <div className="flex shrink-0 flex-col items-end gap-0.5 text-xs text-muted-foreground">
                   <span>{row.doneBy ? `${row.doneBy.split(" ")[0]} · ` : ""}{formatDateShortCentral(row.doneAt)}</span>
-                  <NoteButton row={row} busy={busy} onSave={(note) => onChange({ step: row.key, note })} />
+                  {row.manual && <NoteButton row={row} busy={busy} onSave={(note) => onChange({ step: row.key, note })} />}
                 </div>
               )}
             </li>

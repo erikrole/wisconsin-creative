@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OnboardingChecklistView } from "@/app/(app)/staff/[id]/OnboardingChecklistCard";
+import { BulkOnboardingDialog } from "@/app/(app)/staff/onboarding-status/BulkOnboardingDialog";
+import { GuideDialog, OnboardingChecklistView } from "@/app/(app)/staff/[id]/OnboardingChecklistCard";
 import { buildOnboardingChecklist, type OnboardingFacts } from "@/lib/onboarding-checklist";
+
+const D = new Date("2026-10-27T20:00:00Z");
 
 const base: OnboardingFacts = {
   profile: {
@@ -11,7 +14,7 @@ const base: OnboardingFacts = {
     studentYearOverride: null, gradYear: null, graduationTerm: null, topSizeFit: null, topSize: null, shoeSizeSystem: null,
     shoeSize: null, avatarUrl: null, profilePromptSnoozedUntil: null,
   },
-  signedIn: false, hasClassSchedule: false, hasIosApp: false, hasPush: false, hasCheckout: false, checks: {}, names: {},
+  signedInAt: null, classScheduleAt: null, iosAppAt: null, pushAt: null, checkoutAt: null, adobeAt: null, readGuides: false, checks: {}, names: {},
   guide: {
     slack: { contact: "Erik", note: "Invite from the workspace admin page" },
     asana: { contact: "Erik", note: "" },
@@ -31,12 +34,12 @@ const tick = { at: "2026-10-28T20:00:00Z", by: "a" };
 const STATES: Record<string, OnboardingFacts> = {
   "Just invited": base,
   "Mid-way": {
-    ...base, profile: { ...filled, avatarUrl: null }, signedIn: true, hasClassSchedule: true, hasIosApp: true,
+    ...base, profile: { ...filled, avatarUrl: null }, signedInAt: D, classScheduleAt: D, iosAppAt: D, readGuides: true,
     checks: { slack: tick, asana: { ...tick, note: "Joined the Creative project" }, orientation: tick }, names: { a: "Erik Role" },
   },
   "All done": {
-    ...base, profile: { ...filled, wiscardCardNumber: "1", wiscardIssueCode: "1" }, signedIn: true, hasClassSchedule: true,
-    hasIosApp: true, hasPush: true, hasCheckout: true, checks: { slack: tick, asana: tick, computer_login: tick, adobe: tick, building_access: tick, orientation: tick, gear_training: tick }, names: { a: "Erik Role" },
+    ...base, profile: { ...filled, wiscardCardNumber: "1", wiscardIssueCode: "1" }, signedInAt: D, classScheduleAt: D,
+    iosAppAt: D, pushAt: D, checkoutAt: D, adobeAt: D, readGuides: true, checks: { slack: tick, asana: tick, computer_login: tick, adobe: tick, building_access: tick, orientation: tick, gear_training: tick }, names: { a: "Erik Role" },
   },
 };
 
@@ -46,8 +49,16 @@ export default function OnboardingChecklistLab({ fontClass }: { fontClass: strin
     return () => document.body.classList.remove("wc-fresh", fontClass);
   }, [fontClass]);
   const [facts, setFacts] = useState(STATES);
+  const [view] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("view")));
+  const students = ["Maya Chen", "Jordan Ruiz", "Taylor Kim", "Sam Patel", "Riley Brooks", "Avery Nguyen"].map((name, i) => ({
+    id: String(i), name, avatarUrl: null, createdAt: new Date(Date.now() - (i < 4 ? 3 : 90) * 86_400_000).toISOString(),
+  }));
   return (
     <div className={`wc-fresh ${fontClass} min-h-dvh bg-background p-4 md:p-8`}>
+      {view === "bulk" && <BulkOnboardingDialog students={students} onClose={() => {}} />}
+      {view === "guide" && (
+        <GuideDialog rows={buildOnboardingChecklist(STATES["Mid-way"]!).rows.filter((row) => row.manual)} busy={false} onClose={() => {}} onSave={() => {}} />
+      )}
       <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
         {Object.entries(facts).map(([name, f]) => (
           <div key={name} id={name.toLowerCase().replace(/\W+/g, "-")} className="flex flex-col gap-2">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserAvatar } from "@/components/UserAvatar";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
@@ -37,8 +37,12 @@ export function BulkOnboardingDialog({ students, onClose }: { students: Student[
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
-        <DialogTitle>Tick a step for a group</DialogTitle>
-        <DialogDescription>Marks the step done on each selected student&apos;s checklist.</DialogDescription>
+        <DialogHeader>
+          <div>
+            <DialogTitle>Tick a step for a group</DialogTitle>
+            <DialogDescription>Marks the step done on each selected student&apos;s checklist.</DialogDescription>
+          </div>
+        </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
           <Select value={step} onValueChange={(value) => setStep(value as OnboardingManualStep)}>
             <SelectTrigger aria-label="Step"><SelectValue /></SelectTrigger>

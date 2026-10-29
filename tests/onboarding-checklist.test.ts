@@ -8,6 +8,7 @@ const dbMock = vi.hoisted(() => ({
   webPushSubscription: { findFirst: vi.fn() },
   booking: { findFirst: vi.fn() },
   systemConfig: { findUnique: vi.fn() },
+  licenseCodeClaim: { findFirst: vi.fn() },
   $transaction: vi.fn(),
 }));
 const auditMock = vi.hoisted(() => vi.fn());
@@ -28,6 +29,7 @@ import { applyOnboardingCheck, buildOnboardingChecklist, parseOnboardingChecks }
 const admin = { id: "admin-1", email: "a@wisc.edu", name: "Erik Role", role: "ADMIN" as const, avatarUrl: null };
 const params = { params: Promise.resolve({ id: "stu-1" }) };
 
+const D = new Date("2026-10-28T20:00:00Z");
 const profile = {
   id: "stu-1", name: "Maya Chen", role: "STUDENT" as const, email: "maya@wisc.edu", athleticsEmail: null, phone: null,
   personalPhone: null, workPhone: null, workPhoneNotApplicable: false, wiscardCardNumber: null, wiscardIssueCode: null,
@@ -50,13 +52,13 @@ beforeEach(() => {
   dbMock.user.findUnique.mockResolvedValue({ ...profile, lastActiveAt: null, onboardingChecks: null });
   dbMock.user.findMany.mockResolvedValue([]);
   dbMock.systemConfig.findUnique.mockResolvedValue({ value: { slack: { contact: "Erik", note: "" } } });
-  for (const model of [dbMock.studentAvailabilityBlock, dbMock.userAppInstallation, dbMock.deviceToken, dbMock.webPushSubscription, dbMock.booking]) {
+  for (const model of [dbMock.studentAvailabilityBlock, dbMock.userAppInstallation, dbMock.deviceToken, dbMock.webPushSubscription, dbMock.booking, dbMock.licenseCodeClaim]) {
     model.findFirst.mockResolvedValue(null);
   }
 });
 
 describe("buildOnboardingChecklist", () => {
-  const facts = { profile, signedIn: false, hasClassSchedule: false, hasIosApp: false, hasPush: false, hasCheckout: false, checks: {}, guide: {}, names: {} };
+  const facts = { profile, signedInAt: null, classScheduleAt: null, iosAppAt: null, pushAt: null, checkoutAt: null, adobeAt: null, readGuides: false, checks: {}, guide: {}, names: {} };
 
   it("starts empty, and Wiscard never counts toward the total", () => {
     const list = buildOnboardingChecklist(facts);
@@ -69,11 +71,16 @@ describe("buildOnboardingChecklist", () => {
     const list = buildOnboardingChecklist({
       ...facts,
       profile: { ...profile, personalPhone: "6085550142", avatarUrl: "https://x/y.png", wiscardCardNumber: "1", wiscardIssueCode: "1" },
-      signedIn: true, hasClassSchedule: true, hasIosApp: true, hasPush: true, hasCheckout: true,
+      signedInAt: D, classScheduleAt: D, iosAppAt: D, pushAt: D, checkoutAt: D, readGuides: true,
     });
     const done = Object.fromEntries(list.rows.map((row) => [row.key, row.done]));
     expect(done).toMatchObject({ signed_in: true, photo: true, phone: true, wiscard: true, class_schedule: true, app: true, notifications: true, checkout: true, student: false, sizes: false });
-    expect(list.done).toBe(7);
+    expect(list.done).toBe(8);
+  });
+
+  it("finishes the Adobe step by itself once they hold an Adobe license", () => {
+    const row = buildOnboardingChecklist({ ...facts, adobeAt: D }).rows.find((r) => r.key === "adobe");
+    expect(row).toMatchObject({ done: true, manual: false, doneAt: D.toISOString() });
   });
 
   it("shows who ticked a manual step and ignores unknown stored steps", () => {

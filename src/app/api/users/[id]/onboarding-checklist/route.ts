@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/rbac";
 import { createAuditEntryTx } from "@/lib/audit";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { withSerializationRetry } from "@/lib/serialization";
+import { normalizeGettingStarted } from "@/lib/getting-started";
 import { readinessProfileSelect } from "@/lib/services/onboarding-readiness";
 import {
   applyOnboardingCheck,
@@ -34,18 +35,24 @@ const patchSchema = z.object({
 async function loadChecklist(userId: string) {
   const student = await db.user.findUnique({
     where: { id: userId },
-    select: { ...readinessProfileSelect, role: true, lastActiveAt: true, onboardingChecks: true },
+    select: { ...readinessProfileSelect, role: true, lastActiveAt: true, onboardingChecks: true, gettingStarted: true },
   });
   if (!student || student.role !== Role.STUDENT) throw new HttpError(404, "Student not found");
 
-  const [classBlock, iosApp, deviceToken, webPush, checkout, guideRow] = await Promise.all([
-    db.studentAvailabilityBlock.findFirst({ where: { userId, kind: "WEEKLY" }, select: { id: true } }),
-    db.userAppInstallation.findFirst({ where: { userId, platform: "ios" }, select: { id: true } }),
-    db.deviceToken.findFirst({ where: { userId, revokedAt: null }, select: { id: true } }),
-    db.webPushSubscription.findFirst({ where: { userId, revokedAt: null }, select: { id: true } }),
+  const [classBlock, iosApp, deviceToken, webPush, checkout, adobeClaim, guideRow] = await Promise.all([
+    db.studentAvailabilityBlock.findFirst({ where: { userId, kind: "WEEKLY" }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+    db.userAppInstallation.findFirst({ where: { userId, platform: "ios" }, orderBy: { firstSeenAt: "asc" }, select: { firstSeenAt: true } }),
+    db.deviceToken.findFirst({ where: { userId, revokedAt: null }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+    db.webPushSubscription.findFirst({ where: { userId, revokedAt: null }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
     db.booking.findFirst({
       where: { requesterUserId: userId, kind: "CHECKOUT", status: { in: ["OPEN", "COMPLETED"] } },
-      select: { id: true },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    }),
+    db.licenseCodeClaim.findFirst({
+      where: { userId, releasedAt: null, licenseCode: { label: { contains: "adobe", mode: "insensitive" } } },
+      orderBy: { claimedAt: "asc" },
+      select: { claimedAt: true },
     }),
     db.systemConfig.findUnique({ where: { key: "onboarding_guide" } }),
   ]);
@@ -56,11 +63,13 @@ async function loadChecklist(userId: string) {
 
   return buildOnboardingChecklist({
     profile: student,
-    signedIn: student.lastActiveAt !== null,
-    hasClassSchedule: classBlock !== null,
-    hasIosApp: iosApp !== null,
-    hasPush: deviceToken !== null || webPush !== null,
-    hasCheckout: checkout !== null,
+    signedInAt: student.lastActiveAt,
+    classScheduleAt: classBlock?.createdAt ?? null,
+    iosAppAt: iosApp?.firstSeenAt ?? null,
+    pushAt: deviceToken?.createdAt ?? webPush?.createdAt ?? null,
+    checkoutAt: checkout?.createdAt ?? null,
+    adobeAt: adobeClaim?.claimedAt ?? null,
+    readGuides: normalizeGettingStarted(student.gettingStarted).done.includes("guides"),
     checks,
     guide: parseOnboardingGuide(guideRow?.value),
     names: Object.fromEntries(people.map((person) => [person.id, person.name])),
