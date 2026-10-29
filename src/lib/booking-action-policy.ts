@@ -59,6 +59,18 @@ const STATE_ACTIONS: Record<BookingKind, Record<BookingStatus, Set<string>>> = {
   },
 };
 
+/**
+ * Actions only an ADMIN may take. Add a row here to lock a new action to
+ * admins; `status` limits the rule to one state (e.g. cancelling an active
+ * checkout), and a missing `reason` reads as the action being unavailable.
+ */
+const ADMIN_ONLY_ACTIONS: { action: string; status?: BookingStatus; reason?: string }[] = [
+  { action: "force-complete", reason: "Only admins can force-complete a checkout" },
+  { action: "force-checkout", reason: "Only admins can force-checkout a reservation" },
+  { action: "edit-items", reason: "Only admins can change items on an active checkout" },
+  { action: "cancel", status: "OPEN" },
+];
+
 function isStaffOrAbove(role: string): boolean {
   return role === "ADMIN" || role === "STAFF";
 }
@@ -135,26 +147,13 @@ export function canPerformBookingAction(
     };
   }
 
-  if (action === "force-complete") {
+  const adminOnly = ADMIN_ONLY_ACTIONS.find(
+    (rule) => rule.action === action && (!rule.status || rule.status === booking.status),
+  );
+  if (adminOnly) {
     return actor.role === "ADMIN"
       ? { allowed: true }
-      : { allowed: false, reason: "Only admins can force-complete a checkout" };
-  }
-
-  if (action === "edit-items") {
-    return actor.role === "ADMIN"
-      ? { allowed: true }
-      : { allowed: false, reason: "Only admins can change items on an active checkout" };
-  }
-
-  if (action === "cancel" && resolvedKind === "CHECKOUT" && booking.status === "OPEN" && actor.role !== "ADMIN") {
-    return { allowed: false, reason: `Action "cancel" is not available in OPEN state` };
-  }
-
-  if (action === "force-checkout") {
-    return actor.role === "ADMIN"
-      ? { allowed: true }
-      : { allowed: false, reason: "Only admins can force-checkout a reservation" };
+      : { allowed: false, reason: adminOnly.reason ?? `Action "${action}" is not available in ${booking.status} state` };
   }
 
   if (action === "close-remaining") {
