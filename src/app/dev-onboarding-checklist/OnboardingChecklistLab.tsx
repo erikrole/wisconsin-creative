@@ -50,8 +50,9 @@ export default function OnboardingChecklistLab({ fontClass }: { fontClass: strin
   }, [fontClass]);
   const [facts, setFacts] = useState(STATES);
   const [view] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("view")));
+  const [now] = useState(() => Date.now());
   const students = ["Maya Chen", "Jordan Ruiz", "Taylor Kim", "Sam Patel", "Riley Brooks", "Avery Nguyen"].map((name, i) => ({
-    id: String(i), name, avatarUrl: null, createdAt: new Date(Date.now() - (i < 4 ? 3 : 90) * 86_400_000).toISOString(),
+    id: String(i), name, avatarUrl: null, createdAt: new Date(now - (i < 4 ? 3 : 90) * 86_400_000).toISOString(),
   }));
   return (
     <div className={`wc-fresh ${fontClass} min-h-dvh bg-background p-4 md:p-8`}>
