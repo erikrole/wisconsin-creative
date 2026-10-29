@@ -14,21 +14,6 @@
     ]
   },
   {
-    "date": "2026-10-28",
-    "title": "Neutral buttons and tab underline",
-    "type": "fixes",
-    "summary": "The app's main color is now neutral near-black instead of blue, and tab bars show a single underline under the active tab.",
-    "details": [
-      "A second, shorter red underline no longer sits on top of the first one, and the active-tab underline is now neutral dark instead of blue.",
-      "Primary buttons, selected states and focus rings are near-black in light mode and light gray in dark mode.",
-      "Fixed on the Item, Bookings, Licenses and Bulk inventory pages."
-    ],
-    "pr": 723,
-    "platforms": [
-      "Web"
-    ]
-  },
-  {
     "date": "2026-10-29",
     "title": "A complete, clearer activity log",
     "type": "improvement",
@@ -42,6 +27,21 @@
       "All dates and times in the activity log and across the app show in Central time."
     ],
     "pr": 724,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
+    "title": "Neutral buttons and tab underline",
+    "type": "fixes",
+    "summary": "The app's main color is now neutral near-black instead of blue, and tab bars show a single underline under the active tab.",
+    "details": [
+      "A second, shorter red underline no longer sits on top of the first one, and the active-tab underline is now neutral dark instead of blue.",
+      "Primary buttons, selected states and focus rings are near-black in light mode and light gray in dark mode.",
+      "Fixed on the Item, Bookings, Licenses and Bulk inventory pages."
+    ],
+    "pr": 723,
     "platforms": [
       "Web"
     ]
