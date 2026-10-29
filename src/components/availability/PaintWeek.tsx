@@ -55,7 +55,12 @@ export function PaintWeek({ days, startsAt, endsAt, onPaint }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] gap-x-0.5 text-center text-xs font-bold text-[var(--text-secondary)]" aria-hidden="true">
+      <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]" aria-hidden="true">
+        <span className="size-3 rounded-sm bg-red-500/80" />
+        Can&apos;t work
+        <span className="ml-auto">Drag to paint</span>
+      </div>
+      <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] text-center text-xs font-bold text-[var(--text-secondary)]" aria-hidden="true">
         <span />
         {WEEK_DAYS.map((d) => (
           <span key={d.day}>{d.short}</span>
@@ -87,7 +92,7 @@ export function PaintWeek({ days, startsAt, endsAt, onPaint }: Props) {
           setPainting(false);
         }}
       >
-        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] gap-x-0.5">
+        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] border-r border-b border-[var(--border)]/60">
           {Array.from({ length: SLOTS }, (_, slot) => (
             <div key={slot} className="contents">
               <span className="-mt-1.5 pr-1.5 text-right text-[10px] leading-4 text-[var(--text-muted)] tabular-nums">
@@ -101,9 +106,9 @@ export function PaintWeek({ days, startsAt, endsAt, onPaint }: Props) {
                     data-col={col}
                     data-slot={slot}
                     className={cn(
-                      "h-4 border-t transition-colors duration-150",
-                      slot % 2 === 0 ? "border-[var(--border)]" : "border-transparent",
-                      on ? "bg-[var(--accent)]/80" : "hover:bg-[var(--bg-surface)]",
+                      "h-4 border-t border-l border-[var(--border)]/60 transition-colors duration-100",
+                      slot % 2 === 0 ? "border-t-[var(--border)]" : "border-t-[var(--border)]/30",
+                      on ? "bg-red-500/80" : "hover:bg-red-500/15",
                     )}
                   />
                 );

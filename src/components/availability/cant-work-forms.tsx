@@ -166,7 +166,7 @@ export function WeeklyForm({ userId, onSaved, onCancel }: { userId: string; onSa
         {paintMode && (
           <div className="mb-2 flex flex-col gap-1.5">
             <PaintWeek days={days} startsAt={startsAt} endsAt={endsAt} onPaint={(next) => { setDays(next.days); setStartsAt(next.startsAt); setEndsAt(next.endsAt); }} />
-            <p className="text-sm text-[var(--text-secondary)]">Drag across the days and hours. The roller is back.</p>
+            <p className="text-sm text-[var(--text-secondary)]">Drag across the days and hours you can't work.</p>
           </div>
         )}
         <div className="grid grid-cols-7 gap-1.5">
