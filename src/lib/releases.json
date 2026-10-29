@@ -5,8 +5,8 @@
     "type": "feature",
     "summary": "Admins can see on each student's profile how far they are through onboarding, and tick off the in-person steps.",
     "details": [
-      "Photo, phone, student details, sizes, availability, app and notifications fill in by themselves as the student does them.",
-      "Orientation and gear training are ticked by an admin and show who did it and when.",
+      "Photo, phone, student details, sizes, class schedule, app and notifications fill in by themselves as the student does them.",
+      "Slack, Asana, computer login, Adobe, building access, orientation and gear training are ticked by an admin and show who did it and when.",
       "Wiscard is shown but optional. Nothing is emailed to the student."
     ],
     "pr": 734,

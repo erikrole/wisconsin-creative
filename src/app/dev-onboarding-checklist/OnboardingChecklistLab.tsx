@@ -11,7 +11,14 @@ const base: OnboardingFacts = {
     studentYearOverride: null, gradYear: null, graduationTerm: null, topSizeFit: null, topSize: null, shoeSizeSystem: null,
     shoeSize: null, avatarUrl: null, profilePromptSnoozedUntil: null,
   },
-  signedIn: false, hasAvailability: false, hasIosApp: false, hasPush: false, hasCheckout: false, checks: {}, names: {},
+  signedIn: false, hasClassSchedule: false, hasIosApp: false, hasPush: false, hasCheckout: false, checks: {}, names: {},
+  guide: {
+    slack: { contact: "Erik", note: "Invite from the workspace admin page" },
+    asana: { contact: "Erik", note: "" },
+    computer_login: { contact: "IT desk", note: "Bring student ID" },
+    adobe: { contact: "Maddy", note: "Needs the .wisc.edu email" },
+    building_access: { contact: "Front office", note: "Badge ready in 2 days" },
+  },
 };
 
 const filled: OnboardingFacts["profile"] = {
@@ -24,12 +31,12 @@ const tick = { at: "2026-10-28T20:00:00Z", by: "a" };
 const STATES: Record<string, OnboardingFacts> = {
   "Just invited": base,
   "Mid-way": {
-    ...base, profile: { ...filled, avatarUrl: null }, signedIn: true, hasAvailability: true, hasIosApp: true,
-    checks: { orientation: tick }, names: { a: "Erik Role" },
+    ...base, profile: { ...filled, avatarUrl: null }, signedIn: true, hasClassSchedule: true, hasIosApp: true,
+    checks: { slack: tick, asana: { ...tick, note: "Joined the Creative project" }, orientation: tick }, names: { a: "Erik Role" },
   },
   "All done": {
-    ...base, profile: { ...filled, wiscardCardNumber: "1", wiscardIssueCode: "1" }, signedIn: true, hasAvailability: true,
-    hasIosApp: true, hasPush: true, hasCheckout: true, checks: { orientation: tick, gear_training: tick }, names: { a: "Erik Role" },
+    ...base, profile: { ...filled, wiscardCardNumber: "1", wiscardIssueCode: "1" }, signedIn: true, hasClassSchedule: true,
+    hasIosApp: true, hasPush: true, hasCheckout: true, checks: { slack: tick, asana: tick, computer_login: tick, adobe: tick, building_access: tick, orientation: tick, gear_training: tick }, names: { a: "Erik Role" },
   },
 };
 
@@ -47,9 +54,16 @@ export default function OnboardingChecklistLab({ fontClass }: { fontClass: strin
             <p className="m-0 text-xs font-bold text-muted-foreground">{name}</p>
             <OnboardingChecklistView
               checklist={buildOnboardingChecklist(f)}
-              onToggle={(step, done) => setFacts({
+              onSaveGuide={() => {}}
+              onChange={({ step, done, note }) => setFacts({
                 ...facts,
-                [name]: { ...f, checks: done ? { ...f.checks, [step]: tick } : Object.fromEntries(Object.entries(f.checks).filter(([k]) => k !== step)), names: { a: "Erik Role" } },
+                [name]: {
+                  ...f,
+                  checks: done === false
+                    ? Object.fromEntries(Object.entries(f.checks).filter(([k]) => k !== step))
+                    : { ...f.checks, [step]: { ...tick, ...(f.checks as Record<string, object>)[step], ...(note !== undefined ? { note } : {}) } },
+                  names: { a: "Erik Role" },
+                },
               })}
             />
           </div>

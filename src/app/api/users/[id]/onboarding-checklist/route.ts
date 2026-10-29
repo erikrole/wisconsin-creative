@@ -9,9 +9,12 @@ import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { withSerializationRetry } from "@/lib/serialization";
 import { readinessProfileSelect } from "@/lib/services/onboarding-readiness";
 import {
+  applyOnboardingCheck,
   buildOnboardingChecklist,
   ONBOARDING_MANUAL_STEPS,
+  ONBOARDING_NOTE_MAX,
   parseOnboardingChecks,
+  parseOnboardingGuide,
 } from "@/lib/onboarding-checklist";
 
 /**
@@ -24,8 +27,9 @@ import {
 
 const patchSchema = z.object({
   step: z.enum(ONBOARDING_MANUAL_STEPS),
-  done: z.boolean(),
-});
+  done: z.boolean().optional(),
+  note: z.string().max(ONBOARDING_NOTE_MAX).optional(),
+}).refine((body) => body.done !== undefined || body.note !== undefined);
 
 async function loadChecklist(userId: string) {
   const student = await db.user.findUnique({
@@ -34,8 +38,8 @@ async function loadChecklist(userId: string) {
   });
   if (!student || student.role !== Role.STUDENT) throw new HttpError(404, "Student not found");
 
-  const [availability, iosApp, deviceToken, webPush, checkout] = await Promise.all([
-    db.studentAvailabilityBlock.findFirst({ where: { userId }, select: { id: true } }),
+  const [classBlock, iosApp, deviceToken, webPush, checkout, guideRow] = await Promise.all([
+    db.studentAvailabilityBlock.findFirst({ where: { userId, kind: "WEEKLY" }, select: { id: true } }),
     db.userAppInstallation.findFirst({ where: { userId, platform: "ios" }, select: { id: true } }),
     db.deviceToken.findFirst({ where: { userId, revokedAt: null }, select: { id: true } }),
     db.webPushSubscription.findFirst({ where: { userId, revokedAt: null }, select: { id: true } }),
@@ -43,6 +47,7 @@ async function loadChecklist(userId: string) {
       where: { requesterUserId: userId, kind: "CHECKOUT", status: { in: ["OPEN", "COMPLETED"] } },
       select: { id: true },
     }),
+    db.systemConfig.findUnique({ where: { key: "onboarding_guide" } }),
   ]);
 
   const checks = parseOnboardingChecks(student.onboardingChecks);
@@ -52,11 +57,12 @@ async function loadChecklist(userId: string) {
   return buildOnboardingChecklist({
     profile: student,
     signedIn: student.lastActiveAt !== null,
-    hasAvailability: availability !== null,
+    hasClassSchedule: classBlock !== null,
     hasIosApp: iosApp !== null,
     hasPush: deviceToken !== null || webPush !== null,
     hasCheckout: checkout !== null,
     checks,
+    guide: parseOnboardingGuide(guideRow?.value),
     names: Object.fromEntries(people.map((person) => [person.id, person.name])),
   });
 }
@@ -75,14 +81,12 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     const row = await tx.user.findUnique({ where: { id: params.id }, select: { role: true, onboardingChecks: true } });
     if (!row || row.role !== Role.STUDENT) throw new HttpError(404, "Student not found");
     const before = parseOnboardingChecks(row.onboardingChecks);
-    if (Boolean(before[body.step]) === body.done) return;
-    const after = { ...before };
-    if (body.done) after[body.step] = { at: new Date().toISOString(), by: user.id };
-    else delete after[body.step];
+    const after = applyOnboardingCheck(before, body.step, body, user.id);
+    if (after === before) return;
     await tx.user.update({ where: { id: params.id }, data: { onboardingChecks: after as Prisma.InputJsonValue } });
     await createAuditEntryTx(tx, {
       actorId: user.id, actorRole: user.role, entityType: "user", entityId: params.id,
-      action: "onboarding_check_updated", before: { step: body.step, done: !body.done }, after: { step: body.step, done: body.done },
+      action: "onboarding_check_updated", before: { step: body.step, ...before[body.step] }, after: { step: body.step, done: Boolean(after[body.step]), note: after[body.step]?.note },
     });
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 

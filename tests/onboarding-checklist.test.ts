@@ -7,6 +7,7 @@ const dbMock = vi.hoisted(() => ({
   deviceToken: { findFirst: vi.fn() },
   webPushSubscription: { findFirst: vi.fn() },
   booking: { findFirst: vi.fn() },
+  systemConfig: { findUnique: vi.fn() },
   $transaction: vi.fn(),
 }));
 const auditMock = vi.hoisted(() => vi.fn());
@@ -22,7 +23,7 @@ vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 import { requireAuth } from "@/lib/auth";
 import { GET, PATCH } from "@/app/api/users/[id]/onboarding-checklist/route";
-import { buildOnboardingChecklist, parseOnboardingChecks } from "@/lib/onboarding-checklist";
+import { applyOnboardingCheck, buildOnboardingChecklist, parseOnboardingChecks } from "@/lib/onboarding-checklist";
 
 const admin = { id: "admin-1", email: "a@wisc.edu", name: "Erik Role", role: "ADMIN" as const, avatarUrl: null };
 const params = { params: Promise.resolve({ id: "stu-1" }) };
@@ -48,13 +49,14 @@ beforeEach(() => {
   dbMock.$transaction.mockImplementation(async (op: (tx: typeof dbMock) => Promise<unknown>) => op(dbMock));
   dbMock.user.findUnique.mockResolvedValue({ ...profile, lastActiveAt: null, onboardingChecks: null });
   dbMock.user.findMany.mockResolvedValue([]);
+  dbMock.systemConfig.findUnique.mockResolvedValue({ value: { slack: { contact: "Erik", note: "" } } });
   for (const model of [dbMock.studentAvailabilityBlock, dbMock.userAppInstallation, dbMock.deviceToken, dbMock.webPushSubscription, dbMock.booking]) {
     model.findFirst.mockResolvedValue(null);
   }
 });
 
 describe("buildOnboardingChecklist", () => {
-  const facts = { profile, signedIn: false, hasAvailability: false, hasIosApp: false, hasPush: false, hasCheckout: false, checks: {}, names: {} };
+  const facts = { profile, signedIn: false, hasClassSchedule: false, hasIosApp: false, hasPush: false, hasCheckout: false, checks: {}, guide: {}, names: {} };
 
   it("starts empty, and Wiscard never counts toward the total", () => {
     const list = buildOnboardingChecklist(facts);
@@ -67,10 +69,10 @@ describe("buildOnboardingChecklist", () => {
     const list = buildOnboardingChecklist({
       ...facts,
       profile: { ...profile, personalPhone: "6085550142", avatarUrl: "https://x/y.png", wiscardCardNumber: "1", wiscardIssueCode: "1" },
-      signedIn: true, hasAvailability: true, hasIosApp: true, hasPush: true, hasCheckout: true,
+      signedIn: true, hasClassSchedule: true, hasIosApp: true, hasPush: true, hasCheckout: true,
     });
     const done = Object.fromEntries(list.rows.map((row) => [row.key, row.done]));
-    expect(done).toMatchObject({ signed_in: true, photo: true, phone: true, wiscard: true, availability: true, app: true, notifications: true, checkout: true, student: false, sizes: false });
+    expect(done).toMatchObject({ signed_in: true, photo: true, phone: true, wiscard: true, class_schedule: true, app: true, notifications: true, checkout: true, student: false, sizes: false });
     expect(list.done).toBe(7);
   });
 
@@ -79,6 +81,28 @@ describe("buildOnboardingChecklist", () => {
     expect(Object.keys(checks)).toEqual(["orientation"]);
     const row = buildOnboardingChecklist({ ...facts, checks, names: { "admin-1": "Erik Role" } }).rows.find((r) => r.key === "orientation");
     expect(row).toMatchObject({ done: true, doneBy: "Erik Role", manual: true });
+  });
+});
+
+describe("applyOnboardingCheck", () => {
+  const now = new Date("2026-10-29T17:00:00Z");
+
+  it("ticks with who and when, and keeps them when ticked again", () => {
+    const ticked = applyOnboardingCheck({}, "slack", { done: true }, "admin-1", now);
+    expect(ticked.slack).toEqual({ at: now.toISOString(), by: "admin-1" });
+    expect(applyOnboardingCheck(ticked, "slack", { done: true }, "admin-2")).toBe(ticked);
+  });
+
+  it("adds and clears a note only on a ticked step", () => {
+    const ticked = applyOnboardingCheck({}, "adobe", { done: true, note: " Needs wisc email " }, "admin-1", now);
+    expect(ticked.adobe?.note).toBe("Needs wisc email");
+    expect(applyOnboardingCheck(ticked, "adobe", { note: "" }, "admin-1").adobe?.note).toBeUndefined();
+    expect(applyOnboardingCheck({}, "adobe", { note: "x" }, "admin-1")).toEqual({});
+  });
+
+  it("unticks and drops the note", () => {
+    const ticked = applyOnboardingCheck({}, "asana", { done: true, note: "n" }, "admin-1", now);
+    expect(applyOnboardingCheck(ticked, "asana", { done: false }, "admin-1")).toEqual({});
   });
 });
 
@@ -107,6 +131,11 @@ describe("/api/users/[id]/onboarding-checklist", () => {
     dbMock.user.findUnique.mockResolvedValue({ ...profile, lastActiveAt: null, onboardingChecks: { orientation: { at: "2026-10-29T15:00:00Z", by: "admin-1" } } });
     await PATCH(request("PATCH", { step: "orientation", done: true }), params);
     expect(dbMock.user.update).not.toHaveBeenCalled();
+  });
+
+  it("returns the shared contact for a step", async () => {
+    const body = await (await GET(request("GET"), params)).json();
+    expect(body.data.rows.find((row: { key: string }) => row.key === "slack")).toMatchObject({ contact: "Erik", hint: null });
   });
 
   it("rejects steps that are not manual", async () => {
