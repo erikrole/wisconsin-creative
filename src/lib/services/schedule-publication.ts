@@ -1,4 +1,5 @@
 import { Prisma, Role, ShiftAssignmentSource, ShiftAssignmentStatus, ShiftArea, ShiftWorkerType } from "@prisma/client";
+import { crewTagsOf } from "@/lib/crew-label";
 import { db } from "@/lib/db";
 import { createAuditEntryTx } from "@/lib/audit";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
@@ -255,6 +256,7 @@ async function findGroupForPublication(shiftGroupId: string, tx: Prisma.Transact
               callNote: true,
               crewLabel: true,
               crewHalf: true,
+              crewTags: true,
               acknowledgedAt: true,
               trades: {
                 where: { status: { in: ["OPEN", "CLAIMED"] } },
@@ -667,8 +669,7 @@ export async function publishShiftGroup(
           || (assignment.callNote ?? null) !== workingAssignment.callNote;
         // A position tag is bookkeeping, not a schedule change: it never
         // re-opens acknowledgement or notifies the worker.
-        const crewTagChanged = (assignment.crewLabel ?? null) !== (workingAssignment.crewLabel ?? null)
-          || (assignment.crewHalf ?? null) !== (workingAssignment.crewHalf ?? null);
+        const crewTagChanged = JSON.stringify(crewTagsOf(assignment)) !== JSON.stringify(crewTagsOf(workingAssignment));
         if (!windowChanged && !assignmentFieldsChanged && !crewTagChanged) return [];
         return [{
           slot,
@@ -759,8 +760,9 @@ export async function publishShiftGroup(
               callNote: workingAssignment.callNote,
             } : {}),
             ...(crewTagChanged ? {
-              crewLabel: workingAssignment.crewLabel ?? null,
-              crewHalf: workingAssignment.crewHalf ?? null,
+              crewLabel: crewTagsOf(workingAssignment)[0]?.label ?? null,
+              crewHalf: crewTagsOf(workingAssignment)[0]?.half ?? null,
+              crewTags: crewTagsOf(workingAssignment),
             } : {}),
             ...(workerVisibleChange ? {
               acknowledgedAt: null,
@@ -971,8 +973,9 @@ export async function publishShiftGroup(
               callStartsAt: slot.workerType === "ST" && assignment.callStartsAt ? new Date(assignment.callStartsAt) : null,
               callEndsAt: slot.workerType === "ST" && assignment.callEndsAt ? new Date(assignment.callEndsAt) : null,
               callNote: assignment.callNote,
-              crewLabel: assignment.crewLabel ?? null,
-              crewHalf: assignment.crewHalf ?? null,
+              crewLabel: crewTagsOf(assignment)[0]?.label ?? null,
+              crewHalf: crewTagsOf(assignment)[0]?.half ?? null,
+              crewTags: crewTagsOf(assignment),
             },
             ...(echoNeeded ? { include: timeConflictCandidateInclude } : {}),
           });

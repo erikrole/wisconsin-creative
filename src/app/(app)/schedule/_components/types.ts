@@ -1,6 +1,6 @@
 import type { BadgeProps } from "@/components/ui/badge";
 import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
-import type { CrewHalf } from "@/lib/crew-label";
+import type { CrewHalf, CrewTagValue } from "@/lib/crew-label";
 import { sportLabel } from "@/lib/sports";
 import { scheduleSportFamily } from "@/lib/schedule-sport-family";
 import { venueToneFromEvent } from "@/lib/venue-tone";
@@ -54,6 +54,7 @@ export type ShiftAssignment = {
   callNote?: string | null;
   crewLabel?: string | null;
   crewHalf?: CrewHalf | null;
+  crewTags?: CrewTagValue[] | null;
   hasConflict?: boolean;
   conflictNote?: string | null;
   acknowledgedAt?: string | null;

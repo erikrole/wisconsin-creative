@@ -5,7 +5,7 @@ import {
   workingSchedulePayloadSchema,
   type WorkingSchedulePayload,
 } from "@/lib/schedule-working-copy";
-import { crewTagText, normalizeCrewLabel } from "@/lib/crew-label";
+import { crewTagText, crewTagsOf, normalizeCrewLabel } from "@/lib/crew-label";
 
 function assignedPayload(): WorkingSchedulePayload {
   return {
@@ -67,7 +67,7 @@ describe("crew label", () => {
     const published = assignedPayload();
     const next = applyWorkingScheduleCommand(
       published,
-      { type: "setCrewLabel", slotKey: "shift-1", label: "  SLOW1 ", half: "FIRST" },
+      { type: "setCrewTags", slotKey: "shift-1", tags: [{ label: "  SLOW1 ", half: "FIRST" }] },
       () => "unused",
     );
     expect(next.slots[0]!.assignment?.crewLabel).toBe("SLOW1");
@@ -77,15 +77,32 @@ describe("crew label", () => {
     expect(summarizeWorkingScheduleChanges(published, published).total).toBe(0);
   });
 
+  it("keeps a different label for each half and mirrors the first to the legacy fields", () => {
+    const next = applyWorkingScheduleCommand(
+      assignedPayload(),
+      {
+        type: "setCrewTags",
+        slotKey: "shift-1",
+        tags: [{ label: "SLOW1", half: "FIRST" }, { label: " CAM3 ", half: "SECOND" }, { label: " ", half: null }],
+      },
+      () => "unused",
+    );
+    const assignment = next.slots[0]!.assignment!;
+    expect(assignment.crewTags).toEqual([{ label: "SLOW1", half: "FIRST" }, { label: "CAM3", half: "SECOND" }]);
+    expect(assignment.crewLabel).toBe("SLOW1");
+    expect(assignment.crewHalf).toBe("FIRST");
+    expect(crewTagsOf({ crewLabel: "ROAM2", crewHalf: null })).toEqual([{ label: "ROAM2", half: null }]);
+  });
+
   it("clears the tag when both parts are empty", () => {
     const tagged = applyWorkingScheduleCommand(
       assignedPayload(),
-      { type: "setCrewLabel", slotKey: "shift-1", label: "SLOW2", half: "SECOND" },
+      { type: "setCrewTags", slotKey: "shift-1", tags: [{ label: "SLOW2", half: "SECOND" }] },
       () => "unused",
     );
     const cleared = applyWorkingScheduleCommand(
       tagged,
-      { type: "setCrewLabel", slotKey: "shift-1", label: " ", half: null },
+      { type: "setCrewTags", slotKey: "shift-1", tags: [{ label: " ", half: null }] },
       () => "unused",
     );
     expect(cleared.slots[0]!.assignment?.crewLabel).toBeNull();
@@ -95,7 +112,7 @@ describe("crew label", () => {
   it("rejects a label on an open slot", () => {
     expect(() => applyWorkingScheduleCommand(
       assignedPayload(),
-      { type: "setCrewLabel", slotKey: "shift-2", label: "SLOW1", half: null },
+      { type: "setCrewTags", slotKey: "shift-2", tags: [{ label: "SLOW1", half: null }] },
       () => "unused",
     )).toThrow("WORKING_SLOT_NOT_ASSIGNED");
   });
@@ -103,7 +120,7 @@ describe("crew label", () => {
   it("drops the tag when a different person is assigned", () => {
     const tagged = applyWorkingScheduleCommand(
       assignedPayload(),
-      { type: "setCrewLabel", slotKey: "shift-1", label: "SLOW1", half: "FIRST" },
+      { type: "setCrewTags", slotKey: "shift-1", tags: [{ label: "SLOW1", half: "FIRST" }] },
       () => "unused",
     );
     const replaced = applyWorkingScheduleCommand(

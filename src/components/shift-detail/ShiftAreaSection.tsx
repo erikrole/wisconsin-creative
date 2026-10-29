@@ -1,3 +1,4 @@
+import type { CrewTagValue } from "@/lib/crew-label";
 import { AddSlotMenu, CrewAreaHeading } from "./crew-row";
 import { ShiftSlotCard } from "./ShiftSlotCard";
 import type { PickerUser } from "./UserAvatarPicker";
@@ -19,6 +20,7 @@ type ShiftAssignment = {
   callNote?: string | null;
   crewLabel?: string | null;
   crewHalf?: "FIRST" | "SECOND" | null;
+  crewTags?: CrewTagValue[] | null;
   user: ShiftUser;
 };
 
