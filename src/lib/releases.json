@@ -352,6 +352,20 @@
   },
   {
     "date": "2026-10-25",
+    "title": "Longer names fit in Profile Next Up",
+    "type": "fixes",
+    "summary": "Game and gear names on a profile's Next Up list now wrap instead of cutting off.",
+    "details": [
+      "Names like “Volleyball vs Nebraska” show in full on a second line on every iPhone size.",
+      "Applies to your own profile and to a teammate's profile."
+    ],
+    "platforms": [
+      "iOS"
+    ],
+    "pr": 693
+  },
+  {
+    "date": "2026-10-25",
     "title": "Audit report comparison fixed",
     "type": "fixes",
     "summary": "The audit report's comparison with the previous period now respects the record type you filtered by.",
