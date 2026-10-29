@@ -93,6 +93,20 @@ function siteDomain(url: string | null) {
   }
 }
 
+// Section headings only help once the list is long; short lists stay one grid.
+function groupByCategory(records: SoftwareCredentialSummary[], grouped: boolean) {
+  if (!grouped) return [{ label: null, records }];
+  const groups = new Map<string, SoftwareCredentialSummary[]>();
+  for (const record of records) {
+    const label = record.category?.trim() || "Other";
+    groups.set(label, [...(groups.get(label) ?? []), record]);
+  }
+  if (groups.size < 2) return [{ label: null, records }];
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)))
+    .map(([label, items]) => ({ label, records: items }));
+}
+
 function SecretAction({
   label,
   onClick,
@@ -475,16 +489,32 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
-  async function copyPassword(record: SoftwareCredentialSummary) {
+  async function copyPassword(record: SoftwareCredentialSummary, successMessage = "Password copied") {
     try {
       const password = revealedPasswords[record.id]
         ?? await runSecretRequest(record.id, () => requestPassword(record.id));
-      if (!password) return;
+      if (!password) return false;
       await navigator.clipboard.writeText(password);
       showCopied(`${record.id}:password`);
-      toast.success("Password copied");
+      toast.success(successMessage);
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not copy the password");
+      return false;
+    }
+  }
+
+  // Copy first, while this tab still has focus, then open the site to paste into.
+  async function copyAndOpen(record: SoftwareCredentialSummary) {
+    const url = record.websiteUrl;
+    if (!url || !(await copyPassword(record, `Password copied. Opening ${record.name}.`))) return;
+    const tab = window.open(url, "_blank");
+    if (tab) {
+      tab.opener = null;
+    } else {
+      toast.info(`Open ${record.name} to paste the password`, {
+        action: { label: "Open", onClick: () => { window.open(url, "_blank", "noopener,noreferrer"); } },
+      });
     }
   }
 
@@ -558,11 +588,22 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div className="flex shrink-0 items-center">
               {record.websiteUrl && !isArchived && (
-                <Button asChild type="button" variant="ghost" size="icon" className="size-10 text-muted-foreground hover:text-foreground">
-                  <a href={record.websiteUrl} target="_blank" rel="noreferrer" aria-label={`Open ${record.name} website`}>
-                    <ExternalLink className="size-4" />
-                  </a>
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-10 text-muted-foreground hover:text-foreground"
+                      aria-label={`Copy password and open ${record.name}`}
+                      onClick={() => copyAndOpen(record)}
+                      disabled={secretPending}
+                    >
+                      <ExternalLink className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy password and open site</TooltipContent>
+                </Tooltip>
               )}
               {isAdmin && !isArchived && (
                 <DropdownMenu>
@@ -743,7 +784,14 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
       ) : visibleRecords.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">No logins match “{query.trim()}”.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{visibleRecords.map(renderCard)}</div>
+        <div className="space-y-6">
+          {groupByCategory(visibleRecords, !needle && visibleRecords.length > SEARCH_THRESHOLD).map((group) => (
+            <div key={group.label ?? "all"} className="space-y-3">
+              {group.label && <h3 className="text-sm font-semibold text-muted-foreground">{group.label}</h3>}
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{group.records.map(renderCard)}</div>
+            </div>
+          ))}
+        </div>
       )}
 
       {isAdmin && showArchived && archivedRecords.length > 0 && (

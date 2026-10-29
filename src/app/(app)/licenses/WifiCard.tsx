@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Check, Copy, Eye, EyeOff, Maximize2, Wifi } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Maximize2, Printer, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { toast } from "@/lib/toast";
@@ -59,6 +59,35 @@ export function WifiCard() {
 
   const qrAlt = `QR code to join the ${data.ssid} Wi-Fi network`;
 
+  // A one-page sign to tape up: big code, network and password, nothing else.
+  function printSign() {
+    if (!qr || !data) return;
+    const sign = window.open("", "_blank", "width=720,height=960");
+    if (!sign) {
+      toast.error("Allow pop-ups for this site to print the sign.");
+      return;
+    }
+    const escape = (value: string) => value.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`);
+    sign.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Wi-Fi: ${escape(data.ssid)}</title>
+<style>
+  @page { margin: 0.75in; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #111; text-align: center; margin: 0; padding-top: 0.5in; }
+  h1 { font-size: 44px; margin: 0 0 8px; }
+  p.lead { font-size: 20px; color: #555; margin: 0 0 36px; }
+  img { width: 4.5in; height: 4.5in; }
+  dl { display: inline-grid; grid-template-columns: auto auto; gap: 10px 24px; margin-top: 36px; font-size: 26px; text-align: left; }
+  dt { color: #666; }
+  dd { margin: 0; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
+</style></head><body onload="window.print()">
+<h1>Join the Wi-Fi</h1>
+<p class="lead">Point your phone camera at the code.</p>
+<img src="${qr}" alt="">
+<dl><dt>Network</dt><dd>${escape(data.ssid)}</dd><dt>Password</dt><dd>${escape(data.password)}</dd></dl>
+</body></html>`);
+    sign.document.close();
+    sign.focus();
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -90,7 +119,7 @@ export function WifiCard() {
             <Maximize2 className="size-3.5" aria-hidden="true" />
           </span>
         </button>
-        <div className="min-w-0 flex-1 divide-y rounded-lg border">
+        <div className="min-w-0 flex-1 divide-y rounded-lg border sm:max-w-md">
           <div className="flex items-center gap-2 py-1 pl-3 pr-1">
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">Network</p>
@@ -133,6 +162,12 @@ export function WifiCard() {
               <img src={qr} alt={qrAlt} className="mx-auto aspect-square w-full max-w-80 rounded-lg border bg-white p-2" />
             )}
           </div>
+          <DialogFooter className="border-t pt-5">
+            <Button type="button" variant="outline" onClick={printSign} disabled={!qr}>
+              <Printer data-icon="inline-start" />
+              Print a sign
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

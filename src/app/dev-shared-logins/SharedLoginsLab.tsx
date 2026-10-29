@@ -16,6 +16,11 @@ const SAMPLE_LOGINS = [
   { id: "4", name: "Frame.io", category: "Review", websiteUrl: "https://frame.io", accountEmail: "creative@athletics.wisc.edu", hasPassword: true, visibleTo: ["STAFF"], archivedAt: null, updatedAt },
   { id: "5", name: "Old Stock Site", category: "Stock", websiteUrl: null, accountEmail: "creative@athletics.wisc.edu", hasPassword: true, visibleTo: ["STAFF"], archivedAt: updatedAt, updatedAt },
 ];
+// `?many=1` adds enough logins to show search and category sections.
+const EXTRA_LOGINS = ["Adobe Stock|Stock", "Musicbed|Music", "Artlist|Music", "Storyblocks|Video", "Canva|Design"].map((entry, index) => {
+  const [name, category] = entry.split("|");
+  return { ...SAMPLE_LOGINS[0], id: `x${index}`, name, category, websiteUrl: `https://www.${name.toLowerCase().replace(/[^a-z]/g, "")}.com` };
+});
 
 if (typeof window !== "undefined") {
   const realFetch = window.fetch.bind(window);
@@ -28,7 +33,8 @@ if (typeof window !== "undefined") {
     if (/\/api\/software\/[^/]+\/secret/.test(url)) return json({ password: "Sample-Pass-2026" });
     if (url.includes("/api/software")) {
       const includeArchived = url.includes("includeArchived=1");
-      return json(SAMPLE_LOGINS.filter((login) => (includeArchived || !login.archivedAt) && (role === "ADMIN" || login.visibleTo.includes(role))));
+      const logins = new URLSearchParams(window.location.search).get("many") === "1" ? [...SAMPLE_LOGINS, ...EXTRA_LOGINS] : SAMPLE_LOGINS;
+      return json(logins.filter((login) => (includeArchived || !login.archivedAt) && (role === "ADMIN" || login.visibleTo.includes(role))));
     }
     return realFetch(input, init);
   };

@@ -5,10 +5,10 @@
     "type": "improvement",
     "summary": "Shared logins has a calmer, easier-to-scan layout, and the department Wi-Fi now sits at the top with a QR code you can scan to join.",
     "details": [
-      "Scan the Wi-Fi QR code with your phone camera to join, or tap it to show it larger for someone else.",
+      "Scan the Wi-Fi QR code with your phone camera to join, or tap it to show it larger and print a sign to tape up.",
       "Copy the Wi-Fi network name or password with one tap; the password stays hidden until you show it.",
-      "Each login shows its site, email and password in one tidy block, with copy buttons on both.",
-      "Search appears once the list grows, and staff edit or archive a login from its menu.",
+      "The open-site button on a login copies its password and opens the site, ready to paste.",
+      "Each login shows its site, email and password in one tidy block; long lists get search and category sections.",
       "Software pages now use the refreshed look."
     ],
     "pr": 728,
