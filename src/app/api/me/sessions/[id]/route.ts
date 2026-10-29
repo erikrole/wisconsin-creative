@@ -5,6 +5,7 @@ import { HttpError, ok } from "@/lib/http";
 import { tokenHash } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { createAuditEntry } from "@/lib/audit";
 
 /** DELETE /api/me/sessions/[id] — revoke a specific session (cannot revoke the current one). */
 export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) => {
@@ -35,6 +36,14 @@ export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) =>
   if (deleted.count === 0) {
     throw new HttpError(404, "Session not found.");
   }
+
+  await createAuditEntry({
+    actorId: user.id,
+    actorRole: user.role,
+    entityType: "session",
+    entityId: id,
+    action: "session_signed_out",
+  });
 
   return ok({ success: true });
 });

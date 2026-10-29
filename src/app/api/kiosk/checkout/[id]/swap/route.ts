@@ -92,9 +92,13 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
         entityType: "booking",
         entityId: booking.id,
         action: "kiosk_checkout_item_swapped",
-        before: "assetId" in remove ? { assetId: remove.assetId } : { bulkSkuId: remove.bulkSkuId, unitNumber: remove.unitNumber },
+        before: "assetId" in remove
+          ? { assetId: remove.assetId, tagName: removedLabel }
+          : { bulkSkuId: remove.bulkSkuId, unitNumber: remove.unitNumber, tagName: removedLabel },
         after: {
-          ...(asset ? { assetId: asset.id } : { bulkSkuId: bulkUnit!.bulkSkuId, unitNumber: bulkUnit!.unitNumber }),
+          ...(asset
+            ? { assetId: asset.id, tagName: addedLabel }
+            : { bulkSkuId: bulkUnit!.bulkSkuId, unitNumber: bulkUnit!.unitNumber, tagName: addedLabel }),
           kioskDeviceId: kiosk.kioskId,
           kioskName: kiosk.name,
         },

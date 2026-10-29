@@ -108,6 +108,16 @@ export const EQUIPMENT_ACTIONS = new Set([
   "booking.items_removed",
   "booking.items_qty_changed",
   "booking.item_substituted",
+  "scan_checkout",
+  "scan_checkin",
+  "kiosk_checkout_item_added",
+  "kiosk_checkout_item_removed",
+  "kiosk_checkout_item_swapped",
+  "kiosk_pickup_item_added",
+  "kiosk_pickup_scan_removed",
+  "kiosk_checkin_scan_undone",
+  "serialized_item_transferred_in",
+  "serialized_item_transferred_out",
 ]);
 
 /** Human-readable field name labels */
@@ -522,6 +532,24 @@ export function describeAction(
       return `${reportPrefix}Completed the reservation after the remaining gear was removed`;
     case "booking.item_substituted":
       return `${reportPrefix}Swapped a reserved item for the one scanned at pickup`;
+    case "scan_checkout":
+    case "scan_checkin": {
+      const out = entry.action === "scan_checkout";
+      if (context === "item") {
+        const what = bookingPhrase(entry, out ? "a checkout" : "a return");
+        return out ? `Scanned out for ${what}` : `Scanned back in from ${what}`;
+      }
+      const item = formatAuditItemNames(entry.afterJson) ?? auditItemName(entry.afterJson) ?? "an item";
+      const qty = typeof entry.afterJson?.quantity === "number" ? ` ×${entry.afterJson.quantity}` : "";
+      return out ? `${reportPrefix}Scanned out ${item}${qty}` : `${reportPrefix}Scanned in ${item}${qty}`;
+    }
+    case "kiosk_checkout_item_swapped": {
+      const from = auditItemName(entry.beforeJson);
+      const to = auditItemName(entry.afterJson);
+      return from && to
+        ? `${reportPrefix}Swapped ${from} for ${to} at ${kioskLocationPhrase(entry.afterJson)}`
+        : `${reportPrefix}Swapped an item at ${kioskLocationPhrase(entry.afterJson)}`;
+    }
     case "nudge_sent":
     case "overdue_nudge_sent":
       return `${reportPrefix}Sent a reminder`;
@@ -765,6 +793,8 @@ export type RenderEntry = AuditEntry & {
  *  "primary". The window compares against the oldest folded entry, so a slow
  *  run of edits (one per minute) still folds into a single row; the full run
  *  is kept on `_chain` so same-field edits can render as a value chain. */
+const SCAN_ACTIONS = new Set(["scan_checkout", "scan_checkin"]);
+
 export function coalesceEntries(entries: AuditEntry[]): RenderEntry[] {
   const out: RenderEntry[] = [];
   for (const entry of entries) {
@@ -780,8 +810,16 @@ export function coalesceEntries(entries: AuditEntry[]): RenderEntry[] {
           new Date(entry.createdAt).getTime(),
       ) <= COALESCE_WINDOW_MS
     ) {
-      last._count = (last._count ?? 1) + 1;
       last._oldest = entry.createdAt;
+      // A burst of scans is one row that names every item, not "ROAM2 ×5".
+      if (SCAN_ACTIONS.has(entry.action)) {
+        const names = Array.isArray(last.afterJson?.itemNames)
+          ? (last.afterJson!.itemNames as string[])
+          : [auditItemName(last.afterJson) ?? "an item"];
+        last.afterJson = { ...last.afterJson, itemNames: [...names, auditItemName(entry.afterJson) ?? "an item"] };
+        continue;
+      }
+      last._count = (last._count ?? 1) + 1;
       if (!last._chain) last._chain = [last];
       last._chain.push(entry);
       continue;

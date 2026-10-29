@@ -2,6 +2,7 @@ import { withAuth } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { db } from "@/lib/db";
 import { requireBookingAction } from "@/lib/services/booking-rules";
+import { mergeByTime, scanRowsForAuditPage } from "@/lib/services/activity-scans";
 
 const PAGE_SIZE = 50;
 
@@ -21,14 +22,14 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
   const url = new URL(req.url);
   const cursor = url.searchParams.get("cursor");
 
-  if (cursor) {
-    const cursorLog = await db.auditLog.findFirst({
-      where: { id: cursor, entityType: "booking", entityId: id },
-      select: { id: true },
-    });
-    if (!cursorLog) {
-      throw new HttpError(400, "Invalid audit cursor");
-    }
+  const cursorLog = cursor
+    ? await db.auditLog.findFirst({
+        where: { id: cursor, entityType: "booking", entityId: id },
+        select: { createdAt: true },
+      })
+    : null;
+  if (cursor && !cursorLog) {
+    throw new HttpError(400, "Invalid audit cursor");
   }
 
   const logs = await db.auditLog.findMany({
@@ -43,5 +44,11 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
   const data = hasMore ? logs.slice(0, PAGE_SIZE) : logs;
   const nextCursor = hasMore ? data[data.length - 1]?.id : null;
 
-  return ok({ data, hasMore, nextCursor });
+  // Each item scanned out or back in, placed among this page's rows by time.
+  const scans = await scanRowsForAuditPage(
+    { bookingId: id },
+    { before: cursorLog?.createdAt ?? null, atOrAfter: hasMore ? data[data.length - 1]!.createdAt : null },
+  );
+
+  return ok({ data: mergeByTime(data, scans), hasMore, nextCursor });
 });

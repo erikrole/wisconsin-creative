@@ -1,13 +1,16 @@
 [
   {
     "date": "2026-10-29",
-    "title": "A clearer activity log",
+    "title": "A complete, clearer activity log",
     "type": "improvement",
-    "summary": "Every action in the activity log now reads as a plain sentence, and admins can filter it by area and by person.",
+    "summary": "Every scan, swap and change now shows in the history of the item and booking it touched, in plain sentences, and admins can filter the log by area and person.",
     "details": [
-      "Reports > Audit has Area (checkouts, items, people, schedule, kiosk, settings, sign-in, admin overrides) and Person filters.",
-      "Shift trades, kiosk steps, calendar changes, signatures and passkeys no longer show raw action names.",
-      "Kits have a History card showing who changed what.",
+      "Booking and item history now show each item scanned out and back in, with bursts of scans folded into one line that names every item.",
+      "A swapped or removed item keeps those events in its own history, and swaps name both items.",
+      "Edits show what changed (old value to new value) instead of raw data.",
+      "Password changes and signing out other devices are now recorded.",
+      "Reports > Audit has Area and Person filters, and its charts use the same wording as the log.",
+      "Kits have a History card for staff and admins.",
       "All dates and times in the activity log and across the app show in Central time."
     ],
     "pr": 724,

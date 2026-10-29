@@ -259,3 +259,33 @@ describe("getChainedChange", () => {
     expect(getChainedChange(row)).toBeNull();
   });
 });
+
+describe("item scans and swaps", () => {
+  const booking = { entityType: "booking", entityId: "b1", entity: { label: "Football vs Iowa", kind: "CHECKOUT" } };
+
+  it("names the item on a booking and the booking on an item", () => {
+    const out = entry("scan_checkout", { ...booking, afterJson: { itemName: "ROAM2" } });
+    expect(describeAction(out, "Avery", "booking")).toBe("Scanned out ROAM2");
+    expect(describeAction(out, "Avery", "item")).toBe('Scanned out for checkout "Football vs Iowa"');
+    const back = entry("scan_checkin", { ...booking, afterJson: { itemName: "Batteries", quantity: 4 } });
+    expect(describeAction(back, "Avery", "booking")).toBe("Scanned in Batteries ×4");
+  });
+
+  it("folds a burst of scans into one row that lists every item", () => {
+    const rows = coalesceEntries(["ROAM1", "ROAM2", "SLOW1", "SLOW2"].map((itemName) =>
+      entry("scan_checkin", { ...booking, afterJson: { itemName } })));
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!._count).toBe(1);
+    expect(describeAction(rows[0]!, "Avery", "booking")).toBe("Scanned in ROAM1, ROAM2, SLOW1, and 1 more");
+  });
+
+  it("says which item was swapped for which", () => {
+    const swap = entry("kiosk_checkout_item_swapped", {
+      ...booking,
+      beforeJson: { assetId: "a1", tagName: "ROAM2" },
+      afterJson: { assetId: "a2", tagName: "ROAM3", kioskName: "Camp Randall kiosk" },
+    });
+    expect(describeAction(swap, "Avery", "booking")).toBe("Swapped ROAM2 for ROAM3 at the Camp Randall kiosk");
+  });
+});

@@ -4,6 +4,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     booking: { findUnique: vi.fn() },
     auditLog: { findMany: vi.fn() },
+    scanEvent: { findMany: vi.fn() },
   },
 }));
 
@@ -38,6 +39,7 @@ describe("getBookingDetail status read model", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(db.auditLog.findMany).mockResolvedValue([]);
+    vi.mocked(db.scanEvent.findMany).mockResolvedValue([]);
   });
 
   it("marks past-due booked reservations as overdue for detail badges", async () => {
