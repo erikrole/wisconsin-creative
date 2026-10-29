@@ -20,6 +20,7 @@ const PUBLIC_HANDLER_ROUTES: Record<string, string[]> = {
   "src/app/api/companion/projection/route.ts": ["GET"],
   "src/app/api/companion/session/route.ts": ["POST"],
   "src/app/api/kiosk/activate/route.ts": ["POST"],
+  "src/app/api/schedule/live/route.ts": ["GET"],
   "src/app/api/seed/route.ts": ["POST"],
   "src/app/api/shifts/ics/[token]/route.ts": ["GET"],
 };

@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-29",
+    "title": "Schedule changes show up within seconds",
+    "type": "improvement",
+    "summary": "When someone adds or removes a person on a shift, everyone with the Schedule open sees it within about ten seconds, with no refresh.",
+    "details": [
+      "Covers shift assignments, trades, crew edits and publishing.",
+      "The page checks quietly only while you are looking at it and pauses when you step away."
+    ],
+    "pr": 730,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
     "title": "The paint roller is back",
     "type": "feature",
     "summary": "When you add something weekly, you can paint the days and hours onto a week grid like the old WhenToWork roller, in red.",
