@@ -77,6 +77,23 @@
   },
   {
     "date": "2026-10-29",
+    "title": "Cleaner Shared logins, plus Wi-Fi",
+    "type": "improvement",
+    "summary": "Shared logins has a calmer, easier-to-scan layout, and the department Wi-Fi now sits at the top with a QR code you can scan to join.",
+    "details": [
+      "Scan the Wi-Fi QR code with your phone camera to join, or tap it to show it larger and print a sign to tape up.",
+      "Copy the Wi-Fi network name or password with one tap; the password stays hidden until you show it.",
+      "The open-site button on a login copies its password and opens the site, ready to paste.",
+      "Each login shows its site, email and password in one tidy block; long lists get search and category sections.",
+      "Software pages now use the refreshed look."
+    ],
+    "pr": 728,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
     "title": "The paint roller is back",
     "type": "feature",
     "summary": "When you add something weekly, you can paint the days and hours onto a week grid like the old WhenToWork roller, in red.",
