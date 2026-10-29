@@ -1,0 +1,129 @@
+{
+  "title": "Student Availability",
+  "eyebrow": "Local review \u00b7 October 29, 2026 \u00b7 Unreleased",
+  "lede": "Keep the paint roller, save a week together, make staff review clear, and use the same availability rules across scheduling and native iOS.",
+  "stats": [
+    {
+      "k": "Full unit suite",
+      "v": "8,475 passed",
+      "n": "Coverage gates passed; 13 existing skipped tests. Also 19 real PostgreSQL checks."
+    },
+    {
+      "k": "Painted weekdays",
+      "v": "1 request",
+      "n": "One transaction for all selected weekdays, audits and conflict refresh."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "The paint roller stays",
+      "note": "Actual preserved Claude baseline and edited source, identical painted days, times, form values and viewport. PaintWeek itself has no diff.",
+      "pairs": [
+        {
+          "title": "Monday\u2013Friday, 9\u201310:30 AM",
+          "before": "before-paint.png",
+          "after": "preview-paint.png",
+          "beforeCap": "The existing paint interaction.",
+          "afterCap": "Same interaction and controls; submission now creates all weekdays together.",
+          "beforeEvidence": "before-paint-evidence.json",
+          "afterEvidence": "preview-paint-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Review requests and keep the current schedule clear",
+      "note": "Actual components rendered with matched synthetic data. This is fixture proof, not an authenticated server session.",
+      "pairs": [
+        {
+          "title": "Staff Availability",
+          "before": "before-desktop.png",
+          "after": "preview-desktop.png",
+          "beforeCap": "Past terms and dates mixed with active entries; compact approval icons.",
+          "afterCap": "Pending requests have visible decisions and an optional note. Current totals exclude history; existing review feedback is readable.",
+          "beforeEvidence": "before-desktop-evidence.json",
+          "afterEvidence": "preview-desktop-evidence.json"
+        },
+        {
+          "title": "Tablet width",
+          "before": "before-tablet.png",
+          "after": "preview-tablet.png",
+          "beforeCap": "The same six saved entries.",
+          "afterCap": "The pending request and staff note remain readable.",
+          "beforeEvidence": "before-tablet-evidence.json",
+          "afterEvidence": "preview-tablet-evidence.json"
+        },
+        {
+          "title": "Phone-width web smoke",
+          "before": "before-phone.png",
+          "after": "preview-phone.png",
+          "beforeCap": "Header and saved rows compete for width.",
+          "afterCap": "Controls wrap and the current summary fits the viewport. Native iOS remains the phone workflow.",
+          "beforeEvidence": "before-phone-evidence.json",
+          "afterEvidence": "preview-phone-evidence.json"
+        }
+      ]
+    },
+    {
+      "heading": "Drafts and recovery",
+      "pairs": [
+        {
+          "title": "Add a class time",
+          "before": "before-editor.png",
+          "after": "preview-editor.png",
+          "beforeCap": "Existing profile editor.",
+          "afterCap": "Central-time guidance and isolated form actions; failed edits keep their inputs.",
+          "beforeEvidence": "before-editor-evidence.json",
+          "afterEvidence": "preview-editor-evidence.json"
+        }
+      ],
+      "shots": [
+        {
+          "image": "preview-paint-failure.png",
+          "title": "Failed painted-week save",
+          "cap": "After-only failure state: a simulated 503 keeps the label, weekdays and time range visible. The browser check then submits the same batch successfully."
+        }
+      ]
+    },
+    {
+      "heading": "Native iOS",
+      "note": "After-only: no matched pre-change native capture was retained. Existing offline Availability scenario, WisconsinPerformance, iPhone 18 Pro Max on iOS 27.0. Fixture dates are relative to the recorded October 29 capture. No live API writes or push delivery are exercised.",
+      "shots": [
+        {
+          "image": "native-after-top.png",
+          "title": "My Availability on iPhone 18 Pro Max",
+          "cap": "Native List retained; Central-time guidance, staff review feedback and History are visible."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A painted week saves together",
+      "was": "One request per weekday could leave a partially saved week after failure.",
+      "now": "One validated batch and one serializable transaction create all selected weekdays with their audits and conflict refresh."
+    },
+    {
+      "h": "Review applies to the current request",
+      "was": "A full stale form could replace dates during a decision, and student edits could retain an earlier approval.",
+      "now": "Staff decisions send only status, note and version. Student edits return time off to pending; a stale supplied version yields 409 and retains the draft."
+    },
+    {
+      "h": "Scheduling checks the full call window",
+      "was": "A same-day wall-clock comparison missed availability on overnight windows.",
+      "now": "The shared evaluator covers every local date, exact end boundaries, spring-forward gaps and repeated fall-back hours."
+    }
+  ],
+  "verification": [
+    "8,475 unit tests passed with coverage gates; 13 existing tests skipped. Full lint:ci passed with its existing 121 warnings.",
+    "All 19 disposable PostgreSQL tests passed, including six Availability retry, concurrency, rollback, actor/target scoping and review cases.",
+    "Chromium fixture checks passed for history, staff review payload/note, student controls, stale-edit recovery, retained drafts and the same save ID on retry. No page errors.",
+    "Required Wisconsin simulator build passed; offline native captures remain from the preceding visual slice. No native layout changed in the retry follow-up.",
+    "Migration 0208 generated by Prisma; schema validation, client generation, iOS drift/project and 213 migration-prefix checks passed."
+  ],
+  "notes": [
+    "Preview preparation, unreleased. Claude\u2019s original paint-roller checkout and untracked demo remain preserved with verified recovery archives. PaintWeek has no diff.",
+    "Authenticated student \u2192 staff \u2192 Schedule persistence and in-app notification acceptance await the branch-owned preview. No production deployment.",
+    "Before captures retain the actual preserved baseline. Web after captures were refreshed after the retry fix and 40px approval controls; receipts bind PNG bytes and matching declared inputs. Native captures remain after-only from the prior visual slice.",
+    "Retries reuse the mounted form\u2019s save ID. Older clients without an ID retain legacy behavior; closing and opening a new form starts a new save."
+  ]
+}

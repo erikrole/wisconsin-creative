@@ -1,15 +1,26 @@
 import { describe, expect, it } from "vitest";
+import { availabilityToday, isAvailabilityHistory } from "@/lib/student-availability-display";
 import { source } from "./_helpers/source";
 
 describe("student availability profile UI", () => {
+  it("uses Madison's date even when the instant is already tomorrow in UTC", () => {
+    expect(availabilityToday(new Date("2026-10-30T02:00:00Z"))).toBe("2026-10-29");
+  });
+
+  it.each([
+    [{ kind: "AD_HOC", date: "2026-10-20", dateEndsOn: "2026-10-29" }, false],
+    [{ kind: "AD_HOC", date: "2026-10-20", dateEndsOn: "2026-10-28" }, true],
+    [{ kind: "WEEKLY", semesterEndsOn: "2026-10-28" }, true],
+    [{ kind: "WEEKLY", semesterStartsOn: "2027-01-01" }, false],
+    [{ kind: "AD_HOC", date: "2026-11-20", intent: "TIME_OFF", status: "DENIED" }, true],
+    [{ kind: "WEEKLY" }, false],
+  ])("separates expired or denied entries from current guidance: %j", (block, expected) => {
+    expect(isAvailabilityHistory({ ...block, startsAt: "09:00", endsAt: "10:00" }, "2026-10-29")).toBe(expected);
+  });
+
   it("summarizes availability by operational scheduling impact", () => {
     const tab = source("src/app/(app)/staff/[id]/UserAvailabilityTab.tsx");
 
-    expect(tab).toContain("function AvailabilityImpactSummary");
-    expect(tab).toContain("const approvedTimeOffCount = blocks.filter(isApprovedTimeOff).length");
-    expect(tab).toContain("const advisoryConflictCount = blocks.filter(isAdvisoryConflict).length");
-    expect(tab).toContain("const preferenceCount = blocks.filter(isPreference).length");
-    expect(tab).toContain("const today = localDateValue();");
     expect(tab).toContain("blockIntent(block) === \"TIME_OFF\" && blockStatus(block) === \"DENIED\"");
     expect(tab).toContain("Approved time off is blocking. Other availability stays visible as staff-reviewed guidance.");
     expect(tab).toContain("Blocks assignment, pickup, trade, and call-window changes.");

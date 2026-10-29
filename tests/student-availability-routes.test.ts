@@ -6,6 +6,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
+    $transaction: vi.fn(),
     user: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -47,7 +48,7 @@ vi.mock("@/lib/rate-limit", async () => {
 });
 
 vi.mock("@/lib/audit", () => ({
-  createAuditEntry: vi.fn(),
+  createAuditEntryTx: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({
@@ -56,7 +57,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { sendPushToUser } from "@/lib/services/notifications";
 import { POST as createAvailability } from "@/app/api/users/[id]/availability/route";
 import {
@@ -100,6 +101,7 @@ function params<T extends Record<string, string>>(value: T) {
 describe("student availability routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(db.$transaction).mockImplementation(async (callback) => (callback as (client: typeof db) => Promise<unknown>)(db));
     vi.mocked(requireAuth).mockResolvedValue(studentUser);
     vi.mocked(db.user.findUnique).mockResolvedValue({
       id: "student-1",
@@ -109,6 +111,121 @@ describe("student availability routes", () => {
     } as never);
     vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([] as never);
     vi.mocked(db.shiftAssignment.update).mockResolvedValue({} as never);
+  });
+
+  it.each(["APPROVED", "DENIED"])("rejects student-created time off with %s review status", async (status) => {
+    const res = await createAvailability(jsonRequest("/api/users/student-1/availability", "POST", {
+      kind: "AD_HOC", intent: "TIME_OFF", status, date: "2026-11-02", startsAt: "09:00", endsAt: "10:00",
+    }), params({ id: "student-1" }));
+    expect(res.status).toBe(403);
+    expect(db.studentAvailabilityBlock.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { date: "2026-02-30", startsAt: "09:00", endsAt: "10:00" },
+    { date: "2026-11-02", startsAt: "24:00", endsAt: "25:00" },
+    { date: "2026-11-02", startsAt: "09:65", endsAt: "10:00" },
+  ])("rejects nonexistent calendar dates and wall-clock times: %j", async (fields) => {
+    const res = await createAvailability(jsonRequest("/api/users/student-1/availability", "POST", {
+      kind: "AD_HOC", ...fields,
+    }), params({ id: "student-1" }));
+    expect(res.status).toBe(400);
+    expect(db.studentAvailabilityBlock.create).not.toHaveBeenCalled();
+  });
+
+  it("resubmits student edits for review even if the client echoes the old approval", async () => {
+    vi.mocked(db.studentAvailabilityBlock.findUnique).mockResolvedValue({
+      id: "approved", userId: "student-1", intent: "TIME_OFF", kind: "AD_HOC", status: "APPROVED",
+      date: new Date("2026-11-02"), startsAt: "09:00", endsAt: "10:00", reviewedById: "staff-1",
+      reviewedAt: new Date(), reviewNote: "Approved for this day", updatedAt: new Date(),
+    } as never);
+    vi.mocked(db.studentAvailabilityBlock.update).mockResolvedValue({ id: "approved", intent: "TIME_OFF", status: "PENDING" } as never);
+    const res = await updateAvailability(jsonRequest("/api/users/student-1/availability/approved", "PATCH", {
+      kind: "AD_HOC", intent: "TIME_OFF", status: "APPROVED", date: "2026-11-03", startsAt: "09:00", endsAt: "10:00",
+    }), params({ id: "student-1", blockId: "approved" }));
+    expect(res.status).toBe(200);
+    expect(db.studentAvailabilityBlock.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: "PENDING", reviewedAt: null, reviewedById: null, reviewNote: null }),
+    }));
+  });
+
+  it("reviews the stored request and saves the staff note without replacing dates", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    const existing = {
+      id: "request", userId: "student-1", kind: "AD_HOC", intent: "TIME_OFF", status: "PENDING",
+      date: new Date("2026-11-20"), dateEndsOn: new Date("2026-11-22"), allDay: true,
+      startsAt: "00:00", endsAt: "23:59", label: "Trip", updatedAt: new Date("2026-10-28T12:00:00Z"),
+    };
+    vi.mocked(db.studentAvailabilityBlock.findUnique).mockResolvedValue(existing as never);
+    vi.mocked(db.studentAvailabilityBlock.update).mockResolvedValue({ ...existing, status: "APPROVED" } as never);
+    const res = await updateAvailability(jsonRequest("/api/users/student-1/availability/request", "PATCH", {
+      status: "APPROVED", reviewNote: " Coverage confirmed. ", expectedUpdatedAt: existing.updatedAt.toISOString(),
+    }), params({ id: "student-1", blockId: "request" }));
+    expect(res.status).toBe(200);
+    expect(db.studentAvailabilityBlock.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      date: new Date("2026-11-20"), dateEndsOn: new Date("2026-11-22"), allDay: true, reviewNote: "Coverage confirmed.",
+    }) }));
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ isolationLevel: "Serializable" }));
+  });
+
+  it("rejects stale staff review before writing a decision or sending a notification", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    vi.mocked(db.studentAvailabilityBlock.findUnique).mockResolvedValue({
+      id: "request", userId: "student-1", intent: "TIME_OFF", status: "PENDING", updatedAt: new Date("2026-10-29T12:00:00Z"),
+    } as never);
+    const res = await updateAvailability(jsonRequest("/api/users/student-1/availability/request", "PATCH", {
+      status: "APPROVED", expectedUpdatedAt: "2026-10-28T12:00:00.000Z",
+    }), params({ id: "student-1", blockId: "request" }));
+    expect(res.status).toBe(409);
+    expect(db.studentAvailabilityBlock.update).not.toHaveBeenCalled();
+    expect(db.notification.createManyAndReturn).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
+  });
+
+  it("does not send approval push if conflict refresh fails before commit", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    const pending = {
+      id: "request", userId: "student-1", kind: "AD_HOC", intent: "TIME_OFF", status: "PENDING",
+      date: new Date("2026-11-20"), startsAt: "09:00", endsAt: "10:00", updatedAt: new Date("2026-10-28T12:00:00Z"),
+    };
+    vi.mocked(db.studentAvailabilityBlock.findUnique).mockResolvedValue(pending as never);
+    vi.mocked(db.studentAvailabilityBlock.update).mockResolvedValue({ ...pending, status: "APPROVED" } as never);
+    vi.mocked(db.shiftAssignment.findMany).mockRejectedValueOnce(new Error("refresh failed"));
+    const res = await updateAvailability(jsonRequest("/api/users/student-1/availability/request", "PATCH", {
+      status: "APPROVED",
+    }), params({ id: "student-1", blockId: "request" }));
+    expect(res.status).toBe(500);
+    expect(sendPushToUser).not.toHaveBeenCalled();
+  });
+
+  it("saves all painted weekdays in one transaction and refreshes conflicts once", async () => {
+    vi.mocked(db.studentAvailabilityBlock.create)
+      .mockResolvedValueOnce({ id: "monday", dayOfWeek: 1 } as never)
+      .mockResolvedValueOnce({ id: "wednesday", dayOfWeek: 3 } as never)
+      .mockResolvedValueOnce({ id: "friday", dayOfWeek: 5 } as never);
+    const res = await createAvailability(jsonRequest("/api/users/student-1/availability", "POST", {
+      kind: "WEEKLY", daysOfWeek: [1, 3, 5], startsAt: "09:30", endsAt: "10:45", label: "COMM 201",
+    }), params({ id: "student-1" }));
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.blocks.map((block: { dayOfWeek: number }) => block.dayOfWeek)).toEqual([1, 3, 5]);
+    expect(vi.mocked(db.studentAvailabilityBlock.create).mock.calls.map(([args]) => args.data.dayOfWeek)).toEqual([1, 3, 5]);
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ isolationLevel: "Serializable" }));
+    expect(db.shiftAssignment.findMany).toHaveBeenCalledTimes(1);
+    expect(createAuditEntryTx).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports a failed weekday batch instead of a partial success", async () => {
+    vi.mocked(db.studentAvailabilityBlock.create)
+      .mockResolvedValueOnce({ id: "monday", userId: "student-1", kind: "WEEKLY", dayOfWeek: 1 } as never)
+      .mockRejectedValueOnce(new Error("database write failed"));
+    const res = await createAvailability(jsonRequest("/api/users/student-1/availability", "POST", {
+      kind: "WEEKLY", daysOfWeek: [1, 3], startsAt: "09:30", endsAt: "10:45",
+    }), params({ id: "student-1" }));
+    expect(res.status).toBe(500);
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(db.shiftAssignment.findMany).not.toHaveBeenCalled();
   });
 
   it("lets a student create an ad hoc conflict for themself and audits it", async () => {
@@ -153,7 +270,7 @@ describe("student availability routes", () => {
         date: new Date("2026-10-06T00:00:00.000Z"),
       }),
     });
-    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+    expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({
       actorId: "student-1",
       entityType: "student_availability_block",
       action: "student_availability_created",
@@ -322,7 +439,7 @@ describe("student availability routes", () => {
         reviewedById: null,
       }),
     });
-    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+    expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({
       after: expect.objectContaining({ intent: "TIME_OFF", status: "PENDING" }),
     }));
   });
@@ -481,7 +598,7 @@ describe("student availability routes", () => {
         semesterEndsOn: new Date("2026-12-18T00:00:00.000Z"),
       }),
     });
-    expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+    expect(createAuditEntryTx).toHaveBeenCalledWith(db, expect.objectContaining({
       actorId: "staff-1",
       action: "student_availability_updated",
       before: expect.objectContaining({ label: "Old" }),

@@ -949,6 +949,7 @@ struct AvailabilityBlock: Codable, Identifiable {
     let semesterStartsOn: String?
     let semesterEndsOn: String?
     let reviewNote: String?
+    let updatedAt: String?
 }
 
 struct AvailabilityBlocksResponse: Decodable {

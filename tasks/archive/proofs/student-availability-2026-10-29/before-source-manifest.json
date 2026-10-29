@@ -1,0 +1,19 @@
+{
+  "ios/Wisconsin/App/PerformanceTestHarness.swift": "cf9b2f9ae90ad748be0d01fe6ec751589631c742c7d356102e9ecb9994bc65c8",
+  "ios/Wisconsin/Core/APIClient+Bookings.swift": "80e71b4f290c8b0f750f8c059b35a4d8811c54a877661b88d46495dfb29a3414",
+  "ios/Wisconsin/Models/ScheduleModels.swift": "3f1f576c7940525af91eeff300e6c958c51c5d0ff749931266d57745e37dcd1a",
+  "ios/Wisconsin/Views/AvailabilityView.swift": "1d250cca99b903672676667cba288262e5e31993046a56a8f3306b522a3f2b92",
+  "src/app/(app)/staff/[id]/UserAvailabilityTab.tsx": "73ca4e5c617bc0550d3fc65d9b58406064a7a36ecb22ff9cb4d1153173195c2d",
+  "src/app/api/users/[id]/availability/[blockId]/route.ts": "8804efb0f9d8dd3b8f915a7e8948677ecca71202fd3f85adfd1c9823f0397266",
+  "src/app/api/users/[id]/availability/_shared.ts": "4d50af328a6ea2a07fda6b3cf9751c420d05b264b1da6da240bb7a29e9e05d92",
+  "src/app/api/users/[id]/availability/route.ts": "d78619864d25b3258264147d394ee47860e7554080cd3a7b053c4f6c0dcfdb9e",
+  "src/app/dev-paint-roller/PaintLab.tsx": "03d150cc59d3071c8a198b98ab689dcab05dfb46f16b05e532eac0a4df439cd5",
+  "src/app/dev-paint-roller/page.tsx": "e3cf56ed3eace69b72cc9e8433716c26bde260a2a69d958df18dd39db1e58cfd",
+  "src/app/globals.css": "5f276b0bbd5811beb65b9ac0b7138fe701c1daa25b7e4c66f38cc49cbdaa7bee",
+  "src/components/availability/CantWorkDialog.tsx": "73de04638a8fe56ad4ce51e352e210d60423dc587934535b56ea900ab0d5937b",
+  "src/components/availability/PaintWeek.tsx": "793491af8e0a5f2136f57e62e5703cd3f535b38f30916e0dc2362a7884ba0600",
+  "src/components/availability/cant-work-forms.tsx": "e1b236c230d3474c6d65fa7c6955eaeb4fa7d06434afde5ee97a49ea36631e75",
+  "src/lib/permissions.ts": "6b2a8c8a06d71abff9c65510502921b791d5ccb85b25aa15ae0d3da6624e801c",
+  "src/lib/student-availability.ts": "92ab098eb501ea75d36dc1b9032f472fe791c89968505bb9b4d7c398970b016d",
+  "src/lib/unavailable-times.ts": "b33caa93dc505fa678f4eb05a3d6e2e45b7e743007dec4844e42371cf054339e"
+}

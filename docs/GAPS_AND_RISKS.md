@@ -3,7 +3,7 @@
 ## Document Control
 
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-17
+- Last Updated: 2026-10-29
 - Status: Active registry
 - Purpose: Track only open gaps, pending decisions, active risks, and intentionally deferred scope.
 - Historical record: [GAPS_AND_RISKS_HISTORY.md](archive/GAPS_AND_RISKS_HISTORY.md)
@@ -99,6 +99,8 @@ Review duplicate automatic builds are removed; main protection, sanitized previe
 | Brand asset storage or migration skew | A Brand assets route reaches an environment without migrations `0135`/`0136` or the dedicated private Blob token, or a public media token is reused | Preview now has migrations `0135`/`0136` and the dedicated private-store credential; preserve fail-closed configuration, then verify authenticated upload, replacement, restore copy, private preview/download, favorites, and database/audit read-back before rollout | Engineering |
 
 ## Change Log
+
+- 2026-10-29: **Student Availability local roundout.** Recorded atomic weekday batches, time-off authorization/review/version handling and timezone overlap fixes. No production change. Preview authentication and notification delivery remain open. The duplicate retry follow-up uses durable actor-scoped save receipts (migration 0208). Disposable PostgreSQL proves one batch and audit set under concurrent retry, current review feedback on replay, changed/deleted-entry rejection and all-effects rollback. Legacy clients that omit a request ID remain outside that protection. See the [active ledger](../tasks/student-availability-roundout-2026-10-29.md).
 
 - 2026-10-23: PR #620's native invite-token compatibility fix is local and unreleased. Inbox delivery, real shared-backend signup, Apple device/CDN association and an updated app release remain gates; the shipped 1.4 (36) binary cannot gain token-aware native signup through a web deployment. Keep browser-owned invitation setup available for existing installs. See `tasks/archive/native-invite-pr620-2026-10-23.md`.
 

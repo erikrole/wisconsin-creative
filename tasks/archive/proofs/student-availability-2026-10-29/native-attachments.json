@@ -1,0 +1,26 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "3869C027-7854-4399-B769-9AA3ECE02FE4.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "availability-2-scrolled_0_B0E0E7CF-7E55-4B9C-8F3C-F9158A16074E.png",
+        "timestamp" : 1793298363.434
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "795AB4E9-3E4A-4C13-9D4F-27FD822C190B",
+        "deviceName" : "iPhone 18 Pro Max",
+        "exportedFileName" : "2CBB0DA8-A1B9-47F5-8BCC-FA29B7B3FAAE.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "availability-1-top_0_332141A0-D387-44AD-966D-3A4B106AEE71.png",
+        "timestamp" : 1793298361.437
+      }
+    ],
+    "testIdentifier" : "DeviceSweepScreenshotUITests/testSweep()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/DeviceSweepScreenshotUITests/testSweep"
+  }
+]

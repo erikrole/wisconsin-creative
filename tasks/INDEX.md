@@ -39,6 +39,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `student-availability-roundout-2026-10-29.md` — paint roller preservation, atomic weekly entry, staff review, scheduling accuracy and web/native proof; local and unreleased.
+
 - `onboarding-continuity-2026-10-22.md` — web/iOS save and resume, optional-photo Finish and avatar recovery; local verification is separate from authenticated bidirectional handoff and Monday rollout.
 
 - `performance-web-ios-neon-2026-10-20.md` — browser cache/request lifecycle, native decode/persistence/network work, and production Neon diagnostics; tracks rollout and physical-device energy proof separately.

@@ -1,3 +1,4 @@
+import { availabilityDateKey } from "@/lib/student-availability-display";
 const TZ = process.env.INSTITUTION_TZ ?? "America/Chicago";
 
 export type AvailabilityKind = "WEEKLY" | "AD_HOC";
@@ -85,7 +86,7 @@ function toLocalParts(dt: Date): { dayOfWeek: number; date: string; hhmm: string
 function dateOnly(value: Date | string | null | undefined): string | null {
   if (!value) return null;
   if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
+    return availabilityDateKey(value);
   }
   return value.slice(0, 10);
 }
@@ -140,36 +141,76 @@ function formatConflictNote(block: AvailabilityBlockLike, intent = blockIntent(b
   return label ? `Conflicts with ${label} (${detail})` : `Conflicts with ${fallback} ${detail}`;
 }
 
-function overlapsAvailabilityBlock(block: AvailabilityBlockLike, start: ReturnType<typeof toLocalParts>, end: ReturnType<typeof toLocalParts>) {
-  if (block.kind === "AD_HOC") {
-    const blockStart = dateOnly(block.date);
-    const blockEnd = dateOnly(block.dateEndsOn) ?? blockStart;
-    if (!blockStart || !blockEnd) return false;
+type LocalWindow = { date: string; dayOfWeek: number; startsAt: string; endsAt: string };
 
-    // A dated range is inclusive. All-day ranges intentionally ignore the
-    // stored canonical 00:00–23:59 wall-clock values so a full-day trip still
-    // conflicts with any call window on any covered date.
-    const datesOverlap = start.date <= blockEnd && end.date >= blockStart;
-    if (!datesOverlap) return false;
-    if (block.allDay) return true;
-    return timeOverlaps(start.hhmm, end.hhmm, block.startsAt, block.endsAt);
+function localWindows(window: AvailabilityWindow): LocalWindow[] {
+  const result: LocalWindow[] = [];
+  const endMs = window.endsAt.getTime();
+  if (!Number.isFinite(window.startsAt.getTime()) || !Number.isFinite(endMs) || window.startsAt.getTime() >= endMs) return result;
+  const minute = 60_000;
+  const day = 86_400_000;
+  const offsetAt = (ms: number) => {
+    const parts = toLocalParts(new Date(ms));
+    return Date.parse(`${parts.date}T${parts.hhmm}:00Z`) - Math.floor(ms / minute) * minute;
+  };
+  // Split at offset changes before comparing wall clocks. This preserves both
+  // occurrences of a repeated fall-back hour and skips nonexistent spring time.
+  for (let cursor = window.startsAt.getTime(); cursor < endMs;) {
+    const offset = offsetAt(cursor);
+    let boundary = Math.min(cursor + day, endMs);
+    if (offsetAt(boundary - 1) !== offset) {
+      let low = cursor;
+      let high = boundary - 1;
+      while (high - low > 1) {
+        const middle = Math.floor((low + high) / 2);
+        if (offsetAt(middle) === offset) low = middle;
+        else high = middle;
+      }
+      boundary = high;
+    }
+    let localStart = cursor + offset;
+    const localEnd = boundary + offset;
+    while (localStart < localEnd) {
+      const nextDay = Math.floor(localStart / day) * day + day;
+      const stop = Math.min(nextDay, localEnd);
+      const start = new Date(localStart);
+      // Keep seconds so a call beginning just before a minute boundary still overlaps.
+      result.push({
+        date: availabilityDateKey(start),
+        dayOfWeek: start.getUTCDay(),
+        startsAt: start.toISOString().slice(11, 23),
+        endsAt: stop === nextDay ? "24:00:00.000" : new Date(stop).toISOString().slice(11, 23),
+      });
+      localStart = stop;
+    }
+    cursor = boundary;
   }
+  return result;
+}
 
-  if (!timeOverlaps(start.hhmm, end.hhmm, block.startsAt, block.endsAt)) return false;
-  if (block.dayOfWeek !== start.dayOfWeek) return false;
-  return isWithinDateBounds(start.date, block);
+function overlapsAvailabilityBlock(block: AvailabilityBlockLike, windows: LocalWindow[]) {
+  return windows.some((window) => {
+    if (block.kind === "AD_HOC") {
+      const first = dateOnly(block.date);
+      const last = dateOnly(block.dateEndsOn) ?? first;
+      if (!first || !last || window.date < first || window.date > last) return false;
+      if (block.allDay) return true;
+    } else if (block.dayOfWeek !== window.dayOfWeek || !isWithinDateBounds(window.date, block)) {
+      return false;
+    }
+    return timeOverlaps(window.startsAt, window.endsAt, `${block.startsAt}:00.000`, `${block.endsAt}:00.000`);
+  });
 }
 
 export function evaluateAvailabilityPreferences(
   blocks: AvailabilityBlockLike[],
   window: AvailabilityWindow,
 ): AvailabilityPreferenceEvaluation {
-  const start = toLocalParts(window.startsAt);
-  const end = toLocalParts(window.endsAt);
+  const windows = localWindows(window);
   const conflicts: AvailabilityConflict[] = [];
 
   for (const block of blocks) {
-    if (!overlapsAvailabilityBlock(block, start, end)) continue;
+    if (!overlapsAvailabilityBlock(block, windows)) continue;
     const intent = blockIntent(block);
     const status = blockStatus(block);
     if (status === "DENIED") continue;

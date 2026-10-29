@@ -1,4 +1,12 @@
+import { availabilityDateKey } from "@/lib/student-availability-display";
+import { z } from "zod";
 import { HttpError } from "@/lib/http";
+
+export const availabilityDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").refine((value) => {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && availabilityDateKey(parsed) === value;
+}, "Choose a valid calendar date");
+export const availabilityTimeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Choose a valid time from 00:00 to 23:59");
 
 export function parseDateOnly(value: string | null | undefined): Date | null {
   return value ? new Date(`${value}T00:00:00.000Z`) : null;

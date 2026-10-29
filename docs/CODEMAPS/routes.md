@@ -490,6 +490,7 @@
 - `/api/schedule/bulk-assignment/preview` -> `src/app/api/schedule/bulk-assignment/preview/route.ts`
 - `/api/schedule/export` -> `src/app/api/schedule/export/route.ts`
 - `/api/schedule/health` -> `src/app/api/schedule/health/route.ts`
+- `/api/schedule/live` -> `src/app/api/schedule/live/route.ts`
 - `/api/schedule/open-work` -> `src/app/api/schedule/open-work/route.ts`
 - `/api/schedule/published/[id]/follow` -> `src/app/api/schedule/published/[id]/follow/route.ts`
 - `/api/schedule/published/[id]` -> `src/app/api/schedule/published/[id]/route.ts`

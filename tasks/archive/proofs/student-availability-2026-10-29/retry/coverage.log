@@ -1,0 +1,26 @@
+
+> creative-ops@2026.04.08.1 test:coverage
+> vitest run --coverage
+
+
+ RUN  v5.0.5 /Users/role/.codex/worktrees/student-availability/wisconsin-creative
+      Coverage enabled with v8
+
+
+ Test Files  1016 passed | 2 skipped (1018)
+      Tests  8475 passed | 13 skipped (8488)
+   Start at  13:51:20
+   Duration  16.26s (import 72%, tests 13%, worker 7%, transform 4%, setup 3%)
+
+     Import  2012 modules were evaluated 6688 times · 128.11s total, 72% of tracked time
+             ~3.55s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+
+ % Coverage report from v8
+
+=============================== Coverage summary ===============================
+Statements   : 87.3% ( 32689/37443 )
+Branches     : 79.4% ( 24791/31219 )
+Functions    : 88.46% ( 6417/7254 )
+Lines        : 89.65% ( 29088/32443 )
+================================================================================
