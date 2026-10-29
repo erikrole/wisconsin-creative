@@ -1,3 +1,4 @@
+// source-contract: SwiftUI views cannot render in vitest; this pins the Guides list layout and its parity with the web freshness rules
 import { describe, expect, it } from "vitest";
 import { source } from "./_helpers/source";
 
