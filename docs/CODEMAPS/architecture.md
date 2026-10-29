@@ -9,12 +9,12 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 
 | Surface | Count |
 |---|---:|
-| App pages | 121 |
+| App pages | 123 |
 | App layouts | 35 |
-| API route handlers | 439 |
-| Service files | 146 |
-| Component files | 196 |
-| Test files | 1005 |
+| API route handlers | 443 |
+| Service files | 147 |
+| Component files | 199 |
+| Test files | 1008 |
 
 ## Oversized Source Watchlist
 
@@ -35,11 +35,11 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/schedule/_components/ListView.tsx` | 1174 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/app/(app)/staff/[id]/page.tsx` | 1160 |
+| `src/app/(app)/kits/[id]/page.tsx` | 1151 |
 | `src/lib/services/schedule-publication.ts` | 1133 |
-| `src/app/(app)/kits/[id]/page.tsx` | 1132 |
 | `src/lib/services/shift-notifications.ts` | 1131 |
+| `src/lib/services/booking-create.ts` | 1115 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
-| `src/lib/services/booking-create.ts` | 1095 |
 | `src/lib/services/signature-roster.ts` | 1090 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1087 |
 

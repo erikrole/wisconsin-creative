@@ -9,6 +9,7 @@ import { displayBookingTitle } from "@/lib/booking-display-title";
 import { optionalSportCodeSchema } from "@/lib/validation";
 import { bookingInclude } from "./bookings-helpers";
 import { unique } from "@/lib/utils";
+import { mergeByTime, scanRowsForAuditPage } from "@/lib/services/activity-scans";
 
 const bookingListInclude = {
   location: { select: { id: true, name: true } },
@@ -237,7 +238,13 @@ export async function getBookingDetail(bookingId: string) {
     include: { actor: { select: { id: true, name: true } } }
   });
   const hasMoreAuditLogs = auditLogsRaw.length > AUDIT_LOG_LIMIT;
-  const auditLogs = hasMoreAuditLogs ? auditLogsRaw.slice(0, AUDIT_LOG_LIMIT) : auditLogsRaw;
+  const auditPage = hasMoreAuditLogs ? auditLogsRaw.slice(0, AUDIT_LOG_LIMIT) : auditLogsRaw;
+  // Every item scanned out or back in, placed among the history by time.
+  const scanRows = await scanRowsForAuditPage(
+    { bookingId },
+    { before: null, atOrAfter: hasMoreAuditLogs ? auditPage[auditPage.length - 1]!.createdAt : null },
+  );
+  const auditLogs = mergeByTime(auditPage, scanRows);
   const { events: eventLinks, ...rest } = booking;
 
   const now = new Date();
@@ -296,7 +303,7 @@ export async function getBookingDetail(bookingId: string) {
     scheduleStatusReason,
     auditLogs,
     hasMoreAuditLogs,
-    auditLogNextCursor: hasMoreAuditLogs ? auditLogs[auditLogs.length - 1]?.id : null,
+    auditLogNextCursor: hasMoreAuditLogs ? auditPage[auditPage.length - 1]?.id : null,
     itemLocations,
     locationMode
   };

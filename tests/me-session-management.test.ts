@@ -45,6 +45,10 @@ vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: vi.fn(),
 }));
 
+vi.mock("@/lib/audit", () => ({
+  createAuditEntry: vi.fn(),
+}));
+
 vi.mock("@/lib/companion-store", () => ({
   revokeCompanionUser: vi.fn(),
 }));

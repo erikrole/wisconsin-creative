@@ -28,6 +28,8 @@ export function statusLabel(status: string, kind?: BookingDisplayKind): string {
 
 const actionLabels: Record<string, string> = {
   create: "created booking",
+  scan_checkout: "scanned out",
+  scan_checkin: "scanned in",
   created: "created booking",
   update: "updated",
   updated: "updated",
@@ -58,6 +60,9 @@ const actionLabels: Record<string, string> = {
   kiosk_checkin: "checked in at kiosk",
   kiosk_return: "returned at kiosk",
   kiosk_pickup: "picked up at kiosk",
+  checkout_item_added: "added an item to the active checkout",
+  checkout_item_removed: "removed an item from the active checkout",
+  auto_completed_by_item_removal: "completed the booking by removing its last item",
   auto_completed_by_kiosk_checkin: "completed the booking by returning at kiosk",
   auto_completed_by_bulk_checkin: "completed the booking by bulk return",
   auto_completed_by_partial_checkin: "completed the booking after partial return",

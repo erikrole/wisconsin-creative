@@ -146,11 +146,11 @@ describe("getAllowedActionsClient", () => {
   });
 
   describe("mirrors server-side checkout-rules", () => {
-    it("keeps OPEN checkout cancellation out of normal app and web actions", () => {
+    it("keeps OPEN checkout cancellation admin-only", () => {
       const ctx = booking("OPEN");
       expect(has(getActions(owner, ctx), "cancel")).toBe(false);
       expect(has(getActions(staff, ctx), "cancel")).toBe(false);
-      expect(has(getActions(admin, ctx), "cancel")).toBe(false);
+      expect(has(getActions(admin, ctx), "cancel")).toBe(true);
     });
   });
 });

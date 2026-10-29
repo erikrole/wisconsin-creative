@@ -122,7 +122,7 @@ export function BulkSkuDetailExperience({
               <TabsTrigger
                 key={tab.key}
                 value={tab.key}
-                className="relative shrink-0 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--wi-red)] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
+                className="relative shrink-0"
               >
                 <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>{tab.label}</span>
               </TabsTrigger>

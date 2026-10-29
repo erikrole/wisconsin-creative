@@ -14,6 +14,7 @@ import dynamic from "next/dynamic";
 import MetricCard from "../MetricCard";
 import ActivityTimeline, { TimelineSkeleton, type AuditEntry as TimelineEntry } from "@/components/ActivityTimeline";
 import { AUDIT_RETENTION_DAYS } from "@/lib/audit-retention";
+import { AUDIT_CATEGORIES, AUDIT_CATEGORY_LABELS } from "@/lib/audit-actions";
 
 const LazyActionBreakdownChart = dynamic(
   () => import("./charts").then((m) => ({ default: m.ActionBreakdownChart })),
@@ -96,7 +97,7 @@ function periodStartDate(periodDays: number) {
     : null;
 }
 
-type AuditFilters = { entityType: string; action: string };
+type AuditFilters = { entityType: string; action: string; category: string; actor: string };
 
 /** "checkin_completed" -> "Checkin completed", "kioskDevice" -> "Kiosk device". */
 function humanize(value: string) {
@@ -112,6 +113,8 @@ function buildAuditReportParams(
   const params = new URLSearchParams();
   if (filters.entityType) params.set("entityType", filters.entityType);
   if (filters.action) params.set("action", filters.action);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.actor) params.set("actor", filters.actor);
   if (paging) {
     params.set("limit", String(paging.limit));
     params.set("offset", String(paging.offset));
@@ -182,6 +185,8 @@ export default function AuditReportPage() {
   const [filters, setFilters] = useState<AuditFilters>(() => ({
     entityType: searchParams.get("entityType") ?? "",
     action: searchParams.get("action") ?? "",
+    category: searchParams.get("category") ?? "",
+    actor: searchParams.get("actor") ?? "",
   }));
 
   function changeFilter(key: keyof AuditFilters, value: string) {
@@ -229,6 +234,11 @@ export default function AuditReportPage() {
     keepPreviousData: true,
   });
 
+  const { data: actors } = useFetch<{ id: string; name: string }[]>({
+    url: "/api/reports/audit/actors",
+    transform: (json) => (json as unknown as { data: { id: string; name: string }[] }).data,
+  });
+
   const auditRows = data?.data;
   const timelineEntries = useMemo(
     () => (auditRows ? toTimelineEntries(auditRows) : []),
@@ -270,6 +280,12 @@ export default function AuditReportPage() {
     ...(periodDays > 0
       ? [{ key: "period", label: `Period: ${periodDays}d`, onRemove: () => changePeriod(0) }]
       : []),
+    ...(filters.category
+      ? [{ key: "category", label: AUDIT_CATEGORY_LABELS[filters.category as keyof typeof AUDIT_CATEGORY_LABELS] ?? humanize(filters.category), onRemove: () => changeFilter("category", "") }]
+      : []),
+    ...(filters.actor
+      ? [{ key: "actor", label: actors?.find((a) => a.id === filters.actor)?.name ?? "One person", onRemove: () => changeFilter("actor", "") }]
+      : []),
     ...(filters.entityType
       ? [{ key: "entityType", label: humanize(filters.entityType), onRemove: () => changeFilter("entityType", "") }]
       : []),
@@ -277,10 +293,6 @@ export default function AuditReportPage() {
       ? [{ key: "action", label: humanize(filters.action), onRemove: () => changeFilter("action", "") }]
       : []),
   ];
-  // The breakdowns describe the current results, so keep a chosen value listed even when it narrows them away.
-  const entityOptions = withSelected(data.byEntityType?.map((row) => row.entityType) ?? [], filters.entityType);
-  const actionOptions = withSelected(data.byAction?.map((row) => row.action) ?? [], filters.action);
-
   return (
     <FadeUp>
       {/* Retention notice */}
@@ -316,29 +328,29 @@ export default function AuditReportPage() {
             onChange={changePeriod}
           />
         </ReportToolbarGroup>
-        <ReportToolbarGroup label="Record">
+        <ReportToolbarGroup label="Area">
           <NativeSelect
-            aria-label="Filter by record type"
-            value={filters.entityType}
-            onChange={(event) => changeFilter("entityType", event.target.value)}
+            aria-label="Filter by area"
+            value={filters.category}
+            onChange={(event) => changeFilter("category", event.target.value)}
             className="w-auto min-w-36 text-sm"
           >
-            <option value="">All records</option>
-            {entityOptions.map((value) => (
-              <option key={value} value={value}>{humanize(value)}</option>
+            <option value="">Everything</option>
+            {AUDIT_CATEGORIES.map((value) => (
+              <option key={value} value={value}>{AUDIT_CATEGORY_LABELS[value]}</option>
             ))}
           </NativeSelect>
         </ReportToolbarGroup>
-        <ReportToolbarGroup label="Action">
+        <ReportToolbarGroup label="Person">
           <NativeSelect
-            aria-label="Filter by action"
-            value={filters.action}
-            onChange={(event) => changeFilter("action", event.target.value)}
+            aria-label="Filter by person"
+            value={filters.actor}
+            onChange={(event) => changeFilter("actor", event.target.value)}
             className="w-auto min-w-36 text-sm"
           >
-            <option value="">All actions</option>
-            {actionOptions.map((value) => (
-              <option key={value} value={value}>{humanize(value)}</option>
+            <option value="">Everyone</option>
+            {(actors ?? []).map((person) => (
+              <option key={person.id} value={person.id}>{person.name}</option>
             ))}
           </NativeSelect>
         </ReportToolbarGroup>
@@ -360,7 +372,7 @@ export default function AuditReportPage() {
       </ReportMetricGrid>
 
       {(data.byAction?.length > 0 || data.byEntityType?.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
           {data.byAction?.length > 0 && <LazyActionBreakdownChart byAction={data.byAction} />}
           {data.byEntityType?.length > 0 && <LazyEntityTypeBreakdownChart byEntityType={data.byEntityType} />}
         </div>
@@ -405,8 +417,4 @@ export default function AuditReportPage() {
       </ReportDataRegion>
     </FadeUp>
   );
-}
-
-function withSelected(values: string[], selected: string) {
-  return selected && !values.includes(selected) ? [selected, ...values] : values;
 }

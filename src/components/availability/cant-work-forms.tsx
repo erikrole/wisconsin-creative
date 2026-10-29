@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { PaintRollerIcon } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
+import { PaintWeek } from "./PaintWeek";
 import { WEEK_DAYS, defaultWeeklyEndsOn, localToday, type BlockedRange } from "@/lib/unavailable-times";
 
 /**
@@ -115,6 +117,7 @@ export function WeeklyForm({ userId, onSaved, onCancel }: { userId: string; onSa
   const [endsAt, setEndsAt] = useState("10:45");
   const [endsOn, setEndsOn] = useState(defaultWeeklyEndsOn);
   const [saving, setSaving] = useState(false);
+  const [paintMode, setPaintMode] = useState(false);
   const canSave = days.length > 0 && startsAt < endsAt && !saving;
 
   async function save(e: React.FormEvent) {
@@ -146,7 +149,26 @@ export function WeeklyForm({ userId, onSaved, onCancel }: { userId: string; onSa
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">Days</legend>
+        <div className="mb-2 flex items-center justify-between">
+          <legend className="text-sm font-medium">Days</legend>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={paintMode}
+            className={cn("h-8 gap-1.5 text-[var(--text-secondary)]", paintMode && "text-[var(--accent)]")}
+            onClick={() => setPaintMode((on) => !on)}
+          >
+            <PaintRollerIcon className="size-4" aria-hidden="true" />
+            Paint it in
+          </Button>
+        </div>
+        {paintMode && (
+          <div className="mb-2 flex flex-col gap-1.5">
+            <PaintWeek days={days} startsAt={startsAt} endsAt={endsAt} onPaint={(next) => { setDays(next.days); setStartsAt(next.startsAt); setEndsAt(next.endsAt); }} />
+            <p className="text-sm text-[var(--text-secondary)]">Drag across the days and hours you can&apos;t work.</p>
+          </div>
+        )}
         <div className="grid grid-cols-7 gap-1.5">
           {WEEK_DAYS.map(({ day, short, name }) => {
             const on = days.includes(day);

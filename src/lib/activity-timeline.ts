@@ -2,7 +2,8 @@
  * Pure helpers behind ActivityTimeline: audit rows to sentences, field diffs,
  * coalescing and date grouping. No React; the component owns presentation.
  */
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, INSTITUTION_TZ } from "@/lib/format";
+import { auditSentence } from "@/lib/audit-actions";
 
 /** Map an audit row's entity to a deep-link route, or null if no detail page exists. */
 export function entityHref(
@@ -107,6 +108,16 @@ export const EQUIPMENT_ACTIONS = new Set([
   "booking.items_removed",
   "booking.items_qty_changed",
   "booking.item_substituted",
+  "scan_checkout",
+  "scan_checkin",
+  "kiosk_checkout_item_added",
+  "kiosk_checkout_item_removed",
+  "kiosk_checkout_item_swapped",
+  "kiosk_pickup_item_added",
+  "kiosk_pickup_scan_removed",
+  "kiosk_checkin_scan_undone",
+  "serialized_item_transferred_in",
+  "serialized_item_transferred_out",
 ]);
 
 /** Human-readable field name labels */
@@ -347,8 +358,12 @@ export function describeAction(
       return `${reportPrefix}Duplicated ${target}`;
     case "qr_generated":
       return `${reportPrefix}Generated new QR code`;
-    case "admin_override":
-      return `${reportPrefix}Admin override`;
+    case "admin_override": {
+      const reason = typeof entry.afterJson?.reason === "string" ? entry.afterJson.reason.trim() : "";
+      return reason
+        ? `${reportPrefix}Overrode a scan check: ${reason}`
+        : `${reportPrefix}Overrode a scan check`;
+    }
     case "auto_escalation":
       return "System auto-escalated overdue notification";
     case "cron_notification":
@@ -407,7 +422,7 @@ export function describeAction(
       // "Updated their shoe size" instead of "Updated their profile" + 1 pill.
       const fields = entry.afterJson ? Object.keys(entry.afterJson).filter((k) => !HIDDEN_FIELDS.has(k)) : [];
       if (fields.length === 1) {
-        const label = (FIELD_LABELS[fields[0]!] ?? fields[0]!).toLowerCase(); // length === 1 guard above
+        const label = fieldLabel(fields[0]!).toLowerCase(); // length === 1 guard above
         return `${reportPrefix}Updated their ${label}`;
       }
       if (fields.length > 1) {
@@ -497,6 +512,12 @@ export function describeAction(
       return `${reportPrefix}Updated the checkout at a kiosk`;
     case "kiosk_checkout_item_added":
       return `${reportPrefix}Added ${auditItemName(entry.afterJson) ?? "an item"} at ${kioskLocationPhrase(entry.afterJson)}`;
+    case "checkout_item_removed":
+      return `${reportPrefix}Removed ${auditItemName(entry.beforeJson) ?? "an item"} from the active checkout`;
+    case "auto_completed_by_item_removal":
+      return `${reportPrefix}Checkout closed after its last item was removed`;
+    case "checkout_item_added":
+      return `${reportPrefix}Added ${auditItemName(entry.afterJson) ?? "an item"} to the active checkout`;
     case "kiosk_checkout_item_removed":
       return `${reportPrefix}Removed ${auditItemName(entry.beforeJson) ?? "an item"} at ${kioskLocationPhrase(entry.beforeJson)}`;
     case "partial_bulk_checkin":
@@ -517,10 +538,30 @@ export function describeAction(
       return `${reportPrefix}Completed the reservation after the remaining gear was removed`;
     case "booking.item_substituted":
       return `${reportPrefix}Swapped a reserved item for the one scanned at pickup`;
+    case "scan_checkout":
+    case "scan_checkin": {
+      const out = entry.action === "scan_checkout";
+      if (context === "item") {
+        const what = bookingPhrase(entry, out ? "a checkout" : "a return");
+        return out ? `Scanned out for ${what}` : `Scanned back in from ${what}`;
+      }
+      const item = formatAuditItemNames(entry.afterJson) ?? auditItemName(entry.afterJson) ?? "an item";
+      const qty = typeof entry.afterJson?.quantity === "number" ? ` ×${entry.afterJson.quantity}` : "";
+      return out ? `${reportPrefix}Scanned out ${item}${qty}` : `${reportPrefix}Scanned in ${item}${qty}`;
+    }
+    case "kiosk_checkout_item_swapped": {
+      const from = auditItemName(entry.beforeJson);
+      const to = auditItemName(entry.afterJson);
+      return from && to
+        ? `${reportPrefix}Swapped ${from} for ${to} at ${kioskLocationPhrase(entry.afterJson)}`
+        : `${reportPrefix}Swapped an item at ${kioskLocationPhrase(entry.afterJson)}`;
+    }
     case "nudge_sent":
     case "overdue_nudge_sent":
       return `${reportPrefix}Sent a reminder`;
     default: {
+      const known = auditSentence(entry.action, entry.entityType);
+      if (known) return `${reportPrefix}${known}`;
       const humanized = entry.action.replace(/[._]+/g, " ");
       const sentence = humanized.charAt(0).toUpperCase() + humanized.slice(1);
       if (context === "report") {
@@ -552,16 +593,25 @@ function getEquipmentCounts(
 
 /* ── Field change description ── */
 
+/** "shoeSize" -> "Shoe size" for fields without a curated label. */
+function fieldLabel(key: string): string {
+  if (FIELD_LABELS[key]) return FIELD_LABELS[key]!;
+  const spaced = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/_/g, " ").toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 type FieldChange = { label: string; from: string; to: string; mono?: boolean };
 
 function describeFieldChange(
   key: string,
   before: unknown,
   after: unknown,
+  entityType?: string,
 ): FieldChange | null {
   if (HIDDEN_FIELDS.has(key)) return null;
 
-  const label = FIELD_LABELS[key] || key;
+  // "Item name" only fits items; a kit or person rename reads "Name".
+  const label = key === "name" && entityType && entityType !== "asset" ? "Name" : fieldLabel(key);
 
   // For ID fields, show "set" / "removed" / "changed" instead of raw IDs
   if (ID_FIELDS.has(key)) {
@@ -658,7 +708,17 @@ const DIFF_ACTIONS = new Set([
 ]);
 
 export function getFieldChanges(entry: AuditEntry): FieldChange[] {
-  if (!DIFF_ACTIONS.has(entry.action) || !entry.afterJson) return [];
+  if (!entry.afterJson) return [];
+  // Any other action that saved both sides is an edit too: diff only the fields it recorded on both.
+  if (!DIFF_ACTIONS.has(entry.action)) {
+    const before = entry.beforeJson;
+    // Gear moves already name their items in the sentence.
+    if (!before || EQUIPMENT_ACTIONS.has(entry.action)) return [];
+    return Object.keys(entry.afterJson)
+      .filter((k) => k in before && !/Ids?$/.test(k))
+      .map((k) => describeFieldChange(k, before[k], entry.afterJson![k], entry.entityType))
+      .filter((c): c is FieldChange => c !== null);
+  }
   // Some routes (e.g. role_changed) don't always write a `before` payload —
   // the field-change describer handles missing `before` as "set"/"empty"
   // gracefully so we still render the new value as a pill.
@@ -666,7 +726,7 @@ export function getFieldChanges(entry: AuditEntry): FieldChange[] {
     .map((k) => {
       const b = (entry.beforeJson as Record<string, unknown>)?.[k];
       const a = (entry.afterJson as Record<string, unknown>)?.[k];
-      return describeFieldChange(k, b, a);
+      return describeFieldChange(k, b, a, entry.entityType);
     })
     .filter((c): c is FieldChange => c !== null);
 }
@@ -687,18 +747,22 @@ export function isPhantomEntry(entry: AuditEntry): boolean {
 
 /* ── Date grouping ── */
 
+/** Calendar day in Central time, so "Today" never flips at UTC midnight. */
+function centralDayKey(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: INSTITUTION_TZ });
+}
+
 export function getDateGroup(iso: string, today: Date): string {
   const d = new Date(iso);
-  const todayStr = today.toDateString();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterday = new Date(today.getTime() - 86_400_000);
 
-  if (d.toDateString() === todayStr) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (centralDayKey(d) === centralDayKey(today)) return "Today";
+  if (centralDayKey(d) === centralDayKey(yesterday)) return "Yesterday";
   return d.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: INSTITUTION_TZ,
   });
 }
 
@@ -708,14 +772,20 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: INSTITUTION_TZ,
   });
 }
 
 export function formatTimestamp(entry: RenderEntry): string {
   const newest = formatTime(entry.createdAt);
   if (entry._oldest && entry._oldest !== entry.createdAt) {
-    const oldest = formatTime(entry._oldest);
-    if (oldest !== newest) return `${oldest}–${newest}`;
+    // Earliest first, whichever order the rows arrived in.
+    const [start, end] = [entry._oldest, entry.createdAt].sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
+    const from = formatTime(start!);
+    const to = formatTime(end!);
+    if (from !== to) return `${from}–${to}`;
   }
   return newest;
 }
@@ -740,6 +810,8 @@ export type RenderEntry = AuditEntry & {
  *  "primary". The window compares against the oldest folded entry, so a slow
  *  run of edits (one per minute) still folds into a single row; the full run
  *  is kept on `_chain` so same-field edits can render as a value chain. */
+const SCAN_ACTIONS = new Set(["scan_checkout", "scan_checkin"]);
+
 export function coalesceEntries(entries: AuditEntry[]): RenderEntry[] {
   const out: RenderEntry[] = [];
   for (const entry of entries) {
@@ -755,8 +827,16 @@ export function coalesceEntries(entries: AuditEntry[]): RenderEntry[] {
           new Date(entry.createdAt).getTime(),
       ) <= COALESCE_WINDOW_MS
     ) {
-      last._count = (last._count ?? 1) + 1;
       last._oldest = entry.createdAt;
+      // A burst of scans is one row that names every item, not "ROAM2 ×5".
+      if (SCAN_ACTIONS.has(entry.action)) {
+        const names = Array.isArray(last.afterJson?.itemNames)
+          ? (last.afterJson!.itemNames as string[])
+          : [auditItemName(last.afterJson) ?? "an item"];
+        last.afterJson = { ...last.afterJson, itemNames: [...names, auditItemName(entry.afterJson) ?? "an item"] };
+        continue;
+      }
+      last._count = (last._count ?? 1) + 1;
       if (!last._chain) last._chain = [last];
       last._chain.push(entry);
       continue;
@@ -789,7 +869,7 @@ export function getChainedChange(entry: RenderEntry): ChainedChange | null {
 
   const ordered = [...chain].reverse();
   const values: string[] = [];
-  let label = FIELD_LABELS[key] || key;
+  let label = fieldLabel(key);
   let mono = false;
   for (let i = 0; i < ordered.length; i++) {
     const e = ordered[i]!;
@@ -797,6 +877,7 @@ export function getChainedChange(entry: RenderEntry): ChainedChange | null {
       key,
       (e.beforeJson as Record<string, unknown> | null)?.[key],
       (e.afterJson as Record<string, unknown> | null)?.[key],
+      e.entityType,
     );
     if (!change) continue;
     label = change.label;

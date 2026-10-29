@@ -43,6 +43,7 @@ import {
 import { BookingHeader } from "@/components/booking-details/BookingHeader";
 import BookingInfoCard from "@/components/booking-details/BookingInfoCard";
 import { EditBookingEventsDialog } from "@/components/booking-details/EditBookingEventsDialog";
+import { AddToCheckoutDialog } from "@/components/booking-details/AddToCheckoutDialog";
 import { TransferOwnerDialog } from "@/components/booking-details/TransferOwnerDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { formatCountdownCompact, formatDateTime, getUrgency } from "@/lib/format";
@@ -66,7 +67,7 @@ export default function BookingDetailPage({
   const { booking, loading, reloading, error, reload, patchLocal } = useBookingDetail(id);
 
   // Actions
-  const actions = useBookingActions(id, kind, reload, booking?.updatedAt);
+  const actions = useBookingActions(id, kind, reload, booking?.updatedAt, booking?.status === "OPEN");
   const bookingSync = useBookingChangeSync();
 
   // Extend panel state
@@ -80,6 +81,7 @@ export default function BookingDetailPage({
   // Edit sheet state
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [editSheetEquipment, setEditSheetEquipment] = useState(false);
+  const [addToCheckoutOpen, setAddToCheckoutOpen] = useState(false);
   const [transferOwnerOpen, setTransferOwnerOpen] = useState(false);
   const [editEventsOpen, setEditEventsOpen] = useState(false);
 
@@ -203,8 +205,9 @@ export default function BookingDetailPage({
   const canTransferOwner = allowedActions.includes("transfer-owner");
   const canManageCustody = kind === "CHECKOUT" && allowedActions.includes("manage-custody");
   const canEditEvents = canEdit;
-  // Ready-for-pickup (and draft) reservations take new items; active checkouts change gear at the kiosk.
+  // Ready-for-pickup (and draft) reservations take new items; active checkouts change gear at the kiosk (admins can also add from here).
   const canAddItems = canEdit && kind === "RESERVATION" && (booking?.status === "BOOKED" || booking?.status === "DRAFT");
+  const canAddToCheckout = kind === "CHECKOUT" && allowedActions.includes("edit-items");
   const isOpen = booking?.status === "OPEN";
   const isActive = isOpen || booking?.status === "BOOKED";
   const kioskHandoffLabel =
@@ -445,7 +448,9 @@ export default function BookingDetailPage({
         <BookingEquipmentTab
           booking={booking}
           onBookingUpdated={patchLocal}
-          onAddItems={canAddItems ? () => { setEditSheetEquipment(true); setEditSheetOpen(true); } : undefined}
+          onAddItems={canAddItems
+            ? () => { setEditSheetEquipment(true); setEditSheetOpen(true); }
+            : canAddToCheckout ? () => setAddToCheckoutOpen(true) : undefined}
         />
 
         <Collapsible open={detailsExpanded} onOpenChange={setDetailsExpanded}>
@@ -527,6 +532,13 @@ export default function BookingDetailPage({
           setEditSheetEquipment(false);
           reload();
         }}
+      />
+
+      <AddToCheckoutDialog
+        open={addToCheckoutOpen}
+        bookingId={id}
+        onOpenChange={setAddToCheckoutOpen}
+        onAdded={patchLocal}
       />
 
       <TransferOwnerDialog

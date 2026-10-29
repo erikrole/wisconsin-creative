@@ -1,7 +1,7 @@
 export type BookingKind = "CHECKOUT" | "RESERVATION";
 export type BookingStatus = "DRAFT" | "BOOKED" | "PENDING_PICKUP" | "OPEN" | "COMPLETED" | "CANCELLED";
 
-export type CheckoutAction = "edit" | "extend" | "cancel" | "checkin" | "open" | "force-complete" | "nudge" | "duplicate" | "transfer-owner" | "manage-custody";
+export type CheckoutAction = "edit" | "extend" | "cancel" | "checkin" | "open" | "force-complete" | "nudge" | "duplicate" | "transfer-owner" | "manage-custody" | "edit-items";
 export type ReservationAction = "edit" | "extend" | "cancel" | "convert" | "duplicate" | "force-checkout" | "close-remaining" | "transfer-owner";
 export type BookingAction = CheckoutAction | ReservationAction | "view";
 
@@ -30,8 +30,8 @@ type ActionOptions = {
   includeServerActions?: boolean;
 };
 
-const CLIENT_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "open", "duplicate", "transfer-owner", "manage-custody"];
-const SERVER_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "checkin", "open", "force-complete", "nudge", "duplicate", "transfer-owner", "manage-custody"];
+const CLIENT_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "open", "duplicate", "transfer-owner", "manage-custody", "edit-items"];
+const SERVER_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "checkin", "open", "force-complete", "nudge", "duplicate", "transfer-owner", "manage-custody", "edit-items"];
 const CLIENT_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "duplicate", "transfer-owner"];
 const SERVER_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "convert", "duplicate", "force-checkout", "close-remaining", "transfer-owner"];
 const COLLABORATOR_RESERVATION_ACTION_CAPABILITIES: Partial<Record<"edit" | "extend" | "cancel", string>> = {
@@ -45,7 +45,7 @@ const STATE_ACTIONS: Record<BookingKind, Record<BookingStatus, Set<string>>> = {
     DRAFT: new Set(["edit", "cancel", "transfer-owner"]),
     BOOKED: new Set(["edit", "extend", "cancel", "open", "transfer-owner", "manage-custody"]),
     PENDING_PICKUP: new Set(["edit", "cancel", "transfer-owner", "manage-custody"]),
-    OPEN: new Set(["edit", "extend", "force-complete", "nudge", "transfer-owner", "manage-custody"]),
+    OPEN: new Set(["edit", "extend", "cancel", "force-complete", "nudge", "transfer-owner", "manage-custody", "edit-items"]),
     COMPLETED: new Set(["duplicate"]),
     CANCELLED: new Set(),
   },
@@ -58,6 +58,18 @@ const STATE_ACTIONS: Record<BookingKind, Record<BookingStatus, Set<string>>> = {
     CANCELLED: new Set(["duplicate"]),
   },
 };
+
+/**
+ * Actions only an ADMIN may take. Add a row here to lock a new action to
+ * admins; `status` limits the rule to one state (e.g. cancelling an active
+ * checkout), and a missing `reason` reads as the action being unavailable.
+ */
+const ADMIN_ONLY_ACTIONS: { action: string; status?: BookingStatus; reason?: string }[] = [
+  { action: "force-complete", reason: "Only admins can force-complete a checkout" },
+  { action: "force-checkout", reason: "Only admins can force-checkout a reservation" },
+  { action: "edit-items", reason: "Only admins can change items on an active checkout" },
+  { action: "cancel", status: "OPEN" },
+];
 
 function isStaffOrAbove(role: string): boolean {
   return role === "ADMIN" || role === "STAFF";
@@ -135,16 +147,13 @@ export function canPerformBookingAction(
     };
   }
 
-  if (action === "force-complete") {
+  const adminOnly = ADMIN_ONLY_ACTIONS.find(
+    (rule) => rule.action === action && (!rule.status || rule.status === booking.status),
+  );
+  if (adminOnly) {
     return actor.role === "ADMIN"
       ? { allowed: true }
-      : { allowed: false, reason: "Only admins can force-complete a checkout" };
-  }
-
-  if (action === "force-checkout") {
-    return actor.role === "ADMIN"
-      ? { allowed: true }
-      : { allowed: false, reason: "Only admins can force-checkout a reservation" };
+      : { allowed: false, reason: adminOnly.reason ?? `Action "${action}" is not available in ${booking.status} state` };
   }
 
   if (action === "close-remaining") {
@@ -212,4 +221,9 @@ export function getAllowedBookingActions(
   return allActionsForKind(kind, includeServerActions).filter((action) =>
     canPerformBookingAction(actor, booking, action, kind).allowed
   );
+}
+
+/** True when only admins may take this action, so the UI can mark it. */
+export function isAdminOnlyAction(action: string, status: string): boolean {
+  return ADMIN_ONLY_ACTIONS.some((rule) => rule.action === action && (!rule.status || rule.status === status));
 }

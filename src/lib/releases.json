@@ -1,5 +1,52 @@
 [
   {
+    "date": "2026-10-29",
+    "title": "The paint roller is back",
+    "type": "feature",
+    "summary": "When you add something weekly, you can paint the days and hours onto a week grid like the old WhenToWork roller, in red.",
+    "details": [
+      "Tap Paint it in on Add something weekly, then drag across the days and hours.",
+      "It fills in the same days and times as before; you still name it and save."
+    ],
+    "pr": 725,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
+    "title": "A complete, clearer activity log",
+    "type": "improvement",
+    "summary": "Every scan, swap and change now shows in the history of the item and booking it touched, in plain sentences, and admins can filter the log by area and person.",
+    "details": [
+      "Booking and item history now show each item scanned out and back in, with bursts of scans folded into one line that names every item.",
+      "A swapped or removed item keeps those events in its own history, and swaps name both items.",
+      "Edits show what changed (old value to new value) instead of raw data.",
+      "Password changes and signing out other devices are now recorded.",
+      "Reports > Audit has Area and Person filters, and kits have a History card for staff and admins.",
+      "All dates and times in the activity log and across the app show in Central time."
+    ],
+    "pr": 724,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
+    "title": "Neutral buttons and tab underline",
+    "type": "fixes",
+    "summary": "The app's main color is now neutral near-black instead of blue, and tab bars show a single underline under the active tab.",
+    "details": [
+      "A second, shorter red underline no longer sits on top of the first one, and the active-tab underline is now neutral dark instead of blue.",
+      "Primary buttons, selected states and focus rings are near-black in light mode and light gray in dark mode.",
+      "Fixed on the Item, Bookings, Licenses and Bulk inventory pages."
+    ],
+    "pr": 723,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-28",
     "title": "Trades tab and calmer link colors",
     "type": "improvement",
@@ -13,6 +60,23 @@
       "Opening the app with an expired sign-in now goes to the login page instead of an error."
     ],
     "pr": 722,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
+    "title": "Admins can manage active checkouts",
+    "type": "feature",
+    "summary": "Admins can now add or remove gear on, or cancel, a checkout that is already out, without going to a kiosk.",
+    "details": [
+      "Open the checkout and tap Add items, then search and pick an available item.",
+      "Use the menu on an item row to remove it. Taking off the last item closes the checkout.",
+      "Cancel is now available on an active checkout. Everything on it is released as returned without a scan.",
+      "Admin-only actions are shown in a red-to-violet gradient.",
+      "Each change is recorded in the activity log."
+    ],
+    "pr": 721,
     "platforms": [
       "Web"
     ]

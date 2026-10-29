@@ -128,6 +128,16 @@ describe("getFieldChanges", () => {
     ]);
   });
 
+  it("calls a kit rename a name change, not an item name change", () => {
+    const changes = getFieldChanges(entry("updated", {
+      entityType: "kit",
+      beforeJson: { name: "Old kit" },
+      afterJson: { name: "New kit" },
+    }));
+
+    expect(changes).toEqual([{ label: "Name", from: "Old kit", to: "New kit", mono: false }]);
+  });
+
   it("formats dates and booleans, and strips the protocol from links", () => {
     const changes = getFieldChanges(entry("update", {
       beforeJson: { endsAt: "2026-10-24T22:00:00.000Z", linkUrl: "https://www.sony.com/a7" },
@@ -150,6 +160,14 @@ describe("getFieldChanges", () => {
 
   it("only diffs actions that are edits", () => {
     expect(getFieldChanges(entry("created", { afterJson: { name: "New" } }))).toEqual([]);
+  });
+
+  it("diffs other actions on the fields they saved before and after", () => {
+    expect(getFieldChanges(entry("calendar_event_updated", {
+      entityType: "calendar_event",
+      beforeJson: { summary: "Volleyball vs Iowa", location: "Field House" },
+      afterJson: { summary: "Volleyball vs Iowa (moved)", source: "manual" },
+    }))).toEqual([{ label: "Summary", from: "Volleyball vs Iowa", to: "Volleyball vs Iowa (moved)", mono: false }]);
   });
 });
 
@@ -239,5 +257,54 @@ describe("getChainedChange", () => {
       entry("updated", { actor, createdAt: "2026-10-22T15:01:00.000Z", afterJson: { brand: "Sony" } }),
     ])[0]!;
     expect(getChainedChange(row)).toBeNull();
+  });
+});
+
+describe("item scans and swaps", () => {
+  const booking = { entityType: "booking", entityId: "b1", entity: { label: "Football vs Iowa", kind: "CHECKOUT" } };
+
+  it("names the item on a booking and the booking on an item", () => {
+    const out = entry("scan_checkout", { ...booking, afterJson: { itemName: "ROAM2" } });
+    expect(describeAction(out, "Avery", "booking")).toBe("Scanned out ROAM2");
+    expect(describeAction(out, "Avery", "item")).toBe('Scanned out for checkout "Football vs Iowa"');
+    const back = entry("scan_checkin", { ...booking, afterJson: { itemName: "Batteries", quantity: 4 } });
+    expect(describeAction(back, "Avery", "booking")).toBe("Scanned in Batteries ×4");
+  });
+
+  it("folds a burst of scans into one row that lists every item", () => {
+    const rows = coalesceEntries(["ROAM1", "ROAM2", "SLOW1", "SLOW2"].map((itemName) =>
+      entry("scan_checkin", { ...booking, afterJson: { itemName } })));
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!._count).toBe(1);
+    expect(describeAction(rows[0]!, "Avery", "booking")).toBe("Scanned in ROAM1, ROAM2, SLOW1, and 1 more");
+  });
+
+  it("says which item was swapped for which", () => {
+    const swap = entry("kiosk_checkout_item_swapped", {
+      ...booking,
+      beforeJson: { assetId: "a1", tagName: "ROAM2" },
+      afterJson: { assetId: "a2", tagName: "ROAM3", kioskName: "Camp Randall kiosk" },
+    });
+    expect(describeAction(swap, "Avery", "booking")).toBe("Swapped ROAM2 for ROAM3 at the Camp Randall kiosk");
+  });
+});
+
+describe("scan and swap rows stay readable", () => {
+  it("reads a folded scan burst earliest first even when rows arrive oldest first", () => {
+    const booking = { entityType: "booking", entityId: "b1" };
+    const rows = coalesceEntries([
+      entry("scan_checkout", { ...booking, createdAt: "2026-10-22T15:01:00.000Z", afterJson: { itemName: "ROAM1" } }),
+      entry("scan_checkout", { ...booking, createdAt: "2026-10-22T15:02:00.000Z", afterJson: { itemName: "ROAM2" } }),
+    ]);
+    expect(formatTimestamp(rows[0]!)).toBe("10:01 AM–10:02 AM");
+  });
+
+  it("shows no id chips under a swap", () => {
+    expect(getFieldChanges(entry("kiosk_checkout_item_swapped", {
+      entityType: "booking",
+      beforeJson: { assetId: "a1", tagName: "CAM-101" },
+      afterJson: { assetId: "a4", tagName: "CAM-103", kioskDeviceId: "k1" },
+    }))).toEqual([]);
   });
 });

@@ -509,7 +509,11 @@ export async function extendBooking(
   return updated;
 }
 
-export async function cancelBooking(bookingId: string, actorUserId: string) {
+export async function cancelBooking(
+  bookingId: string,
+  actorUserId: string,
+  opts: { allowActiveCheckout?: boolean } = {},
+) {
   let releasedAssignmentId: string | null = null;
   const result = await db.$transaction(async (tx) => {
     const booking = await tx.booking.findUnique({
@@ -542,7 +546,7 @@ export async function cancelBooking(bookingId: string, actorUserId: string) {
       throw new HttpError(400, "Cannot cancel a completed booking");
     }
 
-    if (booking.kind === BookingKind.CHECKOUT && booking.status === BookingStatus.OPEN) {
+    if (booking.kind === BookingKind.CHECKOUT && booking.status === BookingStatus.OPEN && !opts.allowActiveCheckout) {
       throw new HttpError(
         409,
         "Active checkout custody must be returned at a kiosk or closed through the admin exception",
