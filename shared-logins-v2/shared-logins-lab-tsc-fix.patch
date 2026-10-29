@@ -1,0 +1,15 @@
+diff --git a/src/app/dev-shared-logins/SharedLoginsLab.tsx b/src/app/dev-shared-logins/SharedLoginsLab.tsx
+index 9447d3f69..633bd3d6d 100644
+--- a/src/app/dev-shared-logins/SharedLoginsLab.tsx
++++ b/src/app/dev-shared-logins/SharedLoginsLab.tsx
+@@ -18,8 +18,8 @@ const SAMPLE_LOGINS = [
+ ];
+ // `?many=1` adds enough logins to show search and category sections.
+ const EXTRA_LOGINS = ["Adobe Stock|Stock", "Musicbed|Music", "Artlist|Music", "Storyblocks|Video", "Canva|Design"].map((entry, index) => {
+-  const [name, category] = entry.split("|");
+-  return { ...SAMPLE_LOGINS[0], id: `x${index}`, name, category, websiteUrl: `https://www.${name.toLowerCase().replace(/[^a-z]/g, "")}.com` };
++  const [name = "", category = ""] = entry.split("|");
++  return { ...SAMPLE_LOGINS[0]!, id: `x${index}`, name, category, websiteUrl: `https://www.${name.toLowerCase().replace(/[^a-z]/g, "")}.com` };
+ });
+ 
+ if (typeof window !== "undefined") {
