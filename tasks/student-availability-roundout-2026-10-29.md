@@ -55,3 +55,5 @@ Duplicate-save proof: `npm run test:postgres` passed all 19 tests, including six
 Final local follow-up gates: 8,475 unit tests passed (13 existing skipped), all coverage floors passed; 19 PostgreSQL tests passed; full lint passed with its existing 121 warnings. Fixed the calendar-date source guard using one explicit encoded-date helper and restored 40px approval targets. Browser fixture retry checks passed with the same save UUID. Refreshed matched web evidence is in the review page. Required iPhone 18 Pro Max build, migration checks and schema validation passed.
 
 Final app-only build and TypeScript passed. The sandboxed Turbopack run stalled idle and was stopped; the same build completed outside the process sandbox. No migration/deployment step ran. The review index loads all 12 images with no horizontal overflow.
+
+Draft PR [#735](https://github.com/erikrole/wisconsin-creative/pull/735) is open for the authorized managed preview. Implementation commit: `3c80d9c2c`. Migration-pair guard passed against origin/main. Release-note registration follows with this PR number; hosted CI and preview acceptance remain pending.
