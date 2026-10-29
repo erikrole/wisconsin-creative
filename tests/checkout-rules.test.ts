@@ -173,7 +173,7 @@ describe("getAllowedActions", () => {
     const actions = getAllowedBookingActions(admin, booking);
     expect(actions).toContain("edit");
     expect(actions).toContain("extend");
-    expect(actions).not.toContain("cancel");
+    expect(actions).toContain("cancel");
     expect(actions).not.toContain("checkin");
     expect(actions).not.toContain("open");
     expect(actions).toContain("manage-custody");
