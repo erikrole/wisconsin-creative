@@ -78,7 +78,7 @@ function TabsList({
         <span
           aria-hidden
           data-slot="tabs-indicator"
-          className="pointer-events-none absolute -bottom-px left-0 h-0.5 bg-primary transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+          className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-primary transition-[transform,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
           style={{ transform: `translateX(${bar.left}px)`, width: bar.width }}
         />
       ) : null}

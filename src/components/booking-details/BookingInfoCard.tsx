@@ -194,7 +194,7 @@ export default function BookingInfoCard({
           <SaveableField label="Converted from">
             <Link
               href={`/reservations/${booking.sourceReservation.id}`}
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              className="inline-flex items-center gap-1.5 text-sm text-foreground hover:underline"
             >
               <LinkIcon className="size-3.5" />
               {booking.sourceReservation.refNumber || booking.sourceReservation.title}

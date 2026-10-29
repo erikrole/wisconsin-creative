@@ -715,7 +715,7 @@ function BadgeDetailDialog({
                 {showGalleryLink && !isHiddenUntilEarnedBadge(badge.key) && !isPrivateHolderBadge(badge.key) ? (
                   <Link
                     href={`/badges?badge=${encodeURIComponent(badge.key)}`}
-                    className="mt-2 inline-flex min-h-10 items-center text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="mt-2 inline-flex min-h-10 items-center text-xs font-semibold text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   >
                     See who has it
                   </Link>
@@ -1047,7 +1047,7 @@ export default function UserBadgesTab({
           {gallery ? (
             <Link
               href={gallery.isSelf ? "/badges" : `/badges?tab=team&compare=${encodeURIComponent(userId)}`}
-              className="-mt-3 inline-flex min-h-10 w-fit items-center text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="-mt-3 inline-flex min-h-10 w-fit items-center text-sm font-semibold text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               {gallery.isSelf ? "Open the team badge gallery" : "Compare badges with yours"}
             </Link>

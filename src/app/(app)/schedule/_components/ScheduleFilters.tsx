@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { FilterIcon, ListIcon, CalendarIcon, CalendarDaysIcon, LoaderCircleIcon, XIcon, WorkflowIcon } from "lucide-react";
+import { ArrowLeftRightIcon, FilterIcon, ListIcon, CalendarIcon, CalendarDaysIcon, LoaderCircleIcon, XIcon, WorkflowIcon } from "lucide-react";
 import { SportPicker } from "@/components/SportPicker";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,12 +31,14 @@ type ScheduleFiltersProps = {
   filteredEntries: CalendarEntry[];
   fillingWindow?: boolean;
   sourceSignal?: ScheduleSourceSignalData | null;
+  openTradeCount?: number;
 };
 
 const VIEW_MODES: { value: ViewMode; label: string; icon: ReactNode }[] = [
   { value: "list", label: "List", icon: <ListIcon className="size-3.5" /> },
   { value: "week", label: "Week", icon: <CalendarDaysIcon className="size-3.5" /> },
   { value: "calendar", label: "Calendar", icon: <CalendarIcon className="size-3.5" /> },
+  { value: "trades", label: "Trades", icon: <ArrowLeftRightIcon className="size-3.5" /> },
 ];
 
 const HOME_AWAY_OPTIONS = VENUE_FILTER_OPTIONS as Array<{ value: HomeAwayFilter; label: string }>;
@@ -69,6 +71,7 @@ export function ScheduleFilters({
   filteredEntries,
   fillingWindow = false,
   sourceSignal = null,
+  openTradeCount = 0,
 }: ScheduleFiltersProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const viewRequest = useRef(0);
@@ -133,7 +136,7 @@ export function ScheduleFilters({
 
   return (
     <OperationalToolbar className="mb-3">
-      {filters.queueMeta && (
+      {filters.queueMeta && filters.viewMode !== "trades" && (
         <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 rounded-md bg-primary/5 px-3 py-2 shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_14%,transparent)]">
           <div className="flex min-w-0 items-center gap-2">
             <WorkflowIcon className="size-4 shrink-0 text-primary" />
@@ -189,11 +192,18 @@ export function ScheduleFilters({
               >
                 {mode.icon}
                 <span className="max-sm:hidden">{mode.label}</span>
+                {mode.value === "trades" && openTradeCount > 0 && (
+                  <span className="rounded-sm bg-orange-100 px-1.5 text-[10px] font-semibold tabular-nums text-orange-800 dark:bg-orange-500/20 dark:text-orange-200">
+                    {openTradeCount}
+                  </span>
+                )}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
         </div>
 
+        {filters.viewMode !== "trades" && (
+          <>
         <Button
           type="button"
           variant={filters.myShiftsOnly ? "default" : "outline"}
@@ -357,13 +367,16 @@ export function ScheduleFilters({
           </span>
         )}
 
+          </>
+        )}
+
         {sourceSignal && (
           <div className="ml-auto">
             <ScheduleSourceSignal signal={sourceSignal} />
           </div>
         )}
       </div>
-      <OperationalActiveFilterChips filters={activeFilters} />
+      {filters.viewMode !== "trades" && <OperationalActiveFilterChips filters={activeFilters} />}
     </OperationalToolbar>
   );
 }

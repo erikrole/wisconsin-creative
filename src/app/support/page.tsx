@@ -13,7 +13,7 @@ export default function SupportPage() {
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-6 py-12 sm:py-16">
         <header className="flex flex-col gap-4">
-          <Link href="/about" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+          <Link href="/about" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
             Wisconsin Creative
           </Link>
           <div className="flex flex-col gap-3">
@@ -47,7 +47,7 @@ export default function SupportPage() {
           <p className="text-sm leading-6 text-muted-foreground">
             The app includes password controls and account deletion under Account &amp; Security. Read how account,
             operational, and device information is handled in the{" "}
-            <Link href="/privacy" className="font-medium text-primary underline-offset-4 hover:underline">
+            <Link href="/privacy" className="font-medium text-foreground underline-offset-4 hover:underline">
               Privacy Policy
             </Link>
             .
