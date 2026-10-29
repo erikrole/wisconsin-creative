@@ -27,6 +27,7 @@ import {
 import { GuideEditorLayout } from "@/components/resources/GuideEditorLayout";
 import { GuideSettingsPanel } from "@/components/resources/GuideSettingsPanel";
 import { MarkdownEditor } from "@/components/resources/MarkdownEditor";
+import { toast } from "@/lib/toast";
 import {
   AlertDialog,
   AlertDialogAction,
