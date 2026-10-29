@@ -20,6 +20,8 @@ import { AlertCircle, Check, ImageIcon, MoreHorizontal, Plus, Search } from "luc
 import { StaggerList, StaggerItem } from "@/components/ui/motion";
 import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { AdminOnlyTag } from "@/components/booking-details/AdminOnlyTag";
+import { isAdminOnlyAction } from "@/lib/booking-action-policy";
 import type { BookingDetail, SerializedItem, BulkItem } from "@/components/booking-details/types";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
@@ -302,6 +304,7 @@ export default function BookingEquipmentTab({
                   <Button type="button" variant="outline" size="sm" className="h-10" onClick={onAddItems}>
                     <Plus className="size-4" />
                     Add items
+                    {isCheckout && isAdminOnlyAction("edit-items", booking.status) && <AdminOnlyTag />}
                   </Button>
                 )}
               </div>
@@ -576,6 +579,7 @@ function SerializedRow({
             {canRemove && item.allocationStatus === "active" && (
               <DropdownMenuItem variant="destructive" onSelect={onRemove}>
                 Remove from checkout
+                <AdminOnlyTag />
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

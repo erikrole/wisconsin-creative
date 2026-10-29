@@ -31,6 +31,8 @@ import { statusBadgeVariant, statusLabel, urgencyBadgeClassName } from "./helper
 import type { BookingChangeSyncStatus } from "@/hooks/use-booking-change-sync";
 import type { BookingDetail } from "./types";
 import { formatDateTime } from "@/lib/format";
+import { isAdminOnlyAction } from "@/lib/booking-action-policy";
+import { AdminOnlyTag } from "./AdminOnlyTag";
 import { operationalBookingStatus } from "@/lib/booking-status-display";
 
 type Props = {
@@ -330,6 +332,7 @@ export function BookingHeader({
                           disabled={!!actionLoading}
                         >
                           Close without scan
+                          <AdminOnlyTag />
                         </PendingDropdownMenuItem>
                       )}
                       {canForceCheckout && (
@@ -340,6 +343,7 @@ export function BookingHeader({
                           disabled={!!actionLoading}
                         >
                           Force checkout
+                          <AdminOnlyTag />
                         </PendingDropdownMenuItem>
                       )}
                       {canCloseRemaining && (
@@ -397,6 +401,7 @@ export function BookingHeader({
                           disabled={!!actionLoading}
                         >
                           Cancel
+                          {isAdminOnlyAction("cancel", booking.status) && <AdminOnlyTag />}
                         </PendingDropdownMenuItem>
                       )}
                     </DropdownMenuGroup>

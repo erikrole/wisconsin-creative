@@ -222,3 +222,8 @@ export function getAllowedBookingActions(
     canPerformBookingAction(actor, booking, action, kind).allowed
   );
 }
+
+/** True when only admins may take this action, so the UI can mark it. */
+export function isAdminOnlyAction(action: string, status: string): boolean {
+  return ADMIN_ONLY_ACTIONS.some((rule) => rule.action === action && (!rule.status || rule.status === status));
+}
