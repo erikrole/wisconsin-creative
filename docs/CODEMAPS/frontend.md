@@ -112,9 +112,13 @@
 | `/dev-badges` | `src/app/dev-badges/page.tsx` |
 | `/dev-batteries` | `src/app/dev-batteries/page.tsx` |
 | `/dev-crew-size` | `src/app/dev-crew-size/page.tsx` |
+| `/dev-crew-tags` | `src/app/dev-crew-tags/page.tsx` |
 | `/dev-gear` | `src/app/dev-gear/page.tsx` |
 | `/dev-home` | `src/app/dev-home/page.tsx` |
 | `/dev-labels` | `src/app/dev-labels/page.tsx` |
+| `/dev-onboarding-checklist` | `src/app/dev-onboarding-checklist/page.tsx` |
+| `/dev-person-schedule` | `src/app/dev-person-schedule/page.tsx` |
+| `/dev-schedule-review` | `src/app/dev-schedule-review/page.tsx` |
 | `/dev-settings` | `src/app/dev-settings/page.tsx` |
 | `/dev-sidebar` | `src/app/dev-sidebar/page.tsx` |
 | `/dev-team-availability` | `src/app/dev-team-availability/page.tsx` |
@@ -174,7 +178,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/resources/BrandAssetLibrary.tsx` | 1978 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1979 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1079 |
@@ -183,7 +187,7 @@
 | `src/components/BookingListPage.tsx` | 932 |
 | `src/components/EquipmentPicker.tsx` | 898 |
 | `src/components/Sidebar.tsx` | 803 |
-| `src/components/ShiftDetailPanel.tsx` | 797 |
+| `src/components/ShiftDetailPanel.tsx` | 799 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
 | `src/components/ui/sidebar.tsx` | 708 |
@@ -199,7 +203,7 @@
 | `src/components/resources/MarkdownReader.tsx` | 369 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 355 |
 | `src/components/FormCombobox.tsx` | 352 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 349 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 351 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
@@ -232,7 +236,8 @@
 | `src/hooks/use-onboarding-save.ts` | 249 |
 | `src/hooks/use-operational-polling-activity.ts` | 156 |
 | `src/hooks/use-profile-completion.ts` | 83 |
-| `src/hooks/use-schedule-data.ts` | 776 |
+| `src/hooks/use-schedule-data.ts` | 783 |
+| `src/hooks/use-schedule-live-sync.ts` | 56 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-synced-draft.ts` | 37 |
 | `src/hooks/use-url-state.ts` | 129 |
