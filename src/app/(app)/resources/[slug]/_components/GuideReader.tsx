@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ResourceType } from "@/lib/client-enums";
 import { ArrowLeftIcon, ArrowRightIcon, BadgeCheckIcon, LinkIcon, PencilIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { MarkdownReader } from "@/components/resources/MarkdownReader";
 import { useFetch } from "@/hooks/use-fetch";
