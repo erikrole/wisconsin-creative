@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-30",
+    "title": "Approve trades right on the Schedule",
+    "type": "improvement",
+    "summary": "Admins now see a \"to review\" button on any event with a claimed trade or an open-slot request, and can approve or decline it without leaving the Schedule.",
+    "details": [
+      "Works on every row of the Schedule list, on desktop and phone.",
+      "One button covers all the trades and requests for that event.",
+      "Approving is paused while an event has unreleased crew edits, same as before."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-29",
     "title": "Schedule changes show up within seconds",
     "type": "improvement",

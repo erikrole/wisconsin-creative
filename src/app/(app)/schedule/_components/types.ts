@@ -1,6 +1,7 @@
 import type { BadgeProps } from "@/components/ui/badge";
 import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import type { CrewHalf } from "@/lib/crew-label";
+import type { PendingCrewClaim, PendingCrewTrade } from "@/lib/crew-pending-review";
 import { sportLabel } from "@/lib/sports";
 import { scheduleSportFamily } from "@/lib/schedule-sport-family";
 import { venueToneFromEvent } from "@/lib/venue-tone";
@@ -87,6 +88,8 @@ export type ShiftGroup = {
   archivedAt?: string | null;
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;
+  /** Admin only: claimed trades and open-slot requests waiting on a decision. */
+  pendingReview?: { claims: PendingCrewClaim[]; trades: PendingCrewTrade[] };
   claimsPaused?: boolean;
   autoReleaseAt?: string | null;
   autoReleaseError?: string | null;
@@ -117,6 +120,7 @@ export type CalendarEntry = CalendarEvent & {
   archivedAt?: string | null;
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;
+  pendingReview?: ShiftGroup["pendingReview"];
   claimsPaused?: boolean;
   combinedEventCount?: number;
   autoReleaseAt?: string | null;

@@ -49,6 +49,7 @@ import {
   useDesktopScheduleList,
 } from "./ListViewTimeline";
 import { eventStartLabel } from "./list-view-helpers";
+import { EntryPendingReview } from "./EntryPendingReview";
 import { EventRows } from "./ListViewEventRows";
 
 export type CrewTemplateSide = "HOME" | "AWAY" | "EMPTY";
@@ -86,6 +87,7 @@ type ListViewProps = {
   clearQueue: () => void;
   currentUserId: string;
   isStaff: boolean;
+  canReviewClaims?: boolean;
   expandedRowId: string | null;
   setExpandedRowId: (id: string | null) => void;
   onSelectGroup: (groupId: string | null) => void;
@@ -144,6 +146,7 @@ export function ListView({
   clearQueue,
   currentUserId,
   isStaff,
+  canReviewClaims = false,
   expandedRowId,
   setExpandedRowId,
   onSelectGroup,
@@ -894,6 +897,7 @@ export function ListView({
                             onPostTrade={isStaff ? undefined : openTradeDialog}
                             onCancelTrade={isStaff ? undefined : handleCancelTrade}
                             canClaim={!isStaff}
+                            canReview={canReviewClaims}
                             onClaimed={loadData}
                             onSetupCrew={isStaff ? onSetupCrew : undefined}
                             onQuickManageCrew={isStaff ? onQuickManageCrew : undefined}
@@ -1066,6 +1070,10 @@ export function ListView({
                       {cardSummary}
                     </div>
                   )}
+
+                  <div className="px-4 empty:hidden">
+                    <EntryPendingReview entry={entry} canReview={canReviewClaims} onReviewed={loadData} />
+                  </div>
 
                   {isStaff && (Boolean(entry.shiftGroupId) || onSetupCrew || onHideEvent) && (
                     <div className="absolute right-2 top-2">

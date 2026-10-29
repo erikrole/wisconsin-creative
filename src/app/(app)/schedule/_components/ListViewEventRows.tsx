@@ -11,6 +11,7 @@ import type { CalendarEntry } from "./types";
 import { WorkingCrewEditor, type WorkingCrewEntry } from "./WorkingCrewEditor";
 import { scheduleEventTitleParts } from "./types";
 import { CoverageBadge } from "./Coverage";
+import { EntryPendingReview } from "./EntryPendingReview";
 import { CrewRowActions, CrewSummary, ShiftRowList } from "./ListViewCrewRows";
 import { EventGrid } from "./ListViewGrid";
 import { eventStartLabel } from "./list-view-helpers";
@@ -36,6 +37,7 @@ export function EventRows({
   onPostTrade,
   onCancelTrade,
   canClaim,
+  canReview,
   onClaimed,
   onSetupCrew,
   onQuickManageCrew,
@@ -59,6 +61,7 @@ export function EventRows({
   onPostTrade?: (assignmentId: string) => void;
   onCancelTrade?: (tradeId: string) => void;
   canClaim: boolean;
+  canReview: boolean;
   onClaimed?: () => void | Promise<void>;
   onSetupCrew?: (eventId: string, templateSide: CrewTemplateSide) => void;
   onQuickManageCrew?: (eventId: string) => void;
@@ -142,6 +145,7 @@ export function EventRows({
               crew: <CrewSummary entry={entry} />,
               status: (
                 <div className="flex min-w-0 flex-wrap items-center gap-1">
+                  <EntryPendingReview entry={entry} canReview={canReview} onReviewed={onClaimed} />
                   {showShiftStatus && shiftStatus === "Pending" && <Badge variant="orange" size="sm">{shiftStatus}</Badge>}
                   {entry.claimsPaused && canClaim && (
                     <Badge variant="secondary" size="sm">Updating</Badge>
