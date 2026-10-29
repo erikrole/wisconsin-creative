@@ -2,7 +2,7 @@
  * Pure helpers behind ActivityTimeline: audit rows to sentences, field diffs,
  * coalescing and date grouping. No React; the component owns presentation.
  */
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, INSTITUTION_TZ } from "@/lib/format";
 import { auditSentence } from "@/lib/audit-actions";
 
 /** Map an audit row's entity to a deep-link route, or null if no detail page exists. */
@@ -706,9 +706,10 @@ export function getFieldChanges(entry: AuditEntry): FieldChange[] {
   // Any other action that saved both sides is an edit too: diff only the fields it recorded on both.
   if (!DIFF_ACTIONS.has(entry.action)) {
     const before = entry.beforeJson;
-    if (!before) return [];
+    // Gear moves already name their items in the sentence.
+    if (!before || EQUIPMENT_ACTIONS.has(entry.action)) return [];
     return Object.keys(entry.afterJson)
-      .filter((k) => k in before)
+      .filter((k) => k in before && !/Ids?$/.test(k))
       .map((k) => describeFieldChange(k, before[k], entry.afterJson![k], entry.entityType))
       .filter((c): c is FieldChange => c !== null);
   }
@@ -740,18 +741,22 @@ export function isPhantomEntry(entry: AuditEntry): boolean {
 
 /* ── Date grouping ── */
 
+/** Calendar day in Central time, so "Today" never flips at UTC midnight. */
+function centralDayKey(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: INSTITUTION_TZ });
+}
+
 export function getDateGroup(iso: string, today: Date): string {
   const d = new Date(iso);
-  const todayStr = today.toDateString();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterday = new Date(today.getTime() - 86_400_000);
 
-  if (d.toDateString() === todayStr) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (centralDayKey(d) === centralDayKey(today)) return "Today";
+  if (centralDayKey(d) === centralDayKey(yesterday)) return "Yesterday";
   return d.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: INSTITUTION_TZ,
   });
 }
 
@@ -761,14 +766,20 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: INSTITUTION_TZ,
   });
 }
 
 export function formatTimestamp(entry: RenderEntry): string {
   const newest = formatTime(entry.createdAt);
   if (entry._oldest && entry._oldest !== entry.createdAt) {
-    const oldest = formatTime(entry._oldest);
-    if (oldest !== newest) return `${oldest}–${newest}`;
+    // Earliest first, whichever order the rows arrived in.
+    const [start, end] = [entry._oldest, entry.createdAt].sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
+    const from = formatTime(start!);
+    const to = formatTime(end!);
+    if (from !== to) return `${from}–${to}`;
   }
   return newest;
 }

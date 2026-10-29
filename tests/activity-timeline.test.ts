@@ -289,3 +289,22 @@ describe("item scans and swaps", () => {
     expect(describeAction(swap, "Avery", "booking")).toBe("Swapped ROAM2 for ROAM3 at the Camp Randall kiosk");
   });
 });
+
+describe("scan and swap rows stay readable", () => {
+  it("reads a folded scan burst earliest first even when rows arrive oldest first", () => {
+    const booking = { entityType: "booking", entityId: "b1" };
+    const rows = coalesceEntries([
+      entry("scan_checkout", { ...booking, createdAt: "2026-10-22T15:01:00.000Z", afterJson: { itemName: "ROAM1" } }),
+      entry("scan_checkout", { ...booking, createdAt: "2026-10-22T15:02:00.000Z", afterJson: { itemName: "ROAM2" } }),
+    ]);
+    expect(formatTimestamp(rows[0]!)).toBe("10:01 AM–10:02 AM");
+  });
+
+  it("shows no id chips under a swap", () => {
+    expect(getFieldChanges(entry("kiosk_checkout_item_swapped", {
+      entityType: "booking",
+      beforeJson: { assetId: "a1", tagName: "CAM-101" },
+      afterJson: { assetId: "a4", tagName: "CAM-103", kioskDeviceId: "k1" },
+    }))).toEqual([]);
+  });
+});

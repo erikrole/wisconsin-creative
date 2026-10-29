@@ -374,6 +374,15 @@ enum ItemActivityCopy {
             return "Closed the reservation and released the gear that was never picked up"
         case "completed_after_plan_edit":
             return "Completed the reservation after the remaining gear was removed"
+        case "scan_checkout":
+            return "Scanned out for \(bookingPhrase(entry, fallback: "a checkout"))"
+        case "scan_checkin":
+            return "Scanned back in from \(bookingPhrase(entry, fallback: "a return"))"
+        case "kiosk_checkout_item_swapped":
+            if let from = auditItemName(entry.before), let to = auditItemName(entry.after) {
+                return "Swapped \(from) for \(to) at \(kioskPhrase(entry.after))"
+            }
+            return "Swapped an item at \(kioskPhrase(entry.after))"
         case "nudge_sent", "overdue_nudge_sent":
             return "Sent a reminder"
         default:
