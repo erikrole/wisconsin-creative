@@ -8,6 +8,7 @@
       "Covers shift assignments, trades, crew edits and publishing.",
       "The page checks quietly only while you are looking at it and pauses when you step away."
     ],
+    "pr": 730,
     "platforms": [
       "Web"
     ]
