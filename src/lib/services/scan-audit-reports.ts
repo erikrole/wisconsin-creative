@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { auditCategoryWhere, type AuditCategory } from "@/lib/audit-actions";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { AUDIT_REPORT_EXPORT_LIMIT, SCAN_REPORT_EXPORT_LIMIT } from "./report-shared";
 
@@ -196,10 +197,14 @@ type AuditReportFilters = {
   endDate?: string | null,
   action?: string | null,
   entityType?: string | null,
+  category?: AuditCategory | null,
+  actorId?: string | null,
 };
 
 function buildAuditReportWhere({
   action,
+  actorId,
+  category,
   endDate,
   entityType,
   startDate,
@@ -211,6 +216,8 @@ function buildAuditReportWhere({
   if (Object.keys(dateFilter).length > 0) where.createdAt = dateFilter;
   if (action) where.action = action;
   if (entityType) where.entityType = entityType;
+  if (actorId) where.actorUserId = actorId;
+  if (category) where.AND = [auditCategoryWhere(category)];
 
   return where;
 }
@@ -239,8 +246,10 @@ export async function getAuditReport(
   endDate?: string | null,
   action?: string | null,
   entityType?: string | null,
+  category?: AuditCategory | null,
+  actorId?: string | null,
 ) {
-  const where = buildAuditReportWhere({ startDate, endDate, action, entityType });
+  const where = buildAuditReportWhere({ startDate, endDate, action, entityType, category, actorId });
 
   const auditResults = await Promise.allSettled([
     db.auditLog.findMany({
@@ -278,7 +287,7 @@ export async function getAuditReport(
     ? auditResults[3].value.map((g) => ({ entityType: g.entityType, count: g._count }))
     : [];
 
-  const previousTotal = await getAuditReportPreviousTotal({ action, endDate, entityType, startDate });
+  const previousTotal = await getAuditReportPreviousTotal({ action, actorId, category, endDate, entityType, startDate });
 
   return {
     data: data.map(mapAuditReportEntry),
@@ -297,6 +306,8 @@ export async function getAuditReport(
  */
 async function getAuditReportPreviousTotal({
   action,
+  actorId,
+  category,
   endDate,
   entityType,
   startDate,
@@ -312,6 +323,8 @@ async function getAuditReportPreviousTotal({
     db.auditLog.count({
       where: buildAuditReportWhere({
         action,
+        actorId,
+        category,
         entityType,
         endDate: new Date(start.getTime() - 1).toISOString(),
         startDate: new Date(start.getTime() - span).toISOString(),
@@ -327,8 +340,10 @@ export async function getAuditReportExport(
   endDate?: string | null,
   action?: string | null,
   entityType?: string | null,
+  category?: AuditCategory | null,
+  actorId?: string | null,
 ) {
-  const where = buildAuditReportWhere({ startDate, endDate, action, entityType });
+  const where = buildAuditReportWhere({ startDate, endDate, action, entityType, category, actorId });
   const [data, total] = await Promise.all([
     db.auditLog.findMany({
       where,
@@ -347,4 +362,22 @@ export async function getAuditReportExport(
     truncated: total > AUDIT_REPORT_EXPORT_LIMIT,
     limit: AUDIT_REPORT_EXPORT_LIMIT,
   };
+}
+
+/** People who appear in the audit log, for the "Person" filter. The log keeps 90 days, so this stays small. */
+export async function getAuditActors() {
+  const groups = await db.auditLog.groupBy({
+    by: ["actorUserId"],
+    where: { actorUserId: { not: null } },
+    _count: true,
+    orderBy: { _count: { actorUserId: "desc" } },
+    take: 100,
+  });
+  const ids = groups.flatMap((g) => (g.actorUserId ? [g.actorUserId] : []));
+  const users = await db.user.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+  return users;
 }

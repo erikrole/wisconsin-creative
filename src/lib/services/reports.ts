@@ -17,6 +17,7 @@ export {
   getScanHistoryReport,
   getScanHistoryReportExport,
   getAuditReport,
+  getAuditActors,
   getAuditReportExport,
 } from "./scan-audit-reports";
 export { getBulkLossReport, getBulkLossReportExport } from "./inventory-loss-reports";

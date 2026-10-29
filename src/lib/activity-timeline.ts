@@ -3,6 +3,7 @@
  * coalescing and date grouping. No React; the component owns presentation.
  */
 import { formatDateTime } from "@/lib/format";
+import { auditSentence } from "@/lib/audit-actions";
 
 /** Map an audit row's entity to a deep-link route, or null if no detail page exists. */
 export function entityHref(
@@ -521,6 +522,8 @@ export function describeAction(
     case "overdue_nudge_sent":
       return `${reportPrefix}Sent a reminder`;
     default: {
+      const known = auditSentence(entry.action, entry.entityType);
+      if (known) return `${reportPrefix}${known}`;
       const humanized = entry.action.replace(/[._]+/g, " ");
       const sentence = humanized.charAt(0).toUpperCase() + humanized.slice(1);
       if (context === "report") {

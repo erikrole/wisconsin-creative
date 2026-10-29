@@ -52,7 +52,7 @@ Erik's standing rules for every change, by any agent:
 - Database access uses Neon PostgreSQL through the Prisma adapter. Batch database work where possible and avoid N+1 queries.
 - Keep API routes within the platform timeout budget. Scheduled work belongs in Vercel Cron configuration.
 - Use `withAuth` for authenticated routes and `withHandler` for public routes.
-- Protect every mutation with `requirePermission(role, resource, action)` and write an audit entry with useful before/after snapshots.
+- Protect every mutation with `requirePermission(role, resource, action)` and write an audit entry with useful before/after snapshots. Use a snake_case action and give it a plain sentence in `src/lib/audit-actions.ts` (or a case in `describeAction`); `tests/audit-actions-contract.test.ts` fails otherwise.
 - Use `SERIALIZABLE` for logically concurrent mutations and transactions for logically atomic multi-write flows.
 - Let database constraints decide uniqueness. Catch Prisma `P2002` and return a friendly conflict instead of pre-checking with a race-prone read.
 - Normalize and validate input at the schema boundary. Handle `ZodError` centrally and never assume an error response is JSON.

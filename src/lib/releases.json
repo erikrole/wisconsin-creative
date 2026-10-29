@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-29",
+    "title": "A clearer activity log",
+    "type": "improvement",
+    "summary": "Every action in the activity log now reads as a plain sentence, and admins can filter it by area and by person.",
+    "details": [
+      "Reports > Audit has Area (checkouts, items, people, schedule, kiosk, settings, sign-in, admin overrides) and Person filters.",
+      "Shift trades, kiosk steps, calendar changes, signatures and passkeys no longer show raw action names.",
+      "Kits have a History card showing who changed what.",
+      "Times in the activity log always show in Central time."
+    ],
+    "pr": 723,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-28",
     "title": "Trades tab and calmer link colors",
     "type": "improvement",

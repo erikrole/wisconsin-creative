@@ -105,6 +105,8 @@ describe("audit report CSV export route", () => {
       null,
       null,
       null,
+      null,
+      null,
     );
     expect(getAuditReportExport).not.toHaveBeenCalled();
   });
@@ -126,6 +128,8 @@ describe("audit report CSV export route", () => {
       "2026-06-02T23:59:59.999Z",
       "asset_updated",
       "asset",
+      null,
+      null,
     );
     expect(body).toContain("Timestamp,Actor,Action,Entity Type,Entity ID");
     expect(body).toContain("2026-06-02T12:00:00.000Z,Creative Admin,asset_updated,Asset,asset-1");

@@ -6,6 +6,7 @@ import { HttpError, ok, parsePagination } from "@/lib/http";
 import { parseOptionalDateParam } from "@/lib/api-dates";
 import { enforceRateLimit, REPORT_EXPORT_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
+import { AUDIT_CATEGORIES, type AuditCategory } from "@/lib/audit-actions";
 import { getAuditReport, getAuditReportExport } from "@/lib/services/reports";
 
 function buildAuditReportCsv(rows: Awaited<ReturnType<typeof getAuditReportExport>>["data"]) {
@@ -29,6 +30,12 @@ export const GET = withAuth(async (req, { user }) => {
   const endDate = parseOptionalDateParam(searchParams, "endDate");
   const action = searchParams.get("action");
   const entityType = searchParams.get("entityType");
+  const actorId = searchParams.get("actor");
+  const category = searchParams.get("category") as AuditCategory | null;
+
+  if (category && !AUDIT_CATEGORIES.includes(category)) {
+    throw new HttpError(400, "Unknown audit category");
+  }
 
   if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
     throw new HttpError(400, "startDate must be before endDate");
@@ -36,7 +43,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   if (searchParams.get("format") === "csv") {
     await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
-    const exportData = await getAuditReportExport(startDate, endDate, action, entityType);
+    const exportData = await getAuditReportExport(startDate, endDate, action, entityType, category, actorId);
     const date = appTzDateKey(new Date());
     return new NextResponse(`${buildAuditReportCsv(exportData.data)}\n`, {
       headers: {
@@ -52,5 +59,5 @@ export const GET = withAuth(async (req, { user }) => {
     });
   }
 
-  return ok(await getAuditReport(limit, offset, startDate, endDate, action, entityType));
+  return ok(await getAuditReport(limit, offset, startDate, endDate, action, entityType, category, actorId));
 });
