@@ -132,8 +132,6 @@ type UseScheduleDataResult = {
   currentUserId: string;
   currentUserRole: string;
   openTradeCount: number;
-  tradeSheetOpen: boolean;
-  setTradeSheetOpen: (v: boolean) => void;
   loadTradeCount: () => void;
   sourceSignal: ScheduleSourceSignal | null;
   scheduleHealth: ScheduleHealthSnapshot | null;
@@ -151,7 +149,7 @@ export function useScheduleData(): UseScheduleDataResult {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [viewMode, setViewModeRaw] = useState<ViewMode>(() => parseScheduleViewMode(searchParams.get("view")) ?? "list");
+  const [viewMode, setViewModeRaw] = useState<ViewMode>(() => parseScheduleViewMode(searchParams.get("view")) ?? (searchParams.get("trades") === "open" || searchParams.get("tradeBoard") === "1" ? "trades" : "list"));
   const [calMonth, setCalMonth] = useState(() => parseScheduleMonth(searchParams.get("month")) ?? defaultScheduleMonth());
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [weekStart, setWeekStart] = useState(() => parseScheduleWeek(searchParams.get("week")) ?? defaultScheduleWeek());
@@ -167,8 +165,6 @@ export function useScheduleData(): UseScheduleDataResult {
 
   // UI state
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  // Home links straight to the board with ?trades=open.
-  const [tradeSheetOpen, setTradeSheetOpen] = useState(() => searchParams.get("trades") === "open");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const searchParamsString = searchParams.toString();
   const scheduleSearchSignatureRef = useRef(searchParamsString);
@@ -239,7 +235,9 @@ export function useScheduleData(): UseScheduleDataResult {
     if (viewMode === "list" && listSnapshot) saveScheduleTimelinePosition(listSnapshot);
     const contextDate = viewMode === "list"
       ? scheduleTimelineSnapshotDate(listSnapshot) ?? new Date()
-      : periodContextDateRef.current ?? chooseScheduleViewContextDate({
+      : viewMode === "trades"
+        ? new Date()
+        : periodContextDateRef.current ?? chooseScheduleViewContextDate({
           viewMode,
           snapshot: listViewRoundTripRef.current ? priorSnapshot : null,
           calMonth,
@@ -440,7 +438,7 @@ export function useScheduleData(): UseScheduleDataResult {
   }, [calendarSources]);
 
   // --- React Query: schedule entries ---
-  const effectiveViewMode = deepLink.myShiftsOnly || deepLink.dateRange ? "list" : viewMode;
+  const effectiveViewMode = deepLink.myShiftsOnly || deepLink.dateRange || viewMode === "trades" ? "list" : viewMode;
   /** The list is the continuous today-anchored timeline unless a deep link pinned a window. */
   const isTimeline = effectiveViewMode === "list" && !deepLink.dateRange;
   const effectiveSportFilter = deepLinkApplied ? sportFilter : sportFilter || deepLink.sportCode;
@@ -763,8 +761,6 @@ export function useScheduleData(): UseScheduleDataResult {
     currentUserId,
     currentUserRole,
     openTradeCount: tradeCount ?? 0,
-    tradeSheetOpen,
-    setTradeSheetOpen,
     loadTradeCount: refetchTrades,
     sourceSignal,
     scheduleHealth,

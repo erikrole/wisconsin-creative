@@ -9,7 +9,7 @@ import type { ScheduleQueue } from "@/lib/schedule-queues";
  * React state and the router.
  */
 
-export type ViewMode = "list" | "calendar" | "week";
+export type ViewMode = "list" | "calendar" | "week" | "trades";
 
 export type HomeAwayFilter = VenueFilter;
 
@@ -37,7 +37,7 @@ export type ScheduleUrlState = ScheduleUrlFilters & {
 };
 
 export function parseScheduleViewMode(raw: string | null): ViewMode | null {
-  return raw === "list" || raw === "calendar" || raw === "week" ? raw : null;
+  return raw === "list" || raw === "calendar" || raw === "week" || raw === "trades" ? raw : null;
 }
 
 export function defaultScheduleMonth() {

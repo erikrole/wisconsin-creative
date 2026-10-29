@@ -1024,7 +1024,7 @@ export function ListView({
                       <span>Updating</span>
                     )}
                     {entry.subtitle && (
-                      <span className="font-medium text-primary/70">{entry.subtitle}</span>
+                      <span className="font-medium text-muted-foreground">{entry.subtitle}</span>
                     )}
                     {entry.eventArchivedAt && (
                       <span className="inline-flex items-center gap-0.5 text-muted-foreground/50">

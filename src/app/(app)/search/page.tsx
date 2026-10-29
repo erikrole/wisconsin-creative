@@ -432,7 +432,7 @@ export default function SearchPage() {
                   {type !== "page" && items.length >= 10 && (
                     <Link
                       href={sectionViewAllHrefs[type]!}
-                      className="inline-flex min-h-10 items-center rounded-md px-2 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className="inline-flex min-h-10 items-center rounded-md px-2 text-xs font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     >
                       View all {sectionLabels[type]!.toLowerCase()}
                     </Link>

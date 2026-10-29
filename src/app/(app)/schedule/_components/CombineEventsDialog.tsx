@@ -212,7 +212,7 @@ export function CombineEventsDialog({
                             {eventOptionLabel(suggestion.first)} + {eventOptionLabel(suggestion.second)}
                           </span>
                         </span>
-                        <span className="shrink-0 text-xs font-medium text-primary">Review</span>
+                        <span className="shrink-0 text-xs font-medium text-foreground">Review</span>
                       </Button>
                       <Button
                         type="button"

@@ -211,6 +211,18 @@ export async function destroySession() {
  */
 export const requireAuth = cache(loadAuthenticatedUser);
 
+/**
+ * Clear the session and role-preview cookies for a dead session. Page renders
+ * cannot modify cookies (Next throws), and there the 401 already sends the
+ * visitor to sign in, so a failed delete is expected and safe to ignore.
+ */
+async function dropSessionCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  try {
+    cookieStore.delete(env.sessionCookieName);
+    await clearRolePreviewCookie();
+  } catch {}
+}
+
 async function loadAuthenticatedUser(): Promise<AuthUser> {
   const cookieStore = await cookies();
   const token = cookieStore.get(env.sessionCookieName)?.value;
@@ -252,8 +264,7 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
   });
 
   if (!session || session.expiresAt < new Date()) {
-    cookieStore.delete(env.sessionCookieName);
-    await clearRolePreviewCookie();
+    await dropSessionCookies(cookieStore);
     if (session) {
       await db.session.deleteMany({ where: { id: session.id } });
     }
@@ -261,8 +272,7 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
   }
 
   if (!session.user.active) {
-    cookieStore.delete(env.sessionCookieName);
-    await clearRolePreviewCookie();
+    await dropSessionCookies(cookieStore);
     await db.session.deleteMany({ where: { tokenHash: hashed } });
     throw new HttpError(401, "Account deactivated");
   }

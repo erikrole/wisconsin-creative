@@ -186,7 +186,7 @@ export function BulkSkuInfoTab({
                 href={sku.purchaseLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-10 items-center gap-1 text-sm text-primary hover:underline"
+                className="inline-flex min-h-10 items-center gap-1 text-sm text-foreground hover:underline"
               >
                 <ExternalLink className="size-3.5 shrink-0" />
                 View purchase link
@@ -279,7 +279,7 @@ function EditableText({
           href={linkHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label="Open purchase link"
         >
           <ExternalLink className="size-3.5" />

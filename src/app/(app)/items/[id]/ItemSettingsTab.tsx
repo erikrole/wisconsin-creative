@@ -272,7 +272,7 @@ export function AccessoriesSection({
             <div className="rounded-md bg-muted/40 px-4 py-3 text-sm">
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Parent item</div>
               <div className="mt-1">
-                <Link href={`/items/${asset.parentAsset!.id}`} className="text-primary hover:underline font-mono font-medium">
+                <Link href={`/items/${asset.parentAsset!.id}`} className="text-foreground hover:underline font-mono font-medium">
                   {asset.parentAsset!.assetTag}
                 </Link>
                 {slotLabel ? ` as ${slotLabel}` : ""}. It cannot have its own attachments.

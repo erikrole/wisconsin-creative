@@ -16,14 +16,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetBody,
-} from "@/components/ui/sheet";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
 import { toast } from "@/lib/toast";
@@ -116,12 +108,7 @@ function InternalSchedulePage() {
   const cantWorkUserId = !isStaff && me?.staffingType === "ST" && !me.preview?.readOnly ? me.id : null;
   const [cantWorkOpen, setCantWorkOpen] = useState(false);
   const canReviewClaims = data.currentUserRole === "ADMIN";
-  const { loadData, setExpandedRowId, setTradeSheetOpen } = data;
-  // ?trades=open (Home, trade notifications) opens the board in use-schedule-data.
-  // ?tradeBoard=1 is kept for notifications sent before that link existed.
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("tradeBoard") === "1") setTradeSheetOpen(true);
-  }, [setTradeSheetOpen]);
+  const { loadData, setExpandedRowId } = data;
   const { queue, setQueue } = data.filters;
   const queueUnavailable = data.healthUnavailable && queue !== null
     && !["my-calls-today", "stale-source", "trade-approval"].includes(queue);
@@ -284,15 +271,14 @@ function InternalSchedulePage() {
     ? data.entries.find((entry) => entry.id === selectedCrewEntryId) ?? null
     : null;
 
-  const openTradeBoard = useCallback(() => {
-    setTradeSheetOpen(true);
-  }, [setTradeSheetOpen]);
+  const { setViewMode } = data.filters;
+  const openTradeBoard = useCallback(() => setViewMode("trades"), [setViewMode]);
 
   const showQueue = useCallback((nextQueue: NonNullable<typeof queue>) => {
     if (!canReviewClaims && (nextQueue === "pending-requests" || nextQueue === "trade-approval")) return;
     setQueue(nextQueue);
-    if (nextQueue === "trade-approval") setTradeSheetOpen(true);
-  }, [canReviewClaims, setQueue, setTradeSheetOpen]);
+    if (nextQueue === "trade-approval") setViewMode("trades");
+  }, [canReviewClaims, setQueue, setViewMode]);
 
   const clearBrowseFilters = useCallback(() => {
     if (data.filters.hasFilters) data.filters.clearAll();
@@ -340,8 +326,8 @@ function InternalSchedulePage() {
       setQueue(null);
       return;
     }
-    if (queue === "trade-approval") setTradeSheetOpen(true);
-  }, [canReviewClaims, queue, setQueue, setTradeSheetOpen]);
+    if (queue === "trade-approval") setViewMode("trades");
+  }, [canReviewClaims, queue, setQueue, setViewMode]);
 
   /**
    * Publish the sticky frame's height so the list can position against it.
@@ -464,14 +450,6 @@ function InternalSchedulePage() {
                       </Badge>
                     )}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => data.setTradeSheetOpen(true)}>
-                    Trade Board
-                    {data.openTradeCount > 0 && (
-                      <Badge variant="orange" size="sm" className="ml-auto">
-                        {data.openTradeCount}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Export CSV</DropdownMenuLabel>
                   <DropdownMenuGroup>
@@ -492,19 +470,6 @@ function InternalSchedulePage() {
                   Can’t work
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10"
-                onClick={() => data.setTradeSheetOpen(true)}
-              >
-                Trade Board
-                {data.openTradeCount > 0 && (
-                  <Badge variant="orange" size="sm" className="ml-1.5">
-                    {data.openTradeCount}
-                  </Badge>
-                )}
-              </Button>
             </>
           )}
         </PageHeader>
@@ -516,9 +481,10 @@ function InternalSchedulePage() {
           filteredEntries={data.filteredEntries}
           fillingWindow={data.fillingWindow}
           sourceSignal={data.sourceSignal}
+          openTradeCount={data.openTradeCount}
         />
 
-        {!data.loading && !data.loadError && <ScheduleReadiness
+        {!data.loading && data.filters.viewMode !== "trades" && !data.loadError && <ScheduleReadiness
           entries={data.entries}
           filteredEntries={data.filteredEntries}
           currentUserId={data.currentUserId}
@@ -549,6 +515,17 @@ function InternalSchedulePage() {
             <Button variant="outline" size="sm" className="mt-2 h-10" disabled={data.refreshing} onClick={() => void data.loadData()}>Retry schedule</Button>
           </AlertDescription>
         </Alert>
+      )}
+
+      {data.filters.viewMode === "trades" && (
+        <div className="mx-auto max-w-3xl pt-2">
+          <TradeBoard
+            onChanged={() => { void data.loadData(); data.loadTradeCount(); }}
+            currentUserId={data.currentUserId}
+            currentUserRole={data.currentUserRole}
+            initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}
+          />
+        </div>
       )}
 
       {canDisplaySchedule && data.filters.viewMode === "calendar" && (
@@ -687,36 +664,6 @@ function InternalSchedulePage() {
         <CantWorkDialog userId={cantWorkUserId} open={cantWorkOpen} onOpenChange={setCantWorkOpen} onSaved={data.loadData} />
       )}
 
-      {/* Trade Board sheet */}
-      <Sheet
-        open={data.tradeSheetOpen}
-        onOpenChange={(open) => {
-          data.setTradeSheetOpen(open);
-          if (!open && data.filters.queue === "trade-approval") data.filters.setQueue(null);
-          if (!open) data.loadTradeCount();
-        }}
-      >
-        <SheetContent side="right" className="sm:max-w-xl w-full">
-          <SheetHeader>
-            <SheetTitle>Trade Board</SheetTitle>
-            <SheetDescription>
-              {canReviewClaims
-                ? "Review and manage posted shift trades and open Student slots."
-                : "View and manage available shifts and posted trades."}
-            </SheetDescription>
-          </SheetHeader>
-          <SheetBody>
-            {data.tradeSheetOpen && (
-              <TradeBoard
-                onChanged={data.loadData}
-                currentUserId={data.currentUserId}
-                currentUserRole={data.currentUserRole}
-                initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}
-              />
-            )}
-          </SheetBody>
-        </SheetContent>
-      </Sheet>
     </FadeUp>
   );
 }

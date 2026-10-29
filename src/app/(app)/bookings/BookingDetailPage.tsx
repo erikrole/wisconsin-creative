@@ -406,7 +406,7 @@ export default function BookingDetailPage({
                   {booking.derivedCheckouts.map((checkout, index) => (
                     <span key={checkout.id}>
                       {index > 0 && ", "}
-                      <Link href={`/checkouts/${checkout.id}`} className="font-medium text-primary hover:underline">
+                      <Link href={`/checkouts/${checkout.id}`} className="font-medium text-foreground hover:underline">
                         {checkout.refNumber ?? "checkout"}
                       </Link>
                     </span>

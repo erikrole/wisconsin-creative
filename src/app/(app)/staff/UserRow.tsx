@@ -220,7 +220,7 @@ function UserQuickView({ user }: { user: UserRowType }) {
           ))}
         </dl>
       )}
-      <Link href={`/staff/${user.id}`} className="text-xs font-medium text-primary underline-offset-4 hover:underline">
+      <Link href={`/staff/${user.id}`} className="text-xs font-medium text-foreground underline-offset-4 hover:underline">
         Open profile
       </Link>
     </div>

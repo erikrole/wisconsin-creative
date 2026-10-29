@@ -256,7 +256,7 @@ export default function BookingSheetOverview({ booking, canEdit, onSaveField }: 
 
           {booking.sourceReservation && (
             <ContextRow icon={LinkIcon} label="Converted from">
-              <Link href={`/reservations/${booking.sourceReservation.id}`} className="text-primary hover:underline">
+              <Link href={`/reservations/${booking.sourceReservation.id}`} className="text-foreground hover:underline">
                 {booking.sourceReservation.refNumber || booking.sourceReservation.title}
               </Link>
             </ContextRow>
