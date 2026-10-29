@@ -1,3 +1,4 @@
+// source-contract: every audit action written anywhere in src must have wording; only a source scan can see all write sites.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

@@ -1,13 +1,13 @@
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ok, HttpError } from "@/lib/http";
-import { requireRole } from "@/lib/rbac";
+import { requirePermission } from "@/lib/rbac";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
 export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
-  requireRole(user.role, ["ADMIN", "STAFF"]);
+  requirePermission(user.role, "asset", "audit");
   const { id } = params;
 
   const kit = await db.kit.findUnique({ where: { id }, select: { id: true } });

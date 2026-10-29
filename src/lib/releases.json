@@ -8,7 +8,7 @@
       "Reports > Audit has Area (checkouts, items, people, schedule, kiosk, settings, sign-in, admin overrides) and Person filters.",
       "Shift trades, kiosk steps, calendar changes, signatures and passkeys no longer show raw action names.",
       "Kits have a History card showing who changed what.",
-      "Times in the activity log always show in Central time."
+      "All dates and times in the activity log and across the app show in Central time."
     ],
     "pr": 724,
     "platforms": [

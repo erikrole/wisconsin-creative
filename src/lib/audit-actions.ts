@@ -3,7 +3,7 @@
  *
  * `AUDIT_ACTION_SENTENCES` gives the plain past-tense sentence (no actor) for
  * actions that `describeAction` has no special wording for. The contract test
- * in `src/lib/__tests__/audit-actions.test.ts` fails when code writes an action
+ * in `tests/audit-actions-contract.test.ts` fails when code writes an action
  * that is neither here nor handled in `describeAction`, so the log stays
  * complete as features are added.
  */
@@ -116,10 +116,19 @@ export function auditCategory(action: string, entityType: string | undefined): A
 
 /** Sentence for actions without bespoke wording. Past tense, no actor. */
 export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
+  adopted_for_hire: "Brought an applicant on as a hire",
+  bulk_marked_maintenance: "Marked several items as needing maintenance",
+  bulk_cleared_maintenance: "Cleared maintenance on several items",
+  kiosk_pickup_appended: "Added gear to an existing pickup at a kiosk",
+  move_location: "Moved items to another location",
+  profile_completion_snoozed: "Put off finishing their profile",
+  qr_changed: "Changed the QR code",
+  show_again: "Showed an announcement again",
+  stage_change: "Moved an applicant to another stage",
   account_self_deleted: "Deleted their own account",
   accountability_excluded: "Excluded this checkout from accountability",
   accountability_restored: "Put this checkout back in accountability",
-  add_members: "Added people to the collection",
+  add_members: "Added items to the kit",
   add_receipt: "Added a receipt",
   add_student: "Added a student",
   archive_cycle: "Archived the gear pick cycle",
@@ -133,8 +142,8 @@ export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
   bulk_change_category: "Changed the category of several items",
   bulk_create: "Created several records at once",
   bulk_deleted: "Deleted several records at once",
-  bulk_member_added: "Added several people at once",
-  bulk_member_removed: "Removed several people at once",
+  bulk_member_added: "Added several items to the kit",
+  bulk_member_removed: "Removed several items from the kit",
   bulk_renew: "Renewed several records at once",
   bulk_retired: "Retired several items at once",
   bulk_unretired: "Brought several retired items back",
@@ -184,7 +193,7 @@ export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
   invite_sent: "Sent an invite",
   kiosk_checkin_scan_undone: "Undid a return scan at a kiosk",
   kiosk_checkout_item_swapped: "Swapped an item at a kiosk",
-  kiosk_crew_requested: "Requested a crew member at a kiosk",
+  kiosk_crew_requested: "Asked to join the crew from a kiosk",
   kiosk_operation_receipt: "Finished a kiosk step",
   kiosk_overdue_nudge_sent: "Sent an overdue reminder from a kiosk",
   kiosk_pickup_item_added: "Added an item at kiosk pickup",
@@ -215,7 +224,7 @@ export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
   processed: "Processed this",
   profile_completion_updated: "Updated profile completion",
   regenerate_activation_code: "Made a new kiosk activation code",
-  remove_member: "Removed someone from the collection",
+  remove_member: "Removed an item from the kit",
   remove_receipt: "Removed a receipt",
   remove_student: "Removed a student",
   reordered: "Changed the order",
@@ -309,6 +318,8 @@ const ENTITY_ACTION_SENTENCES: Record<string, string> = {
   "SignatureRosterSnapshot:preview": "Previewed a roster update",
   "SignatureRosterSnapshot:apply": "Applied a roster update",
   "YouTubeLibrary:refresh": "Refreshed the YouTube library",
+  "announcement:publish": "Published an announcement",
+  "kiosk_device:deactivate": "Deactivated a kiosk",
   "announcement:delete": "Deleted an announcement",
   "budget:import": "Imported a budget",
   "budget_line_item:link": "Linked an expense to a budget line",
