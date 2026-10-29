@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LicensesPage from "@/app/(app)/licenses/page";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import FreshTheme from "@/components/FreshTheme";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -24,19 +28,26 @@ if (typeof window !== "undefined") {
     if (/\/api\/software\/[^/]+\/secret/.test(url)) return json({ password: "Sample-Pass-2026" });
     if (url.includes("/api/software")) {
       const includeArchived = url.includes("includeArchived=1");
-      return json(SAMPLE_LOGINS.filter((login) => includeArchived || !login.archivedAt));
+      return json(SAMPLE_LOGINS.filter((login) => (includeArchived || !login.archivedAt) && (role === "ADMIN" || login.visibleTo.includes(role))));
     }
     return realFetch(input, init);
   };
 }
 
 export default function SharedLoginsLab({ fontClass }: { fontClass: string }) {
+  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   const classNames = `wc-fresh ${fontClass}`;
   return (
     <div className={`${classNames} min-h-screen bg-background text-foreground`}>
       <FreshTheme classNames={classNames} />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <LicensesPage />
+        <QueryClientProvider client={queryClient}>
+          <ConfirmProvider>
+            <TooltipProvider>
+              <LicensesPage />
+            </TooltipProvider>
+          </ConfirmProvider>
+        </QueryClientProvider>
       </div>
       <Toaster />
     </div>
