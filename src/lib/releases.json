@@ -8,7 +8,9 @@
       "Schedule has a Trades tab next to List, Week and Calendar, with the open-trade count on it.",
       "Trade Board is no longer in the More menu.",
       "Links and secondary text use neutral colors across the app.",
-      "The underline under the active tab no longer gets clipped in scrolling tab bars."
+      "The underline under the active tab no longer gets clipped in scrolling tab bars.",
+      "Menus and dropdown lists have larger rows on phones and tablets.",
+      "Opening the app with an expired sign-in now goes to the login page instead of an error."
     ],
     "pr": 722,
     "platforms": [
