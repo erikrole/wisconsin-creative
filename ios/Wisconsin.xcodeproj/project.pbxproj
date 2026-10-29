@@ -1788,7 +1788,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.4.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1810,7 +1810,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.4.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin.LiveActivities;
 				PRODUCT_NAME = WisconsinLiveActivities;
 				SDKROOT = iphoneos;
@@ -1871,7 +1871,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.4.2;
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
@@ -1895,7 +1895,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.4.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.Wisconsin;
 				PRODUCT_MODULE_NAME = Wisconsin;
 				PRODUCT_NAME = "Wisconsin Creative";
