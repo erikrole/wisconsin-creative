@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { CalendarOffIcon, MergeIcon, MoreHorizontalIcon, PlusIcon, SparklesIcon } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -60,6 +62,10 @@ const ScheduleCrewSheet = dynamic(loadScheduleCrewSheet);
 const CantWorkDialog = dynamic(() => import("@/components/availability/CantWorkDialog").then((m) => ({ default: m.CantWorkDialog })));
 const CollaboratorSchedule = dynamic(() => import("./_components/CollaboratorSchedule").then((m) => ({ default: m.CollaboratorSchedule })));
 
+const PersonWeekView = dynamic(
+  () => import("./_components/PersonWeekView").then((m) => ({ default: m.PersonWeekView })),
+);
+
 const WeekView = dynamic(
   () => import("./_components/WeekView").then((m) => ({ default: m.WeekView })),
 );
@@ -103,6 +109,16 @@ function InternalSchedulePage() {
     return () => window.clearTimeout(id);
   }, []);
   const isStaff = data.currentUserRole === "STAFF" || data.currentUserRole === "ADMIN";
+  // Week can group by day or by person; the choice rides in `?by=person` so a link keeps it.
+  const searchParams = useSearchParams();
+  const [weekByPerson, setWeekByPerson] = useState(() => searchParams.get("by") === "person");
+  const chooseWeekLayout = (byPerson: boolean) => {
+    setWeekByPerson(byPerson);
+    const url = new URL(window.location.href);
+    if (byPerson) url.searchParams.set("by", "person");
+    else url.searchParams.delete("by");
+    window.history.replaceState(window.history.state, "", url);
+  };
   const { data: me } = useCurrentUser();
   // Student workers add their own days off right where they look at shifts.
   const cantWorkUserId = !isStaff && me?.staffingType === "ST" && !me.preview?.readOnly ? me.id : null;
@@ -544,7 +560,31 @@ function InternalSchedulePage() {
       )}
 
       {/* Week View */}
-      {canDisplaySchedule && data.filters.viewMode === "week" && (
+      {canDisplaySchedule && data.filters.viewMode === "week" && isStaff && (
+        <ToggleGroup
+          type="single"
+          value={weekByPerson ? "person" : "day"}
+          onValueChange={(value) => { if (value) chooseWeekLayout(value === "person"); }}
+          className="mb-3 w-fit"
+          aria-label="Group week by"
+        >
+          <ToggleGroupItem value="day" className="h-9 px-3 text-[13px]">By day</ToggleGroupItem>
+          <ToggleGroupItem value="person" className="h-9 px-3 text-[13px]">By person</ToggleGroupItem>
+        </ToggleGroup>
+      )}
+      {canDisplaySchedule && data.filters.viewMode === "week" && isStaff && weekByPerson && (
+        <PersonWeekView
+          entries={data.filteredEntries}
+          weekStart={data.weekStart}
+          setWeekStart={data.setWeekStart}
+          loading={data.loading}
+          onOpenCrew={openCrewSheet}
+          hasFilters={data.filters.hasFilters || data.filters.myShiftsOnly}
+          onClearFilters={clearBrowseFilters}
+        />
+      )}
+      {/* Week View */}
+      {canDisplaySchedule && data.filters.viewMode === "week" && !(isStaff && weekByPerson) && (
         <WeekView
           entries={data.filteredEntries}
           weekStart={data.weekStart}
@@ -591,6 +631,7 @@ function InternalSchedulePage() {
           clearQueue={() => data.filters.setQueue(null)}
           currentUserId={data.currentUserId}
           isStaff={isStaff}
+          canReviewClaims={canReviewClaims}
           expandedRowId={data.expandedRowId}
           setExpandedRowId={data.setExpandedRowId}
           onSelectGroup={data.setSelectedGroupId}

@@ -45,6 +45,7 @@ export function mergeScheduleData(events: CalendarEvent[], groups: ShiftGroup[])
       archivedAt: g?.archivedAt ?? null,
       publication: g?.publication ?? null,
       hasWorkingCopy: g?.hasWorkingCopy ?? false,
+      pendingReview: g?.pendingReview,
       claimsPaused: g?.claimsPaused ?? false,
       autoReleaseAt: g?.autoReleaseAt ?? null,
       autoReleaseError: g?.autoReleaseError ?? null,

@@ -135,7 +135,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 145
+Fields: 146
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -237,6 +237,7 @@ Fields: 145
 - `notificationPrefs             Json?                            @map("notification_prefs")`
 - `sidebarPrefs                  Json?                            @map("sidebar_prefs")`
 - `gettingStarted                Json?                            @map("getting_started")`
+- `onboardingChecks              Json?                            @map("onboarding_checks")`
 - `icsToken                      String?                          @unique @map("ics_token")`
 - `scheduleEventFollows          ScheduleEventFollow[]`
 - `collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
@@ -2430,7 +2431,7 @@ Indexes and constraints:
 
 ## Model `ShiftAssignment`
 
-Fields: 28
+Fields: 29
 
 - `id               String                @id @default(cuid())`
 - `shiftId          String                @map("shift_id")`
@@ -2444,6 +2445,7 @@ Fields: 28
 - `callNote         String?               @map("call_note")`
 - `crewLabel        String?               @map("crew_label")`
 - `crewHalf         ShiftAssignmentHalf?  @map("crew_half")`
+- `crewTags         Json?                 @map("crew_tags")`
 - `notes            String?`
 - `hasConflict      Boolean               @default(false) @map("has_conflict")`
 - `conflictNote     String?               @map("conflict_note")`
