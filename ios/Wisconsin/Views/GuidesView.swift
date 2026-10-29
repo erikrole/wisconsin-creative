@@ -1270,7 +1270,7 @@ private extension GuideListItem {
         ].joined(separator: " ").lowercased()
     }
 
-    static var placeholders: [GuideListItem] {
+    internal static var placeholders: [GuideListItem] {
         (0..<5).map { index in
             GuideListItem.placeholder(index: index)
         }
