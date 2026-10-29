@@ -66,7 +66,7 @@ export default function LicensesPage() {
           {showPhotoMechanicTab && (
             <TabsTrigger
               value="photo-mechanic"
-              className="relative shrink-0 gap-2 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--wi-red)] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
+              className="relative shrink-0 gap-2"
             >
               <Monitor className="size-4" aria-hidden="true" />
               <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>Photo Mechanic</span>
@@ -74,7 +74,7 @@ export default function LicensesPage() {
           )}
           <TabsTrigger
             value="shared-logins"
-            className="relative shrink-0 gap-2 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--wi-red)] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
+            className="relative shrink-0 gap-2"
           >
             <KeyRound className="size-4" aria-hidden="true" />
             <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>Shared logins</span>

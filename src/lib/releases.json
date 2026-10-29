@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-28",
+    "title": "Neutral buttons and tab underline",
+    "type": "fixes",
+    "summary": "The app's main color is now neutral near-black instead of blue, and tab bars show a single underline under the active tab.",
+    "details": [
+      "A second, shorter red underline no longer sits on top of the first one, and the active-tab underline is now neutral dark instead of blue.",
+      "Primary buttons, selected states and focus rings are near-black in light mode and light gray in dark mode.",
+      "Fixed on the Item, Bookings, Licenses and Bulk inventory pages."
+    ],
+    "pr": 723,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-28",
     "title": "Trades tab and calmer link colors",
     "type": "improvement",
     "summary": "Trades now live in their own tab on Schedule, and links and body text are neutral instead of blue.",
