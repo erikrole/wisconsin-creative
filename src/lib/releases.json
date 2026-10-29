@@ -5,7 +5,8 @@
     "type": "fixes",
     "summary": "Tab bars on item, bookings, licenses and bulk inventory pages now show a single underline under the active tab.",
     "details": [
-      "A second, shorter red underline no longer sits on top of the blue one."
+      "A second, shorter red underline no longer sits on top of the blue one.",
+      "Fixed on the Item, Bookings, Licenses and Bulk inventory pages."
     ],
     "pr": 723,
     "platforms": [
