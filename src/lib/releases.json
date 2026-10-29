@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-29",
+    "title": "Onboarding checklist on student profiles",
+    "type": "feature",
+    "summary": "Admins can see on each student's profile how far they are through onboarding, and tick off the in-person steps.",
+    "details": [
+      "Photo, phone, student details, sizes, availability, app and notifications fill in by themselves as the student does them.",
+      "Orientation and gear training are ticked by an admin and show who did it and when.",
+      "Wiscard is shown but optional. Nothing is emailed to the student."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
     "title": "Schedule changes show up within seconds",
     "type": "improvement",
     "summary": "When someone adds or removes a person on a shift, everyone with the Schedule open sees it within about ten seconds, with no refresh.",

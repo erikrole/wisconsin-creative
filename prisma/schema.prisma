@@ -313,6 +313,8 @@ model User {
   sidebarPrefs                  Json?                            @map("sidebar_prefs")
   /// Getting started checklist: rows handled and whether it was hidden. Shared by web and iOS.
   gettingStarted                Json?                            @map("getting_started")
+  /// Admin-ticked onboarding steps on a student profile: { [step]: { at, by } }.
+  onboardingChecks              Json?                            @map("onboarding_checks")
   icsToken                      String?                          @unique @map("ics_token")
   scheduleEventFollows          ScheduleEventFollow[]
   collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)

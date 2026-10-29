@@ -118,6 +118,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     notificationPrefs: null,
     sidebarPrefs: null,
     gettingStarted: null,
+    onboardingChecks: null,
     athleticsEmail: null,
     startDate: null,
     directReportId: null,
