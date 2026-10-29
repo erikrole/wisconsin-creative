@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-29",
+    "title": "Department Wi-Fi on Shared logins",
+    "type": "feature",
+    "summary": "The shared Wi-Fi network and password now live at the top of Shared logins, with a QR code you can scan to join.",
+    "details": [
+      "Scan the QR code with your phone camera to join the network.",
+      "Copy the network name or password with one tap; the password stays hidden until you show it.",
+      "Only signed-in people with Shared logins access can see it."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-29",
     "title": "The paint roller is back",
     "type": "feature",
     "summary": "When you add something weekly, you can paint the days and hours onto a week grid like the old WhenToWork roller, in red.",
