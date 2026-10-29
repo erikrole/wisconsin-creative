@@ -63,11 +63,12 @@ export function isUnavailableBlock(block: AvailabilityBlockLite): boolean {
 }
 
 /** Folds per-day weekly blocks back into one item: same name, time and end date. */
-export function groupWeekly(blocks: AvailabilityBlockLite[]): WeeklyItem[] {
+export function groupWeekly(blocks: AvailabilityBlockLite[], today = localToday()): WeeklyItem[] {
   const groups = new Map<string, WeeklyItem>();
   for (const block of blocks) {
     if (!isUnavailableBlock(block) || kindOf(block) !== "WEEKLY" || block.dayOfWeek === null) continue;
     const endsOn = dateOnly(block.semesterEndsOn);
+    if (endsOn && endsOn < today) continue;
     const key = [block.label?.trim().toLowerCase() ?? "", block.startsAt, block.endsAt, endsOn ?? ""].join("|");
     const group = groups.get(key) ?? { key, label: block.label?.trim() || null, days: [], startsAt: block.startsAt, endsAt: block.endsAt, endsOn, blockIds: [] };
     if (!group.days.includes(block.dayOfWeek)) group.days.push(block.dayOfWeek);
@@ -117,7 +118,7 @@ function iso(year: number, month: number, day: number): string {
 }
 
 export function localToday(now = new Date()): string {
-  return iso(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
 /**

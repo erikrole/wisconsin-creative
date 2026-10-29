@@ -1,0 +1,20 @@
+
+> creative-ops@2026.04.08.1 test:performance:web
+> node scripts/check-web-performance.mjs
+
+{
+  "provider": {
+    "mounts": 1,
+    "unmounts": 0,
+    "scheduleRefreshes": 5
+  },
+  "calls": {
+    "stats": 1,
+    "bookings": 4,
+    "items": 4
+  },
+  "hiddenScheduledReads": 0,
+  "inFlightResumePassed": true,
+  "preservedDraft": true,
+  "errors": []
+}

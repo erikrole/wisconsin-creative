@@ -1,0 +1,11 @@
+{
+  "errors": [],
+  "checks": [
+    "History preserves weekly day context",
+    "Review sends only decision, note and version",
+    "409 retains draft and cancel/reopen uses refreshed version",
+    "Students have no review actions",
+    "Paint drag preserved; failed batch retains weekdays, label and times",
+    "Painted weekdays submit in one request"
+  ]
+}

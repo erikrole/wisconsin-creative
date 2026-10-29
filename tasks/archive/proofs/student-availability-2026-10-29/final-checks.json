@@ -1,0 +1,31 @@
+{
+  "paintRollerSourceUnchanged": true,
+  "claudeUntrackedDemoHashesMatchRecovery": true,
+  "diffCheckPassed": true,
+  "newAvailabilityDocLinksResolve": true,
+  "docsCheckPassed": true,
+  "changedLinesIncludingNewHelper": {
+    "production": [
+      542,
+      315
+    ],
+    "tests": [
+      189,
+      12
+    ],
+    "trackedDocs": [
+      49,
+      13
+    ]
+  },
+  "reviewBrowser": {
+    "result": {
+      "title": "Student Availability",
+      "images": 12,
+      "allImagesLoaded": true,
+      "horizontalOverflow": false,
+      "pairs": 5
+    },
+    "errors": []
+  }
+}

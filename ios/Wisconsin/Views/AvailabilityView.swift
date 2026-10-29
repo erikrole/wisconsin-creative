@@ -1,5 +1,12 @@
 import SwiftUI
 
+private let availabilityTimeZone = TimeZone(identifier: "America/Chicago") ?? .gmt
+private var availabilityCalendar: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = availabilityTimeZone
+    return calendar
+}
+
 private let availabilityDayNames = [
     "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 ]
@@ -12,18 +19,21 @@ struct AvailabilityView: View {
     let userId: String
 
     @State private var blocks: [AvailabilityBlock] = []
-    @State private var selectedWeekday = Calendar.current.component(.weekday, from: .now) - 1
+    @State private var selectedWeekday = availabilityCalendar.component(.weekday, from: .now) - 1
     @State private var isLoading = true
     @State private var error: String?
     @State private var editorContext: AvailabilityEditorContext?
     @State private var blockPendingDelete: AvailabilityBlock?
 
+    private var currentBlocks: [AvailabilityBlock] { blocks.filter { !$0.isHistory } }
+    private var historyBlocks: [AvailabilityBlock] { blocks.filter(\.isHistory).sorted(by: sortBlocks) }
+
     private var selectedDayBlocks: [AvailabilityBlock] {
-        blocks.filter { $0.isWeekly && $0.dayOfWeek == selectedWeekday }.sorted(by: sortBlocks)
+        currentBlocks.filter { $0.isWeekly && $0.dayOfWeek == selectedWeekday }.sorted(by: sortBlocks)
     }
 
     private var datedBlocks: [AvailabilityBlock] {
-        blocks.filter(\.isDated).sorted(by: sortBlocks)
+        currentBlocks.filter(\.isDated).sorted(by: sortBlocks)
     }
 
     var body: some View {
@@ -49,6 +59,13 @@ struct AvailabilityView: View {
                     }
                     weeklySection
                     daysAwaySection
+                    if !historyBlocks.isEmpty {
+                        Section {
+                            DisclosureGroup("History (\(historyBlocks.count))") {
+                                ForEach(historyBlocks) { block in blockRow(block) }
+                            }
+                        }
+                    }
                 }
                 .listStyle(.insetGrouped)
             }
@@ -78,9 +95,10 @@ struct AvailabilityView: View {
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $editorContext) { context in
-            AvailabilityEditorSheet(userId: userId, context: context) { saved in
+            AvailabilityEditorSheet(userId: userId, context: context, onStale: { await load() }) { saved in
                 upsert(saved)
             }
+            .environment(\.timeZone, availabilityTimeZone)
         }
         .confirmationDialog(
             "Delete availability block?",
@@ -103,7 +121,7 @@ struct AvailabilityView: View {
         Section {
             AvailabilityWeekStrip(
                 selectedDay: $selectedWeekday,
-                blocks: blocks.filter(\.isWeekly)
+                blocks: currentBlocks.filter(\.isWeekly)
             )
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
 
@@ -126,7 +144,7 @@ struct AvailabilityView: View {
         } header: {
             Text(availabilityDayNames[selectedWeekday])
         } footer: {
-            Text("Weekly times repeat every week.")
+            Text("Weekly times repeat in Madison time (Central). Ended terms are in History.")
         }
     }
 
@@ -304,6 +322,11 @@ private struct AvailabilityBlockRow: View {
                     Text(block.secondaryLine)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    if let note = block.reviewNote, !note.isEmpty {
+                        Text("Staff note: \(note)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     if let statusLine = block.statusLine {
                         Text(statusLine)
                             .font(.footnote)
@@ -376,7 +399,7 @@ private struct AvailabilityEditorContext: Identifiable {
             id: UUID().uuidString,
             block: nil,
             suggestedKind: .adHoc,
-            suggestedDay: Calendar.current.component(.weekday, from: date) - 1,
+            suggestedDay: availabilityCalendar.component(.weekday, from: date) - 1,
             suggestedDate: date
         )
     }
@@ -395,9 +418,11 @@ private struct AvailabilityEditorContext: Identifiable {
 private struct AvailabilityEditorSheet: View {
     let userId: String
     let context: AvailabilityEditorContext
+    let onStale: () async -> Void
     let onSaved: (AvailabilityBlock) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(SessionStore.self) private var session
     @State private var kind: AvailabilityEditorKind
     @State private var intent: AvailabilityEditorIntent
     @State private var dayOfWeek: Int
@@ -412,12 +437,14 @@ private struct AvailabilityEditorSheet: View {
     @State private var termStartDate: Date
     @State private var termEndDate: Date
     @State private var semesterLabel: String
+    @State private var createRequestId = UUID().uuidString
     @State private var isSaving = false
     @State private var error: String?
 
-    init(userId: String, context: AvailabilityEditorContext, onSaved: @escaping (AvailabilityBlock) -> Void) {
+    init(userId: String, context: AvailabilityEditorContext, onStale: @escaping () async -> Void, onSaved: @escaping (AvailabilityBlock) -> Void) {
         self.userId = userId
         self.context = context
+        self.onStale = onStale
         self.onSaved = onSaved
         let block = context.block
         _kind = State(initialValue: block?.editorKind ?? context.suggestedKind)
@@ -427,7 +454,7 @@ private struct AvailabilityEditorSheet: View {
         _dateEnd = State(initialValue: block?.parsedDateEndsOn ?? block?.parsedDate ?? context.suggestedDate)
         _isDateRange = State(initialValue: {
             guard let start = block?.parsedDate, let end = block?.parsedDateEndsOn else { return false }
-            return !Calendar.current.isDate(start, inSameDayAs: end)
+            return !availabilityCalendar.isDate(start, inSameDayAs: end)
         }())
         _allDay = State(initialValue: block?.allDay == true)
         _startMinutes = State(initialValue: Self.minutes(block?.startsAt) ?? 9 * 60)
@@ -435,7 +462,7 @@ private struct AvailabilityEditorSheet: View {
         _label = State(initialValue: block?.label ?? "")
         _usesTermDates = State(initialValue: block?.semesterStartsOn != nil || block?.semesterEndsOn != nil)
         _termStartDate = State(initialValue: block?.parsedSemesterStart ?? context.suggestedDate)
-        _termEndDate = State(initialValue: block?.parsedSemesterEnd ?? Calendar.current.date(byAdding: .month, value: 4, to: context.suggestedDate) ?? context.suggestedDate)
+        _termEndDate = State(initialValue: block?.parsedSemesterEnd ?? availabilityCalendar.date(byAdding: .month, value: 4, to: context.suggestedDate) ?? context.suggestedDate)
         _semesterLabel = State(initialValue: block?.semesterLabel ?? "")
     }
 
@@ -479,7 +506,9 @@ private struct AvailabilityEditorSheet: View {
                                 }
                             }
                         }
-                        Text(intent.detail)
+                        Text(intent == .timeOff && context.block != nil && session.currentUser?.role == "STUDENT"
+                             ? "Saving changes sends this request back to staff for review."
+                             : intent.detail)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -675,6 +704,7 @@ private struct AvailabilityEditorSheet: View {
     }
 
     private func save() async {
+        guard !isSaving else { return }
         guard allDay || startMinutes < endMinutes else {
             error = "Start time must be before end time"
             Haptics.warning()
@@ -707,6 +737,7 @@ private struct AvailabilityEditorSheet: View {
                 saved = try await APIClient.shared.updateAvailabilityBlock(
                     userId: userId,
                     blockId: block.id,
+                    expectedUpdatedAt: block.updatedAt,
                     kind: kind.rawValue,
                     intent: intent.rawValue,
                     dayOfWeek: dayOfWeek,
@@ -723,6 +754,7 @@ private struct AvailabilityEditorSheet: View {
             } else {
                 saved = try await APIClient.shared.createAvailabilityBlock(
                     userId: userId,
+                    requestId: createRequestId,
                     kind: kind.rawValue,
                     intent: intent.rawValue,
                     dayOfWeek: dayOfWeek,
@@ -741,6 +773,7 @@ private struct AvailabilityEditorSheet: View {
             Haptics.success()
             dismiss()
         } catch {
+            if case APIError.conflict = error { await onStale() }
             self.error = error.localizedDescription
             Haptics.warning()
         }
@@ -759,13 +792,17 @@ private struct AvailabilityEditorSheet: View {
     }
 
     private static func timeLabel(_ minutes: Int) -> String {
-        let date = Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now) ?? .now
-        return date.formatted(date: .omitted, time: .shortened)
+        let date = availabilityCalendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now) ?? .now
+        let formatter = DateFormatter()
+        formatter.timeZone = availabilityTimeZone
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 
     private static func yyyyMMdd(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = availabilityTimeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
@@ -845,6 +882,16 @@ extension AvailabilityBlock {
     var editorKind: AvailabilityEditorKind { normalizedKind == "AD_HOC" ? .adHoc : .weekly }
     var editorIntent: AvailabilityEditorIntent { AvailabilityEditorIntent(rawValue: normalizedIntent) ?? .cannotWork }
 
+    var isHistory: Bool {
+        if normalizedIntent == "TIME_OFF" && normalizedStatus == "DENIED" { return true }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = availabilityTimeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let end = isDated ? dateEndValue : semesterEndsOn.map { String($0.prefix(10)) }
+        return end.map { $0 < formatter.string(from: .now) } ?? false
+    }
+
     var isWeekly: Bool { normalizedKind != "AD_HOC" && dayOfWeek != nil }
     var isDated: Bool { normalizedKind == "AD_HOC" || dateValue != nil }
     var isApprovedTimeOff: Bool { normalizedIntent == "TIME_OFF" && normalizedStatus == "APPROVED" }
@@ -881,6 +928,7 @@ extension AvailabilityBlock {
 
     var secondaryLine: String {
         var parts: [String] = []
+        if isWeekly, let dayOfWeek { parts.append(availabilityDayNames[dayOfWeek]) }
         if let displayDateRange { parts.append(displayDateRange) }
         if normalizedAllDay {
             parts.append("All day")
@@ -917,6 +965,7 @@ extension AvailabilityBlock {
         guard let value, !value.isEmpty else { return nil }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = availabilityTimeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: String(value.prefix(10)))
     }
@@ -945,23 +994,29 @@ extension AvailabilityBlock {
     var displayDateRange: String? {
         guard let parsedDate else { return dateValue }
         guard let parsedDateEndsOn,
-              !Calendar.current.isDate(parsedDate, inSameDayAs: parsedDateEndsOn)
+              !availabilityCalendar.isDate(parsedDate, inSameDayAs: parsedDateEndsOn)
         else { return formatDisplayDate(parsedDate) }
         return "\(formatDisplayDate(parsedDate)) – \(formatDisplayDate(parsedDateEndsOn))"
     }
 
     private func formatDisplayDate(_ date: Date) -> String {
-        if Calendar.current.component(.year, from: date) == Calendar.current.component(.year, from: .now) {
-            return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-        }
-        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().year())
+        let formatter = DateFormatter()
+        formatter.timeZone = availabilityTimeZone
+        formatter.setLocalizedDateFormatFromTemplate(
+            availabilityCalendar.component(.year, from: date) == availabilityCalendar.component(.year, from: .now)
+                ? "EEEMMMd" : "EEEMMMdyyyy"
+        )
+        return formatter.string(from: date)
     }
 
     private func displayTime(_ value: String) -> String {
         let parts = value.split(separator: ":").compactMap { Int($0) }
         guard parts.count == 2,
-              let date = Calendar.current.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: .now)
+              let date = availabilityCalendar.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: .now)
         else { return value }
-        return date.formatted(date: .omitted, time: .shortened)
+        let formatter = DateFormatter()
+        formatter.timeZone = availabilityTimeZone
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }

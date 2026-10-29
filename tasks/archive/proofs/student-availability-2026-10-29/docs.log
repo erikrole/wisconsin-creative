@@ -1,0 +1,10 @@
+
+> creative-ops@2026.04.08.1 verify:docs
+> node scripts/check-repo-hygiene.mjs && npm run codemap:check
+
+Repo hygiene: ok.
+
+> creative-ops@2026.04.08.1 codemap:check
+> node scripts/generate-codemaps.mjs --check
+
+Codemaps are current.

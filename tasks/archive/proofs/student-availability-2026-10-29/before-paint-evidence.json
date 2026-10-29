@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "dc4f328735da42911c6301708b8c1eababc09c05",
+  "sourcePatchSha256": "d7adbeeb5b1e17889569fce0e5663561ba9b48860d68759a97017653dbc5d06c",
+  "settings": {
+    "device": "Playwright Chromium, deviceScaleFactor 1",
+    "viewport": [
+      1280,
+      1000
+    ],
+    "fixture": "student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814",
+    "role": "STUDENT",
+    "route": "WeeklyForm student entry (fixture)",
+    "appearance": "light",
+    "textSize": "browser default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-29T17:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "2e8caaec0e6eca3e69ce43eac1e4b2b41403b62d32f694fb0743f43e0102f783",
+  "dimensions": [
+    1280,
+    1000
+  ]
+}

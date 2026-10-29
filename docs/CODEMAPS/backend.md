@@ -163,7 +163,7 @@
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 188 |
+| `src/lib/api.ts` | 199 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -289,7 +289,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 398 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 286 |
+| `src/lib/permissions.ts` | 293 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 43 |
 | `src/lib/profile-completion-cache.ts` | 10 |
@@ -333,6 +333,7 @@
 | `src/lib/schedule-event-keyset.ts` | 66 |
 | `src/lib/schedule-event-where.ts` | 63 |
 | `src/lib/schedule-health-types.ts` | 83 |
+| `src/lib/schedule-live.ts` | 44 |
 | `src/lib/schedule-publication-types.ts` | 62 |
 | `src/lib/schedule-queues.ts` | 185 |
 | `src/lib/schedule-read.ts` | 385 |
@@ -372,14 +373,15 @@
 | `src/lib/sports.ts` | 98 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 19 |
-| `src/lib/student-availability.ts` | 209 |
+| `src/lib/student-availability-display.ts` | 24 |
+| `src/lib/student-availability.ts` | 250 |
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/team-availability.ts` | 64 |
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 43 |
 | `src/lib/title-normalization.ts` | 117 |
 | `src/lib/toast.ts` | 53 |
-| `src/lib/unavailable-times.ts` | 185 |
+| `src/lib/unavailable-times.ts` | 186 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |
@@ -896,6 +898,7 @@
 - `/api/schedule/bulk-assignment/preview`
 - `/api/schedule/export`
 - `/api/schedule/health`
+- `/api/schedule/live`
 - `/api/schedule/open-work`
 - `/api/schedule/published/[id]/follow`
 - `/api/schedule/published/[id]`

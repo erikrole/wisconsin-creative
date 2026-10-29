@@ -174,7 +174,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/resources/BrandAssetLibrary.tsx` | 1978 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1979 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 1099 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 1079 |
@@ -203,7 +203,7 @@
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
-| `src/components/NotificationsPopover.tsx` | 306 |
+| `src/components/availability/cant-work-forms.tsx` | 308 |
 
 ## Hooks
 
@@ -232,7 +232,8 @@
 | `src/hooks/use-onboarding-save.ts` | 249 |
 | `src/hooks/use-operational-polling-activity.ts` | 156 |
 | `src/hooks/use-profile-completion.ts` | 83 |
-| `src/hooks/use-schedule-data.ts` | 776 |
+| `src/hooks/use-schedule-data.ts` | 783 |
+| `src/hooks/use-schedule-live-sync.ts` | 56 |
 | `src/hooks/use-sidebar-counts.ts` | 23 |
 | `src/hooks/use-synced-draft.ts` | 37 |
 | `src/hooks/use-url-state.ts` | 129 |

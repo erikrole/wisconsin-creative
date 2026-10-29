@@ -4644,8 +4644,9 @@ enum UIReviewFixtureAPI {
           {"id":"a2","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"13:00","endsAt":"15:00","label":"Lab","semesterLabel":"Fall 2026","semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
           {"id":"a3","kind":"WEEKLY","intent":"PREFER","status":"APPROVED","dayOfWeek":3,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"16:00","endsAt":"21:00","label":"Prefer photo shifts","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
           {"id":"a5","kind":"WEEKLY","intent":"DISLIKE","status":"APPROVED","dayOfWeek":5,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"17:00","endsAt":"20:00","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
-          {"id":"a4","kind":"AD_HOC","intent":"TIME_OFF","status":"APPROVED","dayOfWeek":null,"date":"\(day(12))","dateEndsOn":"\(day(15))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":"Family trip","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
-          {"id":"a6","kind":"AD_HOC","intent":"TIME_OFF","status":"PENDING","dayOfWeek":null,"date":"\(day(30))","dateEndsOn":"\(day(30))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null}
+          {"id":"a4","kind":"AD_HOC","intent":"TIME_OFF","status":"APPROVED","dayOfWeek":null,"date":"\(day(12))","dateEndsOn":"\(day(15))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":"Family trip","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":"Coverage confirmed for your call time."},
+          {"id":"a6","kind":"AD_HOC","intent":"TIME_OFF","status":"PENDING","dayOfWeek":null,"date":"\(day(30))","dateEndsOn":"\(day(30))","allDay":true,"startsAt":"00:00","endsAt":"23:59","label":null,"semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":null,"reviewNote":null},
+          {"id":"a7","kind":"WEEKLY","intent":"CANNOT_WORK","status":"APPROVED","dayOfWeek":1,"date":null,"dateEndsOn":null,"allDay":false,"startsAt":"10:00","endsAt":"11:00","label":"Summer seminar","semesterLabel":null,"semesterStartsOn":null,"semesterEndsOn":"\(day(-7))","reviewNote":null}
         ]}
         """.utf8)
     }
@@ -4715,7 +4716,7 @@ enum TeamAvailabilityFixtures {
         AvailabilityBlock(
             id: id, kind: "WEEKLY", intent: intent, status: status, dayOfWeek: dow, date: nil,
             dateEndsOn: nil, allDay: allDay, startsAt: start, endsAt: end, label: nil,
-            semesterLabel: nil, semesterStartsOn: nil, semesterEndsOn: nil, reviewNote: nil
+            semesterLabel: nil, semesterStartsOn: nil, semesterEndsOn: nil, reviewNote: nil, updatedAt: nil
         )
     }
 

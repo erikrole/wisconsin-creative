@@ -1,0 +1,5 @@
+
+> creative-ops@2026.04.08.1 ios:project:check
+> node scripts/check-ios-project.mjs
+
+OK: XcodeGen output matches checked-in iOS project files

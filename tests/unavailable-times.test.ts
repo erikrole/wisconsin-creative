@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   blockedWindow,
@@ -7,6 +7,7 @@ import {
   formatAwayDates,
   formatWeekDays,
   groupWeekly,
+  localToday,
   isUnavailableBlock,
   upcomingAway,
   type AvailabilityBlockLite,
@@ -39,6 +40,13 @@ const away = (id: string, date: string, dateEndsOn: string, extra: Partial<Avail
 });
 
 describe("when a student can't work", () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-29T17:00:00Z")); });
+  afterEach(() => vi.useRealTimers());
+
+  it("keeps today's term and removes an ended term from current weekly entry", () => {
+    expect(groupWeekly([weekly("past", 1, { semesterEndsOn: "2026-10-28" }), weekly("today", 3, { semesterEndsOn: "2026-10-29" })]).map((item) => item.blockIds)).toEqual([["today"]]);
+    expect(localToday(new Date("2026-10-30T02:00:00Z"))).toBe("2026-10-29");
+  });
   it("folds one block per day back into a single weekly item, Monday first", () => {
     const [comm] = groupWeekly([weekly("a", 5), weekly("b", 1), weekly("c", 3)]);
     expect(comm?.days).toEqual([1, 3, 5]);

@@ -1,0 +1,8 @@
+
+ RUN  v5.0.5 /Users/role/.codex/worktrees/student-availability/wisconsin-creative
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  13:25:23
+   Duration  79ms (transform 44%, tests 28%, setup 14%, import 9%, worker 5%)

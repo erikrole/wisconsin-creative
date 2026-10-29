@@ -11,10 +11,10 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 |---|---:|
 | App pages | 123 |
 | App layouts | 36 |
-| API route handlers | 443 |
+| API route handlers | 444 |
 | Service files | 147 |
 | Component files | 199 |
-| Test files | 1009 |
+| Test files | 1010 |
 
 ## Oversized Source Watchlist
 
@@ -22,7 +22,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/components/resources/BrandAssetLibrary.tsx` | 1978 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1979 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1549 |
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1480 |
 | `src/app/api/assets/route.ts` | 1309 |
