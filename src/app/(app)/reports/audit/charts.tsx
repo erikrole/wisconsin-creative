@@ -8,12 +8,25 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { REPORT_BAR_COLOR, ReportChartCard } from "../report-ui";
+import { describeAction } from "@/lib/activity-timeline";
+
+function humanize(value: string) {
+  const spaced = value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[._-]+/g, " ").toLowerCase().trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function truncate(label: string) {
+  return label.length > 28 ? `${label.slice(0, 27)}\u2026` : label;
+}
 
 function formatAction(action: string) {
-  return action
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/^(.{20}).+$/, "$1\u2026");
+  // "item" context words the action without an actor, the way a chart label needs it.
+  const entry = { id: action, action, createdAt: "", beforeJson: null, afterJson: null, actor: null };
+  return truncate(describeAction(entry, "", "item", "a record"));
+}
+
+function formatEntityType(entityType: string) {
+  return truncate(humanize(entityType));
 }
 
 const chartConfig: ChartConfig = {
@@ -42,7 +55,7 @@ export function ActionBreakdownChart({
             <YAxis
               dataKey="action"
               type="category"
-              width={130}
+              width={180}
               tickLine={false}
               axisLine={false}
               className="text-xs"
@@ -69,7 +82,7 @@ export function EntityTypeBreakdownChart({
   if (byEntityType.length === 0) return null;
 
   return (
-    <ReportChartCard title="By entity type">
+    <ReportChartCard title="By record type">
         <ChartContainer
           config={chartConfig}
           className="w-full"
@@ -83,10 +96,11 @@ export function EntityTypeBreakdownChart({
             <YAxis
               dataKey="entityType"
               type="category"
-              width={90}
+              width={150}
               tickLine={false}
               axisLine={false}
               className="text-xs"
+              tickFormatter={formatEntityType}
             />
             <XAxis type="number" hide />
             <ChartTooltip content={<ChartTooltipContent />} />

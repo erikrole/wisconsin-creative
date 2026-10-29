@@ -5,6 +5,7 @@ import { HttpError, ok } from "@/lib/http";
 import { tokenHash } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { createAuditEntry } from "@/lib/audit";
 
 /** GET /api/me/sessions — list all non-expired sessions for the caller. */
 export const GET = withAuth(async (_req, { user }) => {
@@ -67,6 +68,17 @@ export const DELETE = withAuth(async (_req, { user }) => {
       id: { not: currentSessionId },
     },
   });
+
+  if (result.count > 0) {
+    await createAuditEntry({
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "session",
+      entityId: user.id,
+      action: "sessions_signed_out",
+      after: { count: result.count },
+    });
+  }
 
   return ok({ revokedCount: result.count });
 });

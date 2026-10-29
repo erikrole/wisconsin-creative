@@ -28,6 +28,8 @@ export function statusLabel(status: string, kind?: BookingDisplayKind): string {
 
 const actionLabels: Record<string, string> = {
   create: "created booking",
+  scan_checkout: "scanned out",
+  scan_checkin: "scanned in",
   created: "created booking",
   update: "updated",
   updated: "updated",

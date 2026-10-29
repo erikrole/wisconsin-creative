@@ -29,6 +29,24 @@
     ]
   },
   {
+    "date": "2026-10-29",
+    "title": "A complete, clearer activity log",
+    "type": "improvement",
+    "summary": "Every scan, swap and change now shows in the history of the item and booking it touched, in plain sentences, and admins can filter the log by area and person.",
+    "details": [
+      "Booking and item history now show each item scanned out and back in, with bursts of scans folded into one line that names every item.",
+      "A swapped or removed item keeps those events in its own history, and swaps name both items.",
+      "Edits show what changed (old value to new value) instead of raw data.",
+      "Password changes and signing out other devices are now recorded.",
+      "Reports > Audit has Area and Person filters, and kits have a History card for staff and admins.",
+      "All dates and times in the activity log and across the app show in Central time."
+    ],
+    "pr": 724,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-28",
     "title": "Trades tab and calmer link colors",
     "type": "improvement",

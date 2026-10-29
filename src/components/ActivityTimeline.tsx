@@ -33,6 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { formatDateTime } from "@/lib/format";
+import { AUDIT_CATEGORY_LABELS, auditCategory } from "@/lib/audit-actions";
 import {
   EQUIPMENT_ACTIONS,
   HIDDEN_FIELDS,
@@ -464,6 +465,8 @@ function TimelineEntry({
                 {actorName}
                 {actorRole ? ` · ${actorRole}` : ""}
               </span>
+              <span className="text-muted-foreground">Area</span>
+              <span>{AUDIT_CATEGORY_LABELS[auditCategory(entry.action, entry.entityType)]}</span>
               <span className="text-muted-foreground">Action</span>
               <span className="font-mono text-[11px]">{entry.action}</span>
               <span className="text-muted-foreground">Entity</span>

@@ -57,6 +57,8 @@ import { SaveableField, useSaveField } from "@/components/SaveableField";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { useFetch } from "@/hooks/use-fetch";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import ActivityFeed from "../../items/[id]/ItemHistoryTab";
 import { classifyAssetType, EQUIPMENT_SECTIONS } from "@/lib/equipment-sections";
 import type { EquipmentSectionKey } from "@/lib/equipment-sections";
 import { SPORT_CODES, sportLabel } from "@/lib/sports";
@@ -190,6 +192,9 @@ export default function KitDetailPage() {
 
   // Delete kit
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const { data: me } = useCurrentUser();
+  const canSeeHistory = me?.role === "ADMIN" || me?.role === "STAFF";
   const [deleting, setDeleting] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
   const [cloning, setCloning] = useState(false);
@@ -1022,6 +1027,20 @@ export default function KitDetailPage() {
           </Card>
         </div>
       )}
+
+      {canSeeHistory && <Card className="min-w-0">
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="text-base">History</CardTitle>
+          <Button variant="ghost" onClick={() => setHistoryOpen((open) => !open)}>
+            {historyOpen ? "Hide" : "Show"}
+          </Button>
+        </CardHeader>
+        {historyOpen && (
+          <CardContent>
+            <ActivityFeed assetId={kit.id} assetName={kit.name} endpoint={`/api/kits/${kit.id}/activity`} />
+          </CardContent>
+        )}
+      </Card>}
 
       {/* Remove member confirmation */}
       <AlertDialog open={!!removeTarget} onOpenChange={(v) => { if (!v) setRemoveTarget(null); }}>
