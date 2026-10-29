@@ -33,7 +33,7 @@ function slimShiftGroup(g: {
   event: { id: string; startsAt: Date };
   shifts: { id: string; area: unknown; workerType: unknown; startsAt: Date; endsAt: Date; callStartsAt: Date | null; callEndsAt: Date | null; notes: string | null; viewerRequest: unknown;
     assignments: { id: string; status: unknown; user: unknown; activeTrade: unknown; callStartsAt: Date | null; callEndsAt: Date | null; callNote: string | null; crewLabel: string | null; crewHalf: unknown; hasConflict: boolean; conflictNote: string | null; acknowledgedAt: Date | null; acknowledgedById: string | null }[] }[];
-  publication: unknown; hasWorkingCopy: boolean | undefined; claimsPaused: boolean; autoReleaseAt: string | null | undefined; autoReleaseError: string | null | undefined; coverage: unknown;
+  publication: unknown; hasWorkingCopy: boolean | undefined; pendingReview: unknown; claimsPaused: boolean; autoReleaseAt: string | null | undefined; autoReleaseError: string | null | undefined; coverage: unknown;
 }) {
   return {
     id: g.id,
@@ -53,6 +53,7 @@ function slimShiftGroup(g: {
     })),
     publication: g.publication,
     hasWorkingCopy: g.hasWorkingCopy,
+    pendingReview: g.pendingReview,
     claimsPaused: g.claimsPaused,
     autoReleaseAt: g.autoReleaseAt,
     autoReleaseError: g.autoReleaseError,
@@ -135,7 +136,14 @@ export const GET = withAuth(async (req, { user }) => {
           shiftAssignmentId: { in: assignmentIds },
           status: { in: ["OPEN", "CLAIMED"] },
         },
-        select: { id: true, status: true, shiftAssignmentId: true },
+        select: {
+          id: true,
+          status: true,
+          shiftAssignmentId: true,
+          notes: true,
+          postedBy: { select: { id: true, name: true, avatarUrl: true } },
+          claimedBy: { select: { id: true, name: true, avatarUrl: true } },
+        },
       })
     : [];
   const tradeByAssignmentId = new Map(
@@ -161,6 +169,23 @@ export const GET = withAuth(async (req, { user }) => {
     conflictNote: request.conflictNote,
   }]));
 
+  // Admins decide on claimed trades and open-slot requests right from the list,
+  // so they get every pending one for the loaded groups. Nobody else sees them.
+  const isAdmin = user.role === "ADMIN";
+  const pendingClaims = isAdmin && shiftIds.length > 0
+    ? await db.shiftAssignment.findMany({
+        where: { shiftId: { in: shiftIds }, status: "REQUESTED" },
+        select: {
+          id: true,
+          shiftId: true,
+          hasConflict: true,
+          conflictNote: true,
+          user: { select: { id: true, name: true, avatarUrl: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+
   // Add coverage summary
   const data = groups.map((g) => {
     const totalShifts = g.shifts.length;
@@ -178,9 +203,30 @@ export const GET = withAuth(async (req, { user }) => {
           autoReleaseError: g.workingCopy.autoReleaseError,
         }
       : null;
+    const pendingReview = isAdmin
+      ? {
+          claims: g.shifts.flatMap((s) => pendingClaims
+            .filter((claim) => claim.shiftId === s.id)
+            .map((claim) => ({ ...claim, area: s.area }))),
+          trades: g.shifts.flatMap((s) => s.assignments.flatMap((a) => {
+            const trade = activeTrades.find((t) => t.shiftAssignmentId === a.id && t.status === "CLAIMED");
+            if (!trade?.claimedBy) return [];
+            return [{
+              id: trade.id,
+              assignmentId: a.id,
+              status: "CLAIMED" as const,
+              notes: trade.notes,
+              claimedBy: trade.claimedBy,
+              postedBy: trade.postedBy,
+              area: s.area,
+            }];
+          })),
+        }
+      : undefined;
     return {
       ...g,
       workingCopy: undefined,
+      pendingReview,
       shifts: g.shifts.map((s) => ({
         ...s,
         callStartsAt: s.workerType === "ST" && studentCallTimeVisible ? s.callStartsAt : null,
