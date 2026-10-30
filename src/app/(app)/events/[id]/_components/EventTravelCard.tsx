@@ -37,6 +37,8 @@ type TravelMember = {
   createdAt: string;
   /** On the away game's crew; remove them from the crew, not here. */
   fromCrew?: boolean;
+  /** Items still out on their personal checkout for this trip. */
+  gearOut?: number;
   user: TravelUser;
 };
 
@@ -367,7 +369,7 @@ export function EventTravelCard({
         ) : (
           <div className="flex flex-col gap-1.5">
             {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between gap-2">
+              <div key={m.id} className="flex min-h-10 items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <UserAvatar
                     name={m.user.name}
@@ -379,6 +381,11 @@ export function EventTravelCard({
                   <Badge variant="gray" size="sm" className="shrink-0">
                     {userRoleLabel(m.user.role)}
                   </Badge>
+                  {!!m.gearOut && (
+                    <Badge variant="orange" size="sm" className="shrink-0">
+                      {m.gearOut} {m.gearOut === 1 ? "item" : "items"} out
+                    </Badge>
+                  )}
                 </div>
                 {isStaff && !m.fromCrew && (
                   <Button

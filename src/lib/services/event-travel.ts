@@ -42,7 +42,7 @@ export async function loadTravelRoster(eventId: string, isAwayGame: boolean) {
     include: travelMemberInclude,
     orderBy: { createdAt: "asc" },
   });
-  const manual = added.map((m) => ({ ...m, fromCrew: false }));
+  const manual = added.map((m) => ({ ...m, fromCrew: false, gearOut: 0 }));
   if (!isAwayGame) return manual;
 
   const crew = await db.shiftAssignment.findMany({
@@ -67,7 +67,34 @@ export async function loadTravelRoster(eventId: string, isAwayGame: boolean) {
       createdAt: a.createdAt,
       user: a.user,
       fromCrew: true,
+      gearOut: 0,
     });
   }
-  return [...manual, ...fromCrew].sort((x, y) => x.user.name.localeCompare(y.user.name));
+  const roster = [...manual, ...fromCrew];
+
+  // Gear each traveler still has out on a personal checkout for this trip.
+  // Returns trickle in for days after an away game, so the card shows who is left.
+  const openCheckouts = await db.booking.findMany({
+    where: {
+      eventId,
+      kind: "CHECKOUT",
+      status: "OPEN",
+      custodyScope: "PERSON",
+      requesterUserId: { in: roster.map((r) => r.userId) },
+    },
+    select: {
+      requesterUserId: true,
+      _count: { select: { serializedItems: { where: { allocationStatus: "active" } } } },
+      bulkItems: { select: { checkedOutQuantity: true, checkedInQuantity: true } },
+    },
+  });
+  const gearOut = new Map<string, number>();
+  for (const b of openCheckouts) {
+    const bulk = b.bulkItems.reduce((sum, i) => sum + Math.max(0, i.checkedOutQuantity - i.checkedInQuantity), 0);
+    gearOut.set(b.requesterUserId, (gearOut.get(b.requesterUserId) ?? 0) + b._count.serializedItems + bulk);
+  }
+
+  return roster
+    .map((r) => ({ ...r, gearOut: gearOut.get(r.userId) ?? 0 }))
+    .sort((x, y) => x.user.name.localeCompare(y.user.name));
 }

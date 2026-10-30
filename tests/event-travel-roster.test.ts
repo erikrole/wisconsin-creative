@@ -4,6 +4,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     eventTravelMember: { findMany: vi.fn() },
     shiftAssignment: { findMany: vi.fn() },
+    booking: { findMany: vi.fn() },
   },
 }));
 
@@ -24,9 +25,13 @@ describe("loadTravelRoster", () => {
       { userId: "u2", createdAt: new Date(), user: user("u2", "Amy") },
     ] as never);
 
+    vi.mocked(db.booking.findMany).mockResolvedValue([
+      { requesterUserId: "u2", _count: { serializedItems: 2 }, bulkItems: [{ checkedOutQuantity: 4, checkedInQuantity: 1 }] },
+    ] as never);
+
     const roster = await loadTravelRoster("e1", true);
 
-    expect(roster.map((r) => [r.userId, r.fromCrew])).toEqual([["u2", true], ["u1", false]]);
+    expect(roster.map((r) => [r.userId, r.fromCrew, r.gearOut])).toEqual([["u2", true, 5], ["u1", false, 0]]);
     expect(roster[0]?.id).toBe("crew:u2");
   });
 

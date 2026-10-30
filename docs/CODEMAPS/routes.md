@@ -132,6 +132,7 @@
 - `/dev-team-availability` -> `src/app/dev-team-availability/page.tsx`
 - `/dev-trade-board` -> `src/app/dev-trade-board/page.tsx`
 - `/dev-transfer` -> `src/app/dev-transfer/page.tsx`
+- `/dev-travel` -> `src/app/dev-travel/page.tsx`
 - `/dev-welcome` -> `src/app/dev-welcome/page.tsx`
 - `/dev-wrapped` -> `src/app/dev-wrapped/page.tsx`
 - `/forgot-password` -> `src/app/forgot-password/page.tsx`

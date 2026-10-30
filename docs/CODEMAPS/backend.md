@@ -55,7 +55,7 @@
 | `src/lib/services/damage-cases.ts` | 356 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
 | `src/lib/services/error-reports.ts` | 558 |
-| `src/lib/services/event-travel.ts` | 74 |
+| `src/lib/services/event-travel.ts` | 100 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/football-results.ts` | 139 |
