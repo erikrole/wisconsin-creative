@@ -30,7 +30,7 @@ describe("iOS away-game travel roster", () => {
     expect(screen).toContain("NavigationLink(value: EventTravelPersonRoute(id: member.user.id))");
     expect(screen).toContain("UserDetailView(userId: route.id)");
     expect(screen).toContain("No travelers yet");
-    expect(screen).toContain("Staff add them on the website.");
+    expect(screen).toContain("Travelers appear once the crew is assigned.");
     expect(screen).toContain("Couldn't refresh. The list is unchanged.");
     expect(screen).not.toMatch(/method:\s*"(POST|PATCH|DELETE|PUT)"/);
     expect(screen).not.toMatch(/\/travel\/defaults|travel\/\$\{|remove traveler|Add defaults/);

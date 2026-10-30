@@ -4,7 +4,7 @@ import { HttpError, ok } from "@/lib/http";
 import { requirePermission, requireRole } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
-import { loadTravelEvent, travelerUserWhere, travelMemberInclude } from "@/lib/services/event-travel";
+import { loadTravelEvent, loadTravelRoster, travelerUserWhere, travelMemberInclude } from "@/lib/services/event-travel";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -22,15 +22,11 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   // gates the read rather than racing it.
   const event = await db.calendarEvent.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, isHome: true, sportCode: true },
   });
   if (!event) throw new HttpError(404, "Event not found");
 
-  const members = await db.eventTravelMember.findMany({
-    where: { eventId: id },
-    include: travelMemberInclude,
-    orderBy: { createdAt: "asc" },
-  });
+  const members = await loadTravelRoster(id, event.isHome === false && !!event.sportCode);
 
   return ok({ data: members });
 });

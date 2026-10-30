@@ -35,6 +35,10 @@ type TravelMember = {
   userId: string;
   notes: string | null;
   createdAt: string;
+  /** On the away game's crew; remove them from the crew, not here. */
+  fromCrew?: boolean;
+  /** Items still out on their personal checkout for this trip. */
+  gearOut?: number;
   user: TravelUser;
 };
 
@@ -260,8 +264,6 @@ export function EventTravelCard({
   const [localMembers, setLocalMembers] = useState<TravelMember[] | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const removingRef = useRef(new Set<string>());
-  const [addingDefaults, setAddingDefaults] = useState(false);
-  const addingDefaultsRef = useRef(false);
 
   const {
     data: fetchedMembers,
@@ -284,39 +286,6 @@ export function EventTravelCard({
 
   function handleAdded(member: TravelMember) {
     setLocalMembers((prev) => [...(prev ?? fetchedMembers ?? []), member]);
-  }
-
-  async function handleAddDefaults() {
-    if (addingDefaultsRef.current) return;
-    addingDefaultsRef.current = true;
-    setAddingDefaults(true);
-    try {
-      const res = await fetch(`/api/calendar-events/${eventId}/travel/defaults`, { method: "POST" });
-      if (handleAuthRedirect(res)) return;
-      if (!res.ok) {
-        toast.error(await parseErrorMessage(res, "Failed to add default travelers"));
-        return;
-      }
-      const json = await parseJsonSafely<{ data?: TravelMember[]; added?: number; defaultCount?: number }>(res);
-      if (!json?.data) {
-        toast.error("Default travelers may have been added, but the response was incomplete. Refresh to check.");
-        return;
-      }
-      setLocalMembers(json.data);
-      const added = json.added ?? 0;
-      if (json.defaultCount === 0) {
-        toast.info("No default travelers are set for this sport. Mark them with the plane in Add.");
-      } else if (added === 0) {
-        toast.info("Every default traveler is already on this trip.");
-      } else {
-        toast.success(`Added ${added} default traveler${added === 1 ? "" : "s"}.`);
-      }
-    } catch (err) {
-      toast.error(err instanceof TypeError ? "You’re offline. Check your connection." : "Failed to add default travelers");
-    } finally {
-      addingDefaultsRef.current = false;
-      setAddingDefaults(false);
-    }
   }
 
   async function handleRemove(memberId: string) {
@@ -348,21 +317,11 @@ export function EventTravelCard({
         <div>
           <CardTitle>Travel</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Who is traveling to this away event.
+            Everyone on this away game&apos;s crew, plus anyone added here.
           </p>
         </div>
         {isStaff && (
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="default"
-              className="h-10"
-              disabled={loading || addingDefaults}
-              onClick={handleAddDefaults}
-            >
-              <Plane className="size-3.5 mr-1.5" />
-              {addingDefaults ? "Adding…" : "Add defaults"}
-            </Button>
             <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="default" className="h-10" disabled={loading}>
@@ -405,12 +364,12 @@ export function EventTravelCard({
             inline
             icon="users"
             title="No travelers added"
-            description={isStaff ? "Add defaults brings in the sport's regular travelers. Use Add for anyone else." : "Travelers will appear here once staff adds them."}
+            description={isStaff ? "Assign the crew on the schedule, or use Add for anyone else." : "Travelers appear here once the crew is assigned."}
           />
         ) : (
           <div className="flex flex-col gap-1.5">
             {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between gap-2">
+              <div key={m.id} className="flex min-h-10 items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <UserAvatar
                     name={m.user.name}
@@ -422,8 +381,13 @@ export function EventTravelCard({
                   <Badge variant="gray" size="sm" className="shrink-0">
                     {userRoleLabel(m.user.role)}
                   </Badge>
+                  {!!m.gearOut && (
+                    <Badge variant="orange" size="sm" className="shrink-0">
+                      {m.gearOut} {m.gearOut === 1 ? "item" : "items"} out
+                    </Badge>
+                  )}
                 </div>
-                {isStaff && (
+                {isStaff && !m.fromCrew && (
                   <Button
                     type="button"
                     variant="ghost"

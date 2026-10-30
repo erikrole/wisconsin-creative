@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-10-30",
+    "title": "Travel roster now follows the crew",
+    "type": "improvement",
+    "summary": "An away game's travel roster now shows everyone assigned to its crew, so football no longer looks empty.",
+    "details": [
+      "The Travel card on web and iPhone lists the confirmed crew plus anyone staff added by hand.",
+      "People on the crew are removed from the crew on the Schedule, not from the Travel card.",
+      "Each traveler shows how many items they still have out from the trip.",
+      "The Add defaults button is gone, since the crew now fills the roster."
+    ],
+    "pr": 739,
+    "platforms": [
+      "Web",
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-30",
     "title": "Approve trades right on the Schedule",
     "type": "improvement",
     "summary": "Admins now see a \"to review\" button on any event with a claimed trade or an open-slot request, and can approve or decline it without leaving the Schedule.",
