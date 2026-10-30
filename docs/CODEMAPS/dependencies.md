@@ -145,6 +145,7 @@
 - `test:watch`: `vitest`
 - `verify:docs`: `node scripts/check-repo-hygiene.mjs && npm run codemap:check`
 - `verify:skills`: `python3 -B scripts/verify-skills.py`
+- `wc`: `node scripts/wc.mjs`
 
 ## Environment Variables From `.env.example`
 

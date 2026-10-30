@@ -56,6 +56,7 @@ export const POST = withHandler(async (req) => {
       await tx.session.deleteMany({
         where: { userId: resetToken.userId },
       });
+      await tx.apiToken.deleteMany({ where: { userId: resetToken.userId } });
       const deviceTokenCleanup = await tx.deviceToken.updateMany({
         where: { userId: resetToken.userId, revokedAt: null },
         data: { revokedAt: now },

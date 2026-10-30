@@ -148,7 +148,7 @@
 | `src/lib/services/team-scoreboard.ts` | 600 |
 | `src/lib/services/trade-post-notifications.ts` | 115 |
 | `src/lib/services/usage-analytics-report.ts` | 114 |
-| `src/lib/services/user-deactivation.ts` | 589 |
+| `src/lib/services/user-deactivation.ts` | 590 |
 | `src/lib/services/utilization-report.ts` | 444 |
 | `src/lib/services/wishlist.ts` | 193 |
 | `src/lib/services/wrapped.ts` | 286 |
@@ -163,7 +163,8 @@
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 199 |
+| `src/lib/api-token.ts` | 23 |
+| `src/lib/api.ts` | 208 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -174,11 +175,11 @@
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/assignment-workload.ts` | 83 |
-| `src/lib/audit-actions.ts` | 420 |
+| `src/lib/audit-actions.ts` | 425 |
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
-| `src/lib/auth.ts` | 470 |
+| `src/lib/auth.ts` | 527 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 348 |
 | `src/lib/avatar-image.ts` | 17 |
@@ -193,7 +194,7 @@
 | `src/lib/booking-concurrency.ts` | 41 |
 | `src/lib/booking-display-title.ts` | 77 |
 | `src/lib/booking-snapshot-header.ts` | 2 |
-| `src/lib/booking-status-display.ts` | 152 |
+| `src/lib/booking-status-display.ts` | 153 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 230 |
 | `src/lib/brother-chain.ts` | 71 |
@@ -395,6 +396,7 @@
 | `src/lib/venue-tone.ts` | 135 |
 | `src/lib/web-tools.ts` | 28 |
 | `src/lib/webmcp-tools.ts` | 504 |
+| `src/lib/wifi.ts` | 16 |
 | `src/lib/working-schedule-limits.ts` | 6 |
 
 ## API Route Groups
@@ -807,6 +809,8 @@
 ### `/api/me`
 
 - `/api/me/account`
+- `/api/me/api-tokens/[id]`
+- `/api/me/api-tokens`
 - `/api/me/blasts/[id]/ack`
 - `/api/me/blasts/[id]/read`
 - `/api/me/blasts`
@@ -1047,6 +1051,10 @@
 - `/api/users/org-chart`
 - `/api/users`
 - `/api/users/today`
+
+### `/api/wifi`
+
+- `/api/wifi`
 
 ### `/api/wishlist`
 

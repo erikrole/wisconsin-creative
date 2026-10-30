@@ -135,7 +135,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 146
+Fields: 147
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -169,6 +169,7 @@ Fields: 146
 - `lastActiveAt                  DateTime?                        @map("last_active_at")`
 - `location                      Location?                        @relation(fields: [locationId], references: [id], onDelete: SetNull)`
 - `sessions                      Session[]`
+- `apiTokens                     ApiToken[]`
 - `passkeyCredentials            PasskeyCredential[]`
 - `passkeyChallenges             PasskeyChallenge[]`
 - `requested                     Booking[]                        @relation("BookingRequester")`
@@ -308,6 +309,25 @@ Indexes and constraints:
 
 - `@@index([userId])`
 - `@@map("sessions")`
+
+## Model `ApiToken`
+
+Fields: 9
+
+- `id         String    @id @default(cuid())`
+- `userId     String    @map("user_id")`
+- `name       String`
+- `tokenHash  String    @unique @map("token_hash")`
+- `scope      String`
+- `expiresAt  DateTime  @map("expires_at")`
+- `lastUsedAt DateTime? @map("last_used_at")`
+- `createdAt  DateTime  @default(now()) @map("created_at")`
+- `user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([userId])`
+- `@@map("api_tokens")`
 
 ## Model `PasswordResetToken`
 

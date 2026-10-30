@@ -114,6 +114,7 @@ export const PATCH = withAuth(async (req, { user }) => {
       db.session.deleteMany({
         where: { userId: user.id },
       }),
+      db.apiToken.deleteMany({ where: { userId: user.id } }),
     ]);
 
     try {

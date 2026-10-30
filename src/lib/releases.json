@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-10-30",
+    "title": "Staff command line and API tokens",
+    "type": "feature",
+    "summary": "Staff and admins can now create personal API tokens and use the new wc command line to view and edit the schedule, handle trades and call any app action. AI agents can use it too.",
+    "details": [
+      "Tokens act as you, can be read-only, and expire.",
+      "Sign-in, passwords and account changes stay browser-only.",
+      "Times always show in Central."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-30",
     "title": "Approve trades right on the Schedule",
     "type": "improvement",
     "summary": "Admins now see a \"to review\" button on any event with a claimed trade or an open-slot request, and can approve or decline it without leaving the Schedule.",
