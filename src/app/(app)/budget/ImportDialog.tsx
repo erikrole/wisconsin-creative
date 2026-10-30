@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { BUDGET_CATEGORY_LABELS, fiscalYearLabel, fiscalYearOf, formatCentsCompact } from "@/lib/budget/contract";
+import { BUDGET_CATEGORY_LABELS, fiscalYearLabel, formatCentsCompact } from "@/lib/budget/contract";
 import type { ImportCandidate } from "@/lib/budget/import";
 import { parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 
@@ -28,7 +28,7 @@ export function ImportDialog({
   onImported: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
-  const [unboughtAs, setUnboughtAs] = useState<"CANCELLED" | "PLANNED" | "PURCHASED">(fiscalYear >= fiscalYearOf(new Date()) ? "PLANNED" : "CANCELLED");
+  const [unboughtAs, setUnboughtAs] = useState<"CANCELLED" | "PLANNED" | "PURCHASED">("PLANNED");
   const [sheets, setSheets] = useState<{ name: string; usable: boolean }[]>([]);
   const [sheet, setSheet] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<ImportCandidate[] | null>(null);
@@ -67,11 +67,17 @@ export function ImportDialog({
         status: row.status,
         supplier: row.supplier,
         unitCostCents: row.unitCostCents,
+        unitCostKnown: row.unitCostKnown,
+        plannedTotalKnown: row.budgetedCents !== null,
+        plannedOverrideCents: row.budgetedCents,
+        statusKnown: row.statusKnown,
         quantity: row.quantity,
+        quantityBought: row.quantityBought,
         spentCents: row.spentCents,
         purchasedOn: row.purchasedOn,
         poNumber: row.poNumber,
         orderNumber: row.orderNumber,
+        justification: row.note,
         unplanned: row.unplanned,
       }));
     if (lines.length === 0) return void toast.error("Nothing selected to import.");
@@ -121,9 +127,9 @@ export function ImportDialog({
               <div className="flex flex-col gap-1.5 sm:col-span-2">
                 <Label>Lines with a budget, nothing spent, and no Status</Label>
                 <NativeSelect value={unboughtAs} onChange={(event) => setUnboughtAs(event.target.value as "CANCELLED" | "PLANNED" | "PURCHASED")}>
-                  <option value="CANCELLED">Import as Dropped (past years)</option>
-                  <option value="PLANNED">Import as Planned (this year)</option>
-                  <option value="PURCHASED">Count as bought at the planned amount (older years list only what was bought)</option>
+                  <option value="CANCELLED">Treat as dropped</option>
+                  <option value="PLANNED">Treat as planned</option>
+                  <option value="PURCHASED">Mark bought; leave actual spend unknown</option>
                 </NativeSelect>
               </div>
               <p className="text-xs text-muted-foreground sm:col-span-2">

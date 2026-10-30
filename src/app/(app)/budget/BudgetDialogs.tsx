@@ -117,9 +117,10 @@ export function LineDialog({
   const [form, setForm] = useState({
     description: line?.description ?? "",
     category: line?.category ?? ("EQUIPMENT" as BudgetCategoryValue),
-    status: line?.status ?? ("PLANNED" as BudgetLineStatusValue),
+    status: line?.statusKnown === false ? "UNKNOWN" : (line?.status ?? ("PLANNED" as BudgetLineStatusValue)),
     supplier: line?.supplier ?? "",
-    unitCost: centsToInput(line?.unitCostCents ?? null),
+    unitCost: line?.unitCostKnown === false ? "" : centsToInput(line?.unitCostCents ?? null),
+    budgeted: line?.plannedTotalKnown === false ? "" : line ? centsToInput(line.plannedOverrideCents ?? line.unitCostCents * line.quantity) : "",
     quantity: String(line?.quantity ?? 1),
     spent: centsToInput(line?.spentCents ?? null),
     quantityBought: line?.quantityBought === null || line?.quantityBought === undefined ? "" : String(line.quantityBought),
@@ -137,13 +138,15 @@ export function LineDialog({
   const set = (key: Exclude<keyof typeof form, "unplanned" | "recurring">) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   async function save() {
-    const unitCostCents = parseDollarsToCents(form.unitCost);
+    const unitCost = form.unitCost.trim() === "" ? null : parseDollarsToCents(form.unitCost);
+    const budgeted = form.budgeted.trim() === "" ? null : parseDollarsToCents(form.budgeted);
     const quantity = Number(form.quantity);
     const spentCents = form.spent.trim() === "" ? null : parseDollarsToCents(form.spent);
     const refundCents = form.refund.trim() === "" ? null : parseDollarsToCents(form.refund);
     if (form.refund.trim() !== "" && refundCents === null) return void toast.error("Enter the refund in dollars.");
     if (!form.description.trim()) return void toast.error("Add a description.");
-    if (unitCostCents === null) return void toast.error("Enter the unit cost in dollars, like 1299.50.");
+    if (form.unitCost.trim() && unitCost === null) return void toast.error("Enter a valid unit cost.");
+    if (form.budgeted.trim() && budgeted === null) return void toast.error("Enter a valid budget total.");
     if (!Number.isInteger(quantity) || quantity < 1) return void toast.error("Quantity must be a whole number, 1 or more.");
     if (form.spent.trim() !== "" && spentCents === null) return void toast.error("Enter what was spent in dollars.");
     const quantityBought = form.quantityBought.trim() === "" ? null : Number(form.quantityBought);
@@ -154,9 +157,13 @@ export function LineDialog({
     const body = {
       description: form.description,
       category: form.category,
-      status: form.status,
+      status: form.status === "UNKNOWN" ? "PLANNED" : form.status,
+      statusKnown: form.status !== "UNKNOWN",
       supplier: form.supplier,
-      unitCostCents,
+      unitCostCents: unitCost ?? 0,
+      unitCostKnown: unitCost !== null,
+      plannedTotalKnown: budgeted !== null,
+      plannedOverrideCents: budgeted,
       quantity,
       spentCents,
       quantityBought,
@@ -196,7 +203,7 @@ export function LineDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{line ? "Edit line" : "Add line"}</DialogTitle>
-          <DialogDescription>Planned cost is unit cost times quantity. Add what was spent once it&apos;s bought.</DialogDescription>
+          <DialogDescription>Enter the unit price and budget total separately. Leave unknown amounts blank.</DialogDescription>
         </DialogHeader>
         <DialogBody className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -216,6 +223,7 @@ export function LineDialog({
               {BUDGET_LINE_STATUSES.map((value) => (
                 <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>
               ))}
+              <option value="UNKNOWN">Unknown</option>
             </NativeSelect>
           </Field>
           <Field label="Supplier">
@@ -254,6 +262,15 @@ export function LineDialog({
           </label>
           <Field label="Unit cost ($)">
             <Input inputMode="decimal" value={form.unitCost} onChange={(e) => set("unitCost")(e.target.value)} />
+          </Field>
+          <Field label="Budget total ($)">
+            <Input inputMode="decimal" value={form.budgeted} onChange={(e) => set("budgeted")(e.target.value)} placeholder="Unknown" />
+            <button type="button" className="text-left text-xs text-primary hover:underline" onClick={() => {
+              const each = parseDollarsToCents(form.unitCost);
+              const count = Number(form.quantity);
+              if (each === null || !Number.isInteger(count) || count < 1) return void toast.error("Enter a unit cost and quantity first.");
+              set("budgeted")(((each * count) / 100).toFixed(2));
+            }}>Calculate from unit cost and quantity</button>
           </Field>
           <Field label="Quantity">
             <Input inputMode="numeric" value={form.quantity} onChange={(e) => set("quantity")(e.target.value)} />
@@ -384,6 +401,7 @@ const CONFIDENCE_VARIANT: Record<Suggestion["confidence"], "green" | "blue" | "g
 export function LinksDialog({ line, onClose, onChanged }: { line: LineView; onClose: () => void; onChanged: () => void }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [bulkQuantity, setBulkQuantity] = useState(line.quantityBought === null ? "" : String(line.quantityBought));
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const linkedKeys = new Set(line.links.map((link) => `${link.kind}:${link.targetId}`));
 
@@ -400,6 +418,11 @@ export function LinksDialog({ line, onClose, onChanged }: { line: LineView; onCl
   });
 
   async function link(target: { kind: "asset" | "bulk"; targetId: string; quantity?: number }) {
+    const quantity = Number(bulkQuantity);
+    if (target.kind === "bulk" && (!bulkQuantity.trim() || !Number.isInteger(quantity) || quantity < 1)) {
+      toast.error("Enter the number of units from this purchase before linking a bulk item.");
+      return;
+    }
     const key = `${target.kind}:${target.targetId}`;
     setPendingKey(key);
     try {
@@ -409,7 +432,7 @@ export function LinksDialog({ line, onClose, onChanged }: { line: LineView; onCl
         body: JSON.stringify(
           target.kind === "asset"
             ? { assetId: target.targetId }
-            : { bulkSkuId: target.targetId, quantity: target.quantity },
+            : { bulkSkuId: target.targetId, quantity },
         ),
       });
       if (!response.ok) {
@@ -487,6 +510,10 @@ export function LinksDialog({ line, onClose, onChanged }: { line: LineView; onCl
 
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-semibold">Suggested</h3>
+            <p className="text-xs text-muted-foreground">Suggestions are possible matches. Confirm the item and purchase before linking. Linking does not change item details.</p>
+            <Field label="Units from this purchase (for bulk items)">
+              <Input inputMode="numeric" value={bulkQuantity} onChange={(event) => setBulkQuantity(event.target.value)} placeholder="Unknown" />
+            </Field>
             {suggestions.isLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : visibleSuggestions.length === 0 ? (
@@ -509,7 +536,7 @@ export function LinksDialog({ line, onClose, onChanged }: { line: LineView; onCl
                   <Button
                     type="button"
                     disabled={pendingKey === `${item.kind}:${item.targetId}`}
-                    onClick={() => void link({ kind: item.kind, targetId: item.targetId, quantity: item.suggestedQuantity })}
+                    onClick={() => void link({ kind: item.kind, targetId: item.targetId })}
                   >
                     Link
                   </Button>
@@ -536,7 +563,7 @@ export function LinksDialog({ line, onClose, onChanged }: { line: LineView; onCl
                 <Button
                   type="button"
                   disabled={pendingKey === `${item.kind}:${item.targetId}`}
-                  onClick={() => void link({ kind: item.kind, targetId: item.targetId, quantity: line.quantityBought ?? line.quantity })}
+                  onClick={() => void link({ kind: item.kind, targetId: item.targetId })}
                 >
                   Link
                 </Button>

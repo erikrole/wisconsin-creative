@@ -10,6 +10,10 @@ export type MatchLine = {
   description: string;
   supplier: string | null;
   unitCostCents: number;
+  unitCostKnown?: boolean;
+  actualUnitCents?: number | null;
+  productUrl?: string | null;
+  budgetName?: string | null;
   purchasedOn: string | null; // YYYY-MM-DD
   poNumber: string | null;
   orderNumber: string | null;
@@ -22,6 +26,8 @@ export type MatchItem = {
   purchasePriceCents: number | null;
   purchaseDate: string | null; // YYYY-MM-DD
   notes: string | null;
+  productUrl?: string | null;
+  departmentName?: string | null;
 };
 
 export type MatchResult = {
@@ -34,7 +40,7 @@ const MIN_SUGGESTION_SCORE = 45;
 
 const STOP_WORDS = new Set([
   "the", "and", "for", "with", "kit", "set", "pack", "body", "new", "black", "white", "silver", "gray", "grey",
-  "inch", "mm", "pro", "camera", "lens", "of", "a", "an", "to", "in", "on", "by",
+  "inch", "mm", "pro", "camera", "lens", "of", "a", "an", "to", "in", "on", "by", "sony",
 ]);
 
 export function tokens(text: string): string[] {
@@ -44,6 +50,19 @@ export function tokens(text: string): string[] {
     .split(" ")
     .map((word) => word.replace(/^\.+|\.+$/g, ""))
     .filter((word) => word.length >= 2 && !STOP_WORDS.has(word));
+}
+
+/** A vendor product page is useful evidence even when tracking parameters differ. */
+export function productIdentity(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const bh = host === "bhphotovideo.com" ? /^\/c\/product\/(\d+)/i.exec(parsed.pathname) : null;
+    return bh ? `${host}/product/${bh[1]}` : `${host}${parsed.pathname.replace(/;jsessionid=.*/i, "").replace(/\/$/, "").toLowerCase()}`;
+  } catch {
+    return null;
+  }
 }
 
 function daysBetween(a: string, b: string): number {
@@ -68,11 +87,19 @@ export function scoreLineItemMatch(line: MatchLine, item: MatchItem): MatchResul
     reasons.push(`Item notes mention ${ref}`);
   }
 
-  if (item.purchasePriceCents !== null) {
-    const price = samePrice(line.unitCostCents, item.purchasePriceCents);
+  const product = productIdentity(line.productUrl);
+  const sameProduct = product !== null && product === productIdentity(item.productUrl);
+  if (sameProduct) {
+    score += 60;
+    reasons.push("Same product link");
+  }
+
+  const linePrice = line.actualUnitCents ?? (line.unitCostKnown === false ? null : line.unitCostCents);
+  if (item.purchasePriceCents !== null && linePrice !== null) {
+    const price = samePrice(linePrice, item.purchasePriceCents);
     if (price === "exact") {
       score += 35;
-      reasons.push("Same price");
+      reasons.push(line.actualUnitCents != null ? "Same actual unit price" : "Same planned price");
     } else if (price === "close") {
       score += 20;
       reasons.push("Price within about 3%");
@@ -93,11 +120,21 @@ export function scoreLineItemMatch(line: MatchLine, item: MatchItem): MatchResul
   const lineWords = new Set(tokens(`${line.description} ${line.supplier ?? ""}`));
   const itemWords = new Set(tokens(`${item.brand} ${item.model} ${item.name ?? ""}`));
   const shared = [...itemWords].filter((word) => lineWords.has(word));
+  // Price and a common brand alone do not identify a product.
+  if (!ref && !sameProduct && shared.length === 0) return null;
   if (itemWords.size > 0 && shared.length > 0) {
     const coverage = shared.length / itemWords.size;
     const points = Math.round(Math.min(40, 15 + coverage * 30));
     score += points;
     reasons.push(`Shared words: ${shared.slice(0, 4).join(", ")}`);
+  }
+
+  const budgetTeam = line.budgetName?.trim().toLowerCase();
+  const itemTeam = item.departmentName?.trim().toLowerCase();
+  if ((budgetTeam === "creative" || budgetTeam === "football") && itemTeam && budgetTeam !== itemTeam) {
+    if (!ref) return null;
+    score = Math.min(score, 55);
+    reasons.push(`Different department: ${item.departmentName}`);
   }
 
   if (score < MIN_SUGGESTION_SCORE) return null;

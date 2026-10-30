@@ -85,6 +85,25 @@ describe("plan changes", () => {
     expect(summary.forecastCents).toBe(410_00 + 64_00 + 220_00);
   });
 
+  it("retains a saved baseline after a line changes or is removed", () => {
+    const snapshot = { submittedCents: 800_00, submittedUnknownCount: 1 };
+    const modified = line({ status: "CANCELLED", unitCostCents: 300_00, submittedIncluded: true, submittedAmountCents: 180_00 });
+    expect(summarizeBudget([modified], null, snapshot)).toMatchObject({ submittedCents: 800_00, submittedUnknownCount: 1, freedCents: 180_00 });
+    expect(summarizeBudget([], null, snapshot).submittedCents).toBe(800_00);
+    expect(varianceCents(modified)).toBe(-180_00);
+    const added = line({ status: "PURCHASED", spentCents: 75_00, unplanned: false, submittedIncluded: false });
+    expect(varianceCents(added, true)).toBe(75_00);
+    expect(summarizeBudget([added], null, snapshot).unplannedCents).toBe(75_00);
+  });
+
+  it("distinguishes a recorded zero from unknown totals and spend", () => {
+    const knownZero = line({ plannedOverrideCents: 0, plannedTotalKnown: true });
+    const unknown = line({ status: "PURCHASED", statusKnown: false, plannedTotalKnown: false, spentCents: null });
+    expect(plannedCents(knownZero)).toBe(0);
+    expect(summarizeBudget([knownZero, unknown], null)).toMatchObject({ unknownPlannedCount: 1, unknownSpentCount: 1, unknownStatusCount: 1, submittedUnknownCount: 1 });
+    expect(varianceCents(unknown)).toBeNull();
+  });
+
   it("measures each line against the plan", () => {
     expect(varianceCents(lines[0]!)).toBe(10_00);
     expect(varianceCents(lines[1]!)).toBe(-180_00);

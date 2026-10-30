@@ -12,6 +12,7 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn(), createAuditEntryTx: vi.fn() }));
 vi.mock("@/lib/db", () => {
   const tx = {
+    $executeRaw: vi.fn(),
     budget: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     budgetLine: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), createMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
     budgetLineItem: { create: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
@@ -38,6 +39,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { GET as listBudgets, POST as createBudget } from "@/app/api/budget/route";
 import { GET as getBudget } from "@/app/api/budget/[id]/route";
 import { POST as createLine } from "@/app/api/budget/[id]/lines/route";
+import { POST as savePlan } from "@/app/api/budget/[id]/submitted-plan/route";
 import { POST as bulkLines } from "@/app/api/budget/[id]/lines/bulk/route";
 import { POST as previewImport, PUT as commitImport } from "@/app/api/budget/[id]/import/route";
 import { GET as budgetTrend } from "@/app/api/budget/trend/route";
@@ -88,12 +90,34 @@ const lineRow = {
 };
 
 beforeEach(() => {
-  for (const model of Object.values(tx)) for (const fn of Object.values(model)) fn.mockReset();
+  for (const model of Object.values(tx)) {
+    if (typeof model === "function") (model as MockFn).mockReset();
+    else for (const fn of Object.values(model)) fn.mockReset();
+  }
   vi.mocked(createAuditEntryTx).mockReset();
   vi.mocked(db.$transaction).mockImplementation((async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx)) as never);
   vi.mocked(requireAuth).mockResolvedValue(admin);
   vi.mocked(enforceRateLimit).mockResolvedValue(undefined);
   vi.mocked(db.gearPickCycle.findMany).mockResolvedValue([{ id: "2027-28", title: "2027-28" }] as never);
+});
+
+describe("saved plan", () => {
+  it("requires an admin and captures known and unknown amounts as a deliberate snapshot", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(staff);
+    expect((await savePlan(json("POST", "/api/budget/budget-1/submitted-plan"), idContext)).status).toBe(403);
+    tx.budget!.findUnique!.mockResolvedValue({ id: "budget-1", submittedCents: null, submittedUnknownCount: 0, submittedAt: null });
+    tx.budgetLine!.findMany!.mockResolvedValue([
+      { id: "one", unitCostCents: 100, quantity: 2, plannedTotalKnown: true, plannedOverrideCents: 0, unplanned: false },
+      { id: "two", unitCostCents: 100, quantity: 1, plannedTotalKnown: false, plannedOverrideCents: null, unplanned: false },
+      { id: "late", unitCostCents: 300, quantity: 1, plannedTotalKnown: true, plannedOverrideCents: null, unplanned: true },
+    ]);
+    tx.budget!.update!.mockResolvedValue({ id: "budget-1", submittedCents: 0, submittedUnknownCount: 1, submittedAt: new Date() });
+    expect((await savePlan(json("POST", "/api/budget/budget-1/submitted-plan"), idContext)).status).toBe(200);
+    expect(tx.budget!.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ submittedCents: 0, submittedUnknownCount: 1, submittedSource: "admin" }) }));
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "capture_plan", after: expect.objectContaining({ lines: [
+      { id: "one", included: true, amount: 0 }, { id: "two", included: true, amount: null }, { id: "late", included: false, amount: null },
+    ] }) }));
+  });
 });
 
 describe("budget access", () => {
@@ -263,6 +287,7 @@ describe("budget item links", () => {
   it("requires exactly one target", async () => {
     expect((await linkItem(json("POST", "/api/budget/lines/line-1/links", {}), lineContext)).status).toBe(400);
     expect((await linkItem(json("POST", "/api/budget/lines/line-1/links", { assetId: "a", bulkSkuId: "b" }), lineContext)).status).toBe(400);
+    expect((await linkItem(json("POST", "/api/budget/lines/line-1/links", { bulkSkuId: "b" }), lineContext)).status).toBe(400);
   });
 
   it("returns 404 for a missing item and unlinks with an audit entry", async () => {
@@ -340,14 +365,21 @@ describe("bulk changes and history", () => {
   it("drops several lines and returns their previous values for undo", async () => {
     (requireAuth as unknown as MockFn).mockResolvedValue(admin);
     tx.budgetLine!.findMany!.mockResolvedValue([
-      { id: "l1", status: "PLANNED", category: "EQUIPMENT" },
-      { id: "l2", status: "ORDERED", category: "RENTALS" },
+      { id: "l1", status: "PLANNED", statusKnown: false, category: "EQUIPMENT" },
+      { id: "l2", status: "ORDERED", statusKnown: true, category: "RENTALS" },
     ]);
     const res = await bulkLines(json("POST", "/api/budget/budget-1/lines/bulk", { lineIds: ["l1", "l2"], status: "CANCELLED" }), idContext);
     expect(res.status).toBe(200);
-    expect(tx.budgetLine!.updateMany!.mock.calls[0]![0].data).toEqual({ status: "CANCELLED" });
-    expect((await res.json()).data.previous).toHaveLength(2);
+    expect(tx.budgetLine!.updateMany!.mock.calls[0]![0].data).toEqual({ status: "CANCELLED", statusKnown: true });
+    expect((await res.json()).data.previous).toEqual(expect.arrayContaining([expect.objectContaining({ id: "l1", statusKnown: false })]));
     expect(createAuditEntryTx).toHaveBeenCalledTimes(2);
+  });
+
+  it("can restore an unknown status during undo", async () => {
+    tx.budgetLine!.findMany!.mockResolvedValue([{ id: "l1", status: "CANCELLED", statusKnown: true, category: "EQUIPMENT" }]);
+    const res = await bulkLines(json("POST", "/api/budget/budget-1/lines/bulk", { lineIds: ["l1"], status: "PLANNED", statusKnown: false }), idContext);
+    expect(res.status).toBe(200);
+    expect(tx.budgetLine!.updateMany!.mock.calls[0]![0].data).toEqual({ status: "PLANNED", statusKnown: false });
   });
 
   it("refuses a bulk change that names a line from another budget", async () => {
@@ -403,7 +435,7 @@ describe("year over year", () => {
     ]);
     const res = await budgetTrend(json("GET", "/api/budget/trend?name=Creative"), { params: Promise.resolve({}) });
     expect((await res.json()).data).toEqual([
-      { fiscalYear: "2025-26", submittedCents: 150_00, spentCents: 110_00, forecastCents: 110_00, allocationCents: 3_000_000 },
+      { fiscalYear: "2025-26", submittedCents: 150_00, spentCents: 110_00, forecastCents: 110_00, allocationCents: 3_000_000, incomplete: false },
     ]);
     expect((await budgetTrend(json("GET", "/api/budget/trend"), { params: Promise.resolve({}) })).status).toBe(400);
   });
@@ -435,10 +467,10 @@ describe("spreadsheet import", () => {
     expect(res.status).toBe(200);
     const { data } = await res.json();
     expect(data.candidates.map((c: { description: string; result: string }) => [c.description, c.result])).toEqual([
-      ["Sony FX3", "ready"],
+      ["Sony FX3", "check"],
       ["Total", "skipped"],
     ]);
-    expect(data.candidates[0].purchasedOn).toBe("2026-05-28");
+    expect(data.candidates[0].purchasedOn).toBeNull();
     expect(tx.budgetLine!.create!).not.toHaveBeenCalled();
   });
 

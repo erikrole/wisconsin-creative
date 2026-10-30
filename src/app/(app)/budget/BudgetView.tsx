@@ -49,10 +49,10 @@ const PILL_STYLES: Record<BudgetLineStatusValue, string> = {
   CANCELLED: "bg-muted text-muted-foreground",
 };
 
-function StatusPill({ status }: { status: BudgetLineStatusValue }) {
+function StatusPill({ status, known = true }: { status: BudgetLineStatusValue; known?: boolean }) {
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold ${PILL_STYLES[status]}`}>
-      {BUDGET_STATUS_LABELS[status]}
+      {known ? BUDGET_STATUS_LABELS[status] : "Unknown"}
     </span>
   );
 }
@@ -83,10 +83,10 @@ function formatShortDate(value: string | null): string {
 }
 
 /** Units still unlinked on a bought line: what was bought minus the units already tied to items. */
-function unlinkedUnits(line: Pick<LineView, "status" | "quantity" | "quantityBought" | "links">): number {
-  if (line.status !== "PURCHASED") return 0;
+function unlinkedUnits(line: Pick<LineView, "status" | "statusKnown" | "category" | "quantityBought" | "links">): number {
+  if (!line.statusKnown || line.status !== "PURCHASED" || line.quantityBought === null || (line.category !== "EQUIPMENT" && line.links.length === 0)) return 0;
   const linked = line.links.reduce((sum, link) => sum + link.quantity, 0);
-  return Math.max(0, (line.quantityBought ?? line.quantity) - linked);
+  return Math.max(0, line.quantityBought - linked);
 }
 
 export function BudgetView({ initialBudgetId = null, focusLineId = null }: { initialBudgetId?: string | null; focusLineId?: string | null }) {
@@ -241,10 +241,12 @@ function BudgetBody({
   const { summary, lines, budget } = detail;
   const cap = summary.allocationCents ?? summary.plannedCents;
   const over = summary.remainingCents < 0;
+  const incomplete = summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0;
+  const [savingPlan, setSavingPlan] = useState(false);
   const [onlyUnlinked, setOnlyUnlinked] = useState(false);
   const needItems = lines.filter((line) => unlinkedUnits(line) > 0);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BudgetLineStatusValue | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<BudgetLineStatusValue | "ALL" | "UNKNOWN">("ALL");
   const [sort, setSort] = useState<LineSort>("entered");
   const shown = filterAndSortLines(onlyUnlinked ? needItems : lines, { query, status: statusFilter, sort });
 
@@ -274,6 +276,26 @@ function BudgetBody({
     }
   }
 
+  async function capturePlan() {
+    const ok = await confirm({
+      title: budget.submittedAt ? "Revise the saved plan?" : "Save the submitted plan?",
+      message: "This records the current planned lines as the baseline. Later changes will not alter it; lines marked unplanned are excluded.",
+      confirmLabel: "Save plan",
+    });
+    if (!ok) return;
+    setSavingPlan(true);
+    try {
+      const response = await fetch(`/api/budget/${budget.id}/submitted-plan`, { method: "POST" });
+      if (!response.ok) return void toast.error(await parseErrorMessage(response, "The plan wasn't saved."));
+      toast.success("Submitted plan saved.");
+      onChanged();
+    } catch {
+      toast.error("Couldn't reach the server. Try again.");
+    } finally {
+      setSavingPlan(false);
+    }
+  }
+
   const [view, setView] = useState<"lines" | "insights">("lines");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
@@ -300,14 +322,14 @@ function BudgetBody({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  async function bulk(body: { status?: BudgetLineStatusValue; category?: BudgetCategoryValue }, ids: string[]) {
+  async function bulk(body: { status?: BudgetLineStatusValue; statusKnown?: boolean; category?: BudgetCategoryValue }, ids: string[]) {
     const response = await fetch(`/api/budget/${budget.id}/lines/bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lineIds: ids, ...body }),
     });
     if (!response.ok) throw new Error(await parseErrorMessage(response, "That didn't save. Try again."));
-    const json = await parseJsonSafely<{ data?: { previous: { id: string; status: BudgetLineStatusValue; category: BudgetCategoryValue }[] } }>(response);
+    const json = await parseJsonSafely<{ data?: { previous: { id: string; status: BudgetLineStatusValue; statusKnown: boolean; category: BudgetCategoryValue }[] } }>(response);
     return json?.data?.previous ?? [];
   }
 
@@ -315,19 +337,21 @@ function BudgetBody({
   async function dropSelected() {
     const targets = selectedLines.filter((line) => line.status !== "CANCELLED");
     if (targets.length === 0) return void toast.error("Those lines are already dropped.");
-    const freed = targets.reduce((sum, line) => sum + (line.unplanned ? 0 : plannedCents(line)), 0);
     try {
       const previous = await bulk({ status: "CANCELLED" }, targets.map((line) => line.id));
       setSelected(new Set());
       onChanged();
-      toast(`Dropped ${targets.length} ${targets.length === 1 ? "line" : "lines"}. ${formatCentsCompact(freed)} goes back to the budget.`, {
+      toast(`Dropped ${targets.length} ${targets.length === 1 ? "line" : "lines"}.`, {
         duration: 10_000,
         action: {
           label: "Undo",
           onClick: async () => {
             try {
               for (const status of new Set(previous.map((row) => row.status))) {
-                await bulk({ status }, previous.filter((row) => row.status === status).map((row) => row.id));
+                for (const known of [true, false]) {
+                  const ids = previous.filter((row) => row.status === status && row.statusKnown === known).map((row) => row.id);
+                  if (ids.length) await bulk({ status, statusKnown: known }, ids);
+                }
               }
               onChanged();
               toast.success("Put back.");
@@ -399,23 +423,24 @@ function BudgetBody({
   const barTotal = Math.max(cap, summary.forecastCents, 1);
   const shownBudgeted = shown.filter((line) => !line.unplanned).reduce((sum, line) => sum + plannedCents(line), 0);
   const shownSpent = shown.reduce((sum, line) => sum + (netSpentCents(line) ?? 0), 0);
+  const shownIncomplete = shown.some((line) => !line.plannedTotalKnown || (line.status === "PURCHASED" && line.spentCents === null) || !line.statusKnown);
 
   return (
     <div className="flex flex-col gap-7">
       <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         <StatCard
-          label={summary.allocationCents === null ? "Planned" : "Allocated"}
+          label={summary.allocationCents === null ? (summary.unknownPlannedCount ? "Known planned" : "Planned") : "Allocated"}
           value={formatCentsCompact(cap)}
-          helper={summary.allocationCents === null ? "No overall cap set" : undefined}
+          helper={summary.allocationCents === null ? (summary.unknownPlannedCount ? `${summary.unknownPlannedCount} amounts unknown` : "No overall cap set") : undefined}
         />
-        <StatCard label="Spent" value={formatCentsCompact(summary.spentCents)} tone="accent" />
+        <StatCard label={summary.unknownSpentCount ? "Known spent" : "Spent"} value={summary.unknownSpentCount && summary.spentCents === 0 ? "Unknown" : formatCentsCompact(summary.spentCents)} tone="accent" helper={summary.unknownSpentCount ? `${summary.unknownSpentCount} purchased ${summary.unknownSpentCount === 1 ? "line has" : "lines have"} unknown spend` : undefined} />
         <StatCard
-          label="Planned, not bought"
+          label={summary.unknownPlannedCount ? "Known planned, not bought" : "Planned, not bought"}
           value={formatCentsCompact(summary.outstandingCents)}
           tone="amber"
           helper={`${stillPlanned} ${stillPlanned === 1 ? "line" : "lines"} open`}
         />
-        <StatCard label={over ? "Over by" : "Remaining"} value={formatCentsCompact(Math.abs(summary.remainingCents))} tone={over ? "red" : "green"} />
+        <StatCard label={summary.allocationCents === null ? "Plan difference" : over ? "Over by" : "Remaining"} value={incomplete ? "Unknown" : formatCentsCompact(Math.abs(summary.remainingCents))} tone={incomplete ? "default" : over ? "red" : "green"} helper={incomplete ? "Amounts or statuses need review" : summary.allocationCents === null ? "No allocation set" : undefined} />
       </div>
 
       <div className="flex items-center gap-3">
@@ -450,7 +475,7 @@ function BudgetBody({
       <section className="flex flex-col gap-3.5 rounded-2xl border bg-card p-5" aria-label="Where it went">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold">Where it went</h2>
-          <span className="text-[13px] text-muted-foreground">{pctSpent}% of allocation spent</span>
+          <span className="text-[13px] text-muted-foreground">{incomplete ? "Known amounts only" : `${pctSpent}% of ${summary.allocationCents === null ? "plan" : "allocation"} spent`}</span>
         </div>
         <div className="flex h-3 gap-0.5 overflow-hidden rounded-full bg-muted" role="img" aria-label="Spend by category, then planned and unspent">
           {summary.byCategory.map((row, index) =>
@@ -485,7 +510,7 @@ function BudgetBody({
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border bg-card px-4 py-3 text-[13px] text-muted-foreground">
         <span>
-          Submitted plan <b className="font-bold text-foreground">{formatCentsCompact(submitted)}</b> <span className="opacity-70">fixed</span>
+          {budget.submittedAt ? (budget.submittedSource === "upgrade" ? "Plan captured at upgrade" : "Saved plan") : "Draft plan"} <b className="font-bold text-foreground">{formatCentsCompact(submitted)}</b> {summary.submittedUnknownCount > 0 ? <span>({summary.submittedUnknownCount} unknown)</span> : null}
         </span>
         <span>
           Freed up <b className="font-bold text-[#218358]">{formatCentsCompact(summary.freedCents)}</b>
@@ -493,17 +518,18 @@ function BudgetBody({
         <span>
           Unplanned <b className="font-bold text-[#3E63DD]">{formatCentsCompact(summary.unplannedCents)}</b>
         </span>
-        <span className="ml-auto">
+        {!incomplete && summary.submittedUnknownCount === 0 && budget.submittedAt && <span className="ml-auto">
           <b className={`font-bold ${vsSubmitted > 0 ? "text-[#C62A2F]" : "text-[#218358]"}`}>{formatCentsCompact(Math.abs(vsSubmitted))} {vsSubmitted > 0 ? "over" : "under"}</b>{" "}
           the submitted plan
-        </span>
+        </span>}
+        <Button type="button" size="sm" variant="outline" onClick={() => void capturePlan()} disabled={savingPlan || lines.length === 0}>{budget.submittedAt ? "Revise saved plan" : "Save submitted plan"}</Button>
       </div>
 
       {needItems.length > 0 && (
         <div className="flex flex-wrap items-center gap-3.5 rounded-xl border border-[#F5E29A] bg-[#FFF8E1] px-4 py-3 text-sm text-[#5C4400] dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
           <span className="size-2 rounded-full bg-[#F5B800]" />
           <span className="min-w-0 flex-1 basis-72">
-            <b className="font-bold">{needItems.reduce((sum, line) => sum + unlinkedUnits(line), 0)} bought units</b> aren&apos;t linked to an item yet. Linking fills in each item&apos;s order, PO and serial.
+            <b className="font-bold">{needItems.reduce((sum, line) => sum + unlinkedUnits(line), 0)} recorded equipment units</b> may need an inventory link. Linking does not change the item; order details can be copied separately.
           </span>
           <button type="button" className="text-[13px] font-bold text-[#3E63DD] hover:underline" onClick={() => setOnlyUnlinked((value) => !value)}>
             {onlyUnlinked ? "Show all lines" : "Show only these →"}
@@ -526,7 +552,7 @@ function BudgetBody({
               onChange={(event) => setQuery(event.target.value)}
             />
             <div className="flex gap-0.5 rounded-[10px] bg-muted p-[3px]" role="group" aria-label="Filter by status">
-              {(["ALL", ...BUDGET_LINE_STATUSES] as const).map((status) => (
+              {(["ALL", "UNKNOWN", ...BUDGET_LINE_STATUSES] as const).map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -536,7 +562,7 @@ function BudgetBody({
                     statusFilter === status ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {status === "ALL" ? "All" : BUDGET_STATUS_LABELS[status]}
+                  {status === "ALL" ? "All" : status === "UNKNOWN" ? "Unknown" : BUDGET_STATUS_LABELS[status]}
                 </button>
               ))}
             </div>
@@ -555,7 +581,7 @@ function BudgetBody({
             <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[#1C2024] px-4 py-2.5 text-sm text-white" role="toolbar" aria-label="Bulk actions">
               <b>{selectedLines.length} selected</b>
               <span className="text-[#B9BBC6]">
-                {formatCentsCompact(selectedLines.reduce((sum, line) => sum + (netSpentCents(line) ?? (line.unplanned ? 0 : plannedCents(line))), 0))}
+                {selectedLines.some((line) => !line.plannedTotalKnown || (line.status === "PURCHASED" && line.spentCents === null)) ? "Known: " : ""}{formatCentsCompact(selectedLines.reduce((sum, line) => sum + (netSpentCents(line) ?? (line.unplanned ? 0 : plannedCents(line))), 0))}
               </span>
               <span className="ml-auto flex flex-wrap items-center gap-4 font-bold">
                 <select
@@ -612,7 +638,7 @@ function BudgetBody({
                   <span role="columnheader" className="sr-only">Actions</span>
                 </div>
                 {shown.map((line) => {
-                  const variance = varianceCents(line);
+                  const variance = varianceCents(line, budget.submittedAt !== null);
                   const dropped = line.status === "CANCELLED";
                   const unlinked = unlinkedUnits(line);
                   return (
@@ -661,12 +687,12 @@ function BudgetBody({
                           </div>
                         </div>
                         <span role="cell">
-                          <StatusPill status={line.status} />
+                          <StatusPill status={line.status} known={line.statusKnown} />
                         </span>
                         <span role="cell" className={`${MONO} text-right`}>{line.quantity}</span>
-                        <span role="cell" className={`${MONO} text-right text-muted-foreground`}>{line.unplanned ? "—" : formatCentsCompact(line.unitCostCents)}</span>
+                        <span role="cell" className={`${MONO} text-right text-muted-foreground`}>{line.unitCostKnown ? formatCentsCompact(line.unitCostCents) : "Unknown"}</span>
                         <span role="cell" className={`${MONO} text-right ${dropped ? "text-muted-foreground" : ""}`}>
-                          {line.unplanned ? "—" : formatCentsCompact(plannedCents(line))}
+                          {line.unplanned ? "—" : line.plannedTotalKnown ? formatCentsCompact(plannedCents(line)) : "Unknown"}
                         </span>
                         <span role="cell" className={`${MONO} text-right font-medium`}>
                           {line.spentCents === null ? "—" : formatCentsCompact(netSpentCents(line) ?? 0)}
@@ -679,17 +705,17 @@ function BudgetBody({
                         <span role="cell" className={`${MONO} truncate text-muted-foreground`}>{line.poNumber ?? "—"}</span>
                         <span role="cell" className="text-[13px]">
                           {dropped ? (
-                            <span className="text-muted-foreground">Frees {formatCentsCompact(plannedCents(line))}</span>
+                            <span className="text-muted-foreground">{line.submittedIncluded && line.submittedAmountCents !== null ? `Frees ${formatCentsCompact(line.submittedAmountCents)}` : "Dropped"}</span>
                           ) : line.status !== "PURCHASED" ? (
                             <span className="text-muted-foreground">After it&apos;s bought</span>
                           ) : (
                             <button
                               type="button"
                               onClick={() => onLinks(line)}
-                              className={`font-bold hover:underline ${unlinked > 0 ? "text-[#AB6400] dark:text-amber-400" : "text-[#218358]"}`}
+                              className={`font-bold hover:underline ${unlinked > 0 ? "text-[#AB6400] dark:text-amber-400" : line.links.length ? "text-[#218358]" : "text-muted-foreground"}`}
                             >
                               {line.links.length === 0
-                                ? "Not linked"
+                                ? "Review links"
                                 : unlinked > 0
                                   ? `${(line.quantityBought ?? line.quantity) - unlinked} of ${line.quantityBought ?? line.quantity}`
                                   : "Linked"}
@@ -734,14 +760,14 @@ function BudgetBody({
                 })}
                 <div role="row" className={`${GRID} bg-muted/40 py-3.5 text-[13px] font-bold text-muted-foreground`}>
                   <span role="cell" />
-                  <span role="cell">Total shown</span>
+                  <span role="cell">{shownIncomplete ? "Known total shown" : "Total shown"}</span>
                   <span role="cell" />
                   <span role="cell" />
                   <span role="cell" />
                   <span role="cell" className={`${MONO} text-right text-foreground`}>{formatCentsCompact(shownBudgeted)}</span>
                   <span role="cell" className={`${MONO} text-right text-foreground`}>{formatCentsCompact(shownSpent)}</span>
                   <span role="cell" className={`${MONO} text-right ${shownSpent - shownBudgeted > 0 ? "text-[#C62A2F]" : "text-[#218358]"}`}>
-                    {shownSpent - shownBudgeted === 0 ? "—" : `${shownSpent - shownBudgeted > 0 ? "+" : "−"}${formatCentsCompact(Math.abs(shownSpent - shownBudgeted))}`}
+                    {shownIncomplete || shownSpent - shownBudgeted === 0 ? "—" : `${shownSpent - shownBudgeted > 0 ? "+" : "−"}${formatCentsCompact(Math.abs(shownSpent - shownBudgeted))}`}
                   </span>
                   <span role="cell" />
                   <span role="cell" />

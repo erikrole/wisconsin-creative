@@ -3387,6 +3387,12 @@ model Budget {
   fiscalYear      String       @map("fiscal_year")
   /// Optional overall cap in cents; null when the allocation isn't known.
   allocationCents Int?         @map("allocation_cents")
+  /// Frozen known subtotal of the last explicitly captured plan; null means a draft.
+  submittedCents  Int?         @map("submitted_cents")
+  /// Number of plan lines whose amount was unknown when the snapshot was captured.
+  submittedUnknownCount Int    @default(0) @map("submitted_unknown_count")
+  submittedAt     DateTime?    @map("submitted_at")
+  submittedSource String?      @map("submitted_source")
   notes           String?
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
@@ -3397,8 +3403,8 @@ model Budget {
   @@map("budgets")
 }
 
-/// A planned and (once bought) actual expense. Money is whole cents; the budgeted total is
-/// unit cost x quantity and is never stored.
+/// A planned and (once bought) actual expense. Money is whole cents; the budgeted total may
+/// be recorded independently of unit cost and quantity.
 model BudgetLine {
   id              String           @id @default(cuid())
   budgetId        String           @map("budget_id")
@@ -3407,6 +3413,17 @@ model BudgetLine {
   description     String
   supplier        String?
   unitCostCents   Int              @map("unit_cost_cents")
+  /// A zero value is a placeholder only when this flag is false.
+  unitCostKnown   Boolean          @default(true) @map("unit_cost_known")
+  /// When set, the budgeted total differs from unit cost times quantity.
+  plannedOverrideCents Int?        @map("planned_override_cents")
+  /// False means no budgeted total was recorded, rather than a zero total.
+  plannedTotalKnown Boolean        @default(true) @map("planned_total_known")
+  /// Status can be unknown on older imported sheets even though the operational state is planned.
+  statusKnown     Boolean          @default(true) @map("status_known")
+  /// Per-line snapshot for tracking the original submitted plan and dropped amounts.
+  submittedIncluded Boolean        @default(false) @map("submitted_included")
+  submittedAmountCents Int?        @map("submitted_amount_cents")
   quantity        Int              @default(1)
   /// Filled once bought; may differ from the plan (partial buys, price changes).
   quantityBought  Int?             @map("quantity_bought")

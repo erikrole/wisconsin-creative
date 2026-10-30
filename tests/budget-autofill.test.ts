@@ -60,3 +60,9 @@ describe("applyNote", () => {
     expect(applyNote(null, line)).toBe(purchaseNote(line));
   });
 });
+
+it("does not offer a placeholder as an item's purchase price", () => {
+  const unknown = { ...line, unitCostKnown: false, unitCostCents: 0, spentCents: null };
+  expect(unitPriceCents(unknown)).toBeNull();
+  expect(buildAutofill(unknown, { purchaseDate: null, purchasePriceCents: null, linkUrl: null, notes: null }).some((proposal) => proposal.field === "purchasePrice")).toBe(false);
+});

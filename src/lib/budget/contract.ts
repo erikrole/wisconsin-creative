@@ -51,6 +51,12 @@ export type BudgetLineMoney = {
   category: BudgetCategoryValue;
   unitCostCents: number;
   quantity: number;
+  unitCostKnown?: boolean;
+  plannedTotalKnown?: boolean;
+  plannedOverrideCents?: number | null;
+  statusKnown?: boolean;
+  submittedIncluded?: boolean;
+  submittedAmountCents?: number | null;
   spentCents: number | null;
   /** Added after the plan was submitted; it has no place in the submitted plan. */
   unplanned?: boolean;
@@ -65,8 +71,9 @@ export function netSpentCents(line: Pick<BudgetLineMoney, "spentCents" | "refund
 }
 
 /** What the line was planned to cost. */
-export function plannedCents(line: Pick<BudgetLineMoney, "unitCostCents" | "quantity">): number {
-  return line.unitCostCents * line.quantity;
+export function plannedCents(line: Pick<BudgetLineMoney, "unitCostCents" | "quantity" | "plannedTotalKnown" | "plannedOverrideCents">): number {
+  if (line.plannedTotalKnown === false) return 0;
+  return line.plannedOverrideCents ?? line.unitCostCents * line.quantity;
 }
 
 type BudgetCategoryTotal = {
@@ -94,11 +101,19 @@ export type BudgetSummary = {
   allocationCents: number | null;
   /** Cap (or, without one, the planned total) minus the forecast. Negative means over. */
   remainingCents: number;
+  unknownSpentCount: number;
+  unknownPlannedCount: number;
+  unknownStatusCount: number;
+  submittedUnknownCount: number;
   counts: Record<BudgetLineStatusValue, number>;
   byCategory: BudgetCategoryTotal[];
 };
 
-export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: number | null): BudgetSummary {
+export function summarizeBudget(
+  lines: BudgetLineMoney[],
+  allocationCents: number | null,
+  snapshot?: { submittedCents: number | null; submittedUnknownCount: number },
+): BudgetSummary {
   const counts: Record<BudgetLineStatusValue, number> = { PLANNED: 0, ORDERED: 0, PURCHASED: 0, CANCELLED: 0 };
   const categories = new Map<BudgetCategoryValue, BudgetCategoryTotal>();
   let planned = 0;
@@ -107,15 +122,23 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
   let unplannedTotal = 0;
   let spent = 0;
   let outstanding = 0;
+  let unknownSpentCount = 0;
+  let unknownPlannedCount = 0;
+  let unknownStatusCount = 0;
 
   for (const line of lines) {
     counts[line.status] += 1;
+    if (line.statusKnown === false) unknownStatusCount += 1;
     if (!line.unplanned) submitted += plannedCents(line);
     if (line.status === "CANCELLED") {
-      if (!line.unplanned) freed += plannedCents(line);
+      if (line.submittedIncluded) freed += line.submittedAmountCents ?? 0;
+      else if (snapshot?.submittedCents == null && !line.unplanned) freed += plannedCents(line);
       continue;
     }
-    if (line.unplanned) unplannedTotal += netSpentCents(line) ?? plannedCents(line);
+    if (line.status === "PURCHASED" && line.spentCents === null) unknownSpentCount += 1;
+    if (line.plannedTotalKnown === false) unknownPlannedCount += 1;
+    const outsideSavedPlan = snapshot?.submittedCents != null ? !line.submittedIncluded : !!line.unplanned;
+    if (outsideSavedPlan) unplannedTotal += netSpentCents(line) ?? plannedCents(line);
     const linePlanned = plannedCents(line);
     const lineSpent = netSpentCents(line) ?? 0;
     planned += linePlanned;
@@ -131,7 +154,7 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
   const forecast = spent + outstanding;
   return {
     plannedCents: planned,
-    submittedCents: submitted,
+    submittedCents: snapshot?.submittedCents ?? submitted,
     freedCents: freed,
     unplannedCents: unplannedTotal,
     spentCents: spent,
@@ -139,6 +162,12 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
     forecastCents: forecast,
     allocationCents,
     remainingCents: (allocationCents ?? planned) - forecast,
+    unknownSpentCount,
+    unknownPlannedCount,
+    unknownStatusCount,
+    submittedUnknownCount: snapshot?.submittedCents == null
+      ? lines.filter((line) => !line.unplanned && line.plannedTotalKnown === false).length
+      : snapshot.submittedUnknownCount,
     counts,
     byCategory: [...categories.values()].sort((a, b) => b.plannedCents - a.plannedCents),
   };
@@ -148,11 +177,13 @@ export function summarizeBudget(lines: BudgetLineMoney[], allocationCents: numbe
  * How a line landed against the submitted plan, in cents (positive is over). Null while it is
  * still planned. Dropped lines free their whole plan; unplanned lines are entirely over.
  */
-export function varianceCents(line: BudgetLineMoney): number | null {
-  if (line.status === "CANCELLED") return line.unplanned ? 0 : -plannedCents(line);
+export function varianceCents(line: BudgetLineMoney, hasSavedPlan = false): number | null {
+  const baseline = line.submittedIncluded ? line.submittedAmountCents : hasSavedPlan || line.unplanned ? 0 : line.plannedTotalKnown === false ? null : plannedCents(line);
+  if (baseline == null) return null;
+  if (line.status === "CANCELLED") return -baseline;
   const net = netSpentCents(line);
   if (net === null) return null;
-  return net - (line.unplanned ? 0 : plannedCents(line));
+  return net - baseline;
 }
 
 /** "2026-27" style labels only; keeps the unique (name, year) key tidy. */
