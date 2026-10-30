@@ -53,21 +53,15 @@ import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useItemChangeSync } from "@/hooks/use-item-change-sync";
 import {
   AlertTriangle,
-  Archive,
   Download,
   MoreHorizontal,
-  Package,
-  PackageCheck,
-  PackageOpen,
   RefreshCw,
   Rows3,
   Rows4,
-  Timer,
-  Wrench,
 } from "lucide-react";
 import { FadeUp } from "@/components/ui/motion";
-import { OperationalMetricCard, OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
-import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
+import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { restoreDialogFocus } from "@/lib/a11y-resilience";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { buildBulkRowId, getItemHref, parseBulkRowId } from "./lib/item-href";
@@ -534,86 +528,20 @@ export default function ItemsPage() {
     query.setPage(0);
   };
 
-  const toggleStatusFilter = (status: string) => {
-    const next = new Set(filters.statusFilter);
-    if (next.has(status)) next.delete(status);
-    else next.add(status);
-    filters.setStatusFilter(next);
-    query.setPage(0);
-  };
-
-  const statusSummary = query.statusBreakdown ? [
-    {
-      id: "available",
-      status: "AVAILABLE",
-      label: "Available",
-      value: query.statusBreakdown.available,
-      helper: "Ready to reserve or check out",
-      icon: PackageCheck,
-      tone: "green" as const,
-    },
-    {
-      id: "checked-out",
-      status: "CHECKED_OUT",
-      label: "Checked out",
-      value: query.statusBreakdown.checkedOut,
-      helper: "Currently in active custody",
-      icon: PackageOpen,
-      tone: "blue" as const,
-      railTone: "info" as const,
-    },
-    {
-      id: "pending-pickup",
-      status: "PENDING_PICKUP",
-      label: "Pending pickup",
-      value: query.statusBreakdown.pendingPickup,
-      helper: "Committed and waiting for handoff",
-      icon: Timer,
-      tone: "orange" as const,
-      railTone: "warning" as const,
-    },
-    {
-      id: "reserved",
-      status: "RESERVED",
-      label: "Reserved",
-      value: query.statusBreakdown.reserved,
-      helper: "Committed to upcoming reservations",
-      icon: Package,
-      tone: "purple" as const,
-      railTone: "neutral" as const,
-    },
-    {
-      id: "maintenance",
-      status: "MAINTENANCE",
-      label: "Maintenance",
-      value: query.statusBreakdown.maintenance,
-      helper: "Unavailable until maintenance is cleared",
-      icon: Wrench,
-      tone: "orange" as const,
-      railTone: "warning" as const,
-    },
-    {
-      id: "retired",
-      status: "RETIRED",
-      label: "Retired",
-      value: query.statusBreakdown.retired,
-      helper: "Inactive inventory kept for history",
-      icon: Archive,
-      tone: "muted" as const,
-    },
+  const breakdown = query.statusBreakdown;
+  const statusTabs = breakdown ? [
+    { status: null, label: "All", value: breakdown.available + breakdown.checkedOut + breakdown.pendingPickup + breakdown.reserved + breakdown.maintenance },
+    { status: "AVAILABLE", label: "Available", value: breakdown.available },
+    { status: "CHECKED_OUT", label: "Checked out", value: breakdown.checkedOut },
+    { status: "RESERVED", label: "Reserved", value: breakdown.reserved },
+    { status: "PENDING_PICKUP", label: "Pending pickup", value: breakdown.pendingPickup },
+    { status: "MAINTENANCE", label: "Maintenance", value: breakdown.maintenance },
+    { status: "RETIRED", label: "Retired", value: breakdown.retired },
   ] : [];
-  const railItems: OperationalStatusRailItem[] = statusSummary
-    .filter((item) => item.railTone && item.value > 0)
-    .map((item) => ({
-      id: item.id,
-      label: item.label,
-      value: item.value,
-      detail: item.helper,
-      icon: item.icon,
-      tone: item.railTone!,
-      onSelect: () => toggleStatusFilter(item.status),
-    }));
-  const hasOperationalCommitments = railItems.length > 0;
+  // A tab is a single status; a mix picked in Filters leaves no tab selected.
+  const activeStatusTab = filters.statusFilter.size === 0
+    ? "all"
+    : filters.statusFilter.size === 1 ? [...filters.statusFilter][0]! : "";
 
   return (
     <FadeUp>
@@ -744,33 +672,24 @@ export default function ItemsPage() {
         </div>
       )}
 
-      {/* Inventory status rail */}
-      {query.statusBreakdown && !pageLoading && (
-        <OperationalStatusRail
-          className="mb-4"
-          orientation={{
-            label: "Active inventory",
-            value: `${query.total} ${query.total === 1 ? "item" : "items"}`,
-            icon: Package,
+      {statusTabs.length > 0 && (
+        <Tabs
+          value={activeStatusTab}
+          onValueChange={(value) => {
+            filters.setStatusFilter(new Set(value === "all" ? [] : [value]));
+            query.setPage(0);
           }}
-          items={railItems}
-          allClearLabel={!hasOperationalCommitments ? "No active item statuses need attention" : undefined}
-          details={(
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-              {statusSummary.map((item) => (
-                <OperationalMetricCard
-                  key={item.id}
-                  label={item.label}
-                  value={item.value}
-                  helper={item.helper}
-                  tone={item.tone}
-                  onClick={() => toggleStatusFilter(item.status)}
-                  ariaPressed={filters.statusFilter.has(item.status)}
-                />
-              ))}
-            </div>
-          )}
-        />
+          className="mb-4"
+        >
+          <TabsList className="overflow-x-auto scrollbar-hide" aria-label="Item status">
+            {statusTabs.map((tab) => (
+              <TabsTrigger key={tab.label} value={tab.status ?? "all"} className="shrink-0 px-3 text-sm">
+                {tab.label}
+                <span className="ml-1.5 text-xs font-normal tabular-nums text-muted-foreground">{tab.value}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       )}
 
       <NewItemSheet
@@ -847,7 +766,6 @@ export default function ItemsPage() {
               onItemTypeChange={(v) => { filters.setItemType(v); query.setPage(0); }}
               sorting={filters.sorting}
               onSortingChange={(v) => { filters.setSorting(normalizeItemsSorting(v)); query.setPage(0); }}
-              hasActiveFilters={filters.hasActiveFilters}
               onClearAllFilters={() => { filters.clearAllFilters(); query.setPage(0); }}
               locations={options.locations}
               departments={options.departments}

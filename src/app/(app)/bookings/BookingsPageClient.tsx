@@ -347,7 +347,7 @@ export default function BookingsPage({ initialCheckouts }: { initialCheckouts: I
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
-          <TabsList className="min-w-0 flex-1 overflow-x-auto scrollbar-hide" aria-label="Booking type">
+          <TabsList className="min-w-0 flex-1 overflow-x-auto scrollbar-hide max-sm:basis-full" aria-label="Booking type">
             <TabsTrigger
               value="all"
               className="relative shrink-0 gap-1.5"

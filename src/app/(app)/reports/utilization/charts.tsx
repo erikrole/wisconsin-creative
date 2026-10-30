@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, LabelList, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -103,14 +103,16 @@ export function TopUsedChart({ assets, days }: { assets: TopUsedAsset[]; days: n
       description={`Days in custody over the past ${days} days`}
     >
       <ChartContainer config={config} className="w-full" style={{ height: Math.max(150, data.length * 32) }}>
-        <BarChart data={data} layout="vertical" margin={{ left: 0, right: 12 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: 0, right: 40 }}>
           <YAxis dataKey="label" type="category" width={110} tickLine={false} axisLine={false} className="text-xs" />
           <XAxis type="number" hide />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="days" name="Days in custody" radius={[0, 4, 4, 0]}>
+          <Bar dataKey="days" name="Days in custody" radius={4} barSize={18}>
             {data.map((entry, index) => (
               <Cell key={index} fill={entry.fill} />
             ))}
+            {/* The number sits at the end of each bar, so reading it doesn't take a hover. */}
+            <LabelList dataKey="days" position="right" className="fill-muted-foreground text-xs tabular-nums" formatter={(value) => Math.round(Number(value))} />
           </Bar>
         </BarChart>
       </ChartContainer>

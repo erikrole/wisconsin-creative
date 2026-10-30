@@ -20,11 +20,7 @@ export default async function ReportsLayout({ children }: { children: React.Reac
   return (
     <FreshLayout>
       <div className="print:hidden">
-        <PageHeader
-          title="Reports"
-          description="Read-only analytics for inventory, checkouts, scan health, missing units, badges, and audit history."
-          className="mb-4"
-        />
+        <PageHeader title="Reports" className="mb-4" />
 
         <ReportsNav role={user.role} canViewUsageAnalytics={canViewUsageAnalytics(user)} />
       </div>

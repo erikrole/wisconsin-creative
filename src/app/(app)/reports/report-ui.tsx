@@ -360,11 +360,11 @@ export function ReportBreakdownTable({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4 border-b px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="flex items-center justify-between gap-4 px-4 pb-1 pt-2 text-xs font-medium text-muted-foreground">
         <span>{labelHeading}</span>
         <span>{valueHeading}</span>
       </div>
-      <ul className="list-none p-0">
+      <ul className="flex list-none flex-col gap-0.5 px-2 pb-2">
         {visible.map((row) => {
           const share = denominator > 0 ? row.count / denominator : 0;
           // Bars are scaled to the largest row so small values stay visible.
@@ -376,7 +376,7 @@ export function ReportBreakdownTable({
                   palette color, since these bars encode size, not identity. */}
               <span
                 aria-hidden="true"
-                className="absolute inset-y-0 left-0 rounded-r-sm bg-muted-foreground/15"
+                className="absolute inset-y-0.5 left-0 rounded-md bg-muted-foreground/12"
                 style={{ width: `${barWidth}%` }}
               />
               <span className="relative min-w-0 flex-1 truncate">{row.label}</span>
@@ -388,7 +388,7 @@ export function ReportBreakdownTable({
           );
 
           const rowClassName =
-            "relative flex min-h-11 items-center gap-3 border-b px-4 py-2.5 text-sm last:border-b-0";
+            "relative flex min-h-10 items-center gap-3 rounded-md px-2 py-2 text-sm";
 
           return (
             <li key={row.label}>

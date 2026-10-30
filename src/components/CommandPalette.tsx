@@ -21,7 +21,6 @@ import { AssetImage } from "@/components/AssetImage";
 import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Badge } from "@/components/ui/badge";
 import {
   CommandEmpty,
   CommandGroup,
@@ -223,7 +222,7 @@ export function CommandPalette({
             merged.push({
               type: "item", id: item.id,
               title: assetSearchTitle(item),
-              subtitle: "",
+              subtitle: [item.brand, item.model].filter(Boolean).join(" "),
               href: `/items/${item.id}`,
               imageUrl: item.imageUrl ?? null,
               computedStatus: item.computedStatus ?? undefined,
@@ -338,8 +337,10 @@ export function CommandPalette({
       >
         <DialogTitle className="sr-only">Search</DialogTitle>
         <DialogDescription className="sr-only">Search pages, guides, items, bookings and people, or run an action.</DialogDescription>
+        {/* Results are matched by the server and the page index; cmdk's own filter would hide items matched on a field outside their value. */}
         <CommandPrimitive
           data-slot="command"
+          shouldFilter={false}
           className={cn(
             "flex h-full w-full flex-col overflow-hidden bg-transparent text-popover-foreground",
             "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[12px]! [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:text-[color:var(--sidebar-muted)]",
@@ -473,13 +474,12 @@ export function CommandPalette({
                 {cmdGroups.item.map((r) => {
                   const status = r.computedStatus ?? "AVAILABLE";
                   const isOverdue = r.activeBooking?.isOverdue ?? false;
-                  const badgeStyle = isOverdue ? STATUS_STYLES.red.badge
-                    : status === "CHECKED_OUT" ? STATUS_STYLES.blue.badge
-                    : status === "PENDING_PICKUP" ? STATUS_STYLES.orange.badge
-                    : status === "RESERVED" ? STATUS_STYLES.purple.badge
-                    : status === "MAINTENANCE" ? STATUS_STYLES.orange.badge
-                    : status === "RETIRED" ? STATUS_STYLES.gray.badge
-                    : STATUS_STYLES.green.badge;
+                  const dotClass = STATUS_STYLES[isOverdue ? "red"
+                    : status === "CHECKED_OUT" ? "blue"
+                    : status === "PENDING_PICKUP" || status === "MAINTENANCE" ? "orange"
+                    : status === "RESERVED" ? "purple"
+                    : status === "RETIRED" ? "gray"
+                    : "green"].dot;
                   const statusLabel = isOverdue ? "Overdue"
                     : status === "CHECKED_OUT" ? "Checked out"
                     : status === "PENDING_PICKUP" ? "Pending pickup"
@@ -489,79 +489,64 @@ export function CommandPalette({
                     : "Available";
                   const showHolder = !!r.activeBooking && (isOverdue || status === "CHECKED_OUT" || status === "RESERVED");
                   return (
-                    <CommandItem key={r.id} value={r.title} onSelect={() => handleCmdSelect(r.href)} className="gap-3">
-                      <AssetImage src={r.imageUrl} alt={r.title} size={32} className="rounded" />
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{r.title}</div>
-                        <div className="mt-0.5">
-                          <Badge
-                            className={badgeStyle}
-                            size="sm"
-                            title={showHolder ? `${statusLabel} by ${r.activeBooking?.requesterName}` : statusLabel}
-                          >
-                            {showHolder && (
-                              <UserAvatar
-                                name={r.activeBooking?.requesterName ?? "Unknown"}
-                                avatarUrl={r.activeBooking?.requesterAvatarUrl}
-                                size="xs"
-                              />
-                            )}
-                            {statusLabel}
-                          </Badge>
-                        </div>
-                      </div>
+                    <CommandItem key={r.id} value={`${r.title} ${r.subtitle} ${r.id}`} onSelect={() => handleCmdSelect(r.href)} className="gap-3">
+                      <AssetImage src={r.imageUrl} alt={r.title} size={28} className="rounded" />
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="font-medium">{r.title}</span>
+                        {r.subtitle && <span className="ml-2 text-muted-foreground">{r.subtitle}</span>}
+                      </span>
+                      <span
+                        className={cn("flex shrink-0 items-center gap-1.5 text-[12px]", isOverdue ? "text-[var(--red-text)]" : "text-muted-foreground")}
+                        title={showHolder ? `${statusLabel} by ${r.activeBooking?.requesterName}` : statusLabel}
+                      >
+                        {showHolder ? (
+                          <UserAvatar
+                            name={r.activeBooking?.requesterName ?? "Unknown"}
+                            avatarUrl={r.activeBooking?.requesterAvatarUrl}
+                            size="xs"
+                          />
+                        ) : (
+                          <span aria-hidden="true" className={cn("size-1.5 rounded-full", dotClass)} />
+                        )}
+                        {statusLabel}
+                      </span>
                     </CommandItem>
                   );
                 })}
               </CommandGroup>
             )}
             {cmdGroups.checkout.length > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup heading="Checkouts">
-                  {cmdGroups.checkout.map((r) => (
-                    <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                      <ClipboardCheckIcon className="size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{r.title}</div>
-                        {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
+              <CommandGroup heading="Checkouts">
+                {cmdGroups.checkout.map((r) => (
+                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle} ${r.id}`} onSelect={() => handleCmdSelect(r.href)}>
+                    <ClipboardCheckIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate font-medium">{r.title}</span>
+                    {r.subtitle && <span className="max-w-[45%] shrink-0 truncate text-[12px] text-muted-foreground">{r.subtitle}</span>}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
             )}
             {cmdGroups.reservation.length > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup heading="Reservations">
-                  {cmdGroups.reservation.map((r) => (
-                    <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                      <CalendarCheckIcon className="size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{r.title}</div>
-                        {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
+              <CommandGroup heading="Reservations">
+                {cmdGroups.reservation.map((r) => (
+                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle} ${r.id}`} onSelect={() => handleCmdSelect(r.href)}>
+                    <CalendarCheckIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate font-medium">{r.title}</span>
+                    {r.subtitle && <span className="max-w-[45%] shrink-0 truncate text-[12px] text-muted-foreground">{r.subtitle}</span>}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
             )}
             {cmdGroups.user.length > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup heading="Staff">
-                  {cmdGroups.user.map((r) => (
-                    <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
-                      <UserIcon className="size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{r.title}</div>
-                        {r.subtitle && <div className="truncate text-xs text-muted-foreground">{r.subtitle}</div>}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
+              <CommandGroup heading="Staff">
+                {cmdGroups.user.map((r) => (
+                  <CommandItem key={r.id} value={`${r.title} ${r.subtitle} ${r.id}`} onSelect={() => handleCmdSelect(r.href)}>
+                    <UserIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate font-medium">{r.title}</span>
+                    {r.subtitle && <span className="max-w-[45%] shrink-0 truncate text-[12px] text-muted-foreground">{r.subtitle}</span>}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
             )}
             {cmdQuery.trim() && cmdResults.length > 0 && (
               <>

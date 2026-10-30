@@ -13,7 +13,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { PencilIcon, ImageIcon, RefreshCw, Star, ChevronRight } from "lucide-react";
+import { PencilIcon, ImageIcon, Star, ChevronRight } from "lucide-react";
+import { formatOperationalDateTime } from "@/lib/format";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 import type { AssetDetail } from "../types";
@@ -68,38 +69,54 @@ function StatusLine({ asset }: { asset: AssetDetail }) {
   return <Badge variant="gray" className="px-2.5 py-1 text-xs">{s}</Badge>;
 }
 
-/* ── Actions Dropdown ───────────────────────────────────── */
+/* ── More Menu ──────────────────────────────────────────── */
 
-function ActionsMenu({
+function MoreMenu({
   asset,
+  canEdit,
+  canReport,
   disabled,
+  refreshing,
   onAction,
+  onRefresh,
+  onReportProblem,
 }: {
   asset: AssetDetail;
+  canEdit: boolean;
+  canReport: boolean;
   disabled?: boolean;
+  refreshing: boolean;
   onAction: (action: string) => void;
+  onRefresh: () => void;
+  onReportProblem: () => void;
 }) {
   return (
     <OperationalRowActions
-      label={`Actions for ${asset.assetTag}`}
-      triggerClassName="h-10 w-auto px-3 text-xs font-medium text-foreground"
-      icon={<span>Actions</span>}
+      label={`More actions for ${asset.assetTag}`}
+      triggerClassName="h-10 w-10 border border-border text-foreground"
     >
-      <DropdownMenuItem disabled={disabled} onSelect={() => onAction("add-another")}>Add another like this</DropdownMenuItem>
-      <DropdownMenuItem disabled={disabled} onSelect={() => onAction("print-label")}>Print label</DropdownMenuItem>
-      <DropdownMenuItem disabled={disabled} onSelect={() => onAction("maintenance")}>
-        {asset.status === "MAINTENANCE" ? "Clear Maintenance" : "Needs Maintenance"}
-      </DropdownMenuItem>
-      <DropdownMenuItem disabled={disabled} onSelect={() => onAction("retire")}>Retire</DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        variant="destructive"
-        disabled={disabled || asset.hasBookingHistory}
-        title={asset.hasBookingHistory ? "Item has booking history. Use Retire instead." : "Permanently delete this item"}
-        onSelect={() => onAction("delete")}
-      >
-        Delete
-      </DropdownMenuItem>
+      {canReport && <DropdownMenuItem onSelect={onReportProblem}>Report a problem</DropdownMenuItem>}
+      <DropdownMenuItem disabled={refreshing} onSelect={onRefresh}>Refresh</DropdownMenuItem>
+      {canEdit && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled={disabled} onSelect={() => onAction("add-another")}>Add another like this</DropdownMenuItem>
+          <DropdownMenuItem disabled={disabled} onSelect={() => onAction("print-label")}>Print label</DropdownMenuItem>
+          <DropdownMenuItem disabled={disabled} onSelect={() => onAction("maintenance")}>
+            {asset.status === "MAINTENANCE" ? "Clear maintenance" : "Needs maintenance"}
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={disabled} onSelect={() => onAction("retire")}>Retire</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={disabled || asset.hasBookingHistory}
+            title={asset.hasBookingHistory ? "Item has booking history. Use Retire instead." : "Permanently delete this item"}
+            onSelect={() => onAction("delete")}
+          >
+            Delete
+          </DropdownMenuItem>
+        </>
+      )}
     </OperationalRowActions>
   );
 }
@@ -117,7 +134,6 @@ type ItemHeaderProps = {
   canEdit: boolean;
   refreshing: boolean;
   actionBusy: boolean;
-  lastRefreshed: Date | null;
   onRefresh: () => void;
   onToggleFavorite: () => void;
   onSaveHeaderField: (field: string, value: string) => Promise<void>;
@@ -131,7 +147,6 @@ export function ItemHeader({
   canEdit,
   refreshing,
   actionBusy,
-  lastRefreshed,
   onRefresh,
   onToggleFavorite,
   onSaveHeaderField,
@@ -188,16 +203,10 @@ export function ItemHeader({
     asset.category?.name,
     asset.department?.name,
   ].filter(Boolean);
-  const updatedAt = asset.updatedAt ? new Date(asset.updatedAt) : null;
-  const updatedLabel = updatedAt
-    ? `Updated ${updatedAt.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })} at ${updatedAt.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      })}`
+  const updatedLabel = asset.updatedAt
+    ? `Updated ${formatOperationalDateTime(asset.updatedAt, new Date(), { month: "short" })}`
     : null;
+  const canReport = currentUser != null && currentUser.role !== "COLLABORATOR" && !isRetired;
 
   return (
     <>
@@ -283,76 +292,63 @@ export function ItemHeader({
               {metaParts.map((part, index) => (
                 <span key={part} className="inline-flex items-center gap-2">
                   {index > 0 && (
-                    <span aria-hidden="true" className="text-muted-foreground/30">
-                      /
+                    <span aria-hidden="true" className="text-muted-foreground/40">
+                      ·
                     </span>
                   )}
                   <span>{part}</span>
                 </span>
               ))}
+              {updatedLabel && (
+                <span className="hidden items-center gap-2 sm:inline-flex">
+                  <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+                  <span>{updatedLabel}</span>
+                </span>
+              )}
             </div>
           </>
         }
         actions={
-          <div className="flex flex-col gap-2 lg:min-w-[270px] lg:items-end">
-            <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
-              {activeBookingHref && activeBookingLabel && (
-                <Button variant="default" className="h-10" asChild>
-                  <Link href={activeBookingHref}>{activeBookingLabel}</Link>
-                </Button>
-              )}
-              {canReserve ? (
-                <Button variant={activeBookingHref ? "outline" : "default"} className="h-10" asChild>
-                  <Link href={`/reservations?newFor=${asset.id}`}>Reserve</Link>
-                </Button>
-              ) : (
-                <Button variant="outline" className="h-10" disabled title={reserveDisabledTitle}>
-                  Reserve
-                </Button>
-              )}
-              {currentUser != null && currentUser.role !== "COLLABORATOR" && asset.computedStatus !== "RETIRED" && (
-                <Button variant="outline" className="h-10" onClick={onReportProblem}>Report a problem</Button>
-              )}
-              {canEdit && <ActionsMenu asset={asset} disabled={actionBusy} onAction={onAction} />}
-            </div>
-
-            <div className="flex items-center gap-1 text-[11px] leading-none text-muted-foreground lg:justify-end">
-              {updatedLabel && (
-                <span className="hidden sm:inline">
-                  {updatedLabel}
-                </span>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10 active:scale-[0.96] transition-[background-color,color,box-shadow,transform]"
-                onClick={onRefresh}
-                disabled={refreshing || actionBusy}
-                aria-label={
-                  lastRefreshed
-                    ? `Refresh. Last refreshed ${lastRefreshed.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
-                    : "Refresh"
-                }
-              >
-                <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+            {activeBookingHref && activeBookingLabel && (
+              <Button variant="default" className="h-10" asChild>
+                <Link href={activeBookingHref}>{activeBookingLabel}</Link>
               </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10 active:scale-[0.96] transition-[background-color,color,box-shadow,transform]"
-                onClick={onToggleFavorite}
-                disabled={actionBusy}
-                aria-label={asset.isFavorited ? "Remove from favorites" : "Add to favorites"}
-                aria-pressed={asset.isFavorited}
-              >
-                <Star
-                  className={`size-3.5 ${
-                    asset.isFavorited ? "fill-[var(--yellow-text)] text-[var(--yellow-text)]" : "text-muted-foreground"
-                  }`}
-                />
+            )}
+            {canReserve ? (
+              <Button variant={activeBookingHref ? "outline" : "default"} className="h-10" asChild>
+                <Link href={`/reservations?newFor=${asset.id}`}>Reserve</Link>
               </Button>
-            </div>
+            ) : !activeBookingHref && (
+              <Button variant="outline" className="h-10" disabled title={reserveDisabledTitle}>
+                Reserve
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-10 active:scale-[0.96] transition-[background-color,color,box-shadow,transform]"
+              onClick={onToggleFavorite}
+              disabled={actionBusy}
+              aria-label={asset.isFavorited ? "Remove from favorites" : "Add to favorites"}
+              aria-pressed={asset.isFavorited}
+            >
+              <Star
+                className={`size-4 ${
+                  asset.isFavorited ? "fill-[var(--yellow-text)] text-[var(--yellow-text)]" : "text-muted-foreground"
+                }`}
+              />
+            </Button>
+            <MoreMenu
+              asset={asset}
+              canEdit={canEdit}
+              canReport={canReport}
+              disabled={actionBusy}
+              refreshing={refreshing}
+              onAction={onAction}
+              onRefresh={onRefresh}
+              onReportProblem={onReportProblem}
+            />
           </div>
         }
       />

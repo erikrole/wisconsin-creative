@@ -6,7 +6,6 @@ import { useUrlState, serializeOptionalString } from "@/hooks/use-url-state";
 import { toast } from "@/lib/toast";
 import {
   ArchiveIcon,
-  AlertTriangleIcon,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
@@ -40,8 +39,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import EmptyState from "@/components/EmptyState";
-import { OperationalMetricCard } from "@/components/OperationalFeedback";
-import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { FadeUp } from "@/components/ui/motion";
 import { useFetch } from "@/hooks/use-fetch";
 import { footballGamedayKitRoleLabel } from "@/lib/football-gameday-kits";
@@ -141,19 +138,7 @@ function KitStatusBadge({ kit }: { kit: KitRow }) {
 function KitsLoadingState() {
   return (
     <>
-      <PageHeader
-        title="Kits"
-        description="Named gameday gear lists for each position. Duplicate a kit, then swap cameras."
-      />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index} elevation="flat" className="bg-muted/30 p-4">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="mt-3 h-8 w-16" />
-            <Skeleton className="mt-2 h-4 w-32" />
-          </Card>
-        ))}
-      </div>
+      <PageHeader title="Kits" />
       <Card className="mt-4">
         <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(240px,1fr)_220px_auto_auto]">
           <Skeleton className="h-10 w-full" />
@@ -282,48 +267,18 @@ export default function KitsPage() {
     || sortOrder !== "asc";
   const firstResult = query.total === 0 ? 0 : query.page * query.limit + 1;
   const lastResult = Math.min(query.total, (query.page + 1) * query.limit);
-  const railItems: OperationalStatusRailItem[] = query.summary.empty > 0 ? [{
-    id: "empty-kits",
-    label: "Empty",
-    value: query.summary.empty,
-    detail: "Kits that need contents before they can be used.",
-    icon: AlertTriangleIcon,
-    tone: "warning",
-  }] : [];
-
   if (query.loading) {
     return <KitsLoadingState />;
   }
 
   return (
     <FadeUp>
-      <PageHeader
-        title="Kits"
-        description="Named gameday gear lists for each position. Duplicate a kit, then swap cameras."
-      >
-        <Button onClick={() => setSheetOpen(true)} size="lg" disabled={locationsLoading || Boolean(locationsError)}>
+      <PageHeader title="Kits" className="max-sm:flex-row max-sm:items-center max-sm:justify-between">
+        <Button onClick={() => setSheetOpen(true)} className="h-10" disabled={locationsLoading || Boolean(locationsError)}>
           <PlusIcon className="size-4" />
-          New Kit
+          New kit
         </Button>
       </PageHeader>
-
-      <OperationalStatusRail
-        orientation={{
-          label: "Active kits",
-          value: `${query.summary.active}`,
-          icon: BoxIcon,
-        }}
-        items={railItems}
-        allClearLabel={railItems.length === 0 ? "All active kits have contents" : undefined}
-        details={(
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <OperationalMetricCard label="Matching kits" value={query.summary.total} helper={hasResultFilters ? "Current filters" : "Visible by default"} />
-            <OperationalMetricCard label="Active" value={query.summary.active} helper="Available to checkout flows" tone="green" />
-            <OperationalMetricCard label="Archived" value={query.summary.archived} helper={includeArchived ? "Included in this view" : "Hidden until shown"} onClick={() => setIncludeArchived(true)} ariaPressed={includeArchived} />
-            <OperationalMetricCard label="Empty" value={query.summary.empty} helper="Needs contents before use" tone={query.summary.empty ? "orange" : "muted"} />
-          </div>
-        )}
-      />
 
       <ListToolbar
         search={(
@@ -445,43 +400,36 @@ export default function KitsPage() {
       {!query.loadError && query.kits.length > 0 && (
         <Card className="mt-4 overflow-hidden">
           <div className="grid gap-3 p-3 md:hidden">
-            {query.kits.map((kit) => {
-              const counts = getKitCounts(kit);
-
-              return (
-                <Link
-                  key={kit.id}
-                  href={`/kits/${kit.id}`}
-                  className="group rounded-lg border bg-card p-4 shadow-xs transition-[background-color,border-color,box-shadow,scale] hover:border-primary/40 hover:bg-accent/35 hover:shadow-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.99]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <BoxIcon className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="truncate font-semibold">{kit.name}</span>
-                      </div>
-                      {kit.description && (
-                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                          {kit.description}
-                        </p>
-                      )}
+            {query.kits.map((kit) => (
+              <Link
+                key={kit.id}
+                href={`/kits/${kit.id}`}
+                className="group rounded-lg border bg-card p-4 shadow-xs transition-[background-color,border-color,box-shadow,scale] hover:border-primary/40 hover:bg-accent/35 hover:shadow-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.99]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <BoxIcon className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate font-semibold">{kit.name}</span>
                     </div>
-                    <KitStatusBadge kit={kit} />
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    <span className="font-medium tabular-nums text-foreground">
-                      {pluralize(counts.total, "content")}
-                    </span>
-                    <span>{formatContentDetail(kit)}</span>
-                    {kit.sportCode && <span>{sportLabel(kit.sportCode)}</span>}
-                    {footballGamedayKitRoleLabel(kit.gamedayRole) && (
-                      <span>{footballGamedayKitRoleLabel(kit.gamedayRole)}</span>
+                    {kit.description && (
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                        {kit.description}
+                      </p>
                     )}
-                    <span>{kit.location.name}</span>
                   </div>
-                </Link>
-              );
-            })}
+                  <KitStatusBadge kit={kit} />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                  <span>{formatContentDetail(kit)}</span>
+                  {kit.sportCode && <span>{sportLabel(kit.sportCode)}</span>}
+                  {footballGamedayKitRoleLabel(kit.gamedayRole) && (
+                    <span>{footballGamedayKitRoleLabel(kit.gamedayRole)}</span>
+                  )}
+                  <span>{kit.location.name}</span>
+                </div>
+              </Link>
+            ))}
           </div>
 
           <div className="hidden md:block">
@@ -494,20 +442,17 @@ export default function KitsPage() {
                   <TableHead>Location</TableHead>
                   <TableHead>Sport</TableHead>
                   <TableHead>Job</TableHead>
-                  <TableHead className="text-center">
-                    {sortButton("memberCount", "Contents", "mx-auto")}
+                  <TableHead>
+                    {sortButton("memberCount", "Contents")}
                   </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>
                     {sortButton("updatedAt", "Updated")}
                   </TableHead>
-                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {query.kits.map((kit) => {
-                  const counts = getKitCounts(kit);
-
                   return (
                     <TableRow key={kit.id} className="align-top">
                       <TableCell className="min-w-[280px]">
@@ -531,26 +476,14 @@ export default function KitsPage() {
                       <TableCell className="text-muted-foreground">
                         {footballGamedayKitRoleLabel(kit.gamedayRole) ?? "—"}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex flex-col items-center">
-                          <Badge variant="secondary" className="tabular-nums">
-                            {counts.total}
-                          </Badge>
-                          <span className="mt-1 text-xs text-muted-foreground">
-                            {formatContentDetail(kit)}
-                          </span>
-                        </div>
+                      <TableCell className="text-muted-foreground tabular-nums">
+                        {formatContentDetail(kit)}
                       </TableCell>
                       <TableCell>
                         <KitStatusBadge kit={kit} />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {dateFormatter.format(new Date(kit.updatedAt))}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild variant="ghost" size="sm" className="h-10">
-                          <Link href={`/kits/${kit.id}`}>Open</Link>
-                        </Button>
                       </TableCell>
                     </TableRow>
                   );

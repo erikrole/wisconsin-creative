@@ -2,9 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
-  getUrgency,
-  formatCountdown,
   formatDateShort,
+  formatOperationalDateTime,
   formatDateWithDayTime,
   isStartingToday,
   formatStartsIn,
@@ -23,14 +22,6 @@ import { cn } from "@/lib/utils";
 import { handleAuthRedirect } from "@/lib/errors";
 import { bookingStatusDisplay } from "@/lib/booking-status-display";
 import { UserAvatar } from "@/components/UserAvatar";
-
-/* ── Shared: Urgency Badge ────────────────────────────── */
-
-function UrgencyBadge({ startsAt, endsAt, now }: { startsAt: string; endsAt: string; now: Date }) {
-  const urgency = getUrgency(startsAt, endsAt, now);
-  const variant = urgency === "critical" || urgency === "overdue" ? "red" : urgency === "warning" ? "orange" : "blue";
-  return <Badge variant={variant} className="mt-1">{formatCountdown(endsAt, now)}</Badge>;
-}
 
 /* ── Shared: Upcoming Reservations List ──────────────── */
 
@@ -93,10 +84,8 @@ export function ActiveBookingCard({
   const isPendingPickup = kind === "CHECKOUT" && booking.status === "PENDING_PICKUP";
   const title = kind === "CHECKOUT"
     ? isPendingPickup ? "Pending pickup" : "Active checkout"
-    : "Active Reservation";
-  const activityLabel = kind === "CHECKOUT"
-    ? isPendingPickup ? "Pending pickup" : "Checked out"
-    : "Reserved";
+    : "Active reservation";
+  const overdue = new Date(booking.endsAt) < now;
 
   return (
     <Card>
@@ -106,13 +95,16 @@ export function ActiveBookingCard({
           className="flex flex-col w-full text-left px-5 py-2 pb-3 transition-colors hover:bg-muted/50"
           onClick={() => onSelectBooking(booking.id)}
         >
-          <div className="flex flex-col gap-0.5">
-            <span className="brand-identity text-base font-semibold">{booking.title}</span>
-            <span className="text-sm">
-              {activityLabel} by {booking.requesterName}
+          <span className="brand-identity text-base font-semibold">{booking.title}</span>
+          <span className="mt-2 flex items-center gap-2 text-sm">
+            <UserAvatar name={booking.requesterName} avatarUrl={booking.requesterAvatarUrl} size="sm" className="shrink-0" />
+            <span className="min-w-0 truncate font-medium">{booking.requesterName}</span>
+          </span>
+          {!isPendingPickup && (
+            <span className={`mt-1.5 text-sm tabular-nums ${overdue ? "font-medium text-[var(--red-text)]" : "text-muted-foreground"}`}>
+              {overdue ? "Overdue since" : kind === "CHECKOUT" ? "Due back" : "Ends"} {formatOperationalDateTime(booking.endsAt, now, { month: "short" })}
             </span>
-            <UrgencyBadge startsAt={booking.startsAt} endsAt={booking.endsAt} now={now} />
-          </div>
+          )}
         </button>
       </CardContent>
     </Card>
@@ -159,8 +151,10 @@ function PastBookingsPreview({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Past Bookings</CardTitle>
-        {pastEntries.length > 0 && <Badge variant="gray" size="sm">{pastEntries.length}</Badge>}
+        <CardTitle className="flex items-baseline gap-2">
+          Past bookings
+          {pastEntries.length > 0 && <span className="text-sm font-normal tabular-nums text-muted-foreground">{pastEntries.length}</span>}
+        </CardTitle>
       </CardHeader>
       {pastEntries.length === 0 ? (
         <EmptyState
@@ -328,7 +322,7 @@ export function OperationalOverview({
         <ActiveBookingCard booking={b} kind={b.kind} now={now} onSelectBooking={onSelectBooking} />
       ) : (
         <Card>
-          <CardHeader><CardTitle>Active Checkout</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Active checkout</CardTitle></CardHeader>
           <EmptyState
             inline
             icon="check"
@@ -341,10 +335,10 @@ export function OperationalOverview({
       {/* Upcoming Reservations Card (always visible) */}
       <Card>
         <CardHeader>
-          <CardTitle>Upcoming Reservations</CardTitle>
-          {reservations.length > 0 && (
-            <Badge variant="gray" size="sm">{reservations.length}</Badge>
-          )}
+          <CardTitle className="flex items-baseline gap-2">
+            Upcoming reservations
+            {reservations.length > 0 && <span className="text-sm font-normal tabular-nums text-muted-foreground">{reservations.length}</span>}
+          </CardTitle>
         </CardHeader>
         {reservations.length > 0 ? (
           <CardContent className="p-0 py-1">
