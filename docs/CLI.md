@@ -16,4 +16,6 @@ Edits go to the private working schedule, the same path the web editor uses. `sc
 
 ## For agents
 
+`wc mcp` runs the same commands as an MCP server over stdio (tools such as `schedule_assign`, `trades_list`, `api`; read-only ones carry `readOnlyHint`). Add it to Claude Code with `claude mcp add wisconsin-creative -- node /path/to/repo/scripts/wc.mjs mcp` after `wc login`, or pass `WC_TOKEN`.
+
 Run `wc commands` first, use `--dry-run` before writes, and branch on the error `code` (for example `ONBOARDING_REQUIRED`).

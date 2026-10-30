@@ -32,7 +32,79 @@ export const COMMANDS = [
   { name: "availability", usage: "availability", writes: false, about: "Every active student's availability (staff)." },
   { name: "api", usage: "api METHOD /api/path [--data JSON] [--dry-run]", writes: true, about: "Call any app endpoint directly. Reaches every action the web app has; roles still apply." },
   { name: "commands", usage: "commands", writes: false, about: "This list as JSON." },
+  { name: "mcp", usage: "mcp", writes: false, about: "Run as an MCP server over stdio, exposing these commands as tools." },
 ];
+
+// ── MCP: the same commands as tools, over stdio JSON-RPC ──
+
+const NOT_TOOLS = new Set(["login", "logout", "commands", "mcp"]);
+
+/** Tool input schema read from a command's usage line: CAPS words are required arguments, --flags optional. */
+export function toolFor(command) {
+  const tokens = command.usage.slice(command.name.length).replace(/[[\]()]/g, " ").split(/\s+/).filter((t) => t && t !== "|");
+  const positional = [];
+  const properties = {};
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token.startsWith("--")) {
+      const takesValue = tokens[i + 1] !== undefined && !tokens[i + 1].startsWith("--");
+      properties[token.slice(2)] = takesValue
+        ? { type: "string", description: tokens[(i += 1)] }
+        : { type: "boolean" };
+    } else {
+      const key = token.replace(/^\/api\//, "").toLowerCase();
+      positional.push(key);
+      properties[key] = { type: "string", description: token };
+    }
+  }
+  return {
+    name: command.name.replace(/[ -]/g, "_"),
+    description: command.about,
+    inputSchema: { type: "object", properties, required: positional },
+    annotations: { readOnlyHint: !command.writes },
+    toArgv(input = {}) {
+      const argv = [...command.name.split(" "), ...positional.map((key) => String(input[key] ?? ""))];
+      for (const [key, value] of Object.entries(input)) {
+        if (positional.includes(key) || value === undefined || value === false) continue;
+        argv.push(`--${key}`, ...(value === true ? [] : [typeof value === "string" ? value : JSON.stringify(value)]));
+      }
+      return argv;
+    },
+  };
+}
+
+async function serveMcp() {
+  const tools = COMMANDS.filter((c) => !NOT_TOOLS.has(c.name)).map(toolFor);
+  const send = (message) => process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", ...message })}\n`);
+  const rl = createInterface({ input: process.stdin });
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    const { id, method, params } = JSON.parse(line);
+    if (id === undefined) continue; // notifications need no answer
+    if (method === "initialize") {
+      send({ id, result: { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "wisconsin-creative", version: "1.0.0" } } });
+    } else if (method === "tools/list") {
+      send({ id, result: { tools: tools.map(({ toArgv: _, ...tool }) => tool) } });
+    } else if (method === "tools/call") {
+      const tool = tools.find((t) => t.name === params?.name);
+      if (!tool) {
+        send({ id, error: { code: -32602, message: `Unknown tool ${params?.name}` } });
+        continue;
+      }
+      try {
+        const result = localizeTimes(await run(tool.toArgv(params.arguments)));
+        send({ id, result: { content: [{ type: "text", text: JSON.stringify(result) }] } });
+      } catch (error) {
+        const body = error instanceof CliError ? error.body : { error: error?.message || String(error) };
+        send({ id, result: { isError: true, content: [{ type: "text", text: JSON.stringify(body) }] } });
+      }
+    } else if (method === "ping") {
+      send({ id, result: {} });
+    } else {
+      send({ id, error: { code: -32601, message: `Unsupported method ${method}` } });
+    }
+  }
+}
 
 // ── Arguments ──────────────────────────────────────────
 
@@ -229,7 +301,7 @@ async function run(argv) {
   const key = ["schedule", "trades"].includes(first) ? `${first} ${second}` : first;
   const args = ["schedule", "trades"].includes(first) ? rest : [second, ...rest].filter((v) => v !== undefined);
 
-  if (key === "commands") return COMMANDS;
+  if (key === "commands") return COMMANDS.map(({ name, usage, writes, about }) => ({ name, usage, writes, about }));
   if (key === "login") return login({ flags });
   if (key === "logout") return logout();
 
@@ -293,6 +365,7 @@ async function run(argv) {
 }
 
 async function main() {
+  if (process.argv[2] === "mcp") return serveMcp();
   const flags = parseArgs(process.argv.slice(2)).flags;
   try {
     const result = await run(process.argv.slice(2));

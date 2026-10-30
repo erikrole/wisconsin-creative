@@ -3,11 +3,12 @@
     "date": "2026-10-30",
     "title": "Staff command line and API tokens",
     "type": "feature",
-    "summary": "Staff and admins can now create personal API tokens and use the new wc command line to view and edit the schedule, handle trades and call any app action. AI agents can use it too.",
+    "summary": "Staff and admins can now create personal API tokens in Settings > Security and use the new wc command line, or its MCP server, to view and edit the schedule, handle trades and call any app action. AI agents like Claude can use it too.",
     "details": [
       "Tokens act as you, can be read-only, and expire.",
       "Sign-in, passwords and account changes stay browser-only.",
-      "Times always show in Central."
+      "Times always show in Central.",
+      "Fixed: Active sessions in Settings > Security showed none."
     ],
     "pr": 740,
     "platforms": [
