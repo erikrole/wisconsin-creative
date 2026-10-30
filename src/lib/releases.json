@@ -8,6 +8,7 @@
       "The Travel card on web and iPhone lists the confirmed crew plus anyone staff added by hand.",
       "People on the crew are removed from the crew on the Schedule, not from the Travel card."
     ],
+    "pr": 739,
     "platforms": [
       "Web",
       "iOS"
