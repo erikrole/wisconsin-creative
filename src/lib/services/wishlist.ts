@@ -155,7 +155,7 @@ export async function promoteWish(actor: Actor, wishId: string, input: PromoteWi
     if (!wish) throw new HttpError(404, "Wish not found.");
     if (wish.status === "IN_BUDGET") throw new HttpError(409, "This wish is already in the budget.");
     if (wish.status === "DECLINED") throw new HttpError(409, "Re-open this wish before moving it to the budget.");
-    const budget = await tx.budget.findUnique({ where: { id: input.budgetId }, select: { id: true } });
+    const budget = await tx.budget.findUnique({ where: { id: input.budgetId }, select: { id: true, submittedAt: true } });
     if (!budget) throw new HttpError(404, "Budget not found.");
     const line = await tx.budgetLine.create({
       data: {
@@ -169,7 +169,7 @@ export async function promoteWish(actor: Actor, wishId: string, input: PromoteWi
         linkUrl: wish.linkUrl,
         justification: wish.reason,
         requesterUserId: wish.requestedById,
-        unplanned: input.unplanned,
+        unplanned: input.unplanned || budget.submittedAt != null,
       },
       select: { id: true, budgetId: true },
     });

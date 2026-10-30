@@ -24,7 +24,7 @@ const may14 = new Date("2026-05-14T00:00:00.000Z");
 const fx3Line = {
   description: "Sony FX3 Cinema Camera Body",
   supplier: "B&H Photo",
-  unitCostCents: 399_800,
+  unitCostCents: 399_800, unitCostKnown: true,
   quantity: 3,
   quantityBought: 2,
   purchasedOn: may14,
@@ -74,7 +74,7 @@ describe("suggestItemsForLine", () => {
     expect(suggestions[0]).toMatchObject({ kind: "asset", label: "Sony FX3", detail: "FX3-A", href: "/items/fx3-a", suggestedQuantity: 1, confidence: "high" });
     expect(suggestions[0]!.reasons).toContain("Item notes mention PO-00177267");
     // A bulk item takes the quantity actually bought.
-    expect(suggestions[2]).toMatchObject({ kind: "bulk", detail: "Bulk item", href: "/bulk-inventory", suggestedQuantity: 2 });
+    expect(suggestions[2]).toMatchObject({ kind: "bulk", detail: "Bulk item", href: "/bulk-inventory/sd", suggestedQuantity: 2 });
   });
 
   it("searches only unlinked, unretired items near the price, the date, or the words", async () => {
@@ -214,7 +214,7 @@ describe("getBudgetDetail links", () => {
     expect(detail.lines[0]!.purchasedOn).toBe("2026-05-14");
     expect(detail.lines[0]!.links).toEqual([
       { id: "l1", quantity: 1, kind: "asset", targetId: "a1", label: "Sony FX3", imageUrl: null, detail: "SLOW1 · SN 123", href: "/items/a1" },
-      { id: "l2", quantity: 4, kind: "bulk", targetId: "k1", label: "SD cards", imageUrl: "sd.png", detail: null, href: "/bulk-inventory" },
+      { id: "l2", quantity: 4, kind: "bulk", targetId: "k1", label: "SD cards", imageUrl: "sd.png", detail: null, href: "/bulk-inventory/k1" },
       { id: "l3", quantity: 1, kind: "asset", targetId: "a2", label: "Gimbal", imageUrl: null, detail: "ROAM2", href: "/items/a2" },
     ]);
   });

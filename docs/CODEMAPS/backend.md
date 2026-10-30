@@ -31,7 +31,7 @@
 | `src/lib/services/bookings-lifecycle.ts` | 19 |
 | `src/lib/services/bookings-queries.ts` | 311 |
 | `src/lib/services/bookings.ts` | 7 |
-| `src/lib/services/budget.ts` | 950 |
+| `src/lib/services/budget.ts` | 1055 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 976 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
@@ -62,7 +62,7 @@
 | `src/lib/services/game-record.ts` | 171 |
 | `src/lib/services/game-snapshots.ts` | 253 |
 | `src/lib/services/gear-handover-notify.ts` | 97 |
-| `src/lib/services/gear-picks.ts` | 1192 |
+| `src/lib/services/gear-picks.ts` | 1193 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/inventory-loss-reports.ts` | 618 |
 | `src/lib/services/invite-email.ts` | 133 |
@@ -175,7 +175,7 @@
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/assignment-workload.ts` | 83 |
-| `src/lib/audit-actions.ts` | 425 |
+| `src/lib/audit-actions.ts` | 426 |
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
@@ -530,6 +530,7 @@
 - `/api/budget/[id]/lines/bulk`
 - `/api/budget/[id]/lines`
 - `/api/budget/[id]`
+- `/api/budget/[id]/submitted-plan`
 - `/api/budget/for-asset/[assetId]`
 - `/api/budget/item-search`
 - `/api/budget/lines/[lineId]/history`

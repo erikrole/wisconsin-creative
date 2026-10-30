@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-10-30",
+    "title": "Clearer budget planning",
+    "type": "improvement",
+    "summary": "Budgets now distinguish unknown amounts from recorded zero and keep a saved plan for comparison as purchases change.",
+    "details": [
+      "Save or revise a plan without later edits changing its baseline.",
+      "Review missing amounts and purchase statuses before relying on totals.",
+      "Find inventory using stronger purchase evidence and open linked items directly.",
+      "Choose the number of bulk items when linking a purchase."
+    ],
+    "pr": 741,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-30",
     "title": "Staff command line and API tokens",
     "type": "feature",
     "summary": "Staff and admins can now create personal API tokens in Settings > Security and use the new wc command line, or its MCP server, to view and edit the schedule, handle trades and call any app action. AI agents like Claude can use it too.",

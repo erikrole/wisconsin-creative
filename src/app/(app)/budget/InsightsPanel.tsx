@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BUDGET_CATEGORY_LABELS, fiscalYearLabel, formatCentsCompact, type BudgetCategoryValue } from "@/lib/budget/contract";
+import { BUDGET_CATEGORY_LABELS, fiscalYearLabel, formatCentsCompact, plannedCents, type BudgetCategoryValue } from "@/lib/budget/contract";
 import { monthlySpend, overPlanLines, supplierTotals, type InsightLine } from "@/lib/budget/insights";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import type { BudgetTrendRow } from "@/lib/services/budget";
@@ -14,6 +14,10 @@ type Summary = {
   outstandingCents: number;
   forecastCents: number;
   allocationCents: number | null;
+  unknownSpentCount: number;
+  unknownPlannedCount: number;
+  unknownStatusCount: number;
+  statusSpendConflictCount: number;
   byCategory: { category: BudgetCategoryValue; plannedCents: number; spentCents: number }[];
 };
 
@@ -51,12 +55,14 @@ export function InsightsPanel({
   const supplierPeak = Math.max(...suppliers.map((row) => row.spentCents), 1);
   const over = overPlanLines(lines);
   const cap = summary.allocationCents ?? summary.plannedCents;
+  const incomplete = summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0 || summary.statusSpendConflictCount > 0;
   const projectedPct = cap > 0 ? Math.round((summary.forecastCents / cap) * 100) : 0;
   const attention = [
+    summary.statusSpendConflictCount > 0 && { tone: "#F5B800", text: `${summary.statusSpendConflictCount} planned or dropped ${summary.statusSpendConflictCount === 1 ? "line has" : "lines have"} recorded spending; review the purchase status.` },
     over.length > 0 && {
       tone: "#E5484D",
       text: `${over.length} ${over.length === 1 ? "line costs" : "lines cost"} more than budgeted (+${formatCentsCompact(
-        over.reduce((sum, line) => sum + ((line.spentCents ?? 0) - (line.refundCents ?? 0) - line.unitCostCents * line.quantity), 0),
+        over.reduce((sum, line) => sum + ((line.spentCents ?? 0) - (line.refundCents ?? 0) - plannedCents(line)), 0),
       )} total)`,
     },
     unlinkedLines > 0 && { tone: "#F5B800", text: `${unlinkedLines} ${unlinkedLines === 1 ? "bought line has" : "bought lines have"} units not linked to an item yet` },
@@ -66,10 +72,11 @@ export function InsightsPanel({
 
   return (
     <div className="flex flex-col gap-5">
+      {incomplete && <p className="rounded-xl border p-3 text-sm text-muted-foreground">Some amounts or purchase statuses need review. Charts show recorded amounts only; a complete forecast is unavailable.</p>}
       <section className={card} aria-label="Needs attention">
         <div className={label}>Needs attention</div>
         {attention.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">Nothing needs you. Every bought line is at or under plan and linked.</p>
+          <p className="mt-3 text-sm text-muted-foreground">No recorded exceptions in the available data.</p>
         ) : (
           attention.map((item) => (
             <div key={item.text} className="flex items-center gap-3 border-b py-3 text-sm last:border-b-0">
@@ -129,7 +136,7 @@ export function InsightsPanel({
         </section>
       </div>
 
-      <section className={card} aria-label="Forecast">
+      {!incomplete && <section className={card} aria-label="Forecast">
         <div className={label}>Forecast</div>
         <div className="mt-2 flex flex-wrap items-baseline gap-3">
           <span className={`text-[32px] font-black tracking-[-0.04em] ${cap - summary.forecastCents < 0 ? "text-[#C62A2F]" : "text-[#218358]"}`}>
@@ -149,7 +156,7 @@ export function InsightsPanel({
           <span>Still planned <b className="text-foreground">{formatCentsCompact(summary.outstandingCents)}</b></span>
           <span className="ml-auto">Projected to finish at {formatCentsCompact(summary.forecastCents)} ({projectedPct}%).</span>
         </div>
-      </section>
+      </section>}
 
       <div className="grid gap-3.5 lg:grid-cols-2">
         <section className={card} aria-label="Suppliers">
@@ -182,13 +189,13 @@ export function InsightsPanel({
                 <div className="mb-1 flex justify-between text-sm">
                   <span className="font-bold">{fiscalYearLabel(row.fiscalYear).split(" · ")[0]}</span>
                   <span className="font-mono text-[13px]">
-                    {formatCentsCompact(row.forecastCents)} <span className="text-muted-foreground">of {formatCentsCompact(row.submittedCents)} submitted</span>
+                    {row.incomplete ? "Incomplete data" : <>{formatCentsCompact(row.forecastCents)} <span className="text-muted-foreground">of {formatCentsCompact(row.submittedCents)} submitted</span></>}
                   </span>
                 </div>
-                <div className="relative h-2 rounded-full bg-muted">
+                {!row.incomplete && <div className="relative h-2 rounded-full bg-muted">
                   <div className="absolute inset-y-0 left-0 rounded-full bg-[#C9D6FB]" style={{ width: `${(row.submittedCents / yearPeak) * 100}%` }} />
                   <div className="absolute inset-y-0 left-0 rounded-full bg-[#3E63DD]" style={{ width: `${(row.forecastCents / yearPeak) * 100}%`, maxWidth: "100%" }} />
-                </div>
+                </div>}
               </div>
             ))}
             {!trend.isLoading && years.length === 1 && <p className="text-xs text-muted-foreground">Add earlier years to compare them here.</p>}

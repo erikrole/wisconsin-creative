@@ -3,8 +3,8 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { applyNote, buildAutofill, unitPriceCents, type AutofillField, type AutofillProposal } from "@/lib/budget/autofill";
-import { scoreLineItemMatch, tokens, type MatchItem, type MatchLine, type MatchResult } from "@/lib/budget/matching";
-import { summarizeBudget, type BudgetCategoryValue, type BudgetLineStatusValue } from "@/lib/budget/contract";
+import { productIdentity, scoreLineItemMatch, tokens, type MatchItem, type MatchLine, type MatchResult } from "@/lib/budget/matching";
+import { plannedCents, summarizeBudget, type BudgetCategoryValue, type BudgetLineStatusValue } from "@/lib/budget/contract";
 import { describeLineChanges, type LineChange } from "@/lib/budget/history";
 import type {
   BulkLinesInput,
@@ -25,6 +25,12 @@ const lineSelect = {
   description: true,
   supplier: true,
   unitCostCents: true,
+  unitCostKnown: true,
+  plannedTotalKnown: true,
+  plannedOverrideCents: true,
+  statusKnown: true,
+  submittedIncluded: true,
+  submittedAmountCents: true,
   quantity: true,
   quantityBought: true,
   spentCents: true,
@@ -92,7 +98,7 @@ function toLinkView(row: LineRow["items"][number]): BudgetLineLinkView {
     label: row.bulkSku!.name,
     imageUrl: row.bulkSku!.imageUrl,
     detail: null,
-    href: `/bulk-inventory`,
+    href: `/bulk-inventory/${row.bulkSku!.id}`,
   };
 }
 
@@ -129,6 +135,10 @@ export async function getBudgetDetail(budgetId: string) {
       name: true,
       fiscalYear: true,
       allocationCents: true,
+      submittedCents: true,
+      submittedUnknownCount: true,
+      submittedAt: true,
+      submittedSource: true,
       notes: true,
       lines: { select: lineSelect, orderBy: [{ createdAt: "asc" }] },
     },
@@ -142,12 +152,19 @@ export async function getBudgetDetail(budgetId: string) {
       status: line.status as BudgetLineStatusValue,
       category: line.category as BudgetCategoryValue,
       unitCostCents: line.unitCostCents,
+      unitCostKnown: line.unitCostKnown,
+      plannedTotalKnown: line.plannedTotalKnown,
+      plannedOverrideCents: line.plannedOverrideCents,
+      statusKnown: line.statusKnown,
+      submittedIncluded: line.submittedIncluded,
+      submittedAmountCents: line.submittedAmountCents,
       quantity: line.quantity,
       spentCents: line.spentCents,
       unplanned: line.unplanned,
       refundCents: line.refundCents,
     })),
     rest.allocationCents,
+    { submittedCents: rest.submittedCents, submittedUnknownCount: rest.submittedUnknownCount },
   );
   return { budget: rest, lines: lines.map(toLineView), summary, uaCycles };
 }
@@ -173,6 +190,9 @@ export async function createBudget(actor: Actor, input: CreateBudgetInput) {
           description: true,
           supplier: true,
           unitCostCents: true,
+          unitCostKnown: true,
+          plannedTotalKnown: true,
+          plannedOverrideCents: true,
           quantity: true,
           linkUrl: true,
           justification: true,
@@ -224,6 +244,43 @@ export async function updateBudget(actor: Actor, budgetId: string, input: Update
   });
 }
 
+/** Capture (or deliberately revise) the plan; subsequent edits cannot change this snapshot. */
+export async function captureSubmittedPlan(actor: Actor, budgetId: string) {
+  return db.$transaction(async (tx) => {
+    const before = await tx.budget.findUnique({
+      where: { id: budgetId },
+      select: { id: true, submittedCents: true, submittedUnknownCount: true, submittedAt: true },
+    });
+    if (!before) throw new HttpError(404, "Budget not found.");
+    const lines = await tx.budgetLine.findMany({
+      where: { budgetId },
+      select: { id: true, unitCostCents: true, quantity: true, plannedTotalKnown: true, plannedOverrideCents: true, unplanned: true, submittedIncluded: true, submittedAmountCents: true },
+    });
+    if (lines.length === 0) throw new HttpError(400, "Add a line before saving a plan.");
+    const entries = lines.map((line) => ({
+      id: line.id,
+      included: !line.unplanned,
+      amount: !line.unplanned && line.plannedTotalKnown ? plannedCents(line) : null,
+    }));
+    const submittedCents = entries.reduce((sum, line) => sum + (line.amount ?? 0), 0);
+    if (!Number.isSafeInteger(submittedCents) || submittedCents > 2_147_483_647) throw new HttpError(400, "The submitted plan is too large.");
+    const submittedUnknownCount = entries.filter((line) => line.included && line.amount === null).length;
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE budget_lines AS line
+      SET submitted_included = snapshot.included, submitted_amount_cents = snapshot.amount
+      FROM (VALUES ${Prisma.join(entries.map((line) => Prisma.sql`(${line.id}::text, ${line.included}::boolean, ${line.amount}::integer)`))}) AS snapshot(id, included, amount)
+      WHERE line.id = snapshot.id AND line.budget_id = ${budgetId}
+    `);
+    const after = await tx.budget.update({
+      where: { id: budgetId },
+      data: { submittedCents, submittedUnknownCount, submittedAt: new Date(), submittedSource: "admin" },
+      select: { id: true, submittedCents: true, submittedUnknownCount: true, submittedAt: true },
+    });
+    await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "budget", entityId: budgetId, action: "capture_plan", before: { ...before, lines: lines.map((line) => ({ id: line.id, included: line.submittedIncluded, amount: line.submittedAmountCents })) }, after: { ...after, lines: entries } });
+    return after;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30_000 });
+}
+
 /** A refund can't be larger than what was spent. Throwing inside the transaction rolls the change back. */
 function assertRefund(row: { refundCents: number | null; spentCents: number | null }) {
   if (row.refundCents !== null && row.refundCents > (row.spentCents ?? 0)) {
@@ -245,10 +302,11 @@ async function assertRequester(tx: Prisma.TransactionClient, userId: string | nu
 
 export async function createLine(actor: Actor, budgetId: string, input: CreateLineInput) {
   return db.$transaction(async (tx) => {
-    const budget = await tx.budget.findUnique({ where: { id: budgetId }, select: { id: true } });
+    const budget = await tx.budget.findUnique({ where: { id: budgetId }, select: { id: true, submittedAt: true } });
     if (!budget) throw new HttpError(404, "Budget not found.");
     await assertRequester(tx, input.requesterUserId);
     await assertGearCycle(tx, input.gearPickCycleId);
+    if (input.gearPickCycleId && !input.plannedTotalKnown) throw new HttpError(400, "Enter a budget total before linking an Under Armour year.");
     const row = await tx.budgetLine.create({
       data: {
         budgetId,
@@ -257,6 +315,10 @@ export async function createLine(actor: Actor, budgetId: string, input: CreateLi
         description: input.description,
         supplier: input.supplier ?? null,
         unitCostCents: input.unitCostCents,
+        unitCostKnown: input.unitCostKnown,
+        plannedTotalKnown: input.plannedTotalKnown,
+        plannedOverrideCents: input.plannedOverrideCents ?? null,
+        statusKnown: input.statusKnown,
         quantity: input.quantity,
         quantityBought: input.quantityBought ?? null,
         spentCents: input.spentCents ?? null,
@@ -267,7 +329,7 @@ export async function createLine(actor: Actor, budgetId: string, input: CreateLi
         justification: input.justification ?? null,
         requesterUserId: input.requesterUserId ?? null,
         requesterNote: input.requesterNote ?? null,
-        unplanned: input.unplanned,
+        unplanned: input.unplanned || budget.submittedAt != null,
         refundCents: input.refundCents ?? null,
         recurring: input.recurring,
         gearPickCycleId: input.gearPickCycleId ?? null,
@@ -293,6 +355,7 @@ export async function updateLine(actor: Actor, lineId: string, input: UpdateLine
     if (!before) throw new HttpError(404, "Budget line not found.");
     await assertRequester(tx, input.requesterUserId);
     await assertGearCycle(tx, input.gearPickCycleId);
+    if ((input.gearPickCycleId === undefined ? before.gearPickCycleId : input.gearPickCycleId) && (input.plannedTotalKnown ?? before.plannedTotalKnown) === false) throw new HttpError(400, "Enter a budget total before linking an Under Armour year.");
     const { purchasedOn, ...rest } = input;
     const row = await tx.budgetLine.update({
       where: { id: lineId },
@@ -339,7 +402,7 @@ export type ItemSuggestion = MatchResult & {
   imageUrl: string | null;
   detail: string | null;
   href: string;
-  suggestedQuantity: number;
+  suggestedQuantity: number | null;
 };
 
 export type LineSuggestion = MatchResult & {
@@ -363,11 +426,17 @@ function lineToMatch(line: {
   description: string;
   supplier: string | null;
   unitCostCents: number;
+  unitCostKnown?: boolean;
+  spentCents?: number | null;
+  quantityBought?: number | null;
+  linkUrl?: string | null;
+  budget?: { name: string };
   purchasedOn: Date | null;
   poNumber: string | null;
   orderNumber: string | null;
 }): MatchLine {
-  return { ...line, purchasedOn: dateOnly(line.purchasedOn) };
+  return { ...line, purchasedOn: dateOnly(line.purchasedOn), budgetName: line.budget?.name, productUrl: line.linkUrl,
+    actualUnitCents: line.spentCents != null && line.quantityBought != null && line.quantityBought > 0 ? Math.round(line.spentCents / line.quantityBought) : null };
 }
 
 function wordFilters(text: string) {
@@ -389,8 +458,12 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       description: true,
       supplier: true,
       unitCostCents: true,
+      unitCostKnown: true,
       quantity: true,
       quantityBought: true,
+      spentCents: true,
+      linkUrl: true,
+      budget: { select: { name: true } },
       purchasedOn: true,
       poNumber: true,
       orderNumber: true,
@@ -399,8 +472,12 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
   if (!line) throw new HttpError(404, "Budget line not found.");
   const match = lineToMatch(line);
 
-  const price = line.unitCostCents / 100;
-  const priceBand = { gte: price * 0.97, lte: price * 1.03 };
+  const candidatePrices = [line.unitCostKnown ? line.unitCostCents : null, match.actualUnitCents].filter((price): price is number => price != null && price > 0);
+  const priceBands = candidatePrices.map((cents) => ({ purchasePrice: { gte: (cents / 100) * 0.97, lte: (cents / 100) * 1.03 } }));
+  const product = productIdentity(line.linkUrl);
+  const bhProduct = product?.match(/^bhphotovideo\.com\/product\/(\d+)$/)?.[1];
+  const productFilter = bhProduct ? [{ linkUrl: { contains: `/c/product/${bhProduct}`, mode: "insensitive" as const } }] : [];
+  const bulkProductFilter = bhProduct ? [{ purchaseLink: { contains: `/c/product/${bhProduct}`, mode: "insensitive" as const } }] : [];
   const windowMs = 60 * 86_400_000;
   const dateBand = line.purchasedOn
     ? { gte: new Date(line.purchasedOn.getTime() - windowMs), lte: new Date(line.purchasedOn.getTime() + windowMs) }
@@ -412,18 +489,18 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       where: {
         status: { not: "RETIRED" },
         budgetLines: { none: {} },
-        OR: [{ purchasePrice: priceBand }, ...(dateBand ? [{ purchaseDate: dateBand }] : []), ...words],
+        OR: [...priceBands, ...productFilter, ...(dateBand ? [{ purchaseDate: dateBand }] : []), ...words],
       },
       take: CANDIDATE_LIMIT,
-      select: { id: true, assetTag: true, name: true, brand: true, model: true, purchasePrice: true, purchaseDate: true, notes: true, imageUrl: true },
+      select: { id: true, assetTag: true, name: true, brand: true, model: true, purchasePrice: true, purchaseDate: true, notes: true, imageUrl: true, linkUrl: true, department: { select: { name: true } } },
     }),
     db.bulkSku.findMany({
       where: {
         active: true,
-        OR: [{ purchasePrice: priceBand }, ...tokens(line.description).filter((w) => w.length >= 3).slice(0, 6).map((word) => ({ name: { contains: word, mode: "insensitive" as const } }))],
+        OR: [...priceBands, ...bulkProductFilter, ...tokens(line.description).filter((w) => w.length >= 3).slice(0, 6).map((word) => ({ name: { contains: word, mode: "insensitive" as const } }))],
       },
       take: CANDIDATE_LIMIT,
-      select: { id: true, name: true, purchasePrice: true, notes: true, imageUrl: true },
+      select: { id: true, name: true, purchasePrice: true, notes: true, imageUrl: true, purchaseLink: true, department: { select: { name: true } } },
     }),
   ]);
 
@@ -436,6 +513,8 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       purchasePriceCents: toCents(asset.purchasePrice),
       purchaseDate: dateOnly(asset.purchaseDate),
       notes: asset.notes,
+      productUrl: asset.linkUrl,
+      departmentName: asset.department?.name,
     };
     const result = scoreLineItemMatch(match, item);
     if (!result) continue;
@@ -445,13 +524,13 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       targetId: asset.id,
       label: asset.name?.trim() || `${asset.brand} ${asset.model}`.trim(),
       imageUrl: asset.imageUrl,
-      detail: asset.assetTag,
+      detail: [asset.assetTag, asset.department?.name].filter(Boolean).join(" · "),
       href: `/items/${asset.id}`,
       suggestedQuantity: 1,
     });
   }
   for (const sku of skus) {
-    const item: MatchItem = { name: sku.name, brand: "", model: "", purchasePriceCents: toCents(sku.purchasePrice), purchaseDate: null, notes: sku.notes };
+    const item: MatchItem = { name: sku.name, brand: "", model: "", purchasePriceCents: toCents(sku.purchasePrice), purchaseDate: null, notes: sku.notes, productUrl: sku.purchaseLink, departmentName: sku.department?.name };
     const result = scoreLineItemMatch(match, item);
     if (!result) continue;
     out.push({
@@ -460,9 +539,9 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       targetId: sku.id,
       label: sku.name,
       imageUrl: sku.imageUrl,
-      detail: "Bulk item",
-      href: "/bulk-inventory",
-      suggestedQuantity: line.quantityBought ?? line.quantity,
+      detail: ["Bulk item", sku.department?.name].filter(Boolean).join(" · "),
+      href: `/bulk-inventory/${sku.id}`,
+      suggestedQuantity: line.quantityBought,
     });
   }
   return out.sort((a, b) => b.score - a.score).slice(0, SUGGESTION_LIMIT);
@@ -484,6 +563,7 @@ export async function suggestLinesForAsset(
       purchaseDate: true,
       linkUrl: true,
       notes: true,
+      department: { select: { name: true } },
       budgetLines: {
         select: {
           id: true,
@@ -494,6 +574,7 @@ export async function suggestLinesForAsset(
               supplier: true,
               spentCents: true,
               unitCostCents: true,
+              unitCostKnown: true,
               quantityBought: true,
               poNumber: true,
               orderNumber: true,
@@ -528,6 +609,7 @@ export async function suggestLinesForAsset(
           description: line.description,
           supplier: line.supplier,
           unitCostCents: line.unitCostCents,
+          unitCostKnown: line.unitCostKnown,
           quantityBought: line.quantityBought,
           spentCents: line.spentCents,
           purchasedOn: dateOnly(line.purchasedOn),
@@ -555,14 +637,19 @@ export async function suggestLinesForAsset(
     purchasePriceCents: toCents(asset.purchasePrice),
     purchaseDate: dateOnly(asset.purchaseDate),
     notes: asset.notes,
+    productUrl: asset.linkUrl,
+    departmentName: asset.department?.name,
   };
   const priceCents = item.purchasePriceCents;
+  const productId = productIdentity(asset.linkUrl)?.match(/^bhphotovideo\.com\/product\/(\d+)$/)?.[1];
   const windowMs = 60 * 86_400_000;
   const lines = await db.budgetLine.findMany({
     where: {
       status: { not: "CANCELLED" },
       OR: [
         ...(priceCents !== null ? [{ unitCostCents: { gte: Math.floor(priceCents * 0.97), lte: Math.ceil(priceCents * 1.03) } }] : []),
+        ...(priceCents !== null ? [{ spentCents: { gte: Math.floor(priceCents * 0.97), lte: Math.ceil(priceCents * 1.03) } }] : []),
+        ...(productId ? [{ linkUrl: { contains: `/c/product/${productId}`, mode: "insensitive" as const } }] : []),
         ...(asset.purchaseDate
           ? [{ purchasedOn: { gte: new Date(asset.purchaseDate.getTime() - windowMs), lte: new Date(asset.purchaseDate.getTime() + windowMs) } }]
           : []),
@@ -578,6 +665,10 @@ export async function suggestLinesForAsset(
       description: true,
       supplier: true,
       unitCostCents: true,
+      unitCostKnown: true,
+      spentCents: true,
+      quantityBought: true,
+      linkUrl: true,
       purchasedOn: true,
       poNumber: true,
       orderNumber: true,
@@ -631,6 +722,7 @@ export async function linkItem(actor: Actor, lineId: string, target: LinkTarget)
       const asset = await tx.asset.findUnique({ where: { id: target.assetId }, select: { id: true } });
       if (!asset) throw new HttpError(404, "Item not found.");
     } else {
+      if (target.quantity === undefined) throw new HttpError(400, "Enter the number of bulk units from this purchase.");
       const sku = await tx.bulkSku.findUnique({ where: { id: target.bulkSkuId }, select: { id: true } });
       if (!sku) throw new HttpError(404, "Bulk item not found.");
     }
@@ -696,13 +788,13 @@ export async function searchItemsToLink(query: string): Promise<ItemSearchResult
       },
       take: 8,
       orderBy: { assetTag: "asc" },
-      select: { id: true, assetTag: true, name: true, brand: true, model: true, imageUrl: true },
+      select: { id: true, assetTag: true, name: true, brand: true, model: true, imageUrl: true, department: { select: { name: true } } },
     }),
     db.bulkSku.findMany({
       where: { active: true, name: { contains: q, mode: "insensitive" } },
       take: 4,
       orderBy: { name: "asc" },
-      select: { id: true, name: true, imageUrl: true },
+      select: { id: true, name: true, imageUrl: true, department: { select: { name: true } } },
     }),
   ]);
   return [
@@ -711,9 +803,9 @@ export async function searchItemsToLink(query: string): Promise<ItemSearchResult
       targetId: asset.id,
       label: asset.name?.trim() || `${asset.brand} ${asset.model}`.trim(),
       imageUrl: asset.imageUrl,
-      detail: asset.assetTag,
+      detail: [asset.assetTag, asset.department?.name].filter(Boolean).join(" · "),
     })),
-    ...skus.map((sku) => ({ kind: "bulk" as const, targetId: sku.id, label: sku.name, imageUrl: sku.imageUrl, detail: "Bulk item" })),
+    ...skus.map((sku) => ({ kind: "bulk" as const, targetId: sku.id, label: sku.name, imageUrl: sku.imageUrl, detail: ["Bulk item", sku.department?.name].filter(Boolean).join(" · ") })),
   ];
 }
 
@@ -731,6 +823,7 @@ export async function applyOrderToAsset(actor: Actor, linkId: string, fields: Au
             description: true,
             supplier: true,
             unitCostCents: true,
+            unitCostKnown: true,
             quantityBought: true,
             spentCents: true,
             purchasedOn: true,
@@ -750,6 +843,7 @@ export async function applyOrderToAsset(actor: Actor, linkId: string, fields: Au
       description: line.description,
       supplier: line.supplier,
       unitCostCents: line.unitCostCents,
+      unitCostKnown: line.unitCostKnown,
       quantityBought: line.quantityBought,
       spentCents: line.spentCents,
       purchasedOn: dateOnly(line.purchasedOn),
@@ -773,6 +867,7 @@ export async function applyOrderToAsset(actor: Actor, linkId: string, fields: Au
       } else if (field === "purchasePrice") {
         before.purchasePrice = asset.purchasePrice === null ? null : String(asset.purchasePrice);
         const cents = unitPriceCents(lineInput);
+        if (cents === null) throw new HttpError(400, "This order has no recorded unit price.");
         data.purchasePrice = new Prisma.Decimal((cents / 100).toFixed(2));
         after.purchasePrice = (cents / 100).toFixed(2);
       } else if (field === "linkUrl") {
@@ -809,12 +904,12 @@ export async function bulkUpdateLines(actor: Actor, budgetId: string, input: Bul
   return db.$transaction(async (tx) => {
     const before = await tx.budgetLine.findMany({
       where: { budgetId, id: { in: input.lineIds } },
-      select: { id: true, status: true, category: true },
+      select: { id: true, status: true, statusKnown: true, category: true },
     });
     if (before.length !== new Set(input.lineIds).size) throw new HttpError(404, "Some of those lines aren't in this budget.");
     await tx.budgetLine.updateMany({
       where: { budgetId, id: { in: input.lineIds } },
-      data: { ...(input.status ? { status: input.status } : {}), ...(input.category ? { category: input.category } : {}) },
+      data: { ...(input.status ? { status: input.status, statusKnown: input.statusKnown ?? true } : {}), ...(input.category ? { category: input.category } : {}) },
     });
     for (const line of before) {
       await createAuditEntryTx(tx, {
@@ -823,9 +918,10 @@ export async function bulkUpdateLines(actor: Actor, budgetId: string, input: Bul
         entityType: "budget_line",
         entityId: line.id,
         action: "update",
-        before: { status: line.status, category: line.category },
+        before: { status: line.status, statusKnown: line.statusKnown, category: line.category },
         after: {
           status: input.status ?? line.status,
+          statusKnown: input.status ? input.statusKnown ?? true : line.statusKnown,
           category: input.category ?? line.category,
         },
       });
@@ -866,6 +962,7 @@ export type BudgetTrendRow = {
   spentCents: number;
   forecastCents: number;
   allocationCents: number | null;
+  incomplete: boolean;
 };
 
 /** One budget name across fiscal years, oldest first, for the year-over-year view. */
@@ -876,13 +973,16 @@ export async function getBudgetTrend(name: string): Promise<BudgetTrendRow[]> {
     select: {
       fiscalYear: true,
       allocationCents: true,
-      lines: { select: { status: true, category: true, unitCostCents: true, quantity: true, spentCents: true, refundCents: true, unplanned: true } },
+      submittedCents: true,
+      submittedUnknownCount: true,
+      lines: { select: { status: true, statusKnown: true, category: true, unitCostCents: true, plannedTotalKnown: true, plannedOverrideCents: true, quantity: true, spentCents: true, refundCents: true, unplanned: true } },
     },
   });
   return budgets.map((budget) => {
     const summary = summarizeBudget(
       budget.lines.map((line) => ({ ...line, status: line.status as BudgetLineStatusValue, category: line.category as BudgetCategoryValue })),
       budget.allocationCents,
+      { submittedCents: budget.submittedCents ?? null, submittedUnknownCount: budget.submittedUnknownCount ?? 0 },
     );
     return {
       fiscalYear: budget.fiscalYear,
@@ -890,6 +990,7 @@ export async function getBudgetTrend(name: string): Promise<BudgetTrendRow[]> {
       spentCents: summary.spentCents,
       forecastCents: summary.forecastCents,
       allocationCents: budget.allocationCents,
+      incomplete: summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0 || summary.statusSpendConflictCount > 0 || summary.submittedUnknownCount > 0,
     };
   });
 }
@@ -901,7 +1002,7 @@ export async function getBudgetTrend(name: string): Promise<BudgetTrendRow[]> {
  */
 export async function importLines(actor: Actor, budgetId: string, input: ImportLinesInput) {
   return db.$transaction(async (tx) => {
-    const budget = await tx.budget.findUnique({ where: { id: budgetId }, select: { id: true } });
+    const budget = await tx.budget.findUnique({ where: { id: budgetId }, select: { id: true, submittedAt: true } });
     if (!budget) throw new HttpError(404, "Budget not found.");
     const existing = await tx.budgetLine.findMany({ where: { budgetId }, orderBy: { createdAt: "asc" }, select: { id: true, description: true } });
     // Lines can share a name (two "SD card" purchases), so each sheet row takes the next unused line of that name.
@@ -919,8 +1020,12 @@ export async function importLines(actor: Actor, budgetId: string, input: ImportL
         description: line.description,
         supplier: line.supplier,
         unitCostCents: line.unitCostCents,
+        unitCostKnown: line.unitCostKnown,
+        plannedTotalKnown: line.plannedTotalKnown,
+        plannedOverrideCents: line.plannedOverrideCents ?? null,
+        statusKnown: line.statusKnown,
         quantity: line.quantity,
-        quantityBought: line.spentCents === null ? null : line.quantity,
+        quantityBought: line.quantityBought ?? null,
         spentCents: line.spentCents,
         purchasedOn: toDate(line.purchasedOn) ?? null,
         poNumber: line.poNumber,
@@ -932,7 +1037,7 @@ export async function importLines(actor: Actor, budgetId: string, input: ImportL
         await tx.budgetLine.update({ where: { id: matchId }, data });
         updated += 1;
       } else {
-        await tx.budgetLine.create({ data: { ...data, budgetId }, select: { id: true } });
+        await tx.budgetLine.create({ data: { ...data, justification: line.justification ?? null, budgetId, unplanned: data.unplanned || budget.submittedAt != null }, select: { id: true } });
         created += 1;
       }
     }

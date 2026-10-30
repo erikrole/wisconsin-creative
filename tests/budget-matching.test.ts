@@ -23,7 +23,7 @@ describe("budget line to item matching", () => {
   it("is high confidence when price, date, and words all agree", () => {
     const result = scoreLineItemMatch(line, lens);
     expect(result?.confidence).toBe("high");
-    expect(result?.reasons).toEqual(expect.arrayContaining(["Same price"]));
+    expect(result?.reasons).toEqual(expect.arrayContaining(["Same planned price"]));
   });
 
   it("treats a PO number in the item notes as the strongest signal", () => {
@@ -49,7 +49,19 @@ describe("budget line to item matching", () => {
     expect(result).toBeNull();
   });
 
+  it("uses product links and actual price, but excludes another department", () => {
+    const order = { ...line, budgetName: "Creative", productUrl: "https://www.bhphotovideo.com/c/product/1234/something?ref=tracking", actualUnitCents: 200_000 };
+    const item = { ...lens, departmentName: "Creative", productUrl: "https://www.bhphotovideo.com/c/product/1234/other", purchasePriceCents: 200_000 };
+    expect(scoreLineItemMatch(order, item)?.reasons).toEqual(expect.arrayContaining(["Same product link", "Same actual unit price"]));
+    expect(scoreLineItemMatch(order, { ...item, departmentName: "Football" })).toBeNull();
+    expect(scoreLineItemMatch({ ...order, poNumber: "PO-00177267" }, { ...item, departmentName: "Football", notes: "PO-00177267" })?.confidence).toBe("possible");
+  });
+
+  it("does not suggest an item solely because its brand and price match", () => {
+    expect(scoreLineItemMatch(line, { ...lens, model: "Different", purchaseDate: null })).toBeNull();
+  });
+
   it("drops filler words when comparing text", () => {
-    expect(tokens("The Sony Camera Kit, 24-70mm!")).toEqual(["sony", "24", "70mm"]);
+    expect(tokens("The Sony Camera Kit, 24-70mm!")).toEqual(["24", "70mm"]);
   });
 });

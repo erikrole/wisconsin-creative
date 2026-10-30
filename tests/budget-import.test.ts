@@ -50,19 +50,19 @@ describe("budget sheet import", () => {
     );
     expect(problem).toBeNull();
     expect(candidates.map((c) => [c.description, c.result, c.status, c.unplanned])).toEqual([
-      ["Sony FX3", "ready", "PURCHASED", false],
-      ["Misc supplies", "check", "PURCHASED", true],
+      ["Sony FX3", "check", "PURCHASED", false],
+      ["Misc supplies", "check", "PURCHASED", false],
       ["Tripod", "check", "CANCELLED", false],
       ["Total", "skipped", "PLANNED", false],
     ]);
     const fx3 = candidates[0]!;
-    expect(fx3).toMatchObject({ quantity: 2, budgetedCents: 799_500, unitCostCents: 399_750, spentCents: 800_000, purchasedOn: "2026-05-28", poNumber: "PO-1", row: 2 });
-    expect(candidates[1]).toMatchObject({ budgetedCents: null, spentCents: 21_200, purchasedOn: "2026-06-01" });
+    expect(fx3).toMatchObject({ quantity: 2, budgetedCents: 799_500, unitCostCents: 0, unitCostKnown: false, spentCents: 800_000, purchasedOn: null, poNumber: "PO-1", row: 2 });
+    expect(candidates[1]).toMatchObject({ budgetedCents: null, spentCents: 21_200, purchasedOn: null });
   });
 
   it("keeps unbought lines planned when asked", () => {
     const { candidates } = parseBudgetSheet([["Item", "Budgeted"], ["Lens", "$2,199"]], { fiscalYear: "2026-27", unboughtAs: "PLANNED" });
-    expect(candidates[0]).toMatchObject({ result: "ready", status: "PLANNED" });
+    expect(candidates[0]).toMatchObject({ result: "check", status: "PLANNED", statusKnown: false });
   });
 
   it("explains a sheet it can't read", () => {
@@ -89,13 +89,13 @@ describe("budget sheet import", () => {
         workbookOptions,
       );
       expect(candidates.map((c) => [c.description, c.status, c.result])).toEqual([
-        ["Sony FX3 Body", "PURCHASED", "ready"],
+        ["Sony FX3 Body", "PURCHASED", "check"],
         ["Cellphone Lines", "PLANNED", "ready"],
         ["SanDisk 256GB SD Card", "CANCELLED", "ready"],
         ["Dell Monitor", "ORDERED", "ready"],
       ]);
       // MAY on the 26-27 tab is May 2026, not a purchase date in the future.
-      expect(candidates[0]).toMatchObject({ supplier: "B&H Photo", spentCents: 799_528, budgetedCents: 799_528, purchasedOn: "2026-05-01" });
+      expect(candidates[0]).toMatchObject({ supplier: "B&H Photo", spentCents: 799_528, budgetedCents: 799_528, purchasedOn: null });
     });
 
     it("treats a bought row with no budget as a late addition at the quantity bought", () => {
@@ -107,16 +107,16 @@ describe("budget sheet import", () => {
         ],
         workbookOptions,
       );
-      expect(candidates[0]).toMatchObject({ unplanned: true, budgetedCents: null, quantity: 2, unitCostCents: 14_175, spentCents: 28_350, result: "check", purchasedOn: "2026-07-01" });
-      expect(candidates[1]).toMatchObject({ unplanned: true, budgetedCents: null, quantity: 10, spentCents: 116_350 });
+      expect(candidates[0]).toMatchObject({ unplanned: false, budgetedCents: null, quantity: 1, quantityBought: 2, unitCostCents: 14_175, spentCents: 28_350, result: "check", purchasedOn: null });
+      expect(candidates[1]).toMatchObject({ unplanned: true, budgetedCents: 0, quantity: 10, spentCents: 116_350 });
     });
 
-    it("falls back to price x quantity when the budget cell holds a placeholder", () => {
+    it("keeps a placeholder budget total unknown even when price and quantity are present", () => {
       const { candidates } = parseBudgetSheet(
         [["Item", "Price", "Quantity", "Total Budgeted", "Total Spent"], ["Sony a7V", "2563.53", "1", "X", "2563.53"]],
         workbookOptions,
       );
-      expect(candidates[0]).toMatchObject({ unplanned: false, budgetedCents: 256_353, spentCents: 256_353, status: "PURCHASED" });
+      expect(candidates[0]).toMatchObject({ unplanned: false, budgetedCents: null, spentCents: 256_353, status: "PURCHASED" });
     });
 
     it("stops at the category summary table under the purchases", () => {
@@ -137,11 +137,11 @@ describe("budget sheet import", () => {
     it("counts older years as bought when asked, and honors the checkbox column", () => {
       const rows = [["P", "Item", "Price", "Quantity", "Total"], ["true", "Sony a1 II", "6188", "1", "6188"], ["false", "Spare grip", "100", "1", "100"]];
       const asBought = parseBudgetSheet([["Item", "Price", "Quantity", "Total"], ["Mic", "2495", "1", "2495"]], { ...workbookOptions, fiscalYear: "2022-23", unboughtAs: "PURCHASED" });
-      expect(asBought.candidates[0]).toMatchObject({ status: "PURCHASED", spentCents: 249_500, budgetedCents: 249_500 });
+      expect(asBought.candidates[0]).toMatchObject({ status: "PURCHASED", spentCents: null, budgetedCents: 249_500 });
       const flagged = parseBudgetSheet(rows, { ...workbookOptions, fiscalYear: "2025-26", unboughtAs: "CANCELLED" });
-      expect(flagged.candidates.map((c) => [c.status, c.spentCents])).toEqual([["PURCHASED", 618_800], ["CANCELLED", null]]);
-      // No spent column to leave blank, so a ticked box is ready, not a question.
-      expect(flagged.candidates[0]).toMatchObject({ result: "ready", note: "Marked bought. Using the planned amount." });
+      expect(flagged.candidates.map((c) => [c.status, c.spentCents])).toEqual([["PURCHASED", null], ["CANCELLED", null]]);
+      // A checked box records purchase status, not an actual-spend amount.
+      expect(flagged.candidates[0]).toMatchObject({ result: "check", note: "Marked bought; actual spend not recorded." });
     });
 
     it("suggests the tab for the budget's year and for Football", () => {

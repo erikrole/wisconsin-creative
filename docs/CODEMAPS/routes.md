@@ -269,6 +269,7 @@
 - `/api/budget/[id]/lines/bulk` -> `src/app/api/budget/[id]/lines/bulk/route.ts`
 - `/api/budget/[id]/lines` -> `src/app/api/budget/[id]/lines/route.ts`
 - `/api/budget/[id]` -> `src/app/api/budget/[id]/route.ts`
+- `/api/budget/[id]/submitted-plan` -> `src/app/api/budget/[id]/submitted-plan/route.ts`
 - `/api/budget/for-asset/[assetId]` -> `src/app/api/budget/for-asset/[assetId]/route.ts`
 - `/api/budget/item-search` -> `src/app/api/budget/item-search/route.ts`
 - `/api/budget/lines/[lineId]/history` -> `src/app/api/budget/lines/[lineId]/history/route.ts`

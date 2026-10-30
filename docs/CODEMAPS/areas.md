@@ -23,7 +23,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_BUDGET.md`
 - Pages: `/budget`
-- APIs: `/api/budget/[id]/import`, `/api/budget/[id]/lines/bulk`, `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/history`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`, `/api/budget/lines/[lineId]/suggestions`
+- APIs: `/api/budget/[id]/import`, `/api/budget/[id]/lines/bulk`, `/api/budget/[id]/lines`, `/api/budget/[id]`, `/api/budget/[id]/submitted-plan`, `/api/budget/for-asset/[assetId]`, `/api/budget/item-search`, `/api/budget/lines/[lineId]/history`, `/api/budget/lines/[lineId]/links`, `/api/budget/lines/[lineId]`
 - Services: `src/lib/services/budget.ts`
 - Tests: `tests/budget-autofill.test.ts`, `tests/budget-contract.test.ts`, `tests/budget-history.test.ts`, `tests/budget-import.test.ts`, `tests/budget-insights.test.ts`, `tests/budget-matching.test.ts`, `tests/budget-routes.test.ts`, `tests/budget-suggestions-service.test.ts`
 
