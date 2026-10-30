@@ -29,3 +29,45 @@ export async function loadTravelEvent(eventId: string) {
 export function travelerUserWhere(extra: Parameters<typeof visibleActiveUserWhere>[0] = {}) {
   return visibleActiveUserWhere({ ...extra, role: { not: Role.COLLABORATOR } });
 }
+
+/**
+ * The travel roster for an event: people added by hand, plus everyone
+ * confirmed on the away game's crew. Crew rows carry `fromCrew` and a
+ * synthetic id, so they can be shown but not removed here; take someone off
+ * the crew instead.
+ */
+export async function loadTravelRoster(eventId: string, isAwayGame: boolean) {
+  const added = await db.eventTravelMember.findMany({
+    where: { eventId },
+    include: travelMemberInclude,
+    orderBy: { createdAt: "asc" },
+  });
+  const manual = added.map((m) => ({ ...m, fromCrew: false }));
+  if (!isAwayGame) return manual;
+
+  const crew = await db.shiftAssignment.findMany({
+    where: {
+      status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
+      shift: { shiftGroup: { eventId } },
+      user: travelerUserWhere(),
+    },
+    select: { userId: true, createdAt: true, user: travelMemberInclude.user },
+    orderBy: { createdAt: "asc" },
+  });
+  const seen = new Set(manual.map((m) => m.userId));
+  const fromCrew = [];
+  for (const a of crew) {
+    if (seen.has(a.userId)) continue;
+    seen.add(a.userId);
+    fromCrew.push({
+      id: `crew:${a.userId}`,
+      eventId,
+      userId: a.userId,
+      notes: null,
+      createdAt: a.createdAt,
+      user: a.user,
+      fromCrew: true,
+    });
+  }
+  return [...manual, ...fromCrew].sort((x, y) => x.user.name.localeCompare(y.user.name));
+}

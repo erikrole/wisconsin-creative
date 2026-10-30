@@ -35,6 +35,8 @@ type TravelMember = {
   userId: string;
   notes: string | null;
   createdAt: string;
+  /** On the away game's crew; remove them from the crew, not here. */
+  fromCrew?: boolean;
   user: TravelUser;
 };
 
@@ -348,7 +350,7 @@ export function EventTravelCard({
         <div>
           <CardTitle>Travel</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Who is traveling to this away event.
+            Everyone on this away game's crew, plus anyone added here.
           </p>
         </div>
         {isStaff && (
@@ -405,7 +407,7 @@ export function EventTravelCard({
             inline
             icon="users"
             title="No travelers added"
-            description={isStaff ? "Add defaults brings in the sport's regular travelers. Use Add for anyone else." : "Travelers will appear here once staff adds them."}
+            description={isStaff ? "Assign the crew on the schedule, or use Add for anyone else." : "Travelers appear here once the crew is assigned."}
           />
         ) : (
           <div className="flex flex-col gap-1.5">
@@ -423,7 +425,7 @@ export function EventTravelCard({
                     {userRoleLabel(m.user.role)}
                   </Badge>
                 </div>
-                {isStaff && (
+                {isStaff && !m.fromCrew && (
                   <Button
                     type="button"
                     variant="ghost"
