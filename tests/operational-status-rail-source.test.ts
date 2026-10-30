@@ -36,19 +36,15 @@ describe("operational status rail source contract", () => {
     expect(schedule).toContain("feed={(");
     expect(fixToday).toContain("<OperationalStatusRail");
     expect(fixToday).toContain("const railItems: OperationalStatusRailItem[]");
-    expect(items).toContain("<OperationalStatusRail");
-    expect(items).toContain("const railItems: OperationalStatusRailItem[]");
-    expect(items).toContain("statusSummary.map");
-    expect(items).toContain("toggleStatusFilter(item.status)");
-    expect(items).toContain('label: "Active inventory"');
-    expect(items).toContain("ariaPressed={filters.statusFilter.has(item.status)}");
+    // Items moved to status tabs with counts; the rail stays for operational queues.
+    expect(items).not.toContain("<OperationalStatusRail");
+    expect(items).toContain('<TabsList className="overflow-x-auto scrollbar-hide" aria-label="Item status">');
+    expect(items).toContain('filters.setStatusFilter(new Set(value === "all" ? [] : [value]))');
   });
 
   it("migrates page-level operational summaries without converting analytical reports", () => {
     const migratedPages = [
       "src/app/(app)/operations/OperationsClient.tsx",
-      "src/app/(app)/notifications/page.tsx",
-      "src/app/(app)/kits/page.tsx",
       "src/app/(app)/licenses/page.tsx",
       "src/app/(app)/staff/onboarding-status/page.tsx",
     ];
@@ -58,6 +54,10 @@ describe("operational status rail source contract", () => {
     }
 
     expect(existsSync("src/app/(app)/dashboard/stat-card.tsx")).toBe(false);
+    // The inbox count lives on the Unread tab, so Notifications has no rail.
+    expect(source("src/app/(app)/notifications/page.tsx")).not.toContain("<OperationalStatusRail");
+    // Each kit row carries its own Ready, Out or Empty status, so Kits has no rail.
+    expect(source("src/app/(app)/kits/page.tsx")).not.toContain("<OperationalStatusRail");
     expect(source("src/app/(app)/reports/checkouts/page.tsx")).not.toContain("<OperationalStatusRail");
     expect(source("src/app/(app)/import/_components/ImportPreviewStep.tsx")).not.toContain("<OperationalStatusRail");
   });

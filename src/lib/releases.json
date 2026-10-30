@@ -94,6 +94,124 @@
   },
   {
     "date": "2026-10-29",
+    "title": "Simpler Kits list",
+    "type": "improvement",
+    "summary": "The Kits list shows just the kits.",
+    "details": [
+      "The status strip above the list is gone; each kit still shows Ready or how many pieces are out.",
+      "Rows open the kit when clicked, so the separate Open column is gone.",
+      "Contents read as one plain line, like 9 assets + 3 item families."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Tidier profile summary",
+    "type": "improvement",
+    "summary": "The top of a profile is shorter and calmer.",
+    "details": [
+      "Performance shows on-time returns, checkouts and badges side by side instead of stacked.",
+      "Open schedule and See all are quiet gray links instead of blue."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Easier-to-read Reports",
+    "type": "improvement",
+    "summary": "Report breakdowns read like a ranked list, and the Most-used gear chart shows its numbers.",
+    "details": [
+      "Breakdowns by location, category, type and department show a soft bar behind each row instead of ruled table lines.",
+      "Most-used gear prints each item's days in custody at the end of its bar, so you don't have to hover."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Search finds gear by brand and model",
+    "type": "fixes",
+    "summary": "Cmd-K search now shows every item that matches, including matches on brand or model, in one tidy line each.",
+    "details": [
+      "Searching for \"sony\" or a model name used to hide items whose tag didn't contain the words. They show now.",
+      "Each item reads as tag, product name, then status, with the holder's avatar when it's out.",
+      "Checkouts, reservations and people take one line each, with the name on the right."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Quieter Notifications inbox",
+    "type": "improvement",
+    "summary": "Notifications read like a simple inbox: what happened, when, and a red dot for anything new.",
+    "details": [
+      "Tap a notification to open what it's about. The check mark marks it read.",
+      "All and Unread tabs replace the summary strip, and days group under Today, Yesterday and This week in Central time.",
+      "The Unread and Read tags and the per-row buttons are gone."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Cleaner Schedule list",
+    "type": "improvement",
+    "summary": "Schedule rows say each thing once, and the phone layout gives more room to events.",
+    "details": [
+      "Each event shows its open seats once, with the crew as avatars beside it.",
+      "On phones, event rows drop the repeated date and sport name, and Auto assign sits beside the title."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Tidier Bookings lists",
+    "type": "improvement",
+    "summary": "The Bookings list lines up better and is easier to use on phones.",
+    "details": [
+      "On phones the All, Checkouts and Reservations tabs get their own row instead of being squeezed out by the view controls.",
+      "In list view, rows that can't be selected no longer shift their columns out of line.",
+      "Overdue bookings keep the red badge and edge, and the title stays in normal text."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
+    "title": "Calmer Items pages",
+    "type": "improvement",
+    "summary": "Items has status tabs with counts and shows who has each item and when it's due back.",
+    "details": [
+      "Tabs across the top filter by status: Available, Checked out, Reserved, Pending pickup, Maintenance and Retired.",
+      "The status column names the person holding the item and its due time, in Central time, with overdue items in red.",
+      "On an item's page the header keeps one main button, a favorite star and a More menu (Report a problem, Refresh and staff actions).",
+      "The active checkout card shows who has the item and when it's due back."
+    ],
+    "platforms": [
+      "Web"
+    ],
+    "pr": 738
+  },
+  {
+    "date": "2026-10-29",
     "title": "The paint roller is back",
     "type": "feature",
     "summary": "When you add something weekly, you can paint the days and hours onto a week grid like the old WhenToWork roller, in red.",

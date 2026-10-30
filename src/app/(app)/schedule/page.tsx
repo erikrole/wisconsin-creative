@@ -438,7 +438,8 @@ function InternalSchedulePage() {
         )}
         style={{ top: "var(--schedule-sticky-top, 0px)" }}
       >
-        <PageHeader title="Schedule">
+        {/* On a phone the actions stay beside the title instead of taking a row of their own. */}
+        <PageHeader title="Schedule" className="max-sm:flex-row max-sm:items-center max-sm:justify-between">
           {isStaff ? (
             <>
               <Button size="sm" className="h-10" onClick={() => setAutoAssignOpen(true)}>
@@ -449,7 +450,7 @@ function InternalSchedulePage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-10" aria-label="More schedule actions">
                     <MoreHorizontalIcon data-icon="inline-start" />
-                    More
+                    <span className="max-sm:sr-only">More</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

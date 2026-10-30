@@ -96,7 +96,8 @@ export function bookingStatusVisual(
       variant: "red",
       dot: DOT_BY_VARIANT.red,
       rowClass: "",
-      titleClass: "text-destructive",
+      // The red badge and accent already say overdue; the title stays readable.
+      titleClass: "",
     };
   }
 

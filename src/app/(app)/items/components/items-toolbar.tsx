@@ -7,7 +7,6 @@ import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
   SelectContent,
@@ -68,7 +67,6 @@ export function ItemsToolbar({
   onItemTypeChange,
   sorting,
   onSortingChange,
-  hasActiveFilters,
   onClearAllFilters,
   locations,
   departments,
@@ -96,18 +94,18 @@ export function ItemsToolbar({
   onItemTypeChange: (value: ItemTypeFilter) => void;
   sorting: SortingState;
   onSortingChange: (value: SortingState) => void;
-  hasActiveFilters: boolean;
   onClearAllFilters: () => void;
   locations: Location[];
   departments: Department[];
   categoryOptions: { value: string; label: string }[];
   brands: string[];
 }) {
-  const [filtersOpen, setFiltersOpen] = useState(hasActiveFilters);
   const previousActiveFilterCountRef = useRef(0);
   const currentSort = sorting[0]?.id ?? DEFAULT_ITEMS_SORT_ID;
+  // A single status is shown by the status tabs above, so it is not repeated as a filter.
+  const statusFromFilters = statusFilter.size > 1 ? statusFilter : new Set<string>();
   const activeFilterCount =
-    statusFilter.size +
+    statusFromFilters.size +
     locationFilter.size +
     categoryFilter.size +
     brandFilter.size +
@@ -115,6 +113,7 @@ export function ItemsToolbar({
     (showAccessories ? 1 : 0) +
     (favoritesOnly ? 1 : 0) +
     (itemType !== "all" ? 1 : 0);
+  const [filtersOpen, setFiltersOpen] = useState(activeFilterCount > 0);
   const activeFilters: OperationalActiveFilter[] = [
     ...(itemType !== "all"
       ? [{
@@ -130,7 +129,7 @@ export function ItemsToolbar({
         onRemove: () => onFavoritesOnlyChange(false),
       }]
       : []),
-    ...[...statusFilter].map((value) => ({
+    ...[...statusFromFilters].map((value) => ({
       key: `status-${value}`,
       label: `Status: ${STATUS_OPTIONS.find((option) => option.value === value)?.label ?? value}`,
       onRemove: () => {
@@ -206,29 +205,25 @@ export function ItemsToolbar({
           aria-label="Search items by tag, model, serial, or location"
         />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex min-h-10 items-center rounded-md border border-border/60 bg-background p-0.5">
-            <ToggleGroup
-              type="single"
-              value={itemType}
-              onValueChange={(v) => v && onItemTypeChange(v as ItemTypeFilter)}
-              className="shrink-0"
-              aria-label="Item type filter"
-            >
-              <ToggleGroupItem value="all" className="h-10 px-3 text-xs">All</ToggleGroupItem>
-              <ToggleGroupItem value="serialized" className="h-10 px-3 text-xs">Standard</ToggleGroupItem>
-              <ToggleGroupItem value="unit-tracked" className="h-10 px-3 text-xs">Units</ToggleGroupItem>
-              <ToggleGroupItem value="quantity-tracked" className="h-10 px-3 text-xs">Quantity</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="hidden h-6 w-px bg-border/70 lg:block" aria-hidden="true" />
+        <div className="flex items-center gap-2 max-sm:flex-wrap">
+          <Select value={itemType} onValueChange={(v) => onItemTypeChange(v as ItemTypeFilter)}>
+            <SelectTrigger className="h-10 whitespace-nowrap bg-background max-sm:min-w-0 max-sm:flex-1 sm:w-[132px]" aria-label="Item type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="serialized">Standard</SelectItem>
+              <SelectItem value="unit-tracked">Units</SelectItem>
+              <SelectItem value="quantity-tracked">Quantity</SelectItem>
+            </SelectContent>
+          </Select>
           <Select
             value={SORT_OPTIONS.some((option) => option.value === currentSort) ? currentSort : DEFAULT_ITEMS_SORT_ID}
             onValueChange={(value) => {
               onSortingChange([{ id: value, desc: false }]);
             }}
           >
-            <SelectTrigger className="h-10 w-[152px] bg-background" aria-label="Sort items">
+            <SelectTrigger className="h-10 whitespace-nowrap bg-background max-sm:min-w-0 max-sm:flex-1 sm:w-[152px]" aria-label="Sort items">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent align="end">
@@ -248,7 +243,7 @@ export function ItemsToolbar({
             aria-label="Filter to favorites only"
           >
             <Star className={`size-3.5 ${favoritesOnly ? "fill-current" : ""}`} />
-            Favorites
+            <span className="max-sm:sr-only">Favorites</span>
           </Button>
           <Button
             variant={filtersOpen || activeFilterCount > 0 ? "secondary" : "outline"}
@@ -259,14 +254,14 @@ export function ItemsToolbar({
             aria-label={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : "Filters"}
           >
             <SlidersHorizontal className="size-3.5" />
-            Filters
+            <span className="max-sm:sr-only">Filters</span>
             {activeFilterCount > 0 && (
               <span className="rounded-sm bg-background px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground">
                 {activeFilterCount}
               </span>
             )}
           </Button>
-          {hasActiveFilters && (
+          {activeFilterCount > 0 && (
             <Button variant="ghost" size="sm" className="h-10 gap-1.5 active:scale-[0.96] transition-transform" onClick={onClearAllFilters}>
               Clear
               <XIcon className="size-4" />
