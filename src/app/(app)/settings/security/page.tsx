@@ -29,6 +29,7 @@ import {
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { isPasskeyCancellation, passkeyErrorMessage, passkeyStorageLabel } from "@/lib/passkey-client";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { ApiTokensCard } from "../_components/ApiTokensCard";
 
 const noopSubscribe = () => () => {};
 
@@ -57,11 +58,11 @@ export default function SecuritySettingsPage() {
   const accountEmail = currentUser?.email ?? "";
 
   // ── Sessions ──────────────────────────────────────────────────────────────
-  const { data, loading, error, reload } = useFetch<{ data: Session[] }>({
+  const { data, loading, error, reload } = useFetch<Session[]>({
     url: "/api/me/sessions",
     returnTo: "/settings/security",
   });
-  const sessions = data?.data ?? [];
+  const sessions = data ?? [];
 
   const { data: passkeyData, loading: passkeysLoading, error: passkeysError, reload: reloadPasskeys } = useFetch<Passkey[] | { data: Passkey[] }>({
     url: "/api/me/passkeys",
@@ -636,6 +637,8 @@ export default function SecuritySettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {(currentUser?.role === "ADMIN" || currentUser?.role === "STAFF") && <ApiTokensCard />}
 
         <Card id="account" elevation="flat" className="rounded-xl shadow-xs">
           <CardHeader className="pb-2">

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => {
   const updateMany = vi.fn();
   const tx = {
     booking: { count: vi.fn(), findMany: vi.fn() },
+    apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     session: { deleteMany: vi.fn() },
     passwordResetToken: { deleteMany: vi.fn() },
     passkeyCredential: { deleteMany },

@@ -53,6 +53,8 @@ const SECURITY_ACTIONS = new Set([
   "password_change",
   "sessions_signed_out",
   "session_signed_out",
+  "api_token_created",
+  "api_token_revoked",
   "change_password",
   "password_reset",
   "password_reset_self",
@@ -106,6 +108,7 @@ const ENTITY_CATEGORIES: Record<string, AuditCategory> = {
   kiosk_device: "kiosk",
   kiosk_operation: "kiosk",
   session: "security",
+  api_token: "security",
   passkey_credential: "security",
 };
 
@@ -224,6 +227,8 @@ export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
   passkey_revoked: "Removed a passkey",
   password_change: "Changed their password",
   password_reset: "Reset a password",
+  api_token_created: "Created an API token",
+  api_token_revoked: "Revoked an API token",
   session_signed_out: "Signed out one of their devices",
   sessions_signed_out: "Signed out their other devices",
   pending_profile_updated: "Updated a pending profile",

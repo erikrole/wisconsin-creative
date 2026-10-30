@@ -117,6 +117,7 @@
     "audit:item-data": "node --env-file=.env scripts/audit-item-data.mjs",
     "cleanup:item-data": "node --env-file=.env scripts/cleanup-item-data.mjs",
     "consolidate:battery-families": "node --env-file=.env scripts/consolidate-battery-families.mjs",
+    "wc": "node scripts/wc.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:postgres": "node scripts/test-onboarding-postgres.mjs",

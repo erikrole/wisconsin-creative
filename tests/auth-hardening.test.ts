@@ -16,6 +16,7 @@ const mockTx = {
   user: {
     updateMany: vi.fn(),
   },
+  apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
   session: {
     deleteMany: vi.fn(),
   },
@@ -43,6 +44,7 @@ vi.mock("@/lib/db", () => ({
       findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
     },
+    apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     session: {
       deleteMany: vi.fn(),
     },
@@ -172,6 +174,7 @@ describe("auth hardening", () => {
     });
     expect(db.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
     expect(db.$transaction).toHaveBeenCalledWith([
+      expect.any(Promise),
       expect.any(Promise),
       expect.any(Promise),
     ]);
