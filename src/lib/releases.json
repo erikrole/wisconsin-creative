@@ -1,6 +1,20 @@
 [
   {
     "date": "2026-10-30",
+    "title": "Clearer purchase matches",
+    "type": "fixes",
+    "summary": "Budget suggestions now flag equally supported item matches for review.",
+    "details": [
+      "Matching records with the same purchase evidence are marked as possible matches.",
+      "Admins can compare the records before linking an item."
+    ],
+    "pr": 742,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-30",
     "title": "Clearer budget planning",
     "type": "improvement",
     "summary": "Budgets now distinguish unknown amounts from recorded zero and keep a saved plan for comparison as purchases change.",
