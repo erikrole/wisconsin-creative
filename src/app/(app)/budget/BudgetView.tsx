@@ -523,7 +523,7 @@ function BudgetBody({
           <b className={`font-bold ${vsSubmitted > 0 ? "text-[#C62A2F]" : "text-[#218358]"}`}>{formatCentsCompact(Math.abs(vsSubmitted))} {vsSubmitted > 0 ? "over" : "under"}</b>{" "}
           the submitted plan
         </span>}
-        <Button type="button" size="sm" variant="outline" onClick={() => void capturePlan()} disabled={savingPlan || lines.length === 0}>{budget.submittedAt ? "Revise saved plan" : "Save submitted plan"}</Button>
+        <Button type="button" variant="outline" onClick={() => void capturePlan()} disabled={savingPlan || lines.length === 0}>{budget.submittedAt ? "Revise saved plan" : "Save submitted plan"}</Button>
       </div>
 
       {needItems.length > 0 && (
