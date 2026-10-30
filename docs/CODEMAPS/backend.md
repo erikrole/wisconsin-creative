@@ -55,7 +55,7 @@
 | `src/lib/services/damage-cases.ts` | 356 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
 | `src/lib/services/error-reports.ts` | 558 |
-| `src/lib/services/event-travel.ts` | 32 |
+| `src/lib/services/event-travel.ts` | 74 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/football-results.ts` | 139 |
@@ -193,7 +193,7 @@
 | `src/lib/booking-concurrency.ts` | 41 |
 | `src/lib/booking-display-title.ts` | 77 |
 | `src/lib/booking-snapshot-header.ts` | 2 |
-| `src/lib/booking-status-display.ts` | 152 |
+| `src/lib/booking-status-display.ts` | 153 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 230 |
 | `src/lib/brother-chain.ts` | 71 |
@@ -395,6 +395,7 @@
 | `src/lib/venue-tone.ts` | 135 |
 | `src/lib/web-tools.ts` | 28 |
 | `src/lib/webmcp-tools.ts` | 504 |
+| `src/lib/wifi.ts` | 16 |
 | `src/lib/working-schedule-limits.ts` | 6 |
 
 ## API Route Groups
@@ -567,7 +568,6 @@
 - `/api/calendar-events/[id]/command-center`
 - `/api/calendar-events/[id]`
 - `/api/calendar-events/[id]/travel/[memberId]`
-- `/api/calendar-events/[id]/travel/defaults`
 - `/api/calendar-events/[id]/travel`
 - `/api/calendar-events/[id]/visibility`
 - `/api/calendar-events/[id]/workers/[workerId]`
@@ -1047,6 +1047,10 @@
 - `/api/users/org-chart`
 - `/api/users`
 - `/api/users/today`
+
+### `/api/wifi`
+
+- `/api/wifi`
 
 ### `/api/wishlist`
 

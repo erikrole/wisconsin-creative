@@ -144,7 +144,7 @@ struct EventTravelSection: View {
         VStack(alignment: .leading, spacing: 2) {
             Text("No travelers yet")
                 .font(.body)
-            Text("Staff add them on the website.")
+            Text("Travelers appear once the crew is assigned.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
