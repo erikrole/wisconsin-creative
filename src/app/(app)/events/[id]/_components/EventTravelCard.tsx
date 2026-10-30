@@ -350,7 +350,7 @@ export function EventTravelCard({
         <div>
           <CardTitle>Travel</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Everyone on this away game's crew, plus anyone added here.
+            Everyone on this away game&apos;s crew, plus anyone added here.
           </p>
         </div>
         {isStaff && (
