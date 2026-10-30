@@ -57,6 +57,14 @@ beforeEach(() => {
 });
 
 describe("suggestItemsForLine", () => {
+  it("does not label two items with identical purchase evidence as high confidence", async () => {
+    db.budgetLine.findUnique.mockResolvedValue(fx3Line);
+    db.asset.findMany.mockResolvedValue([asset("fx3-a", { notes: null }), asset("fx3-b", { notes: null })]);
+    const suggestions = await suggestItemsForLine("line-1");
+    expect(suggestions.map((item) => item.confidence)).toEqual(["possible", "possible"]);
+    expect(suggestions[0]!.reasons).toContain("Multiple records share this evidence; confirm the purchase");
+  });
+
   it("ranks unlinked items that match the order, best first, and drops weak ones", async () => {
     db.budgetLine.findUnique.mockResolvedValue(fx3Line);
     db.asset.findMany.mockResolvedValue([

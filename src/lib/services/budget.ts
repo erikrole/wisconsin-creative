@@ -3,7 +3,7 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { applyNote, buildAutofill, unitPriceCents, type AutofillField, type AutofillProposal } from "@/lib/budget/autofill";
-import { productIdentity, scoreLineItemMatch, tokens, type MatchItem, type MatchLine, type MatchResult } from "@/lib/budget/matching";
+import { flagAmbiguousMatches, productIdentity, scoreLineItemMatch, tokens, type MatchItem, type MatchLine, type MatchResult } from "@/lib/budget/matching";
 import { plannedCents, summarizeBudget, type BudgetCategoryValue, type BudgetLineStatusValue } from "@/lib/budget/contract";
 import { describeLineChanges, type LineChange } from "@/lib/budget/history";
 import type {
@@ -544,7 +544,7 @@ export async function suggestItemsForLine(lineId: string): Promise<ItemSuggestio
       suggestedQuantity: line.quantityBought,
     });
   }
-  return out.sort((a, b) => b.score - a.score).slice(0, SUGGESTION_LIMIT);
+  return flagAmbiguousMatches(out).sort((a, b) => b.score - a.score).slice(0, SUGGESTION_LIMIT);
 }
 
 /** Budget lines that might have paid for this asset, for the item page. */
@@ -692,7 +692,7 @@ export async function suggestLinesForAsset(
       poNumber: line.poNumber,
     });
   }
-  return { serialNumber: asset.serialNumber, imageUrl: asset.imageUrl, linked, suggestions: suggestions.sort((a, b) => b.score - a.score).slice(0, SUGGESTION_LIMIT) };
+  return { serialNumber: asset.serialNumber, imageUrl: asset.imageUrl, linked, suggestions: flagAmbiguousMatches(suggestions).sort((a, b) => b.score - a.score).slice(0, SUGGESTION_LIMIT) };
 }
 
 export type BudgetLineLinkViewForAsset = {
