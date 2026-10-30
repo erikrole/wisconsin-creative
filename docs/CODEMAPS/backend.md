@@ -117,9 +117,9 @@
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 604 |
-| `src/lib/services/schedule-publication.ts` | 1133 |
+| `src/lib/services/schedule-publication.ts` | 1136 |
 | `src/lib/services/schedule-template-review.ts` | 549 |
-| `src/lib/services/schedule-working-copy.ts` | 1265 |
+| `src/lib/services/schedule-working-copy.ts` | 1268 |
 | `src/lib/services/scoreboard.ts` | 290 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
@@ -163,7 +163,7 @@
 | `src/lib/announcements.ts` | 163 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 76 |
-| `src/lib/api.ts` | 188 |
+| `src/lib/api.ts` | 199 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
 | `src/lib/app-time.ts` | 257 |
@@ -174,7 +174,7 @@
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/assignment-workload.ts` | 83 |
-| `src/lib/audit-actions.ts` | 418 |
+| `src/lib/audit-actions.ts` | 420 |
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
@@ -221,8 +221,8 @@
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 71 |
 | `src/lib/companion-store.ts` | 367 |
-| `src/lib/crew-label.ts` | 26 |
-| `src/lib/crew-pending-review.ts` | 44 |
+| `src/lib/crew-label.ts` | 55 |
+| `src/lib/crew-pending-review.ts` | 47 |
 | `src/lib/crew-size-template.ts` | 55 |
 | `src/lib/cron.ts` | 35 |
 | `src/lib/crypto.ts` | 17 |
@@ -282,6 +282,7 @@
 | `src/lib/notification-meta.ts` | 121 |
 | `src/lib/observability.ts` | 19 |
 | `src/lib/on-time-rate.ts` | 36 |
+| `src/lib/onboarding-checklist.ts` | 142 |
 | `src/lib/onboarding-save.ts` | 49 |
 | `src/lib/onboarding-versions.ts` | 12 |
 | `src/lib/operational-health.ts` | 2 |
@@ -325,6 +326,7 @@
 | `src/lib/schedule-auto-release.ts` | 42 |
 | `src/lib/schedule-automation-types.ts` | 55 |
 | `src/lib/schedule-availability-context.ts` | 93 |
+| `src/lib/schedule-by-person.ts` | 117 |
 | `src/lib/schedule-change-history-types.ts` | 55 |
 | `src/lib/schedule-data-quality.ts` | 129 |
 | `src/lib/schedule-defaults.ts` | 33 |
@@ -333,9 +335,10 @@
 | `src/lib/schedule-event-keyset.ts` | 66 |
 | `src/lib/schedule-event-where.ts` | 63 |
 | `src/lib/schedule-health-types.ts` | 83 |
+| `src/lib/schedule-live.ts` | 44 |
 | `src/lib/schedule-publication-types.ts` | 62 |
 | `src/lib/schedule-queues.ts` | 185 |
-| `src/lib/schedule-read.ts` | 385 |
+| `src/lib/schedule-read.ts` | 386 |
 | `src/lib/schedule-recent-activity.ts` | 134 |
 | `src/lib/schedule-release.ts` | 16 |
 | `src/lib/schedule-sport-family.ts` | 27 |
@@ -345,7 +348,7 @@
 | `src/lib/schedule-url-state.ts` | 178 |
 | `src/lib/schedule-window.ts` | 188 |
 | `src/lib/schedule-working-copy-guard.ts` | 24 |
-| `src/lib/schedule-working-copy.ts` | 631 |
+| `src/lib/schedule-working-copy.ts` | 637 |
 | `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/scoreboard-display.ts` | 27 |
 | `src/lib/scoreboard-explorer.ts` | 152 |
@@ -830,6 +833,10 @@
 - `/api/notifications/process`
 - `/api/notifications`
 
+### `/api/onboarding-checklist`
+
+- `/api/onboarding-checklist/bulk`
+
 ### `/api/product-events`
 
 - `/api/product-events`
@@ -896,6 +903,7 @@
 - `/api/schedule/bulk-assignment/preview`
 - `/api/schedule/export`
 - `/api/schedule/health`
+- `/api/schedule/live`
 - `/api/schedule/open-work`
 - `/api/schedule/published/[id]/follow`
 - `/api/schedule/published/[id]`
@@ -920,6 +928,7 @@
 - `/api/settings/escalation`
 - `/api/settings/extend-presets`
 - `/api/settings/non-game-schedule`
+- `/api/settings/onboarding-guide`
 - `/api/settings/reservation-rules`
 
 ### `/api/shift-assignments`
@@ -1022,12 +1031,14 @@
 - `/api/users/[id]/availability/[blockId]`
 - `/api/users/[id]/availability`
 - `/api/users/[id]/avatar`
+- `/api/users/[id]/onboarding-checklist`
 - `/api/users/[id]/reset-password`
 - `/api/users/[id]/right-now`
 - `/api/users/[id]/role`
 - `/api/users/[id]`
 - `/api/users/[id]/scoreboard`
 - `/api/users/[id]/setup-reminder`
+- `/api/users/[id]/shifts`
 - `/api/users/bulk-create`
 - `/api/users/export`
 - `/api/users/hidden-cleanup`

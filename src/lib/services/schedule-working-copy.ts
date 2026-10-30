@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma, Role, ShiftAssignmentSource, ShiftAssignmentStatus, ShiftWorkerType } from "@prisma/client";
 import { createAuditEntryTx } from "@/lib/audit";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
+import { crewTagsOf } from "@/lib/crew-label";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
@@ -131,6 +132,7 @@ const groupEditorSelect = {
           callNote: true,
           crewLabel: true,
           crewHalf: true,
+          crewTags: true,
           trades: {
             where: { status: { in: ["OPEN", "CLAIMED"] } },
             select: { id: true },
@@ -408,6 +410,7 @@ export function buildWorkingSchedulePayload(group: EditorGroup): WorkingSchedule
           callNote: assignment.callNote,
           crewLabel: assignment.crewLabel,
           crewHalf: assignment.crewHalf,
+          crewTags: crewTagsOf(assignment),
           activeTradeId: assignment.trades[0]?.id ?? null,
           bookingCount: blockingBookingCount(assignment),
         } : null,

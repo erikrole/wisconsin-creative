@@ -1,3 +1,4 @@
+import type { CrewTagValue } from "@/lib/crew-label";
 import type { ScheduleChangeItem } from "@/lib/schedule-change-history-types";
 
 export type CalendarEvent = {
@@ -69,6 +70,7 @@ export type ShiftGroupSummary = {
       callNote?: string | null;
       crewLabel?: string | null;
       crewHalf?: "FIRST" | "SECOND" | null;
+      crewTags?: CrewTagValue[] | null;
       hasConflict?: boolean;
       conflictNote?: string | null;
       acknowledgedAt?: string | null;
@@ -98,6 +100,7 @@ export type CommandCenterData = {
       callNote: string | null;
       crewLabel: string | null;
       crewHalf: "FIRST" | "SECOND" | null;
+      crewTags?: CrewTagValue[] | null;
       linkedBookingId: string | null;
       linkedBookingStatus: string | null;
     } | null;

@@ -215,6 +215,8 @@ export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
   notifications_marked_all_read: "Marked all notifications read",
   notifications_marked_unread: "Marked notifications unread",
   numbered_unit_balance_reconciled: "Corrected the numbered unit count",
+  onboarding_check_updated: "Updated a student onboarding step",
+  onboarding_guide_updated: "Updated the onboarding contacts and notes",
   onboarding_completed: "Finished onboarding",
   overdue_responders_updated: "Updated who answers overdue alerts",
   passkey_login: "Signed in with a passkey",

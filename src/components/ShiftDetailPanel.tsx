@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import type { CrewTagValue } from "@/lib/crew-label";
 import { toast } from "@/lib/toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
@@ -55,6 +56,7 @@ type ShiftAssignment = {
   callNote?: string | null;
   crewLabel?: string | null;
   crewHalf?: "FIRST" | "SECOND" | null;
+  crewTags?: CrewTagValue[] | null;
   hasConflict: boolean;
   conflictNote: string | null;
   acknowledgedAt?: string | null;

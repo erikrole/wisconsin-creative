@@ -1,9 +1,14 @@
 import { ShiftArea, ShiftAssignmentSource, ShiftWorkerType } from "@prisma/client";
 import { MAX_ASSIGN_MANY, MAX_SLOTS_PER_AREA_CLASS } from "@/lib/working-schedule-limits";
 import { z } from "zod";
-import { CREW_HALVES, CREW_LABEL_MAX_LENGTH, normalizeCrewLabel } from "@/lib/crew-label";
+import { CREW_HALVES, CREW_LABEL_MAX_LENGTH, MAX_CREW_TAGS, crewTagsOf, normalizeCrewTags } from "@/lib/crew-label";
 
 const isoDate = z.string().datetime({ offset: true });
+
+const crewTagSchema = z.object({
+  label: z.string().max(CREW_LABEL_MAX_LENGTH * 2).nullable(),
+  half: z.enum(CREW_HALVES).nullable(),
+});
 
 const workingAssignmentSchema = z.object({
   sourceAssignmentId: z.string().min(1).nullable(),
@@ -16,6 +21,7 @@ const workingAssignmentSchema = z.object({
   // Drafts saved before labels existed omit these.
   crewLabel: z.string().max(CREW_LABEL_MAX_LENGTH).nullable().optional(),
   crewHalf: z.enum(CREW_HALVES).nullable().optional(),
+  crewTags: z.array(crewTagSchema).max(MAX_CREW_TAGS).optional(),
   activeTradeId: z.string().min(1).nullable(),
   bookingCount: z.number().int().min(0),
 });
@@ -231,7 +237,7 @@ export function workingScheduleCommandLabel(
     }
     case "setCallWindowForAll":
       return "Set all Student call windows";
-    case "setCrewLabel": {
+    case "setCrewTags": {
       const slot = slotFor(command.slotKey);
       return `Set ${slot ? titleCaseScheduleWord(slot.area) : "crew"} position label`;
     }
@@ -364,10 +370,9 @@ export const workingScheduleCommandSchema = z.discriminatedUnion("type", [
     callEndsAt: isoDate.nullable(),
   }),
   z.object({
-    type: z.literal("setCrewLabel"),
+    type: z.literal("setCrewTags"),
     slotKey: z.string().min(1),
-    label: z.string().max(CREW_LABEL_MAX_LENGTH * 2).nullable(),
-    half: z.enum(CREW_HALVES).nullable(),
+    tags: z.array(crewTagSchema).max(MAX_CREW_TAGS),
   }),
   z.object({
     type: z.literal("setCallWindowForAll"),
@@ -432,8 +437,8 @@ export function summarizeWorkingScheduleChanges(
     if (
       previous.assignment?.userId !== slot.assignment?.userId
       || previous.assignment?.callNote !== slot.assignment?.callNote
-      || (previous.assignment?.crewLabel ?? null) !== (slot.assignment?.crewLabel ?? null)
-      || (previous.assignment?.crewHalf ?? null) !== (slot.assignment?.crewHalf ?? null)
+      || JSON.stringify(previous.assignment ? crewTagsOf(previous.assignment) : [])
+        !== JSON.stringify(slot.assignment ? crewTagsOf(slot.assignment) : [])
     ) {
       assignmentChanges += 1;
     }
@@ -561,8 +566,6 @@ export function applyWorkingScheduleCommand(
       callStartsAt: null,
       callEndsAt: null,
       callNote: null,
-      crewLabel: null,
-      crewHalf: null,
       activeTradeId: null,
       bookingCount: 0,
     };
@@ -579,6 +582,7 @@ export function applyWorkingScheduleCommand(
       callNote: null,
       crewLabel: null,
       crewHalf: null,
+      crewTags: [],
       activeTradeId: null,
       bookingCount: 0,
     };
@@ -597,12 +601,14 @@ export function applyWorkingScheduleCommand(
       throw new Error("UNASSIGN_BEFORE_REDUCING");
     }
     next.slots.splice(slotIndex, 1);
-  } else if (command.type === "setCrewLabel") {
+  } else if (command.type === "setCrewTags") {
     const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
     if (!slot) throw new Error("WORKING_SLOT_NOT_FOUND");
     if (!slot.assignment) throw new Error("WORKING_SLOT_NOT_ASSIGNED");
-    slot.assignment.crewLabel = normalizeCrewLabel(command.label);
-    slot.assignment.crewHalf = command.half;
+    const tags = normalizeCrewTags(command.tags);
+    slot.assignment.crewTags = tags;
+    slot.assignment.crewLabel = tags[0]?.label ?? null;
+    slot.assignment.crewHalf = tags[0]?.half ?? null;
   } else if (command.type === "setCallWindow") {
     const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
     if (!slot) throw new Error("WORKING_SLOT_NOT_FOUND");

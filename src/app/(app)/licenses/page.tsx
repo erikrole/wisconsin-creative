@@ -11,6 +11,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { useUrlState } from "@/hooks/use-url-state";
 import { PhotoMechanicLicenses } from "./PhotoMechanicLicenses";
 import { SoftwareVault } from "./SoftwareVault";
+import { WifiCard } from "./WifiCard";
 
 type SoftwareSection = "shared-logins" | "photo-mechanic";
 
@@ -105,7 +106,8 @@ export default function LicensesPage() {
           </TabsContent>
         )}
 
-        <TabsContent value="shared-logins" className="pt-4">
+        <TabsContent value="shared-logins" className="space-y-4 pt-4">
+          <WifiCard />
           <SoftwareVault isAdmin={isAdmin} />
         </TabsContent>
       </Tabs>

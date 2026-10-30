@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { UserAvatar } from "@/components/UserAvatar";
 import { CrewPendingReview } from "@/components/shift-detail/CrewPendingReview";
 import { CrewTagEditor } from "@/components/shift-detail/CrewTag";
+import { crewTagsOf } from "@/lib/crew-label";
 import { UserAvatarPicker, type PickerUser } from "@/components/shift-detail/UserAvatarPicker";
 import { CrewSizeDialog } from "./CrewSizeDialog";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
@@ -1036,13 +1037,15 @@ export function WorkingCrewEditor({
                         </CrewFaceFrame>
                         <span className="min-w-0 truncate text-sm">{user?.name ?? "Assigned worker"}</span>
                         <CrewTagEditor
-                          label={slot.assignment.crewLabel}
-                          half={slot.assignment.crewHalf}
+                          tags={crewTagsOf(slot.assignment)}
+                          othersTags={data.schedule.slots.flatMap((other) => other.key === slot.key || !other.assignment
+                            ? []
+                            : [{ name: userById.get(other.assignment.userId)?.name ?? "Someone", tags: crewTagsOf(other.assignment) }])}
                           personName={user?.name ?? "assigned worker"}
                           disabled={actionsDisabled}
                           revealClassName={CREW_ROW_REVEAL}
-                          onSave={(label, half) => void mutate(
-                            { type: "setCrewLabel", slotKey: slot.key, label, half },
+                          onSave={(tags) => void mutate(
+                            { type: "setCrewTags", slotKey: slot.key, tags },
                             `${slot.key}-crew-label`,
                           )}
                         />

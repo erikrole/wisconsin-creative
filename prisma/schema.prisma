@@ -313,6 +313,8 @@ model User {
   sidebarPrefs                  Json?                            @map("sidebar_prefs")
   /// Getting started checklist: rows handled and whether it was hidden. Shared by web and iOS.
   gettingStarted                Json?                            @map("getting_started")
+  /// Admin-ticked onboarding steps on a student profile: { [step]: { at, by } }.
+  onboardingChecks              Json?                            @map("onboarding_checks")
   icsToken                      String?                          @unique @map("ics_token")
   scheduleEventFollows          ScheduleEventFollow[]
   collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)
@@ -2404,6 +2406,8 @@ model ShiftAssignment {
   /// Short position tag shown beside the worker's name, e.g. "SLOW1".
   crewLabel        String?               @map("crew_label")
   crewHalf         ShiftAssignmentHalf?  @map("crew_half")
+  /// Every position label as [{ label, half }]; crewLabel/crewHalf mirror the first. Null on rows saved before multiple labels.
+  crewTags         Json?                 @map("crew_tags")
   notes            String?
   hasConflict      Boolean               @default(false) @map("has_conflict")
   conflictNote     String?               @map("conflict_note")

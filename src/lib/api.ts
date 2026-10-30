@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { bumpScheduleRevision, isScheduleMutation } from "@/lib/schedule-live";
 import { requireAuth, requireKiosk, type AuthUser, type KioskContext } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
@@ -118,11 +119,21 @@ export function withAuth<P extends Record<string, string> = Record<string, strin
       const params = (context?.params ? await context.params : {}) as P;
       const response = await handler(tagRequestJsonParseErrors(req), { user, params });
       deferCompanionProjectionRefresh(req, response);
+      deferScheduleRevisionBump(req, response);
       return response;
     } catch (error) {
       return failRequest(error, req, user);
     }
   };
+}
+
+function deferScheduleRevisionBump(req: Request, response: Response) {
+  if (process.env.NODE_ENV === "test" || !isScheduleMutation(req, response)) return;
+  try {
+    after(bumpScheduleRevision);
+  } catch {
+    void bumpScheduleRevision();
+  }
 }
 
 type KioskCtx<P extends Record<string, string> = Record<string, string>> = {
