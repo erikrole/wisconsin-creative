@@ -36,6 +36,18 @@ export type MatchResult = {
   reasons: string[];
 };
 
+/** Equal evidence cannot identify which individual record belongs to a purchase. */
+export function flagAmbiguousMatches<T extends MatchResult>(matches: T[]): T[] {
+  const counts = new Map<string, number>();
+  const key = (match: MatchResult) => JSON.stringify([match.score, match.reasons]);
+  for (const match of matches) {
+    if (match.confidence === "high") counts.set(key(match), (counts.get(key(match)) ?? 0) + 1);
+  }
+  return matches.map((match) => match.confidence === "high" && (counts.get(key(match)) ?? 0) > 1
+    ? { ...match, confidence: "possible", score: Math.min(match.score, 64), reasons: [...match.reasons, "Multiple records share this evidence; confirm the purchase"] }
+    : match);
+}
+
 const MIN_SUGGESTION_SCORE = 45;
 
 const STOP_WORDS = new Set([

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scoreLineItemMatch, tokens, type MatchItem, type MatchLine } from "@/lib/budget/matching";
+import { flagAmbiguousMatches, scoreLineItemMatch, tokens, type MatchItem, type MatchLine } from "@/lib/budget/matching";
 
 const line: MatchLine = {
   description: "Sony FE 24-70mm f/2.8 GM II Lens",
@@ -20,6 +20,13 @@ const lens: MatchItem = {
 };
 
 describe("budget line to item matching", () => {
+  it("marks equally supported individual records as possible rather than certain", () => {
+    const match = scoreLineItemMatch(line, lens)!;
+    const results = flagAmbiguousMatches([{ ...match, id: "a" }, { ...match, id: "b" }]);
+    expect(results.map((result) => result.confidence)).toEqual(["possible", "possible"]);
+    expect(results[0]!.reasons).toContain("Multiple records share this evidence; confirm the purchase");
+    expect(flagAmbiguousMatches([{ ...match, id: "a" }])[0]!.confidence).toBe("high");
+  });
   it("is high confidence when price, date, and words all agree", () => {
     const result = scoreLineItemMatch(line, lens);
     expect(result?.confidence).toBe("high");
