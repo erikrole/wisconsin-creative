@@ -104,6 +104,11 @@ describe("plan changes", () => {
     expect(varianceCents(unknown)).toBeNull();
   });
 
+  it("flags spending that conflicts with a planned or dropped status", () => {
+    const summary = summarizeBudget([line({ status: "PLANNED", spentCents: 289_00 }), line({ status: "CANCELLED", spentCents: 100_00 })], null);
+    expect(summary.statusSpendConflictCount).toBe(2);
+  });
+
   it("measures each line against the plan", () => {
     expect(varianceCents(lines[0]!)).toBe(10_00);
     expect(varianceCents(lines[1]!)).toBe(-180_00);

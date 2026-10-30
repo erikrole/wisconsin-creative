@@ -121,6 +121,7 @@ export function auditCategory(action: string, entityType: string | undefined): A
 
 /** Sentence for actions without bespoke wording. Past tense, no actor. */
 export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
+  capture_plan: "Saved a budget plan",
   adopted_for_hire: "Brought an applicant on as a hire",
   bulk_marked_maintenance: "Marked several items as needing maintenance",
   bulk_cleared_maintenance: "Cleared maintenance on several items",

@@ -17,6 +17,7 @@ type Summary = {
   unknownSpentCount: number;
   unknownPlannedCount: number;
   unknownStatusCount: number;
+  statusSpendConflictCount: number;
   byCategory: { category: BudgetCategoryValue; plannedCents: number; spentCents: number }[];
 };
 
@@ -54,9 +55,10 @@ export function InsightsPanel({
   const supplierPeak = Math.max(...suppliers.map((row) => row.spentCents), 1);
   const over = overPlanLines(lines);
   const cap = summary.allocationCents ?? summary.plannedCents;
-  const incomplete = summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0;
+  const incomplete = summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0 || summary.statusSpendConflictCount > 0;
   const projectedPct = cap > 0 ? Math.round((summary.forecastCents / cap) * 100) : 0;
   const attention = [
+    summary.statusSpendConflictCount > 0 && { tone: "#F5B800", text: `${summary.statusSpendConflictCount} planned or dropped ${summary.statusSpendConflictCount === 1 ? "line has" : "lines have"} recorded spending; review the purchase status.` },
     over.length > 0 && {
       tone: "#E5484D",
       text: `${over.length} ${over.length === 1 ? "line costs" : "lines cost"} more than budgeted (+${formatCentsCompact(
@@ -70,7 +72,7 @@ export function InsightsPanel({
 
   return (
     <div className="flex flex-col gap-5">
-      {incomplete && <p className="rounded-xl border p-3 text-sm text-muted-foreground">Some amounts or purchase statuses are unknown. Charts show recorded amounts only; a complete forecast is unavailable.</p>}
+      {incomplete && <p className="rounded-xl border p-3 text-sm text-muted-foreground">Some amounts or purchase statuses need review. Charts show recorded amounts only; a complete forecast is unavailable.</p>}
       <section className={card} aria-label="Needs attention">
         <div className={label}>Needs attention</div>
         {attention.length === 0 ? (

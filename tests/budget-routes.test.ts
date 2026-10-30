@@ -107,14 +107,16 @@ describe("saved plan", () => {
     expect((await savePlan(json("POST", "/api/budget/budget-1/submitted-plan"), idContext)).status).toBe(403);
     tx.budget!.findUnique!.mockResolvedValue({ id: "budget-1", submittedCents: null, submittedUnknownCount: 0, submittedAt: null });
     tx.budgetLine!.findMany!.mockResolvedValue([
-      { id: "one", unitCostCents: 100, quantity: 2, plannedTotalKnown: true, plannedOverrideCents: 0, unplanned: false },
-      { id: "two", unitCostCents: 100, quantity: 1, plannedTotalKnown: false, plannedOverrideCents: null, unplanned: false },
-      { id: "late", unitCostCents: 300, quantity: 1, plannedTotalKnown: true, plannedOverrideCents: null, unplanned: true },
+      { id: "one", unitCostCents: 100, quantity: 2, plannedTotalKnown: true, plannedOverrideCents: 0, unplanned: false, submittedIncluded: true, submittedAmountCents: 500 },
+      { id: "two", unitCostCents: 100, quantity: 1, plannedTotalKnown: false, plannedOverrideCents: null, unplanned: false, submittedIncluded: true, submittedAmountCents: null },
+      { id: "late", unitCostCents: 300, quantity: 1, plannedTotalKnown: true, plannedOverrideCents: null, unplanned: true, submittedIncluded: false, submittedAmountCents: null },
     ]);
     tx.budget!.update!.mockResolvedValue({ id: "budget-1", submittedCents: 0, submittedUnknownCount: 1, submittedAt: new Date() });
     expect((await savePlan(json("POST", "/api/budget/budget-1/submitted-plan"), idContext)).status).toBe(200);
     expect(tx.budget!.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ submittedCents: 0, submittedUnknownCount: 1, submittedSource: "admin" }) }));
-    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "capture_plan", after: expect.objectContaining({ lines: [
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({ action: "capture_plan", before: expect.objectContaining({ lines: [
+      { id: "one", included: true, amount: 500 }, { id: "two", included: true, amount: null }, { id: "late", included: false, amount: null },
+    ] }), after: expect.objectContaining({ lines: [
       { id: "one", included: true, amount: 0 }, { id: "two", included: true, amount: null }, { id: "late", included: false, amount: null },
     ] }) }));
   });

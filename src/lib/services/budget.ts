@@ -254,7 +254,7 @@ export async function captureSubmittedPlan(actor: Actor, budgetId: string) {
     if (!before) throw new HttpError(404, "Budget not found.");
     const lines = await tx.budgetLine.findMany({
       where: { budgetId },
-      select: { id: true, unitCostCents: true, quantity: true, plannedTotalKnown: true, plannedOverrideCents: true, unplanned: true },
+      select: { id: true, unitCostCents: true, quantity: true, plannedTotalKnown: true, plannedOverrideCents: true, unplanned: true, submittedIncluded: true, submittedAmountCents: true },
     });
     if (lines.length === 0) throw new HttpError(400, "Add a line before saving a plan.");
     const entries = lines.map((line) => ({
@@ -276,7 +276,7 @@ export async function captureSubmittedPlan(actor: Actor, budgetId: string) {
       data: { submittedCents, submittedUnknownCount, submittedAt: new Date(), submittedSource: "admin" },
       select: { id: true, submittedCents: true, submittedUnknownCount: true, submittedAt: true },
     });
-    await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "budget", entityId: budgetId, action: "capture_plan", before, after: { ...after, lines: entries } });
+    await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "budget", entityId: budgetId, action: "capture_plan", before: { ...before, lines: lines.map((line) => ({ id: line.id, included: line.submittedIncluded, amount: line.submittedAmountCents })) }, after: { ...after, lines: entries } });
     return after;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30_000 });
 }
@@ -990,7 +990,7 @@ export async function getBudgetTrend(name: string): Promise<BudgetTrendRow[]> {
       spentCents: summary.spentCents,
       forecastCents: summary.forecastCents,
       allocationCents: budget.allocationCents,
-      incomplete: summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0 || summary.submittedUnknownCount > 0,
+      incomplete: summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0 || summary.statusSpendConflictCount > 0 || summary.submittedUnknownCount > 0,
     };
   });
 }

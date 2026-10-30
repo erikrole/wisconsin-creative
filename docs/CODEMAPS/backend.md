@@ -175,7 +175,7 @@
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/assignment-workload.ts` | 83 |
-| `src/lib/audit-actions.ts` | 425 |
+| `src/lib/audit-actions.ts` | 426 |
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |

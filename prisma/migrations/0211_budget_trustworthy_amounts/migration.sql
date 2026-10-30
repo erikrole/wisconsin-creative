@@ -34,8 +34,9 @@ WHERE line.id = prices.id AND prices.amount IS NOT NULL;
 -- unknown unit price. An explicit source $0 remains a known zero.
 UPDATE budget_lines
 SET planned_total_known = false
-WHERE justification ~* '(source total was blank|budget total (was )?(marked x|and (actual spend|spent) (were|was) (blank|marked x))|budget total,? and (actual )?spend were blank|budget total and actual spend were blank|budget total and spent were marked x|budget total was blank|budget total marked x)'
-   OR (justification ~* 'no price, quantity or category recorded' AND justification !~* 'total \$0');
+WHERE (unit_cost_cents = 0 OR planned_override_cents = 0)
+  AND (justification ~* '(source total was blank|budget total (was )?(marked x|and (actual spend|spent) (were|was) (blank|marked x))|budget total,? and (actual )?spend were blank|budget total and actual spend were blank|budget total and spent were marked x|budget total was blank|budget total marked x)'
+   OR (justification ~* 'no price, quantity or category recorded' AND justification !~* 'total \$0'));
 
 UPDATE budget_lines
 SET unit_cost_known = false

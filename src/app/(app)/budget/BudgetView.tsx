@@ -241,7 +241,7 @@ function BudgetBody({
   const { summary, lines, budget } = detail;
   const cap = summary.allocationCents ?? summary.plannedCents;
   const over = summary.remainingCents < 0;
-  const incomplete = summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0;
+  const incomplete = summary.unknownSpentCount > 0 || summary.unknownPlannedCount > 0 || summary.unknownStatusCount > 0 || summary.statusSpendConflictCount > 0;
   const [savingPlan, setSavingPlan] = useState(false);
   const [onlyUnlinked, setOnlyUnlinked] = useState(false);
   const needItems = lines.filter((line) => unlinkedUnits(line) > 0);
@@ -423,7 +423,7 @@ function BudgetBody({
   const barTotal = Math.max(cap, summary.forecastCents, 1);
   const shownBudgeted = shown.filter((line) => !line.unplanned).reduce((sum, line) => sum + plannedCents(line), 0);
   const shownSpent = shown.reduce((sum, line) => sum + (netSpentCents(line) ?? 0), 0);
-  const shownIncomplete = shown.some((line) => !line.plannedTotalKnown || (line.status === "PURCHASED" && line.spentCents === null) || !line.statusKnown);
+  const shownIncomplete = shown.some((line) => !line.plannedTotalKnown || (line.status === "PURCHASED" && line.spentCents === null) || !line.statusKnown || ((line.status === "PLANNED" || line.status === "CANCELLED") && (line.spentCents ?? 0) > 0));
 
   return (
     <div className="flex flex-col gap-7">
@@ -442,6 +442,7 @@ function BudgetBody({
         />
         <StatCard label={summary.allocationCents === null ? "Plan difference" : over ? "Over by" : "Remaining"} value={incomplete ? "Unknown" : formatCentsCompact(Math.abs(summary.remainingCents))} tone={incomplete ? "default" : over ? "red" : "green"} helper={incomplete ? "Amounts or statuses need review" : summary.allocationCents === null ? "No allocation set" : undefined} />
       </div>
+      {summary.statusSpendConflictCount > 0 && <p className="rounded-xl border p-3 text-sm text-muted-foreground">{summary.statusSpendConflictCount} planned or dropped {summary.statusSpendConflictCount === 1 ? "line has" : "lines have"} recorded spending. Review the purchase status before relying on the forecast.</p>}
 
       <div className="flex items-center gap-3">
         <div className="flex gap-0.5 rounded-[10px] bg-muted p-[3px]" role="group" aria-label="Budget view">
@@ -688,6 +689,7 @@ function BudgetBody({
                         </div>
                         <span role="cell">
                           <StatusPill status={line.status} known={line.statusKnown} />
+                          {(line.status === "PLANNED" || line.status === "CANCELLED") && (line.spentCents ?? 0) > 0 && <span className="block text-xs text-[#AB6400] dark:text-amber-400">Review spending</span>}
                         </span>
                         <span role="cell" className={`${MONO} text-right`}>{line.quantity}</span>
                         <span role="cell" className={`${MONO} text-right text-muted-foreground`}>{line.unitCostKnown ? formatCentsCompact(line.unitCostCents) : "Unknown"}</span>

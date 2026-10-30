@@ -104,6 +104,7 @@ export type BudgetSummary = {
   unknownSpentCount: number;
   unknownPlannedCount: number;
   unknownStatusCount: number;
+  statusSpendConflictCount: number;
   submittedUnknownCount: number;
   counts: Record<BudgetLineStatusValue, number>;
   byCategory: BudgetCategoryTotal[];
@@ -125,10 +126,12 @@ export function summarizeBudget(
   let unknownSpentCount = 0;
   let unknownPlannedCount = 0;
   let unknownStatusCount = 0;
+  let statusSpendConflictCount = 0;
 
   for (const line of lines) {
     counts[line.status] += 1;
     if (line.statusKnown === false) unknownStatusCount += 1;
+    if ((line.status === "PLANNED" || line.status === "CANCELLED") && (line.spentCents ?? 0) > 0) statusSpendConflictCount += 1;
     if (!line.unplanned) submitted += plannedCents(line);
     if (line.status === "CANCELLED") {
       if (line.submittedIncluded) freed += line.submittedAmountCents ?? 0;
@@ -165,6 +168,7 @@ export function summarizeBudget(
     unknownSpentCount,
     unknownPlannedCount,
     unknownStatusCount,
+    statusSpendConflictCount,
     submittedUnknownCount: snapshot?.submittedCents == null
       ? lines.filter((line) => !line.unplanned && line.plannedTotalKnown === false).length
       : snapshot.submittedUnknownCount,
