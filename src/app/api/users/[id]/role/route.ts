@@ -25,6 +25,10 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   if (user.role !== "ADMIN" && (body.role === "ADMIN" || target.role === "ADMIN")) {
     throw new HttpError(403, "Only admins can change admin roles");
   }
+  // Staff manage students; demoting a peer would open their profile to edits.
+  if (user.role !== "ADMIN" && target.role === "STAFF") {
+    throw new HttpError(403, "Only admins can change staff roles");
+  }
   if (user.role !== "ADMIN" && (body.role === "COLLABORATOR" || target.role === "COLLABORATOR")) {
     throw new HttpError(403, "Only admins can change collaborator access");
   }

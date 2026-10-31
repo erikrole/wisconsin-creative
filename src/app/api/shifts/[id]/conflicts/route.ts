@@ -1,7 +1,7 @@
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ok, HttpError } from "@/lib/http";
-import { requirePermission } from "@/lib/rbac";
+import { requireRole } from "@/lib/rbac";
 import { availabilityConflictNote } from "@/lib/student-availability";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 
@@ -13,7 +13,8 @@ import { visibleActiveUserWhere } from "@/lib/user-visibility";
  * Used to show conflict indicators in the assignment picker UI.
  */
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
-  requirePermission(user.role, "shift", "view");
+  // Feeds the staff assignment picker; the notes name other students' time off.
+  requireRole(user.role, ["ADMIN", "STAFF"]);
   const { id } = params;
 
   const shift = await db.shift.findUnique({

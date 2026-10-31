@@ -16,6 +16,24 @@
   },
   {
     "date": "2026-10-31",
+    "title": "Bug hunt: accounts, times, checkouts",
+    "type": "fixes",
+    "summary": "A sweep across the web app closes several account-safety gaps and fixes reports, checkouts and schedule actions that behaved wrong at the edges.",
+    "details": [
+      "Role and email changes are tighter: staff change student roles only, personal API tokens can't change emails or passwords, and a changed email ends any pending reset link.",
+      "Forgot-password sends at most a few links per address per hour, and a leftover role preview no longer blocks signing back in.",
+      "App Activity counts each day in Madison time, so afternoon and evening use no longer shows under the next day.",
+      "Cancelling an open checkout no longer restocks units already reported lost, and merging checkouts keeps every item on the chosen return time.",
+      "A crew member on a multi-day event can be approved for a timed shift on one of its days, and shifts on cancelled events can't be posted for trade.",
+      "A student's edit of approved time off goes back for review, and the time-off notes behind the assign picker are staff-only."
+    ],
+    "pr": 746,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-10-31",
     "title": "iPhone catches up with the website",
     "type": "improvement",
     "summary": "The iPhone app now shows the department Wi-Fi, lets admins change items on an active checkout, and names every scan and item change in a booking's history.",

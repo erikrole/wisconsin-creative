@@ -10,6 +10,7 @@ type CancelBookingTx = {
   bulkStockMovement: Record<"createMany", MockFn>;
   bookingBulkUnitAllocation: Record<"updateMany", MockFn>;
   bulkSkuUnit: Record<"updateMany", MockFn>;
+  checkinItemReport: Record<"findMany", MockFn>;
   auditLog: Record<"create", MockFn>;
   user: Record<"findUnique", MockFn>;
 };
@@ -27,6 +28,7 @@ vi.mock("@/lib/db", () => {
     bulkStockMovement: { createMany: vi.fn() },
     bookingBulkUnitAllocation: { updateMany: vi.fn() },
     bulkSkuUnit: { updateMany: vi.fn() },
+    checkinItemReport: { findMany: vi.fn().mockResolvedValue([]) },
     auditLog: { create: vi.fn() },
     user: { findUnique: vi.fn().mockResolvedValue({ role: "ADMIN" }) },
   };
@@ -135,6 +137,26 @@ describe("cancelBooking", () => {
         kind: "CHECKIN",
         quantity: 3,
       }],
+    });
+  });
+
+  it("does not restock numbered units already reported lost when an admin cancels an open checkout", async () => {
+    mockTx.booking.findUnique.mockResolvedValue({
+      id: "b-1",
+      kind: "CHECKOUT",
+      status: "OPEN",
+      locationId: "loc-1",
+      bulkItems: [{ id: "bi-1", bulkSkuId: "bulk-1", plannedQuantity: 2, checkedInQuantity: 0, unitAllocations: [] }],
+    });
+    mockTx.checkinItemReport.findMany.mockResolvedValue([
+      { bulkSkuId: null, quantity: null, bulkSkuUnit: { bulkSkuId: "bulk-1" } },
+    ]);
+    mockTx.bulkStockBalance.findMany.mockResolvedValue([{ bulkSkuId: "bulk-1", onHandQuantity: 7 }]);
+
+    await cancelBooking("b-1", "actor-1", { allowActiveCheckout: true });
+
+    expect(mockTx.bulkStockMovement.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ bulkSkuId: "bulk-1", kind: "CHECKIN", quantity: 1 })],
     });
   });
 

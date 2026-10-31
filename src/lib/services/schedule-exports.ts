@@ -1,4 +1,5 @@
 import { BookingKind, BookingStatus, ShiftAssignmentStatus, type Prisma } from "@prisma/client";
+import { appTzDateKey } from "@/lib/app-time";
 import { csvField } from "@/lib/csv";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
@@ -133,7 +134,7 @@ function capped<T>(rows: T[]) {
 }
 
 function filename(type: ScheduleExportType, start: Date, end: Date) {
-  return `schedule-${type}-${start.toISOString().slice(0, 10)}-to-${end.toISOString().slice(0, 10)}.csv`;
+  return `schedule-${type}-${appTzDateKey(start)}-to-${appTzDateKey(end)}.csv`;
 }
 
 async function loadScheduleExportGroups(input: ScheduleExportInput) {
