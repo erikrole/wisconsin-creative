@@ -9,6 +9,7 @@
       "Picking a date or time in the app now means Central time, so a return time chosen on the road matches the labels around it.",
       "The daily checkout charts in Reports labelled each day as the day before for anyone in the Americas."
     ],
+    "pr": 745,
     "platforms": [
       "iOS"
     ]
