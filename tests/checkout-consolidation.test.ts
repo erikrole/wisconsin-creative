@@ -364,6 +364,34 @@ describe("checkout consolidation", () => {
     }));
   });
 
+  it("re-dates moved allocations when the merged checkouts disagreed on the return time", async () => {
+    const tx = transactionClient();
+    const canonical = checkout(ids[0]!);
+    const source = checkout(ids[1]!, { endsAt: new Date("2026-09-05T05:00:00.000Z") });
+    vi.mocked(db.$transaction).mockImplementation(async (callback) => {
+      tx.booking.findMany.mockResolvedValue([source, canonical]);
+      tx.booking.findUniqueOrThrow.mockResolvedValue({ id: canonical.id, status: BookingStatus.OPEN } as never);
+      return callback(tx as never);
+    });
+
+    // Staff keep the canonical checkout's own return time.
+    await mergeCheckouts({
+      ids,
+      actorUserId: "cm000000000000000000000008",
+      actorRole: Role.STAFF,
+      allowContextOverrides: true,
+      endsAt: canonical.endsAt,
+    });
+
+    // The source's allocations arrive with its later due time and would hold
+    // the gear past the booking, so every moved allocation takes the chosen time.
+    expect(tx.assetAllocation.updateMany).toHaveBeenCalledWith({
+      where: { bookingId: ids[0], active: true },
+      data: { endsAt: canonical.endsAt },
+    });
+    expect(checkAvailability).toHaveBeenCalledWith(tx, expect.objectContaining({ endsAt: canonical.endsAt }));
+  });
+
   it("keeps merge repair staff-only", async () => {
     await expect(mergeCheckouts({
       ids,

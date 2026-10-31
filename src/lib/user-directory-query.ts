@@ -1,4 +1,5 @@
 import { Prisma, Role, ShiftArea, StudentYear } from "@prisma/client";
+import { academicYearEnd } from "@/lib/app-time";
 import type { AuthUser } from "@/lib/auth";
 import { visibleUserWhere } from "@/lib/user-visibility";
 import { optionalSportCodeSchema } from "@/lib/validation";
@@ -68,8 +69,7 @@ export function buildUserDirectoryQuery(
   // Year derives an expected graduation year from the Sept→Aug academic
   // calendar, while an explicit override always wins.
   if (!isCollaboratorDirectory && filters.year && DIRECTORY_YEARS.has(filters.year)) {
-    const now = new Date();
-    const acadYearEnd = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear();
+    const acadYearEnd = academicYearEnd();
     const yearGradMap: Record<string, Prisma.UserWhereInput> = {
       SENIOR: { gradYear: acadYearEnd },
       JUNIOR: { gradYear: acadYearEnd + 1 },

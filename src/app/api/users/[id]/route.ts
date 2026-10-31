@@ -310,6 +310,13 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   if (user.role !== "ADMIN" && Object.prototype.hasOwnProperty.call(body, "birthYear")) {
     throw new HttpError(403, "Only the user or an admin can update the birth year");
   }
+  // A leaked token must not re-point a login or lock people out.
+  if (user.apiTokenScope && (body.email !== undefined || body.active !== undefined)) {
+    throw new HttpError(403, "Email and account status changes need a signed-in session, not an API token");
+  }
+  if (body.active === false && target.id === user.id) {
+    throw new HttpError(400, "You cannot deactivate your own account");
+  }
 
   const updateData: Record<string, unknown> = {};
   let deactivationHandled = false;
@@ -485,6 +492,10 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         data: updateData,
         include,
       });
+    // A reset link mailed to the old address must not keep working for the new one.
+    if (updateData.email !== undefined) {
+      await db.passwordResetToken.deleteMany({ where: { userId: id } });
+    }
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       const target = (err.meta?.target as string[] | undefined) ?? [];

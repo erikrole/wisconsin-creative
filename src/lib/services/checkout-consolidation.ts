@@ -505,7 +505,10 @@ export async function mergeCheckouts(args: {
       data: canonicalData,
     });
 
-    if (summary.returnWindowChanged) {
+    // Allocations moved from a source keep that source's due time unless they
+    // are re-dated here, so any disagreement between the merged checkouts
+    // re-dates them, not only a change to the canonical's own time.
+    if (summary.returnWindowChanged || summary.returnWindowConflict) {
       await tx.assetAllocation.updateMany({
         where: { bookingId: summary.canonical.id, active: true },
         data: { endsAt: summary.effectiveEndsAt },

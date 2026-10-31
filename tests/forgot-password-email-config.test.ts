@@ -129,3 +129,28 @@ describe("POST /api/auth/forgot-password", () => {
     delete process.env.RESEND_API_KEY;
   });
 });
+
+describe("forgot-password per-address throttle", () => {
+  it("limits reset emails per address so one inbox cannot be flooded", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 1, resetAt: Date.now() + 60_000 });
+
+    await POST(forgotPasswordRequest(), { params: Promise.resolve({}) });
+
+    expect(checkRateLimit).toHaveBeenCalledWith("forgot:email:user@example.com", expect.objectContaining({ max: expect.any(Number) }));
+  });
+
+  it("answers success without sending when the address is throttled", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    vi.mocked(checkRateLimit)
+      .mockResolvedValueOnce({ allowed: true, remaining: 1, resetAt: Date.now() + 60_000 })
+      .mockResolvedValueOnce({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "user-1", email: "user@example.com", active: true, name: "U" } as never);
+
+    const res = await POST(forgotPasswordRequest(), { params: Promise.resolve({}) });
+
+    expect(res.status).toBe(200);
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(db.passwordResetToken.deleteMany).not.toHaveBeenCalled();
+  });
+});
