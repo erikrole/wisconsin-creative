@@ -390,6 +390,11 @@ struct GuideReaderView: View {
     @State private var loadedGuide: GuideListItem?
     @State private var isLoading = false
     @State private var error: String?
+    /// Which load owns `isLoading`. The `.task` below is cancelled when the
+    /// reader scrolls off screen (a tab switch), and a cancelled load that
+    /// left `isLoading` set made the next `load()` return at once: the guide
+    /// came back as a spinner that never ended.
+    @State private var loadGeneration = 0
 
     private var displayedGuide: GuideListItem {
         loadedGuide ?? guide
@@ -449,20 +454,22 @@ struct GuideReaderView: View {
         // list has the same rule.
         if !forceRefresh, isLoading { return }
 
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
         if forceRefresh { error = nil }
         do {
             let fetched = try await APIClient.shared.guide(slug: guide.slug)
-            guard !Task.isCancelled else { return }
+            guard generation == loadGeneration else { return }
             loadedGuide = fetched
             error = nil
         } catch is CancellationError {
-            return
+            // Nothing newer owns the spinner, so this load must put it down.
         } catch {
-            guard !Task.isCancelled else { return }
+            guard generation == loadGeneration else { return }
             self.error = error.localizedDescription
         }
-        isLoading = false
+        if generation == loadGeneration { isLoading = false }
     }
 }
 

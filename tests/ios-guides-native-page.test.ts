@@ -65,6 +65,10 @@ describe("iOS native Guides page", () => {
     // superseded refresh can be discarded before it lands.
     expect(view).toContain("let fetched = try await APIClient.shared.guide(slug: guide.slug)");
     expect(view).toContain("loadedGuide = fetched");
+    // A load cancelled by a tab switch must put the spinner down itself, or
+    // the next `load()` bails on `isLoading` and the guide never arrives.
+    expect(view).toContain("if generation == loadGeneration { isLoading = false }");
+    expect(view).not.toMatch(/catch is CancellationError \{\s*return\s*\}\s*catch \{\s*guard !Task\.isCancelled/);
     expect(view).toContain('Label("Couldn\'t load this guide", systemImage: "wifi.exclamationmark")');
     expect(view).toContain(".refreshable { await load(forceRefresh: true) }");
     expect(view).toContain("NativeMarkdownArticle(markdown: displayedGuide.markdown, title: displayedGuide.title)");
