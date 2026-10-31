@@ -572,7 +572,7 @@ extension Date {
 
 /// `Text(date, format:)` takes a `FormatStyle` directly and reads the device
 /// zone; this pins Central like the `formatted` overloads above.
-extension Date.FormatStyle {
+extension FormatStyle where Self == Date.FormatStyle {
     static var chicago: Date.FormatStyle {
         var style = Date.FormatStyle.dateTime
         style.timeZone = TimeZone(identifier: "America/Chicago") ?? .current

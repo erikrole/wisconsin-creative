@@ -237,7 +237,7 @@ extension View {
 
 /// `Text(date, format:)` reads the iPad's zone directly; the kiosk clock and
 /// day labels stay on Chicago.
-extension Date.FormatStyle {
+extension FormatStyle where Self == Date.FormatStyle {
     static var chicago: Date.FormatStyle {
         var style = Date.FormatStyle.dateTime
         style.timeZone = KioskTime.timeZone

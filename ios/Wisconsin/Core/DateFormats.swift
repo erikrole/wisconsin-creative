@@ -220,7 +220,7 @@ extension Date {
 /// `Text(date, format:)` and Swift Charts axis labels take a `FormatStyle`
 /// directly, so the `formatted` overloads above never see them and they read
 /// the device zone. Build those styles from here instead.
-extension Date.FormatStyle {
+extension FormatStyle where Self == Date.FormatStyle {
     /// `.dateTime` in America/Chicago, for clock times and day labels.
     static var chicago: Date.FormatStyle {
         var style = Date.FormatStyle.dateTime
