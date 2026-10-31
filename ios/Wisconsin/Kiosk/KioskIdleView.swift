@@ -35,9 +35,6 @@ struct KioskIdleView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let compact = proxy.size.width < KioskLayout.compactBreakpoint || dynamicTypeSize.isAccessibilitySize
-            let rosterWidth = KioskLayout.rosterWidth(for: proxy.size.width)
-
             ZStack {
                 KioskHomeView(
                     locationName: store.info?.locationName,
