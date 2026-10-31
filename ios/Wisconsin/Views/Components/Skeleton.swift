@@ -22,25 +22,6 @@ struct Skeleton: View {
     }
 }
 
-// MARK: - Stat card grid (Home)
-
-struct StatCardSkeleton: View {
-    var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            ForEach(0..<4, id: \.self) { _ in
-                VStack(alignment: .leading, spacing: 10) {
-                    Skeleton(cornerRadius: 4).frame(width: 22, height: 22)
-                    Skeleton().frame(width: 48, height: 28)
-                    Skeleton().frame(width: 84, height: 11)
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
-            }
-        }
-    }
-}
-
 // MARK: - Booking list row
 
 struct BookingRowSkeleton: View {
@@ -96,23 +77,6 @@ struct EventRowSkeleton: View {
             Skeleton().frame(width: 52, height: 13)
         }
         .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Dashboard shift row
-
-struct ShiftRowSkeleton: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            Skeleton(cornerRadius: 8).frame(width: 48, height: 44)
-            VStack(alignment: .leading, spacing: 5) {
-                Skeleton().frame(width: 150, height: 14)
-                Skeleton().frame(width: 100, height: 11)
-            }
-            Spacer()
-        }
-        .padding(10)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

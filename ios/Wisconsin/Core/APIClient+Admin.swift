@@ -191,6 +191,11 @@ extension APIClient {
         return resp.data
     }
 
+    func sharedWifi() async throws -> SharedWifi {
+        let resp: DataWrapper<SharedWifi> = try await perform(request(path: "/api/wifi"))
+        return resp.data
+    }
+
     /// One audited password reveal. The caller must not log or persist the result.
     func softwareLoginPassword(id: String) async throws -> String {
         struct Secret: Decodable { let password: String }

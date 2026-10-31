@@ -1208,3 +1208,38 @@ extension String {
         }
     }
 }
+
+/// One row from `GET /api/users/{id}/shifts`: every shift a person is on, past
+/// and upcoming, newest first. Staff and admins only (web #731 person sheet).
+struct PersonShift: Decodable, Identifiable, Sendable {
+    let id: String
+    let status: String
+    let crewLabel: String?
+    let area: String
+    let startsAt: Date
+    let endsAt: Date
+    let event: Event
+
+    struct Event: Decodable, Sendable {
+        let id: String
+        let summary: String
+        let allDay: Bool
+        let sportCode: String?
+        let opponent: String?
+        let isHome: Bool?
+    }
+
+    /// The Schedule's own title rule: "Football vs Iowa", else the summary.
+    var title: String {
+        if let opponent = event.opponent?.nonBlankText {
+            let name = scheduleOpponentParts(opponent).name
+            let side = event.isHome == false ? "at \(name)" : "vs \(name)"
+            return [sportLabel(event.sportCode), side].compactMap { $0 }.joined(separator: " ")
+        }
+        let summary = cleanScheduleEventSummary(event.summary)
+        if !summary.isEmpty { return summary }
+        return sportLabel(event.sportCode) ?? "Event"
+    }
+
+    var isRequested: Bool { status == "REQUESTED" }
+}

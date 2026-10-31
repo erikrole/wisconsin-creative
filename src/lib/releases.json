@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-10-31",
+    "title": "iPhone catches up with the website",
+    "type": "improvement",
+    "summary": "The iPhone app now shows the department Wi-Fi, lets admins change items on an active checkout, and names every scan and item change in a booking's history.",
+    "details": [
+      "Find the Wi-Fi network and password under Shared logins, with a QR code to show someone else.",
+      "Admins can add an available item from a checkout's menu, or swipe an item to take it off. Taking off the last item closes the checkout.",
+      "Booking history names each item scanned out or back in, with a run of scans shown as one line.",
+      "Staff can open All shifts on a person's profile to see every shift they've been on, upcoming and past."
+    ],
+    "pr": 743,
+    "platforms": [
+      "iOS"
+    ]
+  },
+  {
     "date": "2026-10-30",
     "title": "Clearer purchase matches",
     "type": "fixes",

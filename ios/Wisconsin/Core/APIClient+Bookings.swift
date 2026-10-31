@@ -100,6 +100,36 @@ extension APIClient {
         return response.data
     }
 
+    /// Admin only: items that can go out on an active checkout right now.
+    func availableAssetsForCheckout(search: String) async throws -> [CheckoutAddCandidate] {
+        struct Page: Decodable { let assets: [CheckoutAddCandidate] }
+        var items: [URLQueryItem] = [
+            .init(name: "only_available", value: "true"),
+            .init(name: "limit", value: "20"),
+        ]
+        if !search.isEmpty { items.append(.init(name: "q", value: search)) }
+        let response: DataWrapper<Page> = try await perform(request(path: "/api/assets/picker-search", queryItems: items))
+        return response.data.assets
+    }
+
+    /// Admin only: put one more numbered item on an active checkout.
+    func addCheckoutItem(bookingId: String, assetId: String) async throws -> Booking {
+        struct Body: Encodable { let assetId: String }
+        var req = request(path: "/api/bookings/\(bookingId)/items", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(assetId: assetId))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
+    /// Admin only: take a numbered item off an active checkout without a scan.
+    func removeCheckoutItem(bookingId: String, assetId: String) async throws -> Booking {
+        struct Body: Encodable { let assetId: String }
+        var req = request(path: "/api/bookings/\(bookingId)/items", method: "DELETE")
+        req.httpBody = try JSONEncoder().encode(Body(assetId: assetId))
+        let response: DataWrapper<Booking> = try await perform(req)
+        return response.data
+    }
+
     // MARK: - Booking drafts
 
     /// Current user's saved drafts, newest first. The server prunes drafts
