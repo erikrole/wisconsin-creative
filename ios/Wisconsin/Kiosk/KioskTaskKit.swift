@@ -106,7 +106,7 @@ struct KioskTaskHeader: View {
 struct KioskHeaderClock: View {
     var body: some View {
         TimelineView(.everyMinute) { context in
-            Text(context.date, format: .dateTime.hour().minute())
+            Text(context.date, format: .chicago.hour().minute())
                 .font(KioskType.headerClock)
                 .foregroundStyle(KioskText.tertiary)
         }

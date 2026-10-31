@@ -55,6 +55,13 @@ final class NotificationPrefsViewModel {
     /// Quiet hours and levels are evaluated in the app timezone, not the device's.
     nonisolated static let appTimeZone = TimeZone(identifier: "America/Chicago") ?? .current
 
+    /// The device calendar on the app zone, for SwiftUI's environment.
+    nonisolated static var appCalendar: Calendar {
+        var calendar = Calendar.current
+        calendar.timeZone = appTimeZone
+        return calendar
+    }
+
     private static let isoWithFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
