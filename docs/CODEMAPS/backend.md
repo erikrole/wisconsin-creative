@@ -40,9 +40,9 @@
 | `src/lib/services/candidate-scoring.ts` | 594 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkin-item-reports.ts` | 645 |
-| `src/lib/services/checkout-consolidation.ts` | 596 |
+| `src/lib/services/checkout-consolidation.ts` | 599 |
 | `src/lib/services/checkout-escalation-notifications.ts` | 504 |
-| `src/lib/services/checkout-lifecycle.ts` | 668 |
+| `src/lib/services/checkout-lifecycle.ts` | 671 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/checkout-reports.ts` | 370 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -113,7 +113,7 @@
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 470 |
 | `src/lib/services/schedule-change-history.ts` | 544 |
-| `src/lib/services/schedule-exports.ts` | 522 |
+| `src/lib/services/schedule-exports.ts` | 523 |
 | `src/lib/services/schedule-health.ts` | 383 |
 | `src/lib/services/schedule-notification-policy.ts` | 95 |
 | `src/lib/services/schedule-open-work.ts` | 604 |
@@ -122,11 +122,11 @@
 | `src/lib/services/schedule-working-copy.ts` | 1268 |
 | `src/lib/services/scoreboard.ts` | 290 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
-| `src/lib/services/shift-assignments.ts` | 727 |
+| `src/lib/services/shift-assignments.ts` | 731 |
 | `src/lib/services/shift-generation.ts` | 676 |
 | `src/lib/services/shift-notifications.ts` | 1131 |
 | `src/lib/services/shift-trade-emails.ts` | 70 |
-| `src/lib/services/shift-trades-board.ts` | 485 |
+| `src/lib/services/shift-trades-board.ts` | 486 |
 | `src/lib/services/shift-trades-close.ts` | 229 |
 | `src/lib/services/shift-trades-list.ts` | 244 |
 | `src/lib/services/shift-trades-review.ts` | 405 |
@@ -167,7 +167,7 @@
 | `src/lib/api.ts` | 208 |
 | `src/lib/app-product-page.ts` | 183 |
 | `src/lib/app-product-pages.ts` | 170 |
-| `src/lib/app-time.ts` | 257 |
+| `src/lib/app-time.ts` | 266 |
 | `src/lib/apps-live-versions.ts` | 204 |
 | `src/lib/apps-page.ts` | 421 |
 | `src/lib/asset-attachments.ts` | 166 |
@@ -256,7 +256,7 @@
 | `src/lib/guide-ranking.ts` | 80 |
 | `src/lib/guide-search-result.ts` | 49 |
 | `src/lib/guides.ts` | 369 |
-| `src/lib/http.ts` | 130 |
+| `src/lib/http.ts` | 139 |
 | `src/lib/ics-token.ts` | 26 |
 | `src/lib/image-search-modal.ts` | 59 |
 | `src/lib/image-search.ts` | 231 |
@@ -319,7 +319,7 @@
 | `src/lib/resource-import.ts` | 186 |
 | `src/lib/resource-search.ts` | 124 |
 | `src/lib/return-to.ts` | 42 |
-| `src/lib/role-preview.ts` | 226 |
+| `src/lib/role-preview.ts` | 227 |
 | `src/lib/sanitize.ts` | 40 |
 | `src/lib/schedule-assignee.ts` | 27 |
 | `src/lib/schedule-assignment-eligibility.ts` | 71 |

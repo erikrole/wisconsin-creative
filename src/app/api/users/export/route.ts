@@ -1,4 +1,4 @@
-import { appTzDateKey } from "@/lib/app-time";
+import { academicYearEnd, appTzDateKey } from "@/lib/app-time";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
 import { HttpError } from "@/lib/http";
@@ -28,7 +28,7 @@ function deriveYear(
 ): StudentYear | null {
   if (override) return override;
   if (gradYear == null) return null;
-  const acadYearEnd = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear();
+  const acadYearEnd = academicYearEnd(now);
   const remaining = gradYear - acadYearEnd;
   if (remaining <= -1) return "GRAD";
   if (remaining === 0) return "SENIOR";

@@ -10,6 +10,7 @@ import { createSystemAuditEntry } from "@/lib/audit";
 
 const RESET_TOKEN_EXPIRY_MS = 1000 * 60 * 60; // 1 hour
 const FORGOT_LIMIT = { max: 20, windowMs: 15 * 60 * 1000 }; // per IP; sized for shared NAT
+const FORGOT_EMAIL_LIMIT = { max: 3, windowMs: 60 * 60 * 1000 }; // per address; one inbox, one link
 
 export const POST = withHandler(async (req) => {
   const ip = getClientIp(req);
@@ -26,8 +27,10 @@ export const POST = withHandler(async (req) => {
     });
   }
 
-  // Always return success to prevent email enumeration
-  const user = await db.user.findUnique({ where: { email } });
+  // Always return success to prevent email enumeration. The per-address
+  // budget is spent before the lookup so unknown addresses cost the same.
+  const perAddress = await checkRateLimit(`forgot:email:${email}`, FORGOT_EMAIL_LIMIT);
+  const user = perAddress.allowed ? await db.user.findUnique({ where: { email } }) : null;
 
   if (user?.active) {
     // Delete any existing reset tokens for this user

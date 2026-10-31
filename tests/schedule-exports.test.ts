@@ -140,6 +140,17 @@ describe("schedule exports", () => {
     expect(result.truncated).toBe(false);
   });
 
+  it("names the file by Chicago calendar days, so a week ending Sunday night is not dated Monday", async () => {
+    const result = await buildScheduleExport({
+      ...baseInput,
+      type: "roster",
+      parsedStartDate: new Date("2026-10-05T05:00:00.000Z"),
+      parsedEndDate: new Date("2026-10-12T04:59:59.999Z"),
+    });
+
+    expect(result.filename).toBe("schedule-roster-2026-10-05-to-2026-10-11.csv");
+  });
+
   it("summarizes hours by active worker only", async () => {
     const result = await buildScheduleExport({ ...baseInput, type: "hours" });
 

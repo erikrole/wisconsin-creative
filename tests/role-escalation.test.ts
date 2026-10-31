@@ -122,6 +122,16 @@ describe("PATCH /api/users/[id]/role", () => {
     expect(res.status).toBe(403);
   });
 
+  it("STAFF can only change student roles, never another staff member's", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(authUser("staff-1", Role.STAFF));
+    vi.mocked(db.user.findUnique).mockResolvedValue(userRoleResult("target-1", Role.STAFF));
+
+    const res = await PATCH(makeRequest({ role: "STUDENT" }), { params: Promise.resolve({ id: "target-1" }) });
+
+    expect(res.status).toBe(403);
+    expect(db.user.update).not.toHaveBeenCalled();
+  });
+
   it("cannot change own role", async () => {
     vi.mocked(requireAuth).mockResolvedValue(authUser("admin-1", Role.ADMIN));
     vi.mocked(db.user.findUnique).mockResolvedValue(userRoleResult("admin-1", Role.ADMIN));

@@ -3,7 +3,10 @@ import { Prisma, Role } from "@prisma/client";
 
 const mocks = vi.hoisted(() => ({
   requireAuth: vi.fn(),
-  db: { user: { findUnique: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn() } },
+  db: {
+    user: { findUnique: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn() },
+    passwordResetToken: { deleteMany: vi.fn() },
+  },
   audit: vi.fn(),
   deactivate: vi.fn(),
   revoke: vi.fn(),
@@ -223,6 +226,51 @@ describe("PATCH /api/users/[id]", () => {
       const response = await patch({ directReportId: managerId });
 
       expect((await response.json()).error).toBe("Direct report chain is too deep");
+    });
+  });
+
+  describe("account takeover guards", () => {
+    it("refuses an email change from an API token", async () => {
+      mocks.requireAuth.mockResolvedValue({ ...admin, apiTokenScope: "WRITE" });
+
+      const response = await patch({ email: "attacker@example.com" });
+
+      expect(response.status).toBe(403);
+      expect(mocks.db.user.update).not.toHaveBeenCalled();
+    });
+
+    it("refuses to deactivate from an API token", async () => {
+      mocks.requireAuth.mockResolvedValue({ ...admin, apiTokenScope: "WRITE" });
+
+      expect((await patch({ active: false })).status).toBe(403);
+      expect(mocks.deactivate).not.toHaveBeenCalled();
+    });
+
+    it("still lets an API token edit ordinary profile fields", async () => {
+      mocks.requireAuth.mockResolvedValue({ ...admin, apiTokenScope: "WRITE" });
+
+      expect((await patch({ name: "Ada L." })).status).toBe(200);
+    });
+
+    it("drops pending password reset links when the login email changes", async () => {
+      await patch({ email: "new@example.com" });
+
+      expect(mocks.db.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { userId: studentId } });
+    });
+
+    it("keeps reset links when the email stays the same", async () => {
+      await patch({ name: "Ada L." });
+
+      expect(mocks.db.passwordResetToken.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("refuses to deactivate yourself", async () => {
+      mocks.db.user.findUnique.mockResolvedValueOnce({ ...student, id: "admin-1", role: Role.ADMIN });
+
+      const response = await patch({ active: false }, "admin-1");
+
+      expect(response.status).toBe(400);
+      expect(mocks.deactivate).not.toHaveBeenCalled();
     });
   });
 

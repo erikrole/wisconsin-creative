@@ -5,6 +5,7 @@ import {
   normalizeAllDayToUtcMidnight,
   formatAllDayDate,
   appTzDateKey,
+  academicYearEnd,
   appTzDayRange,
   appTzWeekday,
   startOfAppWeek,
@@ -132,5 +133,14 @@ describe("Madison week and month", () => {
     expect(endOfAppWeek(now, "America/Chicago").toISOString()).toBe("2027-01-04T06:00:00.000Z");
     expect(startOfAppMonth(now, "America/Chicago").toISOString()).toBe("2026-12-01T06:00:00.000Z");
     expect(endOfAppMonth(now, "America/Chicago").toISOString()).toBe("2027-01-01T06:00:00.000Z");
+  });
+});
+
+describe("academicYearEnd", () => {
+  it("rolls to the next academic year on August 1 in Chicago, not in UTC", () => {
+    // 9 PM CDT on July 31 is already August 1 in UTC.
+    expect(academicYearEnd(new Date("2026-08-01T02:00:00Z"))).toBe(2026);
+    expect(academicYearEnd(new Date("2026-08-01T05:00:00Z"))).toBe(2027);
+    expect(academicYearEnd(new Date("2027-03-15T12:00:00Z"))).toBe(2027);
   });
 });

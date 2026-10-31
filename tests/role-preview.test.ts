@@ -32,6 +32,10 @@ describe("role preview policy", () => {
     expect(isRolePreviewBlockedRequest(request("/api/admin/role-preview", "POST"))).toBe(false);
     expect(isRolePreviewBlockedRequest(request("/api/admin/role-preview", "DELETE"))).toBe(false);
     expect(isRolePreviewBlockedRequest(request("/api/auth/logout", "POST"))).toBe(false);
+    // A stale preview cookie must never lock an admin out of signing back in.
+    expect(isRolePreviewBlockedRequest(request("/api/auth/login", "POST"))).toBe(false);
+    expect(isRolePreviewBlockedRequest(request("/api/auth/passkey/authentication/verify", "POST"))).toBe(false);
+    expect(isRolePreviewBlockedRequest(request("/api/auth/forgot-password", "POST"))).toBe(false);
     expect(isRolePreviewBlockedRequest(request("/api/items", "POST"))).toBe(true);
     expect(isRolePreviewBlockedRequest(request("/api/items/export?format=csv"))).toBe(true);
     expect(isRolePreviewBlockedRequest(request("/api/signatures/artifacts/revision/svg"))).toBe(true);

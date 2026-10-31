@@ -208,6 +208,23 @@ describe("postTrade", () => {
     await expect(postTrade("bad-id", { id: "user-1" })).rejects.toThrow("Assignment not found");
   });
 
+  it("refuses to post a shift whose event was cancelled or hidden", async () => {
+    const cancelled = {
+      ...makeShiftAssignment({ userId: "user-1" }),
+      shift: { ...makeShift(), shiftGroup: { event: { id: "ev-1", summary: "Game", status: "CANCELLED" } } },
+    };
+    mockTx.shiftAssignment.findUnique.mockResolvedValue(cancelled);
+    await expect(postTrade(cancelled.id, { id: "user-1" })).rejects.toThrow("cancelled");
+
+    const hidden = {
+      ...makeShiftAssignment({ userId: "user-1" }),
+      shift: { ...makeShift(), shiftGroup: { event: { id: "ev-2", summary: "Game", status: "CONFIRMED", isHidden: true } } },
+    };
+    mockTx.shiftAssignment.findUnique.mockResolvedValue(hidden);
+    await expect(postTrade(hidden.id, { id: "user-1" })).rejects.toThrow("no longer on the schedule");
+    expect(mockTx.shiftTrade.create).not.toHaveBeenCalled();
+  });
+
   it("throws 403 when user doesn't own the assignment", async () => {
     const assignment = {
       ...makeShiftAssignment({ userId: "other-user" }),

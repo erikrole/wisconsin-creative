@@ -37,3 +37,14 @@ describe("zod validation error response shape", () => {
     expect("errors" in parsed.error).toBe(false);
   });
 });
+
+describe("Prisma reference errors", () => {
+  it("answers a dangling foreign key with 400 and a missing row with 404 instead of 500", async () => {
+    const { Prisma } = await import("@prisma/client");
+    const fk = new Prisma.PrismaClientKnownRequestError("fk", { code: "P2003", clientVersion: "test" });
+    const missing = new Prisma.PrismaClientKnownRequestError("missing", { code: "P2025", clientVersion: "test" });
+
+    expect(fail(fk).status).toBe(400);
+    expect(fail(missing).status).toBe(404);
+  });
+});
