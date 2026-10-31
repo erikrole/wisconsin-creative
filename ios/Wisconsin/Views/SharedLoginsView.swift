@@ -37,7 +37,7 @@ final class SharedLoginsViewModel {
 
         do {
             // Wi-Fi is a bonus section: if it fails, the logins still show.
-            async let wifiResult = try? APIClient.shared.sharedWifi()
+            async let wifiResult = try? await APIClient.shared.sharedWifi()
             let page = try await APIClient.shared.softwareLogins()
             let loadedWifi = await wifiResult
             guard generation == loadGeneration else { return }
@@ -181,6 +181,11 @@ struct SharedLoginsView: View {
                 if phase != .active { vm.clearSecrets() }
             }
             .toast($vm.toast)
+            // On the screen, not the row: a List can drop an offscreen row and
+            // its sheet with it.
+            .sheet(isPresented: $showWifiQR) {
+                if let wifi = vm.wifi { WifiQRSheet(wifi: wifi) }
+            }
     }
 
     @ViewBuilder
@@ -309,9 +314,6 @@ struct SharedLoginsView: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, Brand.Space.xs)
-        .sheet(isPresented: $showWifiQR) {
-            WifiQRSheet(wifi: wifi)
-        }
     }
 
     @ViewBuilder
@@ -437,7 +439,6 @@ private extension View {
         }
     }
 }
-
 
 /// Big code for someone else's camera: the standard Wi-Fi join string, drawn
 /// with Core Image so it works offline.

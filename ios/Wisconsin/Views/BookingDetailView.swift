@@ -368,20 +368,23 @@ struct BookingDetailView: View {
             }
             Button("Keep Booking", role: .cancel) {}
         } message: {
-            Text("This cannot be undone.")
+            // Admins can cancel a checkout that is already out (web #721).
+            Text(booking?.status == .open
+                ? "Everything on it is marked returned without a scan. This cannot be undone."
+                : "This cannot be undone.")
         }
         .confirmationDialog(
-            "Take \(itemToRemove?.asset.itemListPrimaryTitle ?? "this item") off this checkout?",
+            "Remove \(itemToRemove?.asset.itemListPrimaryTitle ?? "this item") from this checkout?",
             isPresented: Binding(get: { itemToRemove != nil }, set: { if !$0 { itemToRemove = nil } }),
             titleVisibility: .visible,
             presenting: itemToRemove
         ) { item in
-            Button("Remove item", role: .destructive) {
+            Button("Remove", role: .destructive) {
                 Task { await removeItem(item) }
             }
-            Button("Keep item", role: .cancel) {}
+            Button("Keep", role: .cancel) {}
         } message: { _ in
-            Text("Use this when the item never left or came back without a scan. Taking off the last item closes the checkout.")
+            Text("It's marked returned without a scan. Removing the last item closes the checkout.")
         }
         .sheet(isPresented: $showAddItem) {
             if let booking {
@@ -593,7 +596,8 @@ struct BookingDetailView: View {
         if isActioning { return }
         isActioning = true
         do {
-            install(try await APIClient.shared.removeCheckoutItem(bookingId: bookingId, assetId: item.assetId))
+            let updated = try await APIClient.shared.removeCheckoutItem(bookingId: bookingId, assetId: item.assetId)
+            install(updated)
             Haptics.success()
         } catch {
             self.error = error.localizedDescription
@@ -1367,9 +1371,13 @@ private struct EquipmentSection: View {
             }
             ForEach(serializedItems) { item in
                 serializedRow(item)
-                    .swipeActions(edge: .trailing) {
-                        if let onRemoveItem, item.allocationStatus?.lowercased() != "returned" {
-                            Button(role: .destructive) { onRemoveItem(item) } label: {
+                    // Same rule as the web row menu: only gear still out.
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        if let onRemoveItem, item.allocationStatus?.lowercased() == "active" {
+                            Button(role: .destructive) {
+                                Haptics.warning()
+                                onRemoveItem(item)
+                            } label: {
                                 Label("Remove", systemImage: "minus.circle")
                             }
                         }

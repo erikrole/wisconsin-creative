@@ -63,6 +63,9 @@ struct UserDetailView: View {
                                 openBooking: { pushedBookingId = $0 },
                                 openShift: { selectedShift = $0 }
                             )
+                            if canSeeAllShifts {
+                                PersonShiftsLinkCard(userId: detail.id, name: detail.name)
+                            }
                             if isViewingSelf && MyHoursAccess.canRead(role: session.currentUser?.role) {
                                 MyHoursCard(
                                     hours: ownHours,
@@ -249,6 +252,12 @@ struct UserDetailView: View {
 
     private var isViewingSelf: Bool {
         session.currentUser?.id == userId
+    }
+
+    /// The person's whole shift history is a staff view, like the website's.
+    private var canSeeAllShifts: Bool {
+        let role = session.currentUser?.role
+        return role == "STAFF" || role == "ADMIN"
     }
 
     private func load() async {
@@ -2052,3 +2061,138 @@ enum BadgePreviewData {
 }
 
 #endif
+
+// MARK: - All shifts
+
+/// Opens every shift a person has been on, the web Schedule's person sheet.
+private struct PersonShiftsLinkCard: View {
+    let userId: String
+    let name: String
+
+    var body: some View {
+        NavigationLink {
+            PersonShiftsView(userId: userId, name: name)
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(Color.statusBackground(.green))
+                    Image(systemName: "calendar")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.statusText(.green))
+                }
+                .frame(width: 38, height: 38)
+                .accessibilityHidden(true)
+
+                Text("All shifts")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
+            .padding(Brand.Space.md)
+        }
+        .buttonStyle(.plain)
+        .brandCard(padding: 0)
+    }
+}
+
+struct PersonShiftsView: View {
+    let userId: String
+    let name: String
+
+    @State private var shifts: [PersonShift]?
+    @State private var error: String?
+
+    private var upcoming: [PersonShift] {
+        // Server order is newest first; upcoming reads soonest first.
+        Array((shifts ?? []).filter { $0.endsAt > .now }.reversed())
+    }
+
+    private var past: [PersonShift] {
+        (shifts ?? []).filter { $0.endsAt <= .now }
+    }
+
+    var body: some View {
+        List {
+            if !upcoming.isEmpty {
+                Section("Upcoming") {
+                    ForEach(upcoming) { row($0) }
+                }
+            }
+            if !past.isEmpty {
+                Section("Past · \(past.count)") {
+                    ForEach(past) { row($0) }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .overlay {
+            if let error, shifts == nil {
+                ContentUnavailableView {
+                    Label("Couldn't load shifts", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(error)
+                } actions: {
+                    Button("Retry") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
+            } else if shifts == nil {
+                ProgressView()
+            } else if shifts?.isEmpty == true {
+                ContentUnavailableView("No shifts yet", systemImage: "calendar")
+            }
+        }
+        .navigationTitle(name)
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .refreshable { await load() }
+    }
+
+    private func row(_ shift: PersonShift) -> some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(venueRailColor(isHome: shift.event.isHome))
+                .frame(width: 4)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(shift.title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                Text(when(shift))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(([shift.area.shiftAreaLabel, shift.crewLabel?.nonBlankText].compactMap { $0 }).joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            if shift.isRequested {
+                StatusPill(label: "Requested", tone: .orange)
+            }
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func when(_ shift: PersonShift) -> String {
+        let day = shift.startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().year())
+        if shift.event.allDay { return "\(day) · All day" }
+        return "\(day) · \(shift.startsAt.gearTime) – \(shift.endsAt.gearTime)"
+    }
+
+    private func load() async {
+        do {
+            shifts = try await APIClient.shared.personShifts(userId: userId)
+            error = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            self.error = error.localizedDescription
+        }
+    }
+}

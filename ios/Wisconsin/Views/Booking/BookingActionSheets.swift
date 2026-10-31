@@ -462,7 +462,7 @@ struct AddCheckoutItemSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
-    @State private var results: [CheckoutAddCandidate] = []
+    @State private var results: [CheckoutAddCandidate]?
     @State private var addingId: String?
     @State private var error: String?
 
@@ -474,19 +474,24 @@ struct AddCheckoutItemSheet: View {
                         .font(.footnote)
                         .foregroundStyle(Color.statusText(.red))
                 }
-                ForEach(results) { asset in
+                ForEach(results ?? []) { asset in
                     Button {
                         Task { await add(asset) }
                     } label: {
                         HStack(spacing: 10) {
                             AssetThumbnail(imageUrl: asset.imageUrl, size: 40)
+                            // Tag first, like the checkout's own gear list.
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(asset.name ?? asset.assetTag)
-                                    .font(.body)
-                                    .lineLimit(1)
                                 Text(asset.assetTag)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.gothamBold(size: 16))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                if let name = asset.name.nonBlankText, !name.isSameListText(as: asset.assetTag) {
+                                    Text(name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
                             }
                             Spacer()
                             if addingId == asset.id { ProgressView() }
@@ -497,7 +502,9 @@ struct AddCheckoutItemSheet: View {
                 }
             }
             .overlay {
-                if results.isEmpty {
+                if results == nil {
+                    ProgressView()
+                } else if results?.isEmpty == true {
                     ContentUnavailableView("No available items", systemImage: "shippingbox")
                 }
             }
@@ -514,10 +521,17 @@ struct AddCheckoutItemSheet: View {
             .task(id: query) {
                 try? await Task.sleep(for: .milliseconds(250))
                 guard !Task.isCancelled else { return }
-                if let found = try? await APIClient.shared.availableAssetsForCheckout(
-                    search: query.trimmingCharacters(in: .whitespacesAndNewlines)
-                ) {
+                do {
+                    let found = try await APIClient.shared.availableAssetsForCheckout(
+                        search: query.trimmingCharacters(in: .whitespacesAndNewlines)
+                    )
+                    guard !Task.isCancelled else { return }
                     results = found
+                    error = nil
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    if results == nil { results = [] }
+                    self.error = error.localizedDescription
                 }
             }
         }
@@ -527,7 +541,8 @@ struct AddCheckoutItemSheet: View {
         addingId = asset.id
         error = nil
         do {
-            onAdded(try await APIClient.shared.addCheckoutItem(bookingId: bookingId, assetId: asset.id))
+            let updated = try await APIClient.shared.addCheckoutItem(bookingId: bookingId, assetId: asset.id)
+            onAdded(updated)
             Haptics.success()
             dismiss()
         } catch {
