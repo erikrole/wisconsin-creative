@@ -1,0 +1,2 @@
+/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-bughunt/ios/Wisconsin/App/AppIntentsData.swift:552:19: warning: 'requestConfirmation(result:confirmationActionName:showPrompt:)' is deprecated: Please use requestConfirmation(conditions:actionName:dialog:) or requestConfirmation(conditions:actionName:dialog:showDialogAsPrompt:content:) [#DeprecatedDeclaration]
+/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-bughunt/ios/Wisconsin/Views/GuidesView.swift:1273:5: warning: 'internal' modifier conflicts with extension's default access of 'private'

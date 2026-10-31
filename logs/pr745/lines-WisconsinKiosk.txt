@@ -1,0 +1,3 @@
+    |                                         `- error: type 'FormatStyle' has no member 'chicago'
+/Users/role/Code/wisconsin-creative/.claude/worktrees/ios-bughunt-745/ios/Wisconsin/Kiosk/KioskTaskKit.swift:109:41: error: type 'FormatStyle' has no member 'chicago'
+warning: 'UIRequiresFullScreen' has been deprecated starting in iOS 26.0 and will be ignored in a future release. See the UIRequiresFullScreen documentation for more details. (in target 'WisconsinKiosk' from project 'Wisconsin')

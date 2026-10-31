@@ -1,0 +1,11 @@
+Publishing changes from background: 0
+ForEach: 46
+duplicate: 0
+Unable to simultaneously satisfy: 0
+Main Thread Checker: 0
+Fault: 0
+Thread Performance Checker: 0
+AttributeGraph: 107
+precondition: 0
+Invalid frame dimension: 0
+ActivityKit: 700

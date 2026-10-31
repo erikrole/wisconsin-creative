@@ -1,0 +1,39 @@
+diff --git a/ios/Wisconsin/Core/DateFormats.swift b/ios/Wisconsin/Core/DateFormats.swift
+index 9fefa3d40..e17c942a1 100644
+--- a/ios/Wisconsin/Core/DateFormats.swift
++++ b/ios/Wisconsin/Core/DateFormats.swift
+@@ -220,7 +220,7 @@ extension Date {
+ /// `Text(date, format:)` and Swift Charts axis labels take a `FormatStyle`
+ /// directly, so the `formatted` overloads above never see them and they read
+ /// the device zone. Build those styles from here instead.
+-extension Date.FormatStyle {
++extension FormatStyle where Self == Date.FormatStyle {
+     /// `.dateTime` in America/Chicago, for clock times and day labels.
+     static var chicago: Date.FormatStyle {
+         var style = Date.FormatStyle.dateTime
+diff --git a/ios/Wisconsin/Kiosk/KioskDateFormatting.swift b/ios/Wisconsin/Kiosk/KioskDateFormatting.swift
+index 603aaa1b3..c24bfba4e 100644
+--- a/ios/Wisconsin/Kiosk/KioskDateFormatting.swift
++++ b/ios/Wisconsin/Kiosk/KioskDateFormatting.swift
+@@ -237,7 +237,7 @@ extension View {
+ 
+ /// `Text(date, format:)` reads the iPad's zone directly; the kiosk clock and
+ /// day labels stay on Chicago.
+-extension Date.FormatStyle {
++extension FormatStyle where Self == Date.FormatStyle {
+     static var chicago: Date.FormatStyle {
+         var style = Date.FormatStyle.dateTime
+         style.timeZone = KioskTime.timeZone
+diff --git a/ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift b/ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift
+index a2fd10a17..a1918baa8 100644
+--- a/ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift
++++ b/ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift
+@@ -572,7 +572,7 @@ extension Date {
+ 
+ /// `Text(date, format:)` takes a `FormatStyle` directly and reads the device
+ /// zone; this pins Central like the `formatted` overloads above.
+-extension Date.FormatStyle {
++extension FormatStyle where Self == Date.FormatStyle {
+     static var chicago: Date.FormatStyle {
+         var style = Date.FormatStyle.dateTime
+         style.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
