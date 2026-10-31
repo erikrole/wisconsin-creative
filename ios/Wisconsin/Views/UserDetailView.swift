@@ -2109,13 +2109,14 @@ struct PersonShiftsView: View {
     @State private var shifts: [PersonShift]?
     @State private var error: String?
 
+    /// Soonest first.
     private var upcoming: [PersonShift] {
-        // Server order is newest first; upcoming reads soonest first.
-        Array((shifts ?? []).filter { $0.endsAt > .now }.reversed())
+        (shifts ?? []).filter { $0.endsAt > .now }.sorted { $0.startsAt < $1.startsAt }
     }
 
+    /// Most recent first.
     private var past: [PersonShift] {
-        (shifts ?? []).filter { $0.endsAt <= .now }
+        (shifts ?? []).filter { $0.endsAt <= .now }.sorted { $0.startsAt > $1.startsAt }
     }
 
     var body: some View {
