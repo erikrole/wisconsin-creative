@@ -19,6 +19,8 @@ struct BookingDetailView: View {
     @State private var showCloseRemaining = false
     @State private var showEvents = false
     @State private var showNudgeConfirm = false
+    @State private var showAddItem = false
+    @State private var itemToRemove: BookingSerializedItem?
     @State private var showCustodyConfirm = false
     @State private var notice: String?
     @State private var isActioning = false
@@ -127,6 +129,11 @@ struct BookingDetailView: View {
         booking?.kind == .checkout && booking?.allows("manage-custody") == true
     }
 
+    /// Admin-only add and remove on an active checkout (web #721).
+    private var canEditItems: Bool {
+        booking?.kind == .checkout && booking?.allows("edit-items") == true
+    }
+
     private var canEditLinkedEvents: Bool {
         canEditBooking && booking?.kind == .checkout
     }
@@ -142,6 +149,7 @@ struct BookingDetailView: View {
             canTransferOwner,
             canManageCustody,
             canEditLinkedEvents,
+            canEditItems,
         ].filter { $0 }.count > 1
     }
 
@@ -178,7 +186,8 @@ struct BookingDetailView: View {
                             availabilityError: availabilityError,
                             bookingStartsAt: booking.startsAt,
                             bookingEndsAt: booking.endsAt,
-                            onRetryAvailability: { Task { await loadConflicts(for: booking) } }
+                            onRetryAvailability: { Task { await loadConflicts(for: booking) } },
+                            onRemoveItem: canEditItems && !isActioning ? { itemToRemove = $0 } : nil
                         )
                     }
                     if BookingActivityAccess.canRead(role: session.currentUser?.role) {
@@ -361,6 +370,26 @@ struct BookingDetailView: View {
         } message: {
             Text("This cannot be undone.")
         }
+        .confirmationDialog(
+            "Take \(itemToRemove?.asset.itemListPrimaryTitle ?? "this item") off this checkout?",
+            isPresented: Binding(get: { itemToRemove != nil }, set: { if !$0 { itemToRemove = nil } }),
+            titleVisibility: .visible,
+            presenting: itemToRemove
+        ) { item in
+            Button("Remove item", role: .destructive) {
+                Task { await removeItem(item) }
+            }
+            Button("Keep item", role: .cancel) {}
+        } message: { _ in
+            Text("Use this when the item never left or came back without a scan. Taking off the last item closes the checkout.")
+        }
+        .sheet(isPresented: $showAddItem) {
+            if let booking {
+                AddCheckoutItemSheet(bookingId: booking.id) { updatedBooking in
+                    install(updatedBooking)
+                }
+            }
+        }
         .confirmationDialog("Nudge borrower?", isPresented: $showNudgeConfirm, titleVisibility: .visible) {
             Button("Send nudge") { Task { await nudgeBorrower() } }
             Button("Cancel", role: .cancel) {}
@@ -428,6 +457,12 @@ struct BookingDetailView: View {
                     booking?.custodyScope == "SHARED" ? "Make personal checkout" : "Make shared checkout",
                     systemImage: "person.2.badge.gearshape"
                 )
+            }
+            .disabled(isActioning)
+        }
+        if canEditItems {
+            Button { showAddItem = true } label: {
+                Label("Add item", systemImage: "plus.square")
             }
             .disabled(isActioning)
         }
@@ -546,6 +581,19 @@ struct BookingDetailView: View {
             availabilityError = nil
             returnInsight = CheckoutReturnInsight(nextNeedAt: nil, hasUpcomingNeed: false)
             await reconcileLiveActivity(afterLoading: cancelled)
+            Haptics.success()
+        } catch {
+            self.error = error.localizedDescription
+            Haptics.warning()
+        }
+        isActioning = false
+    }
+
+    private func removeItem(_ item: BookingSerializedItem) async {
+        if isActioning { return }
+        isActioning = true
+        do {
+            install(try await APIClient.shared.removeCheckoutItem(bookingId: bookingId, assetId: item.assetId))
             Haptics.success()
         } catch {
             self.error = error.localizedDescription
@@ -1298,6 +1346,7 @@ private struct EquipmentSection: View {
     let bookingStartsAt: Date
     let bookingEndsAt: Date
     let onRetryAvailability: (() -> Void)?
+    var onRemoveItem: ((BookingSerializedItem) -> Void)?
 
     var body: some View {
         Section {
@@ -1318,6 +1367,13 @@ private struct EquipmentSection: View {
             }
             ForEach(serializedItems) { item in
                 serializedRow(item)
+                    .swipeActions(edge: .trailing) {
+                        if let onRemoveItem, item.allocationStatus?.lowercased() != "returned" {
+                            Button(role: .destructive) { onRemoveItem(item) } label: {
+                                Label("Remove", systemImage: "minus.circle")
+                            }
+                        }
+                    }
             }
             ForEach(bulkItems) { item in
                 bulkRow(item)
@@ -1487,17 +1543,5 @@ private struct BookingExtendBar: View {
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(.bar)
-    }
-}
-
-// MARK: - Shared
-
-struct ScalePressStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }

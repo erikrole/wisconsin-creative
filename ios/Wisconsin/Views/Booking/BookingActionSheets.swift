@@ -452,3 +452,88 @@ func uniqueIds(_ ids: [String]) -> [String] {
     var seen = Set<String>()
     return ids.filter { seen.insert($0).inserted }
 }
+
+
+/// Admin-only: pick one available numbered item to put on an active checkout.
+/// The item goes out now and is due back with the checkout.
+struct AddCheckoutItemSheet: View {
+    let bookingId: String
+    let onAdded: (Booking) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var results: [CheckoutAddCandidate] = []
+    @State private var addingId: String?
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let error {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(Color.statusText(.red))
+                }
+                ForEach(results) { asset in
+                    Button {
+                        Task { await add(asset) }
+                    } label: {
+                        HStack(spacing: 10) {
+                            AssetThumbnail(imageUrl: asset.imageUrl, size: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(asset.name ?? asset.assetTag)
+                                    .font(.body)
+                                    .lineLimit(1)
+                                Text(asset.assetTag)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if addingId == asset.id { ProgressView() }
+                        }
+                        .frame(minHeight: 44)
+                    }
+                    .disabled(addingId != nil)
+                }
+            }
+            .overlay {
+                if results.isEmpty {
+                    ContentUnavailableView("No available items", systemImage: "shippingbox")
+                }
+            }
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search by name or tag")
+            .navigationTitle("Add to this checkout")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            // Re-runs on every keystroke and cancels the previous run, so the
+            // sleep is the debounce.
+            .task(id: query) {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                if let found = try? await APIClient.shared.availableAssetsForCheckout(
+                    search: query.trimmingCharacters(in: .whitespacesAndNewlines)
+                ) {
+                    results = found
+                }
+            }
+        }
+    }
+
+    private func add(_ asset: CheckoutAddCandidate) async {
+        addingId = asset.id
+        error = nil
+        do {
+            onAdded(try await APIClient.shared.addCheckoutItem(bookingId: bookingId, assetId: asset.id))
+            Haptics.success()
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
+            Haptics.warning()
+        }
+        addingId = nil
+    }
+}

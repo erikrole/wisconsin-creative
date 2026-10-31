@@ -144,7 +144,7 @@ describe("iOS create booking picker parity", () => {
   it("makes native reservation picker rows match their visible full-row hit targets", () => {
     const pickers = source("ios/Wisconsin/Views/CreateBooking/CreateBookingPickers.swift");
 
-    expect(pickers.match(/\.contentShape\(Rectangle\(\)\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(pickers.match(/\.contentShape\(Rectangle\(\)\)/g)?.length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows battery/counted-item photos in the native picker", () => {

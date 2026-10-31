@@ -79,11 +79,7 @@ describe("iOS native control cleanup", () => {
       "private struct ActionsSection",
       "private struct BookingExtendBar",
     );
-    const extendBar = sliceBetween(
-      booking,
-      "private struct BookingExtendBar",
-      "// MARK: - Shared",
-    );
+    const extendBar = booking.slice(booking.indexOf("private struct BookingExtendBar"));
 
     expect(actions).not.toContain(".buttonStyle(.glass)");
     // Cancel is a plain destructive row in the grouped list, not a bordered button.
