@@ -1,0 +1,13 @@
+diff --git a/ios/Wisconsin/Views/GuidesView.swift b/ios/Wisconsin/Views/GuidesView.swift
+index c4947d9c2..059f40c57 100644
+--- a/ios/Wisconsin/Views/GuidesView.swift
++++ b/ios/Wisconsin/Views/GuidesView.swift
+@@ -1270,7 +1270,7 @@ private extension GuideListItem {
+         ].joined(separator: " ").lowercased()
+     }
+ 
+-    static var placeholders: [GuideListItem] {
++    internal static var placeholders: [GuideListItem] {
+         (0..<5).map { index in
+             GuideListItem.placeholder(index: index)
+         }
