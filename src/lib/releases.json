@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-10-31",
+    "title": "Wi-Fi and checkout edits on iPhone",
+    "type": "improvement",
+    "summary": "The iPhone app now shows the department Wi-Fi with a QR code, and admins can add or remove items on an active checkout.",
+    "details": [
+      "Find the network name and password under Shared logins, with a QR code to share.",
+      "Admins can add an available item from a checkout's menu, or swipe an item to take it off.",
+      "Taking off the last item closes the checkout, the same as on the website."
+    ],
+    "pr": 743,
+    "platforms": [
+      "iOS"
+    ]
+  },
+  {
     "date": "2026-10-30",
     "title": "Clearer purchase matches",
     "type": "fixes",
