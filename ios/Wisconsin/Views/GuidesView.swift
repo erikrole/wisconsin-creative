@@ -1276,8 +1276,11 @@ private extension GuideListItem {
             targetAreas.joined(separator: " "),
         ].joined(separator: " ").lowercased()
     }
+}
 
-    internal static var placeholders: [GuideListItem] {
+/// Internal, not file-private: GuideSkeletonPlaceholderTests decodes these.
+extension GuideListItem {
+    static var placeholders: [GuideListItem] {
         (0..<5).map { index in
             GuideListItem.placeholder(index: index)
         }
