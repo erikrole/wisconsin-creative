@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPersonCards,
   buildTeamCards,
+  buildWelcomeCard,
   longestOnTimeStreak,
   WRAPPED_UNLOCK_AT,
   WRAPPED_WINDOW_END,
@@ -62,6 +63,21 @@ describe("Wrapped window", () => {
 describe("buildPersonCards", () => {
   it("gives nothing to someone with no events and no checkouts", () => {
     expect(buildPersonCards(input({ games: [game({ day: 1, crew: [JO] })] }))).toEqual([]);
+  });
+
+  it("opens someone with nothing personal on a cover that hands off to the team", () => {
+    const card = buildWelcomeCard({ name: "Bucky Badger", primaryArea: "PHOTO" });
+    expect(card.layout).toBe("cover");
+    expect(card.value).toBe("Bucky's fall in Creative");
+    expect(card.sentence).toBe("Photo crew. Your story starts with your first event. Here's the team's fall.");
+    expect(buildWelcomeCard({ name: "Pat", primaryArea: null }).sentence).toBe("Your story starts with your first event. Here's the team's fall.");
+  });
+
+  it("says a whole number of days without calling it more", () => {
+    const sentence = (shiftHours: number) => buildPersonCards(input({ games: [game({ day: 5 })], shiftHours })).find((card) => card.id === "hours")!.sentence;
+    expect(sentence(48)).toBe("That's 2 full days of call time.");
+    expect(sentence(50)).toBe("That's more than 2 full days of call time.");
+    expect(sentence(24)).toBe("That's 1 full day of call time.");
   });
 
   it("tells a short story for a light fall and always ends on style and summary", () => {

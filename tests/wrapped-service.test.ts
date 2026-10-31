@@ -155,6 +155,24 @@ describe("getWrappedRecap", () => {
     expect(db.wrappedRecap.upsert).not.toHaveBeenCalled();
   });
 
+  it("opens a new student on a welcome cover before the team's cards", async () => {
+    db.gameSnapshot.findMany.mockResolvedValue([{
+      eventId: "e1",
+      title: "Football vs Rival",
+      startsAt: new Date("2026-09-05T18:00:00Z"),
+      sportCode: "FB",
+      opponent: "Rival",
+      site: "HOME",
+      venue: "Camp Randall Stadium",
+      result: "WIN",
+      official: true,
+      crew: [crewMember("jo")],
+    }]);
+    const result = await getWrappedRecap("me", { now: AFTER });
+    expect(result?.status === "ready" && result.recap.cards.map((card) => card.id)).toEqual(["welcome"]);
+    expect(result?.status === "ready" && result.recap.team.length).toBeGreaterThan(0);
+  });
+
   it("gives collaborators the team recap only", async () => {
     db.user.findUnique.mockResolvedValue({ id: "me", name: "Pat", avatarUrl: null, primaryArea: null, role: "COLLABORATOR" });
     const result = await getWrappedRecap("me", { now: AFTER });
