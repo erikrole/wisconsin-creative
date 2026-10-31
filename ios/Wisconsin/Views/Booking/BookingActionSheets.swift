@@ -482,14 +482,16 @@ struct AddCheckoutItemSheet: View {
                             AssetThumbnail(imageUrl: asset.imageUrl, size: 40)
                             // Tag first, like the checkout's own gear list.
                             VStack(alignment: .leading, spacing: 2) {
+                                // Concrete colors: inside a Button, `.primary`
+                                // and `.secondary` resolve to the red tint.
                                 Text(asset.assetTag)
                                     .font(.gothamBold(size: 16))
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(Color.primary)
                                     .lineLimit(1)
                                 if let name = asset.name.nonBlankText, !name.isSameListText(as: asset.assetTag) {
                                     Text(name)
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.secondary)
                                         .lineLimit(1)
                                 }
                             }
