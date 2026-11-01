@@ -10,7 +10,7 @@
       "Moving a reservation's start now follows the same rules as creating one: not into the past, and not beyond the advance-booking window.",
       "The test-notification buttons send at most a few pushes per minute."
     ],
-    "pr": 0,
+    "pr": 748,
     "platforms": [
       "Web"
     ]
