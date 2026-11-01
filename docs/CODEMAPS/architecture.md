@@ -31,7 +31,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/settings/app-activity/page.tsx` | 1234 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
 | `src/lib/services/gear-picks.ts` | 1193 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 1187 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1189 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 1173 |
 | `src/app/(app)/staff/[id]/page.tsx` | 1160 |
 | `src/app/(app)/kits/[id]/page.tsx` | 1151 |

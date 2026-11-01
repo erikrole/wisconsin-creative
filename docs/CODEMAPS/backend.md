@@ -247,7 +247,7 @@
 | `src/lib/football-gameday-kits-schema.ts` | 17 |
 | `src/lib/football-gameday-kits.ts` | 63 |
 | `src/lib/football-results.ts` | 233 |
-| `src/lib/format.ts` | 334 |
+| `src/lib/format.ts` | 335 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
@@ -297,7 +297,7 @@
 | `src/lib/prisma-errors.ts` | 43 |
 | `src/lib/profile-completion-cache.ts` | 10 |
 | `src/lib/profile-completion-events.ts` | 6 |
-| `src/lib/profile-completion.ts` | 240 |
+| `src/lib/profile-completion.ts` | 242 |
 | `src/lib/profile-phone-schema.ts` | 16 |
 | `src/lib/profile-phone.ts` | 29 |
 | `src/lib/profile-sizing.ts` | 24 |

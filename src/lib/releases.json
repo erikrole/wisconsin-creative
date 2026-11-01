@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-11-01",
+    "title": "A smoother first week for new students",
+    "type": "improvement",
+    "summary": "After you finish setup, the setup window stays closed. Home asks only for a profile photo, the Schedule explains itself when it is empty, and the first page is called Home everywhere.",
+    "details": [
+      "Finishing setup without a photo no longer reopens the setup window on every page. A gentle photo reminder comes back the next day and opens straight on the photo step.",
+      "Home's banner and Getting started list ask for a profile photo once your details are in, instead of saying your profile is unfinished.",
+      "An empty Schedule says that shifts show up once you are scheduled, and only staff see the calendar-sources hint.",
+      "The first page is called Home in the menu, breadcrumbs, search and error pages.",
+      "Member since on your profile shows the Madison date."
+    ],
+    "pr": 752,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Bug hunt follow-ups: availability, contacts, bulk assign",
     "type": "fixes",
     "summary": "Five more findings from the web bug hunt are closed: late-night availability blocks now count, staff contact details stay out of student reads, reservation edits follow the same start rules as new reservations, and bulk assignment keeps every pick that still fits.",
