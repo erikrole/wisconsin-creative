@@ -272,7 +272,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
       <ReportProblemDialog assetId={asset.id} assetTag={asset.assetTag} open={reportOpen} onOpenChange={setReportOpen} onReported={loadAsset} />
 
       {/* Tabs — sticky on scroll, horizontally scrollable on mobile */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
+      <Tabs panels={false} value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
         <TabsList className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm overflow-x-auto scrollbar-hide">
           {availableTabs.map((tab) => {
             const count =

@@ -1059,7 +1059,7 @@ export default function UserDetailPage() {
       <RightNow userId={user.id} enabled={isSelf || isStaffOrAdmin} />
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => switchTab(v as TabKey)}>
+      <Tabs panels={false} value={activeTab} onValueChange={(v) => switchTab(v as TabKey)}>
         <TabsList
           aria-label="Profile sections"
           className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm overflow-x-auto scrollbar-hide"

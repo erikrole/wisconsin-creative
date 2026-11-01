@@ -63,7 +63,7 @@ export function NotificationsPopover({
     unreadRef.current = unreadCount;
   });
 
-  const label = unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications";
+  const label = unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications";
 
   useEffect(() => {
     if (!open) return;

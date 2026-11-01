@@ -504,7 +504,7 @@ export default function EquipmentPicker({
   return (
     <div className="overflow-hidden rounded-2xl border border-border/50 bg-background/90 shadow-xs">
       {/* ── Section tabs ── */}
-      <Tabs value={activeSection} onValueChange={(value) => { setActiveSection(value as EquipmentSectionKey); }}>
+      <Tabs panels={false} value={activeSection} onValueChange={(value) => { setActiveSection(value as EquipmentSectionKey); }}>
         <TabsList className="gap-2 overflow-x-auto border-b-0 bg-transparent px-3 py-3 [&>[data-slot=tabs-indicator]]:hidden">
           {EQUIPMENT_SECTIONS.map((sec) => (
             <TabsTrigger

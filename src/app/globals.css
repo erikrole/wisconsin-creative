@@ -124,7 +124,7 @@
   --sidebar-active: rgba(28, 32, 36, 0.08);
   --sidebar-text: #60646c;
   --sidebar-text-active: #1c2024;
-  --sidebar-muted: #8b8d98;
+  --sidebar-muted: #6b6e7b; /* 4.7:1 on the rail, 5.1:1 on white */
   --sidebar-border: #e8e8ec;
   --sidebar-ring: #c5050c;
   --sidebar-icon-active: #c5050c;
@@ -453,7 +453,7 @@
   --sidebar-active: rgba(255, 255, 255, 0.10);
   --sidebar-text: #a8aab2;
   --sidebar-text-active: #ececef;
-  --sidebar-muted: #7b7d86;
+  --sidebar-muted: #8a8c96; /* 5.5:1 on the dark rail */
   --sidebar-border: #26282d;
   --sidebar-ring: #ff6b70;
   --sidebar-icon-active: #ff6b70;
@@ -2673,7 +2673,7 @@ tr.cursor-pointer td {
   --bg-surface: #f4f5f7;
   --text: #1c2024;
   --text-secondary: #60646c;
-  --text-muted: #8b8d98;
+  --text-muted: #6b6e7b; /* 4.6:1 on --bg at 12px captions */
   --blue-text: #2f4bb0;
   --blue-bg: #e8eeff;
   --radius: 10px;
@@ -2733,6 +2733,7 @@ tr.cursor-pointer td {
   --border: #26282d;
   --text: #ececef;
   --text-secondary: #a8aab2;
+  --text-muted: #8f919b;
 }
 
 /* ===== Settings cards (wc-fresh) =====

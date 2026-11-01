@@ -94,7 +94,7 @@ export default function LicensesPage() {
                   onAction={reloadAccess}
                 />
               ) : (
-                <div className="space-y-4" aria-label="Loading Photo Mechanic access" aria-busy={accessLoading || undefined}>
+                <div role="status" className="space-y-4" aria-label="Loading Photo Mechanic access" aria-busy={accessLoading || undefined}>
                   <Skeleton className="h-28 w-full rounded-lg" />
                   <Skeleton className="h-16 w-full rounded-lg" />
                   <Skeleton className="h-56 w-full rounded-lg" />

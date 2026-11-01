@@ -214,7 +214,7 @@ export function ReviewQueue({ queue, canRefresh, replay }: { queue: Queue; canRe
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Tabs className="[&_[role=tablist]]:bg-card" value={view} onValueChange={(value) => setView(value as "queue" | "ready" | "all")}>
+            <Tabs panels={false} className="[&_[role=tablist]]:bg-card" value={view} onValueChange={(value) => setView(value as "queue" | "ready" | "all")}>
               <TabsList>
                 <TabsTrigger value="queue">Needs attention</TabsTrigger>
                 <TabsTrigger value="ready">Ready to send ({ready})</TabsTrigger>

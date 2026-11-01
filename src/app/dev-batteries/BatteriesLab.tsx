@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import BatteryCockpitPage from "@/app/(app)/bulk-inventory/batteries/page";
 import FreshTheme from "@/components/FreshTheme";
 import { Toaster } from "@/components/ui/sonner";
@@ -29,13 +31,16 @@ if (typeof window !== "undefined") {
 
 export default function BatteriesLab({ fontClass }: { fontClass: string }) {
   const classNames = `wc-fresh ${fontClass}`;
+  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   return (
-    <div className={`${classNames} min-h-screen bg-background text-foreground`}>
-      <FreshTheme classNames={classNames} />
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <BatteryCockpitPage />
+    <QueryClientProvider client={queryClient}>
+      <div className={`${classNames} min-h-screen bg-background text-foreground`}>
+        <FreshTheme classNames={classNames} />
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+          <BatteryCockpitPage />
+        </div>
+        <Toaster />
       </div>
-      <Toaster />
-    </div>
+    </QueryClientProvider>
   );
 }

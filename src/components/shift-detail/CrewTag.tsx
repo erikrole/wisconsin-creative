@@ -97,7 +97,6 @@ export function CrewTagEditor({
         <button
           type="button"
           disabled={disabled}
-          aria-label={`${hasTag ? "Edit" : "Add"} position label for ${personName}`}
           className={cn(
             "inline-flex min-h-6 shrink-0 items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
             !hasTag && revealClassName,
@@ -111,6 +110,7 @@ export function CrewTagEditor({
               Label
             </span>
           )}
+          <span className="sr-only">, {hasTag ? "edit" : "add"} position label for {personName}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] space-y-3 p-3" align="start">

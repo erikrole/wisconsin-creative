@@ -116,7 +116,7 @@ export function BulkSkuDetailExperience({
           }}
         />
 
-        <Tabs value={activeTab} onValueChange={(v) => switchTab(v as TabKey)}>
+        <Tabs panels={false} value={activeTab} onValueChange={(v) => switchTab(v as TabKey)}>
           <TabsList className="sticky top-0 z-10 overflow-x-auto bg-background/95 backdrop-blur-sm scrollbar-hide">
             {visibleTabs.map((tab) => (
               <TabsTrigger

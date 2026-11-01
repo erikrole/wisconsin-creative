@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-11-01",
+    "title": "Keyboard and screen-reader pass",
+    "type": "improvement",
+    "summary": "The web app reads better with a screen reader and passes an automated WCAG AA scan on every main page, with a new check in CI so it stays that way.",
+    "details": [
+      "Small gray captions in the sidebar and page headers are a shade darker so they meet the 4.5:1 contrast rule; the sidebar is a named landmark.",
+      "The home link, account menu, notifications bell, phone tab bar, settings search and other controls now announce their visible text plus the count or hint, instead of a label that hid it.",
+      "Filter tabs on Items, Notifications, item and person pages no longer claim to control a panel that does not exist.",
+      "Trade Board and By person rows that are dimmed keep readable text, and the Trade Board pick-up button is a slightly deeper green.",
+      "Nothing moves and no feature changes."
+    ],
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Faster, cheaper calendar subscriptions",
     "type": "improvement",
     "summary": "Your subscribed shift calendar is now answered from a cache, so the thousands of overnight refreshes calendar apps make no longer wake the database.",

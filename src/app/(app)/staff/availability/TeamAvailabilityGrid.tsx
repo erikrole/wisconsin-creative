@@ -24,7 +24,7 @@ type Filter = "all" | "review" | "empty";
 
 function chipClass(b: TeamBlock) {
   if (b.status === "PENDING") return "border border-dashed border-muted-foreground/50 text-muted-foreground";
-  if (b.intent === "PREFER") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
+  if (b.intent === "PREFER") return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
   if (b.intent === "DISLIKE") return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
   return "bg-red-500/12 text-red-700 dark:text-red-300";
 }
@@ -104,8 +104,9 @@ export function TeamAvailabilityGrid({ students }: { students: TeamStudent[] }) 
         <Button variant="outline" size="icon" aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))}>
           <ChevronLeft />
         </Button>
-        <Button variant="outline" aria-label="Go to this week" onClick={() => setWeekStart(weekStartOf(today))}>
+        <Button variant="outline" onClick={() => setWeekStart(weekStartOf(today))}>
           {dayLabel(days[0]!)} – {dayLabel(days[6]!)}
+          <span className="sr-only">, go to this week</span>
         </Button>
         <Button variant="outline" size="icon" aria-label="Next week" onClick={() => setWeekStart(addDays(weekStart, 7))}>
           <ChevronRight />

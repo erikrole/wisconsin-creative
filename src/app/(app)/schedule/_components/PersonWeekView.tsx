@@ -206,7 +206,7 @@ export function PersonWeek({ students, entries, weekStart, setWeekStart, loading
                   const blocks = blocksFor.get(r.id) ?? NO_BLOCKS;
                   return (
                     <tr key={r.id} className="border-b align-top last:border-0">
-                      <td className={cn("sticky left-0 z-10 bg-card px-3 py-2", r.shifts.length === 0 && "opacity-70")}>{rowHeader(r)}</td>
+                      <td className={cn("sticky left-0 z-10 bg-card px-3 py-2", r.shifts.length === 0 && "[&_.font-bold]:font-semibold [&_.font-bold]:text-muted-foreground")}>{rowHeader(r)}</td>
                       {dayKeys.map((d) => {
                         const away = blocksOnDate(blocks, d).filter((b) => b.status === "APPROVED" && b.intent !== "PREFER");
                         return (
