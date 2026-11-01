@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { HttpError } from "@/lib/http";
+import { PAST_START_SKEW_MS } from "@/lib/time";
 
 export type ReservationRules = {
   advanceWindowDays: number | null;
@@ -42,4 +44,21 @@ export function normalizeReservationRules(raw: unknown): ReservationRules {
 export async function loadReservationRules(): Promise<ReservationRules> {
   const row = await db.systemConfig.findUnique({ where: { key: "reservation_rules" } });
   return normalizeReservationRules(row?.value);
+}
+
+/**
+ * The start-time rules a new reservation must pass. Moving an existing
+ * reservation's start goes through the same gate, so an edit cannot push a
+ * pickup into the past or past the advance-booking window.
+ */
+export function assertReservationStartAllowed(start: Date, rules: ReservationRules) {
+  if (start.getTime() < Date.now() - PAST_START_SKEW_MS) {
+    throw new HttpError(400, "Start date must not be in the past");
+  }
+  if (rules.advanceWindowDays !== null && start.getTime() > Date.now() + rules.advanceWindowDays * 86_400_000) {
+    throw new HttpError(
+      409,
+      `Reservations cannot be made more than ${rules.advanceWindowDays} day${rules.advanceWindowDays === 1 ? "" : "s"} in advance.`
+    );
+  }
 }

@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { deactivateUserWithCleanup } from "@/lib/services/user-deactivation";
 import { normalizeSlackHandle, normalizeSlackProfileUrl, normalizeWiscardNumber, slackHandleSchema, slackProfileUrlSchema, validateBirthdayParts, wiscardCardNumberSchema, wiscardIssueCodeSchema, wiscardNumberSchema } from "@/lib/validation";
-import { canReadUserProfile } from "@/lib/user-visibility";
+import { canReadContactDetails, canReadUserProfile } from "@/lib/user-visibility";
 import { getGameRecordForUser } from "@/lib/services/game-record";
 import { normalizeProfilePhone, phoneAuditValue } from "@/lib/profile-phone";
 import { nullableProfilePhoneSchema } from "@/lib/profile-phone-schema";
@@ -204,6 +204,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   // Wiscard identifiers are campus credentials (door access, card swipes), not
   // directory data. Only the person and the staff who manage profiles read them.
   const canReadWiscard = isSelfOrAdmin || user.role === "STAFF";
+  const showContact = canReadContactDetails(user, target);
   if (targetIsCollaborator && !isSelfOrAdmin) {
     return ok({
       data: {
@@ -249,9 +250,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       staffingType: target.staffingType,
       locationId: target.locationId,
       location: target.location?.name ?? null,
-      phone: target.phone,
-      personalPhone: target.personalPhone ?? null,
-      workPhone: target.workPhone ?? null,
+      phone: showContact ? target.phone : null,
+      personalPhone: showContact ? target.personalPhone ?? null : null,
+      workPhone: showContact ? target.workPhone ?? null : null,
       workPhoneNotApplicable: target.workPhoneNotApplicable,
       wiscardNumber: canReadWiscard ? (target.wiscardNumber ?? null) : undefined,
       wiscardCardNumber: canReadWiscard ? (target.wiscardCardNumber ?? null) : undefined,
@@ -269,7 +270,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       // hash); its owner only learns whether one exists.
       hasIcsToken: isSelf ? Boolean(target.icsToken) : undefined,
       title: target.title ?? null,
-      athleticsEmail: target.athleticsEmail ?? null,
+      athleticsEmail: showContact ? target.athleticsEmail ?? null : null,
       startDate: target.startDate?.toISOString() ?? null,
       directReportId: target.directReportId ?? null,
       directReportName: target.directReportName ?? null,
@@ -284,8 +285,8 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       bottomSize: target.bottomSize ?? null,
       shoeSize: target.shoeSize ?? null,
       shoeSizeSystem: target.shoeSizeSystem ?? null,
-      birthdayMonth: target.birthdayMonth ?? null,
-      birthdayDay: target.birthdayDay ?? null,
+      birthdayMonth: showContact ? target.birthdayMonth ?? null : null,
+      birthdayDay: showContact ? target.birthdayDay ?? null : null,
       birthYear: isSelfOrAdmin ? (target.birthYear ?? null) : undefined,
     },
   });

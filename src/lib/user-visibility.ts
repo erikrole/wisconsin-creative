@@ -83,3 +83,18 @@ export function canReadSharedScoreboard(
   if (actor.id === target.id || target.active) return true;
   return actor.role === Role.ADMIN || actor.role === Role.STAFF;
 }
+
+/**
+ * Phone numbers, athletics email and birthday are directory data for students
+ * (the team calls each other on game day) but private for staff, admins and
+ * collaborators. Anyone reads their own; staff and admins manage every profile
+ * and read all of them. Matches the rule the people CSV export already applies.
+ */
+export function canReadContactDetails(
+  actor: Pick<AuthUser, "id" | "role">,
+  target: { id: string; role: Role | string },
+): boolean {
+  if (actor.id === target.id) return true;
+  if (actor.role === Role.ADMIN || actor.role === Role.STAFF) return true;
+  return target.role === Role.STUDENT;
+}

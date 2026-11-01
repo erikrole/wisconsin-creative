@@ -33,7 +33,7 @@
 | `src/lib/services/bookings.ts` | 7 |
 | `src/lib/services/budget.ts` | 1055 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
-| `src/lib/services/bulk-schedule-assignment.ts` | 976 |
+| `src/lib/services/bulk-schedule-assignment.ts` | 994 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 764 |
@@ -106,7 +106,7 @@
 | `src/lib/services/reservation-lifecycle.ts` | 1059 |
 | `src/lib/services/reservation-pickup-guard.ts` | 71 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
-| `src/lib/services/reservation-rules.ts` | 46 |
+| `src/lib/services/reservation-rules.ts` | 65 |
 | `src/lib/services/reservation-schedule.ts` | 461 |
 | `src/lib/services/scan-audit-reports.ts` | 384 |
 | `src/lib/services/scans.ts` | 168 |
@@ -377,11 +377,11 @@
 | `src/lib/sports.ts` | 98 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 19 |
-| `src/lib/student-availability.ts` | 209 |
+| `src/lib/student-availability.ts` | 248 |
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/team-availability.ts` | 64 |
 | `src/lib/theme.ts` | 145 |
-| `src/lib/time.ts` | 43 |
+| `src/lib/time.ts` | 35 |
 | `src/lib/title-normalization.ts` | 117 |
 | `src/lib/toast.ts` | 53 |
 | `src/lib/unavailable-times.ts` | 185 |
@@ -389,7 +389,7 @@
 | `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |
 | `src/lib/user-list-cache.ts` | 91 |
-| `src/lib/user-visibility.ts` | 86 |
+| `src/lib/user-visibility.ts` | 101 |
 | `src/lib/utils.ts` | 22 |
 | `src/lib/validation.ts` | 895 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
