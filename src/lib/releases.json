@@ -1,6 +1,23 @@
 [
   {
     "date": "2026-11-01",
+    "title": "Bug hunt follow-ups: availability, contacts, bulk assign",
+    "type": "fixes",
+    "summary": "Five more findings from the web bug hunt are closed: late-night availability blocks now count, staff contact details stay out of student reads, reservation edits follow the same start rules as new reservations, and bulk assignment keeps every pick that still fits.",
+    "details": [
+      "Availability blocks are checked on every day a shift touches, so a game that runs past midnight no longer misses a block early the next morning, and all-day events check the event's own weekday.",
+      "Students and collaborators no longer receive staff and admin phone numbers, athletics emails or birthdays through the user list and profile responses; student contact details stay shared with the team.",
+      "Moving a reservation's start now follows the same rules as creating one: not into the past, and not beyond the advance-booking window.",
+      "Applying a bulk assignment now stages every pick that still fits and reports the ones that no longer do, instead of refusing the whole batch when one person was reassigned or deactivated after the preview.",
+      "The test-notification buttons send at most a few pushes per minute."
+    ],
+    "pr": 748,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Faster, cheaper calendar subscriptions",
     "type": "improvement",
     "summary": "Your subscribed shift calendar is now answered from a cache, so the thousands of overnight refreshes calendar apps make no longer wake the database.",

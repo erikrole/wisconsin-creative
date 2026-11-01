@@ -27,7 +27,9 @@ describe("bulk schedule assignment contracts", () => {
     expect(service).toContain("scheduleBulkAssignment");
     expect(service).toContain("isolationLevel: Prisma.TransactionIsolationLevel.Serializable");
     expect(service).toContain('source: "AUTO_FILL"');
-    expect(service).toContain("droppedCount: dropped");
+    // A pick that fails its live re-check is dropped and counted, never the whole batch.
+    expect(service).toContain("droppedCount: input.proposals.length - applied");
+    expect(service).toContain("if (!isStalePick(error)) throw error;");
     expect(service).toContain("current.alternatives.some((alternative) => alternative.userId === proposal.userId)");
     expect(service).toContain("enqueueRelease({ shiftGroupId, version: 1, now, batchId })");
     expect(applyRoute).toContain('requirePermission(user.role, "shift", "manage")');
@@ -172,7 +174,7 @@ describe("bulk schedule assignment contracts", () => {
     // A student slot on a STAFF_ONLY sport is out of scope, not an unfilled gap.
     expect(bulk).toContain("if (!policyAllowsWorkerType(policy, slot.workerType)) return false;");
     expect(bulk).toContain("if (!policyAllowsWorkerType(groupPolicy, slot.workerType)) {");
-    expect(bulk).toContain("was put on hold for auto assignment");
+    expect(bulk).toContain("if (groupPolicy === SportAutoAssignPolicy.HOLD) continue;");
     expect(autoFill).toContain("policyAllowsWorkerType(policy, shift.workerType");
   });
 
@@ -313,7 +315,7 @@ describe("bulk schedule assignment contracts", () => {
     // Travel state has to reach the candidate snapshot to be gated on.
     expect(scoring).toContain("sportAssignments: { select: { sportCode: true, defaultTraveler: true } }");
     expect(bulk).toContain("isTravelEligible(candidate.sportAssignments, state.event.sportCode, state.event.isHome");
-    expect(bulk).toContain("isTravelEligible(\n          user.sportAssignments,");
+    expect(bulk).toContain("isTravelEligible(\n            user.sportAssignments,");
     expect(bulk).toContain('reasonCode = "no_travel_roster"');
     expect(bulk).toContain("no longer on the travel roster for an away game");
     expect(autoFill).toContain("isTravelEligible(user.sportAssignments ?? [], eventSportCode, eventIsHome");
