@@ -274,6 +274,18 @@ describe("owner app activity report", () => {
     expect(report.activity?.adoption.daily.at(-1)?.counts).toEqual({ "1.3": 2, "1.2": 5, "1.1": 1, Older: 1 });
   });
 
+  it("buckets activity days in Chicago, not by the raw UTC timestamp", async () => {
+    await getAppActivityReport(7);
+
+    const daySql = dbMock.$queryRaw.mock.calls
+      .map((call) => (call[0] as { sql: string }).sql)
+      .filter((sql) => sql.includes("AS day"));
+    expect(daySql).toHaveLength(2);
+    // occurred_at is a naive UTC timestamp: a single AT TIME ZONE reads it as
+    // Chicago wall time and shifts every afternoon onto the next day.
+    for (const sql of daySql) expect(sql).toContain("AT TIME ZONE 'UTC' AT TIME ZONE");
+  });
+
   it("allows the report only to the configured owner", async () => {
     const response = await getAppActivity(request(), { params: Promise.resolve({}) });
     expect(response.status).toBe(200);

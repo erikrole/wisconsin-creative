@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => {
     },
     assetAllocation: { updateMany: vi.fn() },
     scanSession: { updateMany: vi.fn() },
+    apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     session: { deleteMany: vi.fn() },
     passwordResetToken: { deleteMany: vi.fn() },
     deviceToken: { updateMany: vi.fn() },

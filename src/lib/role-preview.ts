@@ -207,8 +207,9 @@ export function isRolePreviewBlockedRequest(req: Request) {
   const url = new URL(req.url);
   const pathname = url.pathname;
 
-  // Logging out is safe and must remain available while previewing.
-  if (pathname === "/api/auth/logout" && req.method === "POST") return false;
+  // Signing out or back in is safe and must stay available while previewing:
+  // a preview cookie can outlive the session cookie it was set beside.
+  if (pathname.startsWith("/api/auth/") && req.method === "POST") return false;
   if (req.method !== "GET" && req.method !== "HEAD") return true;
 
   // Preview may inspect read models, but it must not retrieve protected files

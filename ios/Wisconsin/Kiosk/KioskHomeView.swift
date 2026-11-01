@@ -97,7 +97,7 @@ struct KioskHomeView: View {
         let meridiem = Text(" \(parts.meridiem)").font(KioskType.displayClockMeridiem).foregroundStyle(KioskText.tertiary)
         return Text("\(time)\(colon)\(secs)\(meridiem)")
             .lineLimit(1)
-            .accessibilityLabel(Text(date, format: .dateTime.hour().minute()))
+            .accessibilityLabel(Text(date, format: .chicago.hour().minute()))
     }
 
     private func dateLine(_ date: Date) -> String {

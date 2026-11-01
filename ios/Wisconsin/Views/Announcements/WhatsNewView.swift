@@ -170,7 +170,7 @@ private struct WhatsNewRow: View {
                     }
                     Spacer(minLength: 8)
                     if let date = announcement.publishedDate {
-                        Text(date, format: .dateTime.month(.abbreviated).day())
+                        Text(date, format: .chicago.month(.abbreviated).day())
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)

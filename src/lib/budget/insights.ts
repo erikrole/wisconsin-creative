@@ -13,6 +13,10 @@ export type InsightLine = {
   status: BudgetLineStatusValue;
   supplier: string | null;
   unitCostCents: number;
+  unitCostKnown?: boolean;
+  plannedTotalKnown?: boolean;
+  plannedOverrideCents?: number | null;
+  statusKnown?: boolean;
   quantity: number;
   spentCents: number | null;
   refundCents: number | null;
@@ -64,7 +68,7 @@ export function supplierTotals(lines: InsightLine[]): SupplierTotal[] {
 /** Lines that cost more than planned (not counting unplanned ones, which are over by definition). */
 export function overPlanLines(lines: InsightLine[]): InsightLine[] {
   return lines.filter((line) => {
-    if (line.unplanned || line.status === "CANCELLED") return false;
+    if (line.unplanned || line.status === "CANCELLED" || line.plannedTotalKnown === false) return false;
     const net = netSpentCents(line);
     return net !== null && net > plannedCents(line);
   });
@@ -78,11 +82,11 @@ export function linesToCsv(lines: InsightLine[]): string {
   const rows = lines.map((line) => [
     line.description,
     BUDGET_CATEGORY_LABELS[line.category],
-    line.status === "CANCELLED" ? "Dropped" : line.status[0] + line.status.slice(1).toLowerCase(),
+    line.statusKnown === false ? "Unknown" : line.status === "CANCELLED" ? "Dropped" : line.status[0] + line.status.slice(1).toLowerCase(),
     line.supplier,
     line.quantity,
-    line.unplanned ? "" : dollars(line.unitCostCents),
-    line.unplanned ? "" : dollars(plannedCents(line)),
+    line.unitCostKnown === false ? "" : dollars(line.unitCostCents),
+    line.unplanned || line.plannedTotalKnown === false ? "" : dollars(plannedCents(line)),
     dollars(line.spentCents),
     dollars(line.refundCents),
     line.purchasedOn,

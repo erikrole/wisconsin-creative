@@ -56,7 +56,7 @@ export async function postTrade(
             shiftGroup: {
               include: {
                 workingCopy: { select: { version: true } },
-                event: { select: { id: true, summary: true } },
+                event: { select: { id: true, summary: true, ...tradeEventStateSelect } },
               },
             },
           },
@@ -69,6 +69,7 @@ export async function postTrade(
     // shift staff are still redrafting advertises coverage that the pending
     // publish can move or delete, and no claim on it could be approved anyway.
     assertNoWorkingCopy(assignment.shift.shiftGroup?.workingCopy);
+    assertTradeEventLive(assignment.shift.shiftGroup);
     const isOwner = assignment.userId === actor.id;
     if (!isOwner) {
       if (!isTradeManager(actor)) {

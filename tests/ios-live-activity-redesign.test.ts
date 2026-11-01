@@ -21,7 +21,7 @@ describe("iOS checkout-return Live Activity redesign", () => {
 
   it("keeps the due time inside the expanded bottom region so the island corner cannot clip it", () => {
     expect(widget).not.toContain("DynamicIslandExpandedRegion(.trailing)");
-    expect(widget).toContain('Text("Due \\(context.state.endsAt, style: .time)")');
+    expect(widget).toContain('Text("Due \\(context.state.endsAt, format: .chicago.hour().minute())")');
     expect(widget).toContain(".padding(.horizontal, 6)");
   });
 

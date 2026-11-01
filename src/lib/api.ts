@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { bumpScheduleRevision, isScheduleMutation } from "@/lib/schedule-live";
+import { bearerTokenFrom, isTokenBlockedRequest } from "@/lib/api-token";
 import { requireAuth, requireKiosk, type AuthUser, type KioskContext } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
@@ -101,11 +102,19 @@ export function withAuth<P extends Record<string, string> = Record<string, strin
   return async (req: Request, context: { params: Promise<P> }): Promise<NextResponse> => {
     let user: AuthUser | null = null;
     try {
-      // CSRF: validate Origin header on mutating requests
-      if (req.method !== "GET" && req.method !== "HEAD") {
+      const mutating = req.method !== "GET" && req.method !== "HEAD";
+      // CSRF: validate Origin header on mutating requests. A bearer token is
+      // never attached by a browser on its own, so token requests skip it.
+      if (mutating && !bearerTokenFrom(req.headers.get("authorization"))) {
         assertSameOrigin(req);
       }
       user = await requireAuth();
+      if (user.apiTokenScope && isTokenBlockedRequest(new URL(req.url).pathname, req.method)) {
+        throw new HttpError(403, "This route needs a signed-in session, not an API token");
+      }
+      if (mutating && user.apiTokenScope === "READ") {
+        throw new HttpError(403, "This API token is read-only");
+      }
       await recordPreviewActivity();
       if (user.forcePasswordChange && !isForcePasswordAllowed(req)) {
         throw new HttpError(403, "Password change required before continuing");

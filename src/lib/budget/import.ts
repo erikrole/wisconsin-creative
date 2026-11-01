@@ -18,7 +18,10 @@ export type ImportCandidate = {
   status: BudgetLineStatusValue;
   supplier: string | null;
   quantity: number;
+  quantityBought: number | null;
   unitCostCents: number;
+  unitCostKnown: boolean;
+  statusKnown: boolean;
   /** Planned total in cents (unit x quantity); null for an unplanned line. */
   budgetedCents: number | null;
   spentCents: number | null;
@@ -184,16 +187,11 @@ export function parseBudgetSheet(rows: string[][], options: ImportOptions): { ca
   const cell = (row: string[], key: string) => (cols[key] === undefined ? "" : (row[cols[key]!] ?? "").trim());
   const candidates: ImportCandidate[] = [];
 
-  let blankRun = 0;
   for (let i = headerRow + 1; i < rows.length; i += 1) {
     const row = rows[i]!;
     if (row.every((value) => !value || !value.trim())) {
-      blankRun += 1;
-      // Two empty rows end the list: what follows is a summary table (Category, Budgeted, Purchased, Remaining), not purchases.
-      if (blankRun >= 2) break;
       continue;
     }
-    blankRun = 0;
     if (looksLikeHeader(row)) break;
     const description = cell(row, "description");
     const base = {
@@ -210,7 +208,10 @@ export function parseBudgetSheet(rows: string[][], options: ImportOptions): { ca
       note,
       status: "PLANNED",
       quantity: 1,
+      quantityBought: null,
       unitCostCents: 0,
+      unitCostKnown: false,
+      statusKnown: false,
       budgetedCents: null,
       spentCents: null,
       purchasedOn: null,
@@ -227,56 +228,52 @@ export function parseBudgetSheet(rows: string[][], options: ImportOptions): { ca
     }
 
     const quantityRaw = cell(row, "quantity");
-    let quantity = /^\d+$/.test(quantityRaw) && Number(quantityRaw) >= 1 ? Number(quantityRaw) : 1;
+    const quantity = /^\d+$/.test(quantityRaw) && Number(quantityRaw) >= 1 ? Number(quantityRaw) : 1;
+    const boughtRaw = cell(row, "boughtQuantity");
+    const quantityBought = /^\d+$/.test(boughtRaw) ? Number(boughtRaw) : null;
     const each = parseMoney(cell(row, "each"));
     const budgetedRaw = cell(row, "budgeted");
     let budgeted = parseMoney(budgetedRaw);
     const spent = parseMoney(cell(row, "spent"));
     const notes: string[] = [];
-    let planGuessed = false;
-    // A sheet with a budget column that is empty or $0 on a row that was still bought is a late addition, not a plan
-    // of price x quantity. Text like "X" in that column is treated as "no figure", so the row falls back to the price.
-    const blankPlan = cols.budgeted !== undefined && (budgetedRaw === "" || budgeted === 0);
-    const lateAddition = blankPlan && spent !== null && spent > 0;
-    if (lateAddition) {
-      budgeted = null;
-      const boughtRaw = cell(row, "boughtQuantity");
-      if (/^\d+$/.test(boughtRaw) && Number(boughtRaw) >= 1) quantity = Number(boughtRaw);
-    } else if ((budgeted === null || budgeted === 0) && each !== null) {
+    // Only derive a total if the sheet has no total column. A blank, X, or
+    // explicit zero in a total column is source data and must not be replaced.
+    if (cols.budgeted === undefined && each !== null) {
       budgeted = each * quantity;
-      if (blankPlan) {
-        planGuessed = true;
-        notes.push("Budget was blank or $0. Using price x quantity.");
-      }
     }
-    const unitCostCents = budgeted !== null ? (each ?? Math.round(budgeted / quantity)) : each ?? Math.round((spent ?? 0) / quantity);
+    const unitCostCents = each ?? 0;
+    if (each === null) notes.push("Unit price not recorded.");
+    if (budgeted === null) notes.push("Budget total not recorded.");
 
     const when = parseSheetDate(cell(row, "date"), options.fiscalYear, options.today);
-    if (when?.guessed) notes.push(`Date read as ${when.date.slice(0, 7)}`);
-
-    if (budgeted === null && spent === null) {
-      candidates.push(skipped("No amounts on this row"));
-      continue;
-    }
+    if (when?.guessed) notes.push(`Source date: ${cell(row, "date")} (exact date not recorded).`);
 
     const sheetStatus = readStatus(cell(row, "status"));
     const flag = readFlag(cell(row, "boughtFlag"));
 
-    let result: ImportResult = planGuessed ? "check" : "ready";
+    let result: ImportResult = budgeted === null || each === null || when?.guessed ? "check" : "ready";
     let status: BudgetLineStatusValue;
-    let spentCents: number | null = spent !== null && spent >= 0 ? spent : null;
+    const spentCents: number | null = spent !== null && spent >= 0 ? spent : null;
     let unplanned = false;
-    if (budgeted === null) {
-      unplanned = true;
-      result = "check";
-      status = sheetStatus === "ORDERED" ? "ORDERED" : "PURCHASED";
-      notes.push("No budgeted amount. Imports as Unplanned.");
-    } else if (sheetStatus === "CANCELLED") {
+    if (sheetStatus === "CANCELLED") {
       status = "CANCELLED";
-      spentCents = null;
+      if (spentCents !== null) {
+        result = "check";
+        notes.push("Dropped status and recorded spend conflict; check the source.");
+      }
+    } else if ((budgeted === null || budgeted === 0) && spentCents !== null && spentCents > 0) {
+      unplanned = budgeted === 0;
+      result = "check";
+      status = sheetStatus === "ORDERED" ? "ORDERED" : (sheetStatus === "PLANNED" || flag === false) ? "PLANNED" : "PURCHASED";
+      notes.push("Budget total is zero or unknown; review whether this was unplanned.");
+      if (status === "PLANNED") notes.push("Unpurchased status and recorded spend conflict; check the source.");
     } else if (spentCents !== null) {
-      status = sheetStatus === "ORDERED" ? "ORDERED" : "PURCHASED";
-      if (spentCents === 0 && budgeted > 0 && status === "PURCHASED") {
+      status = sheetStatus === "ORDERED" ? "ORDERED" : (sheetStatus === "PLANNED" || flag === false) ? "PLANNED" : "PURCHASED";
+      if (status === "PLANNED" && spentCents > 0) {
+        result = "check";
+        notes.push("Unpurchased status and recorded spend conflict; check the source.");
+      }
+      if (spentCents === 0 && (budgeted ?? 0) > 0 && status === "PURCHASED") {
         result = "check";
         notes.push("Marked bought with $0 spent.");
       }
@@ -286,14 +283,12 @@ export function parseBudgetSheet(rows: string[][], options: ImportOptions): { ca
       status = "PLANNED";
     } else if (sheetStatus === "PURCHASED" || flag === true) {
       status = "PURCHASED";
-      spentCents = budgeted;
-      // A sheet with no spent column at all (older years) can only say "bought"; a blank cell in a Spent column is worth a look.
-      if (cols.spent !== undefined) result = "check";
-      notes.push(cols.spent !== undefined ? "Marked bought with no amount spent. Using the planned amount." : "Marked bought. Using the planned amount.");
+      result = "check";
+      notes.push("Marked bought; actual spend not recorded.");
     } else if (options.unboughtAs === "PURCHASED" && flag === null) {
       status = "PURCHASED";
-      spentCents = budgeted;
-      notes.push("Taken as bought at the planned amount.");
+      result = "check";
+      notes.push("Marked bought by import choice; actual spend not recorded.");
     } else {
       status = options.unboughtAs === "PURCHASED" ? "PLANNED" : options.unboughtAs;
       if (status === "CANCELLED") {
@@ -308,10 +303,13 @@ export function parseBudgetSheet(rows: string[][], options: ImportOptions): { ca
       note: notes.join(" ") || (status === "CANCELLED" ? "Dropped in the sheet" : spentCents !== null ? "Ready" : "Planned, not bought yet"),
       status,
       quantity,
+      quantityBought,
       unitCostCents,
-      budgetedCents: unplanned ? null : budgeted,
+      unitCostKnown: each !== null,
+      statusKnown: sheetStatus !== null || flag !== null,
+      budgetedCents: budgeted,
       spentCents,
-      purchasedOn: when?.date ?? null,
+      purchasedOn: when && !when.guessed ? when.date : null,
       unplanned,
     });
   }

@@ -8,7 +8,10 @@ export type TableLine = {
   orderNumber: string | null;
   category: BudgetCategoryValue;
   status: BudgetLineStatusValue;
+  statusKnown?: boolean;
   unitCostCents: number;
+  plannedTotalKnown?: boolean;
+  plannedOverrideCents?: number | null;
   quantity: number;
   spentCents: number | null;
   purchasedOn: string | null;
@@ -24,7 +27,7 @@ export const LINE_SORT_LABELS: Record<LineSort, string> = {
 };
 
 /** What a line really costs: the recorded spend when bought, else the plan. */
-export const lineAmountCents = (line: Pick<TableLine, "unitCostCents" | "quantity" | "spentCents">): number =>
+export const lineAmountCents = (line: Pick<TableLine, "unitCostCents" | "quantity" | "spentCents" | "plannedTotalKnown" | "plannedOverrideCents">): number =>
   line.spentCents ?? plannedCents(line);
 
 /** Search matches description, supplier, PO, order number, and category name; every word must match. */
@@ -40,10 +43,10 @@ export function matchesQuery(line: TableLine, query: string): boolean {
 
 export function filterAndSortLines<T extends TableLine>(
   lines: readonly T[],
-  options: { query: string; status: BudgetLineStatusValue | "ALL"; sort: LineSort },
+  options: { query: string; status: BudgetLineStatusValue | "ALL" | "UNKNOWN"; sort: LineSort },
 ): T[] {
   const kept = lines.filter(
-    (line) => (options.status === "ALL" || line.status === options.status) && matchesQuery(line, options.query),
+    (line) => (options.status === "ALL" || (options.status === "UNKNOWN" ? line.statusKnown === false : line.statusKnown !== false && line.status === options.status)) && matchesQuery(line, options.query),
   );
   if (options.sort === "entered") return kept;
   const sorted = [...kept];

@@ -17,6 +17,7 @@ vi.mock("next/server", async (importOriginal) => ({
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(),
+  headers: vi.fn(async () => new Headers()),
 }));
 
 vi.mock("@/lib/db", () => ({

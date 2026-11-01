@@ -8,6 +8,7 @@ import { scheduleEventTitleParts } from "@/app/(app)/schedule/_components/types"
 import { AREA_LABELS } from "@/types/areas";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { icsTokenLookupValues } from "@/lib/ics-token";
+import { icsFeedCacheKey, icsFeedEtag, lookupIcsFeed, rememberIcsFeed, type CachedIcsFeed } from "@/lib/ics-feed-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -86,9 +87,16 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
     });
   }
 
+  // Calendar apps poll on their own clock, all night, so a feed that nothing
+  // changed since is answered from Redis (see ics-feed-cache) without Neon.
+  const cacheKey = icsFeedCacheKey(token);
+  const { revision, feed: cachedFeed } = await lookupIcsFeed(cacheKey);
+  if (cachedFeed) return feedResponse(cachedFeed, req);
+
   // Hashed tokens match by digest; tokens minted before hashing still match raw.
   const user = await db.user.findFirst({ where: { icsToken: { in: icsTokenLookupValues(token) }, active: true } });
   if (!user || user.role === "COLLABORATOR") {
+    await rememberIcsFeed(cacheKey, { status: 404 });
     return new NextResponse("Not found", { status: 404 });
   }
 
@@ -225,13 +233,28 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
   lines.push("END:VCALENDAR");
 
   const body = lines.flatMap(icsFold).join("\r\n") + "\r\n";
+  const feed: CachedIcsFeed = { status: 200, revision: revision ?? 0, etag: icsFeedEtag(body), body };
+  // Built from the revision read before the queries, so an edit that lands
+  // mid-build makes the next poll rebuild rather than serve this one.
+  if (revision !== null) await rememberIcsFeed(cacheKey, feed);
+  return feedResponse(feed, req);
+});
 
-  return new NextResponse(body, {
+function feedResponse(feed: CachedIcsFeed, req: Request): NextResponse {
+  if (feed.status === 404) return new NextResponse("Not found", { status: 404 });
+  const headers = {
+    ETag: feed.etag,
+    // Never stored by an intermediary; calendar apps keep the ETag themselves
+    // and a match skips the body.
+    "Cache-Control": "no-cache, no-store",
+    "X-Event-Limit": String(ICS_ASSIGNMENT_LIMIT),
+  };
+  if (req.headers.get("if-none-match") === feed.etag) return new NextResponse(null, { status: 304, headers });
+  return new NextResponse(feed.body, {
     headers: {
+      ...headers,
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": `attachment; filename="shifts.ics"`,
-      "Cache-Control": "no-cache, no-store",
-      "X-Event-Limit": String(ICS_ASSIGNMENT_LIMIT),
     },
   });
-});
+}

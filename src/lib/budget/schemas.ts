@@ -48,6 +48,10 @@ const lineFields = {
   description: z.string().trim().min(1).max(200),
   supplier: optionalText(120),
   unitCostCents: cents,
+  unitCostKnown: z.boolean(),
+  plannedTotalKnown: z.boolean(),
+  plannedOverrideCents: cents.nullable(),
+  statusKnown: z.boolean(),
   quantity: z.number().int().min(1).max(10_000),
   quantityBought: z.number().int().min(0).max(10_000).nullable(),
   spentCents: cents.nullable(),
@@ -70,6 +74,10 @@ export const createLineSchema = z.object({
   status: lineFields.status.default("PLANNED"),
   supplier: lineFields.supplier.optional(),
   quantity: lineFields.quantity.default(1),
+  unitCostKnown: lineFields.unitCostKnown.default(true),
+  plannedTotalKnown: lineFields.plannedTotalKnown.default(true),
+  plannedOverrideCents: lineFields.plannedOverrideCents.optional(),
+  statusKnown: lineFields.statusKnown.default(true),
   quantityBought: lineFields.quantityBought.optional(),
   spentCents: lineFields.spentCents.optional(),
   purchasedOn: lineFields.purchasedOn.optional(),
@@ -104,7 +112,8 @@ export const linkItemSchema = z
     bulkSkuId: id.optional(),
     quantity: z.number().int().min(1).max(100_000).optional(),
   })
-  .refine((value) => (value.assetId === undefined) !== (value.bulkSkuId === undefined), "Choose an item or a bulk item");
+  .refine((value) => (value.assetId === undefined) !== (value.bulkSkuId === undefined), "Choose an item or a bulk item")
+  .refine((value) => value.bulkSkuId === undefined || value.quantity !== undefined, "Enter the number of bulk units from this purchase");
 
 export const applyOrderSchema = z.object({
   fields: z.array(z.enum(AUTOFILL_FIELDS)).min(1).max(AUTOFILL_FIELDS.length),
@@ -115,6 +124,7 @@ export const bulkLinesSchema = z
   .object({
     lineIds: z.array(z.string().trim().min(1).max(64)).min(1).max(200),
     status: z.enum(BUDGET_LINE_STATUSES).optional(),
+    statusKnown: z.boolean().optional(),
     category: z.enum(BUDGET_CATEGORIES).optional(),
   })
   .refine((value) => value.status !== undefined || value.category !== undefined, "Nothing to change");
@@ -130,11 +140,17 @@ export const importLinesSchema = z.object({
         status: lineFields.status,
         supplier: lineFields.supplier,
         unitCostCents: lineFields.unitCostCents,
+        unitCostKnown: lineFields.unitCostKnown.default(true),
+        plannedTotalKnown: lineFields.plannedTotalKnown.default(true),
+        plannedOverrideCents: lineFields.plannedOverrideCents.optional(),
+        statusKnown: lineFields.statusKnown.default(true),
         quantity: lineFields.quantity,
+        quantityBought: lineFields.quantityBought.optional(),
         spentCents: lineFields.spentCents,
         purchasedOn: lineFields.purchasedOn,
         poNumber: lineFields.poNumber,
         orderNumber: lineFields.orderNumber,
+        justification: lineFields.justification.optional(),
         unplanned: lineFields.unplanned,
       }),
     )

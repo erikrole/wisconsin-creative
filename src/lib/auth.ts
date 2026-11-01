@@ -1,13 +1,14 @@
 import bcrypt from "bcryptjs";
 import { cache } from "react";
 import { after } from "next/server";
-import { cookies } from "next/headers";
-import { Role, ShiftWorkerType } from "@prisma/client";
+import { cookies, headers } from "next/headers";
+import { Role, ShiftWorkerType, type Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { requiresOnboarding } from "@/lib/profile-completion";
 import { randomHex } from "@/lib/crypto";
+import { bearerTokenFrom, type ApiTokenScope } from "@/lib/api-token";
 import {
   capabilitiesForActor,
   collaboratorPolicyMetadataForActor,
@@ -16,6 +17,7 @@ import {
   type CollaboratorCapability,
   type CollaboratorPolicyMetadata,
 } from "@/lib/collaborator-access";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 import {
   clearRolePreviewCookie,
@@ -41,7 +43,11 @@ export type AuthUser = {
   forcePasswordChange?: boolean;
   onboardingRequired?: boolean;
   preview?: RolePreviewInfo;
+  /** Set when the request authenticated with a personal API token. */
+  apiTokenScope?: ApiTokenScope;
 };
+
+const API_TOKEN_LAST_USED_REFRESH_MS = 1000 * 60 * 60;
 
 // User sessions slide on activity (D-066). A remembered sign-in stays alive
 // while it is used at least once every 30 days, up to a 90-day absolute cap;
@@ -223,7 +229,101 @@ async function dropSessionCookies(cookieStore: Awaited<ReturnType<typeof cookies
   } catch {}
 }
 
+// Identity and policy only, not the full staff profile (password hash, contact
+// details, clothing sizes, notification prefs, etc.).
+const authUserSelect = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  active: true,
+  affiliation: true,
+  collaboratorProfile: true,
+  collaboratorPolicyId: true,
+  staffingType: true,
+  avatarUrl: true,
+  forcePasswordChange: true,
+  onboardingRequired: true,
+  onboardingCompletedAt: true,
+  lastActiveAt: true,
+  collaboratorPolicy: { select: collaboratorPolicyActorSelect },
+} as const;
+
+type AuthUserRow = Prisma.UserGetPayload<{ select: typeof authUserSelect }>;
+
+function toAuthUser(
+  user: AuthUserRow,
+  preview: Awaited<ReturnType<typeof readRolePreviewCookie>>,
+): AuthUser {
+  const actualCollaboratorPolicy = collaboratorPolicyMetadataForActor(user);
+  const collaboratorPolicy = preview?.role === Role.COLLABORATOR
+    ? rolePreviewCollaboratorPolicyMetadata(preview.collaboratorAffiliation)
+    : user.role === Role.COLLABORATOR
+      ? actualCollaboratorPolicy
+      : null;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: preview?.role ?? user.role,
+    affiliation: preview ? collaboratorPolicy?.affiliationKey ?? null : collaboratorPolicy?.affiliationKey ?? user.affiliation,
+    collaboratorProfile: compatibilityCollaboratorProfile(
+      collaboratorPolicy,
+      preview ? null : user.collaboratorProfile,
+    ),
+    collaboratorPolicy,
+    capabilities: preview?.capabilities ?? capabilitiesForActor(user),
+    staffingType: user.staffingType,
+    avatarUrl: user.avatarUrl ?? null,
+    forcePasswordChange: user.forcePasswordChange,
+    onboardingRequired: requiresOnboarding(user),
+    preview: preview ? rolePreviewInfo(preview) : undefined,
+  };
+}
+
+/**
+ * A request carrying `Authorization: Bearer wc_...` is authenticated by that
+ * token alone, never by a cookie, and a bad token is a 401 rather than a
+ * fallback. The token acts as its owner; role previews do not apply.
+ */
+async function loadApiTokenUser(raw: string, requestHeaders: Headers): Promise<AuthUser> {
+  const hashed = await tokenHash(raw);
+  const token = await db.apiToken.findUnique({
+    where: { tokenHash: hashed },
+    select: {
+      id: true,
+      scope: true,
+      expiresAt: true,
+      lastUsedAt: true,
+      user: { select: authUserSelect },
+    },
+  });
+  const now = new Date();
+  if (!token || token.expiresAt < now) {
+    await enforceRateLimit(`api-token:bad:${getClientIp({ headers: requestHeaders } as Request)}`, { max: 30, windowMs: 60_000 });
+    throw new HttpError(401, "API token is invalid or expired");
+  }
+  if (!token.user.active) {
+    throw new HttpError(401, "Account deactivated");
+  }
+  requireActiveCollaboratorPolicy(token.user);
+
+  const staleBefore = new Date(now.getTime() - API_TOKEN_LAST_USED_REFRESH_MS);
+  if (!token.lastUsedAt || token.lastUsedAt < staleBefore) {
+    after(() => db.apiToken.updateMany({
+      where: { id: token.id, OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: staleBefore } }] },
+      data: { lastUsedAt: now },
+    }));
+  }
+
+  return { ...toAuthUser(token.user, null), apiTokenScope: token.scope === "WRITE" ? "WRITE" : "READ" };
+}
+
 async function loadAuthenticatedUser(): Promise<AuthUser> {
+  const requestHeaders = await headers();
+  const bearer = bearerTokenFrom(requestHeaders.get("authorization"));
+  if (bearer) return loadApiTokenUser(bearer, requestHeaders);
+
   const cookieStore = await cookies();
   const token = cookieStore.get(env.sessionCookieName)?.value;
 
@@ -234,32 +334,12 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
   const hashed = await tokenHash(token);
   const session = await db.session.findUnique({
     where: { tokenHash: hashed },
-    // Session validation needs identity and policy, not the full staff profile
-    // (password hash, contact details, clothing sizes, notification prefs, etc.).
     select: {
       id: true,
       expiresAt: true,
       createdAt: true,
       persistent: true,
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          active: true,
-          affiliation: true,
-          collaboratorProfile: true,
-          collaboratorPolicyId: true,
-          staffingType: true,
-          avatarUrl: true,
-          forcePasswordChange: true,
-          onboardingRequired: true,
-          onboardingCompletedAt: true,
-          lastActiveAt: true,
-          collaboratorPolicy: { select: collaboratorPolicyActorSelect },
-        },
-      },
+      user: { select: authUserSelect },
     },
   });
 
@@ -288,30 +368,7 @@ async function loadAuthenticatedUser(): Promise<AuthUser> {
     await refreshUserLastActive(session.user.id, session.user.lastActiveAt);
   }
 
-  const actualCollaboratorPolicy = collaboratorPolicyMetadataForActor(session.user);
-  const collaboratorPolicy = preview?.role === Role.COLLABORATOR
-    ? rolePreviewCollaboratorPolicyMetadata(preview.collaboratorAffiliation)
-    : session.user.role === Role.COLLABORATOR
-      ? actualCollaboratorPolicy
-      : null;
-  return {
-    id: session.user.id,
-    email: session.user.email,
-    name: session.user.name,
-    role: preview?.role ?? session.user.role,
-    affiliation: preview ? collaboratorPolicy?.affiliationKey ?? null : collaboratorPolicy?.affiliationKey ?? session.user.affiliation,
-    collaboratorProfile: compatibilityCollaboratorProfile(
-      collaboratorPolicy,
-      preview ? null : session.user.collaboratorProfile,
-    ),
-    collaboratorPolicy,
-    capabilities: preview?.capabilities ?? capabilitiesForActor(session.user),
-    staffingType: session.user.staffingType,
-    avatarUrl: session.user.avatarUrl ?? null,
-    forcePasswordChange: session.user.forcePasswordChange,
-    onboardingRequired: requiresOnboarding(session.user),
-    preview: preview ? rolePreviewInfo(preview) : undefined,
-  };
+  return toAuthUser(session.user, preview);
 }
 
 // ── Kiosk Device Auth ────────────────────────────────────

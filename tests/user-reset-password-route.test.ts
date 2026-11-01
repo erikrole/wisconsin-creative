@@ -16,6 +16,7 @@ vi.mock("@/lib/db", () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     session: {
       deleteMany: vi.fn(),
     },

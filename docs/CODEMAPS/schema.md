@@ -135,7 +135,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 146
+Fields: 147
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -169,6 +169,7 @@ Fields: 146
 - `lastActiveAt                  DateTime?                        @map("last_active_at")`
 - `location                      Location?                        @relation(fields: [locationId], references: [id], onDelete: SetNull)`
 - `sessions                      Session[]`
+- `apiTokens                     ApiToken[]`
 - `passkeyCredentials            PasskeyCredential[]`
 - `passkeyChallenges             PasskeyChallenge[]`
 - `requested                     Booking[]                        @relation("BookingRequester")`
@@ -308,6 +309,25 @@ Indexes and constraints:
 
 - `@@index([userId])`
 - `@@map("sessions")`
+
+## Model `ApiToken`
+
+Fields: 9
+
+- `id         String    @id @default(cuid())`
+- `userId     String    @map("user_id")`
+- `name       String`
+- `tokenHash  String    @unique @map("token_hash")`
+- `scope      String`
+- `expiresAt  DateTime  @map("expires_at")`
+- `lastUsedAt DateTime? @map("last_used_at")`
+- `createdAt  DateTime  @default(now()) @map("created_at")`
+- `user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([userId])`
+- `@@map("api_tokens")`
 
 ## Model `PasswordResetToken`
 
@@ -3411,12 +3431,16 @@ Values: `AWARDS_PRIZES`, `BUSINESS_TRAVEL`, `EQUIPMENT`, `IT_SERVICES`, `LEASES`
 
 ## Model `Budget`
 
-Fields: 8
+Fields: 12
 
 - `id              String       @id @default(cuid())`
 - `name            String`
 - `fiscalYear      String       @map("fiscal_year")`
 - `allocationCents Int?         @map("allocation_cents")`
+- `submittedCents  Int?         @map("submitted_cents")`
+- `submittedUnknownCount Int    @default(0) @map("submitted_unknown_count")`
+- `submittedAt     DateTime?    @map("submitted_at")`
+- `submittedSource String?      @map("submitted_source")`
 - `notes           String?`
 - `createdAt       DateTime     @default(now()) @map("created_at")`
 - `updatedAt       DateTime     @updatedAt @map("updated_at")`
@@ -3430,7 +3454,7 @@ Indexes and constraints:
 
 ## Model `BudgetLine`
 
-Fields: 28
+Fields: 34
 
 - `id              String           @id @default(cuid())`
 - `budgetId        String           @map("budget_id")`
@@ -3439,6 +3463,12 @@ Fields: 28
 - `description     String`
 - `supplier        String?`
 - `unitCostCents   Int              @map("unit_cost_cents")`
+- `unitCostKnown   Boolean          @default(true) @map("unit_cost_known")`
+- `plannedOverrideCents Int?        @map("planned_override_cents")`
+- `plannedTotalKnown Boolean        @default(true) @map("planned_total_known")`
+- `statusKnown     Boolean          @default(true) @map("status_known")`
+- `submittedIncluded Boolean        @default(false) @map("submitted_included")`
+- `submittedAmountCents Int?        @map("submitted_amount_cents")`
 - `quantity        Int              @default(1)`
 - `quantityBought  Int?             @map("quantity_bought")`
 - `spentCents      Int?             @map("spent_cents")`

@@ -344,6 +344,14 @@ struct BookingAsset: Codable, Identifiable {
     }
 }
 
+/// One row from `GET /api/assets/picker-search`, used by the admin Add item sheet.
+struct CheckoutAddCandidate: Decodable, Identifiable, Sendable {
+    let id: String
+    let assetTag: String
+    let name: String?
+    let imageUrl: String?
+}
+
 struct BookingSerializedItem: Codable, Identifiable {
     let id: String
     let assetId: String
@@ -1202,9 +1210,4 @@ struct UserListResponse: Codable, Sendable {
     let limit: Int
     let offset: Int
     let stats: Stats?
-}
-
-struct APIResponse<T: Codable>: Codable {
-    let data: T?
-    let error: String?
 }

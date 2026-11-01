@@ -343,6 +343,7 @@ struct WrappedPlayerView: View {
     @State private var paused = false
     @State private var holding = false
     @State private var showsGrid = false
+    @State private var cardWidth: CGFloat = 0
 
     private static let cardSeconds: Double = 6.5
     private var last: Int { slides.count - 1 }
@@ -359,6 +360,7 @@ struct WrappedPlayerView: View {
                     removal: .opacity
                 ))
                 .contentShape(Rectangle())
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { cardWidth = $0 }
                 .gesture(tapGesture)
                 .simultaneousGesture(holdGesture)
                 .accessibilityElement(children: .combine)
@@ -462,9 +464,9 @@ struct WrappedPlayerView: View {
 
     private var tapGesture: some Gesture {
         SpatialTapGesture().onEnded { value in
-            // Left third goes back, the rest goes forward, like stories.
-            let width = UIScreen.main.bounds.width
-            if value.location.x < width * 0.3 { go(index - 1) } else { go(index + 1) }
+            // Left third goes back, the rest goes forward, like stories. The
+            // card's own width, not the screen's: an iPad window can be narrower.
+            if value.location.x < cardWidth * 0.3 { go(index - 1) } else { go(index + 1) }
         }
     }
 
