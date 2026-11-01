@@ -36,6 +36,8 @@ test("student claims an open shift, admin approves; trade posted, claimed and ap
     // Admins see the editable crew list, so the assignment shows as an Unassign control.
     await expect(adminPage.getByRole("button", { name: `Unassign ${teammate.name}` })).toBeVisible();
     await expect(adminPage.getByRole("row", { name: /2 of 2 shifts filled/ })).toBeVisible();
+    // The game ends at 8 PM Madison time; rendered on the UTC server it must not become a two-day range.
+    await expect(adminPage.getByText(/^[A-Z][a-z]{2} \d{1,2}-\d{1,2}$/)).toHaveCount(0);
     // The teammate sees it too, in Madison time.
     await teammatePage.reload();
     await clickOpens(teammatePage.getByRole("button", { name: "Expand shifts" }), teammatePage.getByRole("button", { name: `Open Video shift assigned to ${teammate.name}` }));

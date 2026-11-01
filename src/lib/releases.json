@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-11-01",
+    "title": "Every date reads in Madison time",
+    "type": "fixes",
+    "summary": "A few remaining dates followed the server's clock or your device's clock instead of Madison time, so an evening game could show on the next day when a page first loaded or when you were travelling.",
+    "details": [
+      "The Schedule no longer labels a game that ends at 8 PM as a two-day event, and it sorts and places evening events under the right day on the first load.",
+      "Full dates, day-and-time labels, Today and Tomorrow labels and date ranges all use Madison time like the rest of the app.",
+      "An event that ends exactly at midnight stays on the day it ends.",
+      "Nothing changes in layout or wording."
+    ],
+    "pr": 753,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Automated checks on the core flows",
     "type": "improvement",
     "summary": "Every change now runs a browser through the flows students and admins rely on most, so a broken reservation, kiosk return or shift trade is caught before it ships.",

@@ -7,6 +7,7 @@ import {
   formatDateRange,
   formatDateTime,
   formatDateWithDayTime,
+  formatDayLabel,
   formatDueLabel,
   formatDuration,
   formatMinutes,
@@ -142,3 +143,19 @@ describe("display dates", () => {
     expect(formatDateRange(iso, "2026-03-14T20:00:00.000Z")).toBe("Mar 11 – Mar 14");
   });
 });
+
+describe("Madison evenings", () => {
+  // The unit workers run on the Madison clock; the end-to-end flow suite renders
+  // the same helpers on a UTC server and checks the Schedule for a stray day range.
+  it("stay on their Madison day", () => {
+    const eightPmMonday = "2026-11-03T02:00:00.000Z"; // Nov 2, 8:00 PM CST
+    expect(formatDateFull(eightPmMonday)).toBe("Nov 2, 2026");
+    expect(formatDateWithDayTime(eightPmMonday)).toEqual({ date: "Nov 2, 2026", dayTime: "Monday 8:00 PM" });
+    expect(formatDateRange("2026-11-02T23:00:00.000Z", eightPmMonday)).toBe("Nov 2");
+    expect(formatDayLabel(eightPmMonday, new Date("2026-11-01T06:00:00.000Z"))).toBe("Tomorrow");
+    expect(formatDayLabel(eightPmMonday, new Date("2026-10-20T12:00:00.000Z"))).toBe("Monday, Nov 2");
+    // An all-day date is a calendar day already; "today" still comes from the Madison clock.
+    expect(formatDayLabel("2026-11-02T00:00:00.000Z", new Date("2026-11-02T03:00:00.000Z"), true)).toBe("Tomorrow");
+  });
+});
+

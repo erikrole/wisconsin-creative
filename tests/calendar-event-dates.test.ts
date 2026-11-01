@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   eventOccursOnCalendarDay,
+  eventSpansMultipleDays,
   formatCalendarEventAllDayLabel,
   formatCalendarEventDateRange,
   sortCalendarEventsForDisplay,
@@ -49,5 +50,27 @@ describe("calendar event date helpers", () => {
       "all-day-sep-2",
       "timed-sep-2",
     ]);
+  });
+
+  it("files a Madison evening game under one Madison day", () => {
+    const game = { startsAt: "2026-11-02T23:00:00.000Z", endsAt: "2026-11-03T02:00:00.000Z", allDay: false };
+    expect(eventSpansMultipleDays(game)).toBe(false);
+    expect(formatCalendarEventDateRange(game)).toBe("Nov 2");
+    expect(formatCalendarEventDateRange(game, { includeYear: true })).toBe("Nov 2, 2026");
+    expect(eventOccursOnCalendarDay(game, new Date(2026, 10, 2))).toBe(true);
+    expect(eventOccursOnCalendarDay(game, new Date(2026, 10, 3))).toBe(false);
+
+    // Ending exactly at Madison midnight does not spill onto the next day.
+    const untilMidnight = { ...game, endsAt: "2026-11-03T06:00:00.000Z" };
+    expect(eventSpansMultipleDays(untilMidnight)).toBe(false);
+    expect(eventOccursOnCalendarDay(untilMidnight, new Date(2026, 10, 3))).toBe(false);
+
+    // A true overnight shoot still reads as a range.
+    const overnight = { ...game, endsAt: "2026-11-03T08:00:00.000Z" };
+    expect(formatCalendarEventDateRange(overnight)).toBe("Nov 2-3");
+    expect(sortCalendarEventsForDisplay([
+      { id: "all-day-nov-3", startsAt: "2026-11-03T00:00:00.000Z", endsAt: "2026-11-04T00:00:00.000Z", allDay: true },
+      { id: "game", ...game },
+    ]).map((event) => event.id)).toEqual(["game", "all-day-nov-3"]);
   });
 });

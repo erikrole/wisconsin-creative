@@ -141,10 +141,15 @@ const dayFormatter = new Intl.DateTimeFormat("en-US", {
   month: "numeric",
   day: "numeric",
 });
-function institutionDayNumber(date: Date): number {
+/** Calendar parts of an instant on the Central calendar (`month` is 1-12). */
+export function institutionDayParts(date: Date): { year: number; month: number; day: number } {
   const parts = dayFormatter.formatToParts(date);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
-  return Math.floor(Date.UTC(get("year"), get("month") - 1, get("day")) / 86_400_000);
+  return { year: get("year"), month: get("month"), day: get("day") };
+}
+function institutionDayNumber(date: Date): number {
+  const { year, month, day } = institutionDayParts(date);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
 }
 function institutionYear(date: Date): number {
   return Number(dayFormatter.formatToParts(date).find((p) => p.type === "year")?.value);
@@ -198,6 +203,7 @@ export function formatDateFull(iso: string | null, allDay = false) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    ...(allDay ? {} : { timeZone: INSTITUTION_TZ }),
   });
 }
 
@@ -294,21 +300,27 @@ export function formatDuration(startsAt: string, endsAt: string): string {
 /** "Mar 11, Friday 12:00 PM" — date with day-of-week and time */
 export function formatDateWithDayTime(iso: string): { date: string; dayTime: string } {
   const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const dayTime = d.toLocaleDateString("en-US", { weekday: "long" }) + " " +
-    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: INSTITUTION_TZ });
+  const dayTime = d.toLocaleDateString("en-US", { weekday: "long", timeZone: INSTITUTION_TZ }) + " " +
+    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: INSTITUTION_TZ });
   return { date, dayTime };
 }
 
 /** "Today", "Tomorrow", or "Wednesday, Apr 9" */
 export function formatDayLabel(dateStr: string, now: Date, allDay = false): string {
   const date = calendarDate(dateStr, allDay);
+  // An all-day date is a calendar day already; "today" is still the Central day, not the clock's.
   const offset = allDay
-    ? Math.round((date.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000)
+    ? Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000) - institutionDayNumber(now)
     : institutionDayOffset(date, now);
   if (offset === 0) return "Today";
   if (offset === 1) return "Tomorrow";
-  return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    ...(allDay ? {} : { timeZone: INSTITUTION_TZ }),
+  });
 }
 
 /** "None", "45min", "1 hr", "2 hrs", or "1h 30m" for a call-time offset in minutes. */
@@ -325,8 +337,8 @@ export function formatMinutes(minutes: number): string {
 export function formatDateRange(startsAt: string, endsAt: string) {
   const s = new Date(startsAt);
   const e = new Date(endsAt);
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  if (s.toDateString() === e.toDateString()) {
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: INSTITUTION_TZ };
+  if (institutionDateKey(s) === institutionDateKey(e)) {
     return s.toLocaleDateString("en-US", opts);
   }
   return `${s.toLocaleDateString("en-US", opts)} – ${e.toLocaleDateString("en-US", opts)}`;
