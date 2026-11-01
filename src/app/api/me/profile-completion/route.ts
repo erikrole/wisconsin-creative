@@ -174,8 +174,11 @@ export const PATCH = withAuth(async (req, { user }) => {
         if (!getProfileCompletion(before).requiredComplete) {
           throw new HttpError(409, "Save your required details before finishing setup.", { code: "ONBOARDING_INCOMPLETE" });
         }
+        // Finishing without a photo is a choice the person just made, so the
+        // photo reminder waits a day instead of reopening on the next page.
         const next = await tx.user.update({ where: { id: user.id }, data: {
-          onboardingCompletedAt: new Date(), onboardingRequired: false, profilePromptSnoozedUntil: null,
+          onboardingCompletedAt: new Date(), onboardingRequired: false,
+          profilePromptSnoozedUntil: before.avatarUrl ? null : new Date(Date.now() + 24 * 60 * 60 * 1000),
         }, select: profileSelect });
         await createAuditEntryTx(tx, {
           actorId: user.id, actorRole: user.role, entityType: "user", entityId: user.id,

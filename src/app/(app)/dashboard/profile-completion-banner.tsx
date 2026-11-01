@@ -23,12 +23,13 @@ export function ProfileCompletionBanner() {
 
   const missingCount = missingFields.length;
   const missingLabel = missingCount === 1 ? "1 detail left" : `${missingCount} details left`;
-  const description =
-    data.profile.role === "COLLABORATOR"
-      ? "Add a profile photo so teammates can recognize you across the roster."
-      : data.completion.operationalReady
-        ? "Your working details are ready. Add the remaining profile details when you have a minute."
-        : "Add the remaining contact and identification details so the team can reach you and keep handoffs moving.";
+  // After setup the team has what it needs; the only ask left is a photo.
+  const photoOnly = data.profile.role === "COLLABORATOR" || data.completion.onboardingComplete;
+  const description = photoOnly
+    ? "So teammates recognize you on the roster, the schedule and the kiosk."
+    : data.completion.operationalReady
+      ? "Your working details are ready. Add the remaining profile details when you have a minute."
+      : "Add the remaining contact and identification details so the team can reach you and keep handoffs moving.";
 
   return (
     <section
@@ -62,11 +63,11 @@ export function ProfileCompletionBanner() {
             className="text-[13px] font-semibold text-foreground"
             style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
           >
-            Finish your setup
+            {photoOnly ? "Add a profile photo" : "Finish your setup"}
           </h2>
           <p className="mt-0.5 text-[12px] leading-5 text-muted-foreground">
-            {description}{" "}
-            <span className="text-muted-foreground/75">Missing: {formatMissingFields(missingFields)}.</span>
+            {description}
+            {!photoOnly && <span className="text-muted-foreground/75"> Missing: {formatMissingFields(missingFields)}.</span>}
           </p>
         </div>
 
@@ -76,7 +77,7 @@ export function ProfileCompletionBanner() {
           className="min-h-10 w-full sm:w-auto"
           onClick={openProfileCompletion}
         >
-          Finish setup
+          {photoOnly ? "Add photo" : "Finish setup"}
           <ArrowRightIcon data-icon="inline-end" />
         </Button>
       </div>

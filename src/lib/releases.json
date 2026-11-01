@@ -18,6 +18,25 @@
   },
   {
     "date": "2026-11-01",
+    "title": "A smoother first week for new students",
+    "type": "improvement",
+    "summary": "After you finish setup, the setup window stays closed. Home asks only for a profile photo, the Schedule explains itself when it is empty, and the first page is called Home everywhere.",
+    "details": [
+      "Finishing setup without a photo no longer reopens the setup window on every page. A gentle photo reminder comes back the next day and opens straight on the photo step.",
+      "Home's banner and Getting started list ask for a profile photo once your details are in, instead of saying your profile is unfinished.",
+      "An empty Schedule says that shifts show up once you are scheduled, and only staff see the calendar-sources hint.",
+      "The first page is called Home in the menu, breadcrumbs, search and error pages.",
+      "Member since on your profile shows the Madison date.",
+      "On iOS, the Getting started list also asks for a profile photo once your details are in."
+    ],
+    "pr": 752,
+    "platforms": [
+      "Web",
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Automated checks on the core flows",
     "type": "improvement",
     "summary": "Every change now runs a browser through the flows students and admins rely on most, so a broken reservation, kiosk return or shift trade is caught before it ships.",

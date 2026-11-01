@@ -188,12 +188,23 @@ describe("PATCH /api/me/profile-completion FINISH", () => {
     const { response, body } = await save({ step: "FINISH", expectedUserId: student.id });
 
     expect(response.status).toBe(200);
-    expect(updatedData()).toEqual({ onboardingCompletedAt: expect.any(Date), onboardingRequired: false, profilePromptSnoozedUntil: null });
+    // Finishing without a photo is a choice just made, so the photo reminder waits a day.
+    expect(updatedData()).toEqual({ onboardingCompletedAt: expect.any(Date), onboardingRequired: false, profilePromptSnoozedUntil: expect.any(Date) });
+    expect((updatedData().profilePromptSnoozedUntil as Date).getTime()).toBeGreaterThan(Date.now() + 23 * 60 * 60 * 1000);
     expect(mocks.audit).toHaveBeenCalledWith(mocks.db, expect.objectContaining({
       action: "onboarding_completed",
       after: { onboardingComplete: true, photoAdded: false },
     }));
     expect(body.data.completion.requiresSetup).toBe(false);
+  });
+
+  it("does not schedule a photo reminder when the photo is already in", async () => {
+    stored = profile({ ...complete, avatarUrl: "https://example.com/maya.webp" });
+
+    const { response } = await save({ step: "FINISH", expectedUserId: student.id });
+
+    expect(response.status).toBe(200);
+    expect(updatedData().profilePromptSnoozedUntil).toBeNull();
   });
 
   it("replays safely after setup is already finished", async () => {

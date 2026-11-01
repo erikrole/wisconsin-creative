@@ -789,8 +789,8 @@ export function ListView({
                 : hasFilters
                   ? "No events match these filters"
                   : myShiftsOnly
-                    ? "No shifts assigned"
-                    : "No events found"
+                    ? "No shifts yet"
+                    : "Nothing on the schedule yet"
             }
             description={
               activeQueueMeta
@@ -798,8 +798,10 @@ export function ListView({
                 : hasFilters
                   ? "Try adjusting or clearing filters to see more of the schedule."
                   : myShiftsOnly
-                    ? "You don't have shift assignments in this timeline."
-                    : "No schedule events are available. Check Settings > Calendar Sources to add an ICS feed."
+                    ? "Shifts you\u2019re scheduled on show up here. Until then, the full schedule shows what\u2019s coming up."
+                    : isStaff
+                      ? "No schedule events are available. Check Settings > Calendar Sources to add an ICS feed."
+                      : "Events show up here once the team adds them."
             }
             actionLabel={
               activeQueueMeta
@@ -808,10 +810,10 @@ export function ListView({
                   ? "Clear filters"
                   : myShiftsOnly
                     ? "Show all events"
-                    : "Calendar Sources"
+                    : isStaff ? "Calendar Sources" : undefined
             }
             actionHref={
-              activeQueueMeta || hasFilters || myShiftsOnly
+              activeQueueMeta || hasFilters || myShiftsOnly || !isStaff
                 ? undefined
                 : "/settings/calendar-sources"
             }

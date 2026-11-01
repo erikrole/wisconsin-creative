@@ -127,7 +127,7 @@ type NavGroup = {
 const navGroups: NavGroup[] = [
   {
     items: [
-      { label: "Dashboard", href: "/", icon: HouseIcon },
+      { label: "Home", href: "/", icon: HouseIcon },
       { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
       { label: "Bookings", href: "/bookings", icon: ClipboardListIcon },
       { label: "Items", href: "/items", icon: CameraIcon },
