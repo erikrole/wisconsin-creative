@@ -11,7 +11,8 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(100),
 });
 
-export const GET = withAuth(async (req) => {
+export const GET = withAuth(async (req, { user }) => {
+  requirePermission(user.role, "asset", "view");
   const includeInactive = new URL(req.url).searchParams.get("includeInactive") === "1";
   const departments = await db.department.findMany({
     where: includeInactive ? {} : { active: true },

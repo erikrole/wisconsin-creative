@@ -183,6 +183,15 @@ export function appTzDateKey(instant: Date, timeZone: string = env.appTimezone):
 }
 
 /**
+ * The calendar year the current academic year ends in (Sept to Aug), by the
+ * app-timezone date. Student year labels and directory filters derive from it.
+ */
+export function academicYearEnd(now: Date = new Date(), timeZone: string = env.appTimezone): number {
+  const { year, month } = appTzYmd(now, timeZone);
+  return month >= 8 ? year + 1 : year;
+}
+
+/**
  * The `[start, end)` UTC window covering one app-timezone calendar day,
  * given its `YYYY-MM-DD` key. DST-correct via `startOfDayInAppTz`.
  */

@@ -491,6 +491,48 @@ describe("directAssignShift", () => {
   });
 });
 
+describe("multi-day all-day events", () => {
+  it("lets a worker on a three-day tournament take a timed shift on one of its days", async () => {
+    const tournamentShift = makeShift({
+      id: "tournament-video",
+      shiftGroupId: "tournament-group",
+      startsAt: new Date("2026-07-07T05:00:00.000Z"),
+      endsAt: new Date("2026-07-10T05:00:00.000Z"),
+      callStartsAt: null,
+      callEndsAt: null,
+      shiftGroup: {
+        event: {
+          startsAt: new Date("2026-07-07T05:00:00.000Z"),
+          endsAt: new Date("2026-07-10T05:00:00.000Z"),
+          allDay: true,
+        },
+      },
+    });
+    const gameShift = makeShift({
+      id: "day-two-game",
+      shiftGroupId: "day-two-group",
+      startsAt: new Date("2026-07-08T18:00:00.000Z"),
+      endsAt: new Date("2026-07-08T21:00:00.000Z"),
+      callStartsAt: null,
+      callEndsAt: null,
+      shiftGroup: { event: { startsAt: new Date("2026-07-08T18:00:00.000Z"), endsAt: new Date("2026-07-08T21:00:00.000Z"), allDay: false } },
+    });
+    mockTx.shift.findUnique.mockResolvedValue(gameShift);
+    mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
+    mockTx.shiftAssignment.findMany.mockResolvedValue([
+      { id: "tournament-assignment", callStartsAt: null, callEndsAt: null, shift: tournamentShift },
+    ]);
+    mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
+    mockTx.shiftAssignment.create.mockResolvedValue({
+      id: "game-assignment", shiftId: gameShift.id, userId: "user-1", status: "DIRECT_ASSIGNED",
+    });
+
+    const result = await directAssignShift(gameShift.id, "user-1", "admin-1");
+
+    expect(result.id).toBe("game-assignment");
+  });
+});
+
 describe("repairRoleSlotMismatch", () => {
   it("moves an active mismatched assignment into a matching open slot", async () => {
     const studentSlot = makeShift({ id: "student-slot", workerType: "ST" });

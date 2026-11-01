@@ -152,6 +152,11 @@ describe("shared mutation array bounds", () => {
     })).toThrow(`Too big: expected number to be <=${MAX_BULK_QUANTITY_PER_LINE}`);
   });
 
+  it("bounds the free-text bulk SKU category like every other string field", () => {
+    expect(() => updateBulkSkuSchema.parse({ category: "Audio" })).not.toThrow();
+    expect(() => updateBulkSkuSchema.parse({ category: "x".repeat(201) })).toThrow();
+  });
+
   it("caps bulk-unit label numbers at the PostgreSQL Int maximum", () => {
     expect(() => markBulkUnitLabelsSchema.parse({
       unitNumbers: [MAX_BULK_UNIT_NUMBER],

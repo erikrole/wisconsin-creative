@@ -321,7 +321,7 @@ private struct CheckoutReturnLockScreen: View {
                 Spacer(minLength: 8)
 
                 if presentation.urgency != .returned {
-                    Text("Due \(context.state.endsAt, style: .time)")
+                    Text("Due \(context.state.endsAt, format: .chicago.hour().minute())")
                         .font(.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -350,7 +350,7 @@ private struct CheckoutReturnLockScreen: View {
                         .lineLimit(1)
                 } else if let nextNeedAt = context.state.nextNeedAt {
                     Label {
-                        Text("Needed again \(nextNeedAt, style: .time)")
+                        Text("Needed again \(nextNeedAt, format: .chicago.hour().minute())")
                     } icon: {
                         Image(systemName: "arrow.forward.circle.fill")
                     }
@@ -453,7 +453,7 @@ private struct ExpandedReturnStatus: View {
                         figure: .system(size: 30, weight: .bold, design: .rounded)
                     )
                     Spacer(minLength: 8)
-                    Text("Due \(context.state.endsAt, style: .time)")
+                    Text("Due \(context.state.endsAt, format: .chicago.hour().minute())")
                         .font(.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -468,7 +468,7 @@ private struct ExpandedReturnStatus: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 } else if let nextNeedAt = context.state.nextNeedAt {
-                    Text("Needed again \(nextNeedAt, style: .time)")
+                    Text("Needed again \(nextNeedAt, format: .chicago.hour().minute())")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -567,5 +567,15 @@ extension Date {
             pinned.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
         }
         return pinned.format(self)
+    }
+}
+
+/// `Text(date, format:)` takes a `FormatStyle` directly and reads the device
+/// zone; this pins Central like the `formatted` overloads above.
+extension FormatStyle where Self == Date.FormatStyle {
+    static var chicago: Date.FormatStyle {
+        var style = Date.FormatStyle.dateTime
+        style.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
+        return style
     }
 }

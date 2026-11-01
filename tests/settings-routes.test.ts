@@ -473,6 +473,15 @@ describe("Departments settings routes", () => {
     }));
   });
 
+  it("keeps the department list internal", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ ...studentUser, role: "COLLABORATOR" } as never);
+
+    const res = await getDepartments(makeGetRequest("https://app.example.com/api/departments"), noParams);
+
+    expect(res.status).toBe(403);
+    expect(db.department.findMany).not.toHaveBeenCalled();
+  });
+
   it("includes inactive departments when requested", async () => {
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
     vi.mocked(db.department.findMany).mockResolvedValue([]);
