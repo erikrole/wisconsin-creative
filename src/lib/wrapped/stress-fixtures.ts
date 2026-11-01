@@ -1,8 +1,8 @@
-import { buildPersonCards, buildTeamCards, type WrappedGame, type WrappedPersonInput, type WrappedRecap } from "@/lib/wrapped/recap";
+import { buildPersonCards, buildTeamCards, buildWelcomeCard, type WrappedGame, type WrappedPersonInput, type WrappedRecap } from "@/lib/wrapped/recap";
 
 /** Synthetic extremes for the Wrapped dev lab and stress tests; no database needed. */
 
-export const WRAPPED_SCENARIOS = ["nothing", "one-shift", "checkouts-only", "huge", "long-text", "collaborator"] as const;
+export const WRAPPED_SCENARIOS = ["nothing", "new-student", "one-shift", "checkouts-only", "huge", "long-text", "collaborator"] as const;
 export type WrappedScenario = (typeof WRAPPED_SCENARIOS)[number];
 
 const SPORTS = ["FB", "MBB", "WBB", "VB", "MHKY", "WHKY", "WSOC", "SB", "WRES", "MSWIM", "WTRACK", "MXC"];
@@ -60,6 +60,12 @@ export function wrappedScenario(name: WrappedScenario): WrappedRecap {
     case "nothing":
       teamGames = [];
       break;
+    case "new-student":
+      // Joined after the season: nothing personal, but the team's fall still plays.
+      teamGames = Array.from({ length: 24 }, (_, n) => makeGame(n, { crew: [mate(n % 9), mate((n + 3) % 9)] }));
+      teamCheckouts = 310;
+      badges = 19;
+      break;
     case "one-shift":
       input = person({ games: [makeGame(1, { crew: [ME] })], shiftHours: 0.5 });
       teamGames = input.games;
@@ -105,7 +111,9 @@ export function wrappedScenario(name: WrappedScenario): WrappedRecap {
       teamCheckouts = 40;
       break;
   }
-  const cards = input.user.role === "COLLABORATOR" ? [] : buildPersonCards(input);
+  const team = buildTeamCards({ games: teamGames, checkouts: teamCheckouts, badgesAwarded: badges });
+  const personal = input.user.role === "COLLABORATOR" ? [] : buildPersonCards(input);
+  const cards = personal.length === 0 && team.length > 0 && input.user.role !== "COLLABORATOR" ? [buildWelcomeCard(input.user)] : personal;
   return {
     version: 1,
     seasonKey: "2026-fall",
@@ -113,6 +121,6 @@ export function wrappedScenario(name: WrappedScenario): WrappedRecap {
     generatedAt: "2026-11-30T12:00:00.000Z",
     person: { userId: input.user.id, name: input.user.name, avatarUrl: null },
     cards,
-    team: buildTeamCards({ games: teamGames, checkouts: teamCheckouts, badgesAwarded: badges }),
+    team,
   };
 }

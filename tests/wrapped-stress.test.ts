@@ -21,7 +21,7 @@ describe.each(WRAPPED_SCENARIOS)("Wrapped stress: %s", (name) => {
 
   it("has unique card ids, a summary last, and at most four summary stats", () => {
     expect(new Set(cards.map((c) => c.id)).size).toBe(cards.length);
-    if (recap.cards.length > 0) {
+    if (recap.cards.length > 1) {
       expect(recap.cards.at(-1)!.layout).toBe("summary");
       expect(recap.cards.at(-1)!.items!.length).toBeLessThanOrEqual(4);
     }
@@ -33,6 +33,13 @@ describe("Wrapped stress outcomes", () => {
     expect(wrappedScenario("nothing").cards).toEqual([]);
     expect(wrappedScenario("nothing").team).toEqual([]);
     expect(wrappedScenario("collaborator").cards).toEqual([]);
+  });
+
+  it("opens a new student on their own cover before the team's cards", () => {
+    const recap = wrappedScenario("new-student");
+    expect(recap.cards.map((card) => card.id)).toEqual(["welcome"]);
+    expect(recap.cards[0]!.layout).toBe("cover");
+    expect(recap.team.length).toBeGreaterThan(0);
   });
 
   it("rounds a half hour of call time without calling it zero", () => {

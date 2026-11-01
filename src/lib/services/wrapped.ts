@@ -13,6 +13,7 @@ import { scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
 import {
   buildPersonCards,
   buildTeamCards,
+  buildWelcomeCard,
   WRAPPED_RECAP_VERSION,
   WRAPPED_SEASON_KEY,
   WRAPPED_UNLOCK_AT,
@@ -134,7 +135,7 @@ export async function buildWrappedRecap(userId: string, now: Date = new Date()):
         shift: { select: { startsAt: true, endsAt: true, callStartsAt: true, callEndsAt: true } },
       },
     }),
-    db.eventTravelMember.count({ where: { userId, event: { startsAt: WINDOW } } }),
+    db.eventTravelMember.count({ where: { userId, event: { startsAt: WINDOW, status: { not: "CANCELLED" } } } }),
     db.booking.findMany({
       where: { requesterUserId: userId, kind: "CHECKOUT", status: { in: [...COUNTED_CHECKOUT_STATUSES] }, startsAt: WINDOW },
       select: {
@@ -192,14 +193,17 @@ export async function buildWrappedRecap(userId: string, now: Date = new Date()):
       badges: badges.map((badge) => ({ name: badge.definition.name, awardedAt: badge.awardedAt })),
     });
 
+  const team = buildTeamCards({ games, checkouts: teamCheckouts, badgesAwarded });
+  // Someone with nothing personal still opens on their own cover before the team's cards.
+  const welcome = cards.length === 0 && team.length > 0 && user.role !== "COLLABORATOR";
   return {
     version: WRAPPED_RECAP_VERSION,
     seasonKey: WRAPPED_SEASON_KEY,
     windowLabel: WRAPPED_WINDOW_LABEL,
     generatedAt: now.toISOString(),
     person: { userId: user.id, name: user.name, avatarUrl: user.avatarUrl },
-    cards,
-    team: buildTeamCards({ games, checkouts: teamCheckouts, badgesAwarded }),
+    cards: welcome ? [buildWelcomeCard(user)] : cards,
+    team,
   };
 }
 
