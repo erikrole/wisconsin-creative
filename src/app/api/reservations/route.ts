@@ -10,7 +10,7 @@ import { startOfDayInAppTz } from "@/lib/app-time";
 import { parseDateRange } from "@/lib/time";
 import { createReservationSchema, sanitizeBookingFields } from "@/lib/validation";
 import { createReservationLifecycleNotification } from "@/lib/services/notifications";
-import { loadReservationRules } from "@/lib/services/reservation-rules";
+import { assertReservationStartAllowed, loadReservationRules } from "@/lib/services/reservation-rules";
 import { sanitizeCollaboratorBooking } from "@/lib/collaborator-gear";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
 import { assertSupportedReservationPickupLocation } from "@/lib/services/reservation-pickup-location";
@@ -89,20 +89,10 @@ export const POST = withAuth(async (req, { user }) => {
   if (user.role === "STUDENT" || user.role === "COLLABORATOR") {
     body.requesterUserId = user.id;
   }
-  const { start, end } = parseDateRange(body.startsAt, body.endsAt, { requireFutureStart: true });
+  const { start, end } = parseDateRange(body.startsAt, body.endsAt);
 
   const rules = await loadReservationRules();
-
-  // Enforce advance booking window
-  if (rules.advanceWindowDays !== null) {
-    const maxStartMs = Date.now() + rules.advanceWindowDays * 86_400_000;
-    if (start.getTime() > maxStartMs) {
-      throw new HttpError(
-        409,
-        `Reservations cannot be made more than ${rules.advanceWindowDays} day${rules.advanceWindowDays === 1 ? "" : "s"} in advance.`
-      );
-    }
-  }
+  assertReservationStartAllowed(start, rules);
 
   let reservation;
   try {
