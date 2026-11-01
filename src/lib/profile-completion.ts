@@ -233,7 +233,9 @@ export function getProfileCompletion(profile: ProfileCompletionProfile, now = ne
     completedCount: hiddenSmokeIdentity ? applicableFields.length : completedCount,
     totalCount: applicableFields.length,
     missingFields: hiddenSmokeIdentity ? [] : missingFields,
-    firstIncompleteStep: hiddenSmokeIdentity ? null : requiresSetup && requiredComplete ? "PHOTO" as const : firstIncompleteStep,
+    // Once the required details are in, the only thing left to ask for is the
+    // photo, so a reminder opens there rather than on a skipped Wiscard.
+    firstIncompleteStep: hiddenSmokeIdentity ? null : requiredComplete && !completeByField.photo ? "PHOTO" as const : firstIncompleteStep,
     completeByField,
   };
 }
