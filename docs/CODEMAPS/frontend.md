@@ -80,6 +80,7 @@
 | `/settings/quick-links` | `src/app/(app)/settings/quick-links/page.tsx` |
 | `/settings/reservation-rules` | `src/app/(app)/settings/reservation-rules/page.tsx` |
 | `/settings/security` | `src/app/(app)/settings/security/page.tsx` |
+| `/settings/shared-case-checklist` | `src/app/(app)/settings/shared-case-checklist/page.tsx` |
 | `/settings/sports` | `src/app/(app)/settings/sports/page.tsx` |
 | `/settings/venue-mappings` | `src/app/(app)/settings/venue-mappings/page.tsx` |
 | `/signatures/[id]/capture/[memberId]` | `src/app/(app)/signatures/[id]/capture/[memberId]/page.tsx` |
@@ -112,6 +113,7 @@
 | `/dev-badges` | `src/app/dev-badges/page.tsx` |
 | `/dev-batteries` | `src/app/dev-batteries/page.tsx` |
 | `/dev-bookings` | `src/app/dev-bookings/page.tsx` |
+| `/dev-case-checklist` | `src/app/dev-case-checklist/page.tsx` |
 | `/dev-crew-size` | `src/app/dev-crew-size/page.tsx` |
 | `/dev-crew-tags` | `src/app/dev-crew-tags/page.tsx` |
 | `/dev-gear` | `src/app/dev-gear/page.tsx` |

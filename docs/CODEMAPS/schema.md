@@ -544,7 +544,7 @@ Indexes and constraints:
 
 ## Model `Booking`
 
-Fields: 44
+Fields: 45
 
 - `id                      String                          @id @default(cuid())`
 - `kind                    BookingKind`
@@ -563,6 +563,7 @@ Fields: 44
 - `refNumber               String?                         @unique @map("ref_number")`
 - `shiftAssignmentId       String?                         @map("shift_assignment_id")`
 - `kitId                   String?                         @map("kit_id")`
+- `packingChecks           Json?                           @map("packing_checks")`
 - `pickupKioskDeviceId     String?                         @map("pickup_kiosk_device_id")`
 - `createdAt               DateTime                        @default(now()) @map("created_at")`
 - `updatedAt               DateTime                        @updatedAt @map("updated_at")`

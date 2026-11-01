@@ -15,6 +15,7 @@ const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string; parentHre
   "allowed-emails": { label: "Registration access" },
   "collaborator-access": { label: "Collaborator access" },
   "checkout-policies": { label: "Checkout policies" },
+  "shared-case-checklist": { label: "Shared case checklist" },
   "reservation-rules": { label: "Reservation rules" },
   "calendar-sources": { label: "Calendar sources" },
   "venue-mappings": { label: "Venue mappings" },

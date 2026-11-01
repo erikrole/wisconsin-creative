@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-11-01",
+    "title": "Shared case checklist",
+    "type": "feature",
+    "summary": "Shared travel case trips now have a checklist for things packed in the case that aren't checked out, like XLR cables, towels and sensor cleaning kits.",
+    "details": [
+      "Staff keep the list in Settings, Shared case checklist. Bring over from Resources copies an existing checklist in one step.",
+      "The checklist shows on every shared case reservation and checkout, and ticks carry over from the reservation to its checkout.",
+      "Anyone can tick an item, and each tick shows who did it and when, in Madison time."
+    ],
+    "pr": 739,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Automated checks on the core flows",
     "type": "improvement",
     "summary": "Every change now runs a browser through the flows students and admins rely on most, so a broken reservation, kiosk return or shift trade is caught before it ships.",

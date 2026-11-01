@@ -22,7 +22,7 @@
 | `Category` | 9 | 3 |
 | `Asset` | 44 | 8 |
 | `FirmwareWatchTarget` | 17 | 3 |
-| `Booking` | 44 | 15 |
+| `Booking` | 45 | 15 |
 | `BookingAccountabilityExclusion` | 11 | 4 |
 | `BookingDueDateChange` | 8 | 4 |
 | `BookingSerializedItem` | 10 | 4 |

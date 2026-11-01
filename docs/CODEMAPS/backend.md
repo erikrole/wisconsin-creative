@@ -121,6 +121,7 @@
 | `src/lib/services/schedule-template-review.ts` | 549 |
 | `src/lib/services/schedule-working-copy.ts` | 1268 |
 | `src/lib/services/scoreboard.ts` | 290 |
+| `src/lib/services/shared-case-checklist.ts` | 88 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 731 |
 | `src/lib/services/shift-generation.ts` | 676 |
@@ -175,7 +176,7 @@
 | `src/lib/asset-qr-code.ts` | 9 |
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/assignment-workload.ts` | 83 |
-| `src/lib/audit-actions.ts` | 426 |
+| `src/lib/audit-actions.ts` | 429 |
 | `src/lib/audit-retention.ts` | 8 |
 | `src/lib/audit.ts` | 163 |
 | `src/lib/auth-email-guidance.ts` | 7 |
@@ -196,7 +197,7 @@
 | `src/lib/booking-snapshot-header.ts` | 2 |
 | `src/lib/booking-status-display.ts` | 153 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 230 |
+| `src/lib/breadcrumbs.ts` | 231 |
 | `src/lib/brother-chain.ts` | 71 |
 | `src/lib/brother-label-csv.ts` | 185 |
 | `src/lib/brother-label-render.ts` | 134 |
@@ -277,7 +278,7 @@
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
 | `src/lib/motion-features.ts` | 5 |
-| `src/lib/nav-sections.ts` | 308 |
+| `src/lib/nav-sections.ts` | 317 |
 | `src/lib/notification-catalog.ts` | 325 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
@@ -361,6 +362,7 @@
 | `src/lib/serialization.ts` | 47 |
 | `src/lib/server-seed.ts` | 25 |
 | `src/lib/settled.ts` | 23 |
+| `src/lib/shared-case-checklist.ts` | 82 |
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 200 |
 | `src/lib/shift-claim-eligibility.ts` | 63 |
@@ -510,6 +512,7 @@
 
 - `/api/bookings/[id]/audit-logs`
 - `/api/bookings/[id]/cancel`
+- `/api/bookings/[id]/checklist`
 - `/api/bookings/[id]/custody-scope`
 - `/api/bookings/[id]/events`
 - `/api/bookings/[id]/extend`
@@ -728,6 +731,7 @@
 - `/api/kiosk/checkin/[id]/quantity`
 - `/api/kiosk/checkin/[id]/report`
 - `/api/kiosk/checkin/[id]/scan`
+- `/api/kiosk/checklist/[bookingId]`
 - `/api/kiosk/checkout/[id]/extend-window`
 - `/api/kiosk/checkout/[id]/nudge`
 - `/api/kiosk/checkout/[id]`
@@ -935,6 +939,8 @@
 - `/api/settings/non-game-schedule`
 - `/api/settings/onboarding-guide`
 - `/api/settings/reservation-rules`
+- `/api/settings/shared-case-checklist/import`
+- `/api/settings/shared-case-checklist`
 
 ### `/api/shift-assignments`
 

@@ -116,6 +116,15 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
   },
   // Booking rules
   {
+    href: "/settings/shared-case-checklist",
+    label: "Shared case checklist",
+    requiredRole: "STAFF",
+    group: "Booking",
+    description: "Things packed in the shared travel case that aren't checked out, ticked off on every trip.",
+    keywords: ["travel case", "football", "packing", "checklist", "shared", "case", "xlr", "towels"],
+    relatedHrefs: ["/settings/checkout-policies"],
+  },
+  {
     href: "/settings/checkout-policies",
     label: "Checkout policies",
     requiredRole: "ADMIN",

@@ -42,6 +42,7 @@ import {
 } from "@/components/booking-details/helpers";
 import { BookingHeader } from "@/components/booking-details/BookingHeader";
 import BookingInfoCard from "@/components/booking-details/BookingInfoCard";
+import { SharedCaseChecklistCard } from "@/components/booking-details/SharedCaseChecklistCard";
 import { EditBookingEventsDialog } from "@/components/booking-details/EditBookingEventsDialog";
 import { AddToCheckoutDialog } from "@/components/booking-details/AddToCheckoutDialog";
 import { TransferOwnerDialog } from "@/components/booking-details/TransferOwnerDialog";
@@ -452,6 +453,8 @@ export default function BookingDetailPage({
             ? () => { setEditSheetEquipment(true); setEditSheetOpen(true); }
             : canAddToCheckout ? () => setAddToCheckoutOpen(true) : undefined}
         />
+
+        {booking.custodyScope === "SHARED" && <SharedCaseChecklistCard bookingId={booking.id} />}
 
         <Collapsible open={detailsExpanded} onOpenChange={setDetailsExpanded}>
           <Card elevation="flat" className="rounded-xl border-border/50 shadow-xs">
