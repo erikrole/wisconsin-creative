@@ -2,7 +2,7 @@ import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
-import { shouldIncludeHiddenUsers } from "@/lib/user-visibility";
+import { canReadContactDetails, shouldIncludeHiddenUsers } from "@/lib/user-visibility";
 import { requireCollaboratorCapability } from "@/lib/collaborator-access";
 import { Prisma } from "@prisma/client";
 import { buildUserDirectoryQuery } from "@/lib/user-directory-query";
@@ -159,6 +159,7 @@ export const GET = withAuth(async (req, { user }) => {
         };
       }
       const collaboratorBasicOnly = u.role === "COLLABORATOR" && user.role !== "ADMIN" && user.id !== u.id;
+      const showContact = !collaboratorBasicOnly && canReadContactDetails(user, u);
       return {
       id: u.id,
       name: u.name,
@@ -174,7 +175,7 @@ export const GET = withAuth(async (req, { user }) => {
         affiliation: u.collaboratorPolicy.affiliation,
       } : null,
       staffingType: u.staffingType,
-      phone: collaboratorBasicOnly ? null : u.phone,
+      phone: showContact ? u.phone : null,
       slackHandle: collaboratorBasicOnly ? null : u.slackHandle ?? null,
       slackProfileUrl: collaboratorBasicOnly ? null : u.slackProfileUrl ?? null,
       primaryArea: collaboratorBasicOnly ? null : u.primaryArea,

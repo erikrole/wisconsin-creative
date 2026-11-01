@@ -1,8 +1,12 @@
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { sendPush } from "@/lib/push/apns";
 import { z } from "zod";
+
+/** A real push per call; a handful a minute covers "tap again to be sure". */
+const TEST_PUSH_LIMIT = { max: 5, windowMs: 60_000 };
 
 const testPushSchema = z.object({
   token: z.string().min(1).max(512),
@@ -14,6 +18,7 @@ const testPushSchema = z.object({
  * in one tap instead of by reading serverless logs.
  */
 export const POST = withAuth(async (req, { user }) => {
+  await enforceRateLimit(`push-test:apns:${user.id}`, TEST_PUSH_LIMIT);
   const body = testPushSchema.parse(await req.json());
   const tokens = await db.deviceToken.findMany({
     where: { userId: user.id, token: body.token, revokedAt: null },
