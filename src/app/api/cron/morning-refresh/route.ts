@@ -20,6 +20,7 @@ import { pruneJobRuns, recordJobRun } from "@/lib/services/job-runs";
 import { captureGameSnapshots, type GameSnapshotRunResult } from "@/lib/services/game-snapshots";
 import { badges, badgesEnabled } from "@/lib/badges";
 import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
+import { bumpScheduleRevision } from "@/lib/schedule-live";
 
 function maintenanceValue<T>(
   result: PromiseSettledResult<T>,
@@ -140,6 +141,11 @@ export const GET = withCron(async () => {
       }
     }));
   }
+
+  // Synced events and generated shifts bypass the API wrapper that normally
+  // bumps the live schedule revision; open Schedule pages and cached calendar
+  // feeds (ics-feed-cache) learn about tonight's changes from this bump.
+  await bumpScheduleRevision();
 
   // ── 2. Archive completed shift groups ─────────────────────────────────
   const { count: archived } = await db.shiftGroup.updateMany({

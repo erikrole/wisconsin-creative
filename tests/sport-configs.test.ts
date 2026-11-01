@@ -388,3 +388,76 @@ describe("bulkAddToRoster", () => {
     expect(result).toHaveLength(2);
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// upsertSportConfigsForGroup
+// ═════════════════════════════════════════════════════════════════════════════
+describe("upsertSportConfigsForGroup", () => {
+  beforeEach(() => {
+    mockTx.sportConfig.findUnique.mockReset();
+    mockTx.sportConfig.upsert.mockReset();
+    mockTx.sportShiftConfig.upsert.mockReset();
+    mockTx.sportConfig.upsert.mockImplementation(async ({ where }: { where: { sportCode: string } }) => ({ id: `cfg-${where.sportCode}`, sportCode: where.sportCode }));
+    mockTx.sportShiftConfig.upsert.mockResolvedValue({});
+  });
+
+  it("applies one patch to every code in a single serializable transaction and returns the fresh rows", async () => {
+    const existingRow = {
+      id: "cfg-MBB", sportCode: "MBB", active: true,
+      shiftConfigs: [{ area: ShiftArea.VIDEO, homeCount: 3, awayCount: 1, homeStaffCount: 1, homeStudentCount: 2, awayStaffCount: null, awayStudentCount: null }],
+    };
+    mockTx.sportConfig.findUnique.mockImplementation(async ({ where }: { where: { sportCode?: string; id?: string } }) => {
+      if (where.sportCode === "MBB") return sportConfigRow(existingRow);
+      if (where.sportCode === "WBB") return null;
+      return sportConfigRow({ id: where.id, sportCode: where.id?.replace("cfg-", ""), active: false, shiftConfigs: [] });
+    });
+
+    const { upsertSportConfigsForGroup } = await import("@/lib/services/sport-configs");
+    const results = await upsertSportConfigsForGroup(["MBB", "WBB"], { active: false, shiftStartOffset: -90 });
+
+    expectSerializableIsolation(transactionCalls);
+    expect(transactionCalls).toHaveLength(1);
+    expect(results.map((row) => row.sportCode)).toEqual(["MBB", "WBB"]);
+    // Each code gets the same patch; the new code is created with it.
+    expect(mockTx.sportConfig.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { sportCode: "WBB" },
+      create: { sportCode: "WBB", active: false, shiftStartOffset: -90 },
+      update: { active: false, shiftStartOffset: -90 },
+    }));
+    // Without a shiftConfigs patch the existing rows are re-applied unchanged
+    // (legacy null staff/student splits fall back to the totals) and a code
+    // with no existing rows gets none.
+    expect(mockTx.sportShiftConfig.upsert).toHaveBeenCalledTimes(1);
+    expect(mockTx.sportShiftConfig.upsert.mock.calls[0]![0]).toMatchObject({
+      where: { sportConfigId_area: { sportConfigId: "cfg-MBB", area: ShiftArea.VIDEO } },
+      update: { homeCount: 3, awayCount: 1, homeStaffCount: 1, homeStudentCount: 2, awayStaffCount: 0, awayStudentCount: 1 },
+    });
+  });
+
+  it("keeps each code's own active flag when the patch only changes shifts, and defaults a new code to active", async () => {
+    mockTx.sportConfig.findUnique.mockImplementation(async ({ where }: { where: { sportCode?: string; id?: string } }) => {
+      if (where.sportCode === "VB") return sportConfigRow({ id: "cfg-VB", sportCode: "VB", active: false, shiftConfigs: [] });
+      if (where.sportCode === "WSOC") return null;
+      return sportConfigRow({ id: where.id, sportCode: "x", active: true, shiftConfigs: [] });
+    });
+
+    const { upsertSportConfigsForGroup } = await import("@/lib/services/sport-configs");
+    await upsertSportConfigsForGroup(["VB", "WSOC"], {
+      shiftConfigs: [{ area: ShiftArea.VIDEO, homeStaffCount: 1, homeStudentCount: 4, awayCount: 2 }],
+    });
+
+    expect(mockTx.sportConfig.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { sportCode: "VB" }, update: { active: false } }));
+    expect(mockTx.sportConfig.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { sportCode: "WSOC" }, create: { sportCode: "WSOC", active: true } }));
+    expect(mockTx.sportShiftConfig.upsert).toHaveBeenCalledTimes(2);
+    for (const call of mockTx.sportShiftConfig.upsert.mock.calls) {
+      expect(call[0].create).toMatchObject({ area: ShiftArea.VIDEO, homeCount: 5, awayCount: 2, homeStaffCount: 1, homeStudentCount: 4, awayStaffCount: 0, awayStudentCount: 2 });
+    }
+  });
+
+  it("leaves out a code whose fresh row cannot be read back", async () => {
+    mockTx.sportConfig.findUnique.mockResolvedValue(null);
+
+    const { upsertSportConfigsForGroup } = await import("@/lib/services/sport-configs");
+    await expect(upsertSportConfigsForGroup(["MBB"], { active: true })).resolves.toEqual([]);
+  });
+});
