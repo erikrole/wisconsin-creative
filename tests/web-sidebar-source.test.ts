@@ -125,7 +125,7 @@ describe("web sidebar source contract", () => {
     const sidebar = source("src/components/Sidebar.tsx");
 
     expect(sidebar).toContain('href={`/staff/${user.id}`}');
-    expect(sidebar).toContain('aria-label="Account menu"');
+    expect(sidebar).toContain('<span className="sr-only">Account menu</span>');
     expect(appShell).not.toContain('aria-label="My profile"');
     expect(appShell).not.toContain("<TooltipContent>Profile</TooltipContent>");
   });
