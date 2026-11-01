@@ -9,11 +9,13 @@
       "Home's banner and Getting started list ask for a profile photo once your details are in, instead of saying your profile is unfinished.",
       "An empty Schedule says that shifts show up once you are scheduled, and only staff see the calendar-sources hint.",
       "The first page is called Home in the menu, breadcrumbs, search and error pages.",
-      "Member since on your profile shows the Madison date."
+      "Member since on your profile shows the Madison date.",
+      "On iOS, the Getting started list also asks for a profile photo once your details are in."
     ],
     "pr": 752,
     "platforms": [
-      "Web"
+      "Web",
+      "iOS"
     ]
   },
   {

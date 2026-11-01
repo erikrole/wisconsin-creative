@@ -189,12 +189,14 @@ struct GettingStartedCard: View {
         let action: () -> Void
     }
 
-    private var profileDone: Bool { completionStore.response?.completion.profileComplete == true }
+    // Once the team has what it needs, the only profile ask left is the photo (matches the web card).
+    private var requiredDone: Bool { completionStore.response?.completion.requiredComplete == true }
+    private var profileDone: Bool { requiredDone && completionStore.response?.completion.completeByField["photo"] == true }
 
     private var rows: [Row] {
         guard let user = session.currentUser, let progress = model.progress else { return [] }
         let common = [
-            Row(id: "profile", title: "Finish your profile", done: profileDone) {
+            Row(id: "profile", title: requiredDone ? "Add a profile photo" : "Finish your profile", done: profileDone) {
                 completionStore.presentManually(for: user.id)
             },
             Row(id: "guides", title: "Read the guides", done: progress.done.contains("guides")) {
