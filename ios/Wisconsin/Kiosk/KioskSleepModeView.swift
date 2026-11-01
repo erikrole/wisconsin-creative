@@ -27,7 +27,7 @@ struct KioskSleepModeView: View {
                             .font(KioskType.standbyMeridiem)
                             .foregroundStyle(Self.dimTone))
                             .lineLimit(1)
-                        Text(context.date, format: .dateTime.weekday(.wide).month(.wide).day())
+                        Text(context.date, format: .chicago.weekday(.wide).month(.wide).day())
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(Self.dimTone)
                         Text("Tap to wake")

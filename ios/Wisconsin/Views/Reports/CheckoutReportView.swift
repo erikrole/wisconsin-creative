@@ -142,13 +142,15 @@ struct CheckoutReportView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                         AxisGridLine()
-                        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                        AxisValueLabel(format: .utcDay.month(.abbreviated).day())
                     }
                 }
                 .frame(height: 160)
+                .environment(\.calendar, ReportTrendPoint.utcCalendar)
+                .environment(\.timeZone, .gmt)
                 .accessibilityLabel("Daily checkouts over the last \(report.days) days")
                 if let selectedDay, let match = ReportTrendPoint.nearest(to: selectedDay, in: points) {
-                    Text("\(match.day.formatted(.dateTime.month(.abbreviated).day())) · \(match.count)")
+                    Text("\(match.day.formatted(.utcDay.month(.abbreviated).day())) · \(match.count)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()

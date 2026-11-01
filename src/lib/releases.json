@@ -49,6 +49,21 @@
   },
   {
     "date": "2026-10-31",
+    "title": "iPhone times stay on Madison time",
+    "type": "fixes",
+    "summary": "Every clock in the iPhone app, its widgets and the Live Activity now reads in Central time, and report charts label the right day.",
+    "details": [
+      "Return times on the lock screen Live Activity, shift and gear widgets, blast acknowledgements and What's new dates showed the phone's own time zone when travelling. They now read in Central like the rest of the app.",
+      "Picking a date or time in the app now means Central time, so a return time chosen on the road matches the labels around it.",
+      "The daily checkout charts in Reports labelled each day as the day before for anyone in the Americas."
+    ],
+    "pr": 745,
+    "platforms": [
+      "iOS"
+    ]
+  },
+  {
+    "date": "2026-10-31",
     "title": "Bug hunt: accounts, times, checkouts",
     "type": "fixes",
     "summary": "A sweep across the web app closes several account-safety gaps and fixes reports, checkouts and schedule actions that behaved wrong at the edges.",

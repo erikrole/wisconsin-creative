@@ -550,7 +550,7 @@ struct ExtendCheckoutIntent: AppIntent {
 
         let label = newEndsAt.operationalDateTimeLabel(now: Date(), capitalizesRelativeDay: false)
         try await requestConfirmation(
-            result: .result(dialog: "Extend \(booking.title) until \(label)?")
+            dialog: "Extend \(booking.title) until \(label)?"
         )
 
         do {

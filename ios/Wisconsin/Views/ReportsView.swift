@@ -423,10 +423,12 @@ struct ReportsView: View {
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: 4)) { value in
                             AxisGridLine()
-                            AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                            AxisValueLabel(format: .utcDay.month(.abbreviated).day())
                         }
                     }
                     .frame(height: 170)
+                    .environment(\.calendar, ReportTrendPoint.utcCalendar)
+                    .environment(\.timeZone, .gmt)
                     .accessibilityLabel("Daily checkout activity over the last \(vm.days) days")
                 }
                 .padding(.vertical, 4)
@@ -440,7 +442,7 @@ struct ReportsView: View {
         // rather than crammed into a floating annotation.
         if let day = selectedDay, let match = ReportTrendPoint.nearest(to: day, in: points) {
             HStack(spacing: 6) {
-                Text(match.day, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
+                Text(match.day, format: .utcDay.weekday(.abbreviated).month(.abbreviated).day())
                     .font(.caption.weight(.semibold))
                 Text("\(match.count) checkout\(match.count == 1 ? "" : "s")")
                     .font(.caption)
@@ -644,10 +646,16 @@ struct ReportTrendPoint: Identifiable {
               let day = Int(parts[2])
         else { return nil }
 
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC") ?? .gmt
-        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+        return utcCalendar.date(from: DateComponents(year: year, month: month, day: day))
     }
+
+    /// The zone the days were bucketed in. Charts plotting these points take
+    /// it through the environment so axis ticks fall on the same midnights.
+    static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        return calendar
+    }()
 
     static func build(from trend: [CheckoutTrendPoint]) -> [ReportTrendPoint] {
         trend.compactMap { point in

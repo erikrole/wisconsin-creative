@@ -429,7 +429,7 @@ private struct NextShiftWidgetView: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Next shift \(shift.title)")
-            .accessibilityValue(Text(shift.startsAt, format: .dateTime.weekday().hour().minute()))
+            .accessibilityValue(Text(shift.startsAt, format: .chicago.weekday().hour().minute()))
         } else {
             ZStack {
                 AccessoryWidgetBackground()
@@ -444,7 +444,7 @@ private struct NextShiftWidgetView: View {
     private var inlineBody: some View {
         if let shift = entry.snapshot?.nextShift {
             Label {
-                Text("\(shift.title) \(shift.startsAt, format: .dateTime.hour().minute())")
+                Text("\(shift.title) \(shift.startsAt, format: .chicago.hour().minute())")
             } icon: {
                 Image(systemName: sportGlyph(for: shift.title))
             }
@@ -508,7 +508,7 @@ private struct NextShiftWidgetView: View {
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 2) {
                 DayChip(date: shift.startsAt)
-                Text(shift.startsAt, format: .dateTime.hour().minute())
+                Text(shift.startsAt, format: .chicago.hour().minute())
                     .font(.gothamBold(13, relativeTo: .subheadline))
                     .monospacedDigit()
                     .lineLimit(1)
@@ -801,7 +801,7 @@ private struct GearDueWidgetView: View {
                     Text("\(lead.count) \(lead.noun)")
                         .font(.gothamBold(15, relativeTo: .headline))
                         .lineLimit(1)
-                    Text("\(next.title) · \(next.isOverdue ? "was due" : "due") \(next.endsAt, format: .dateTime.hour().minute())")
+                    Text("\(next.title) · \(next.isOverdue ? "was due" : "due") \(next.endsAt, format: .chicago.hour().minute())")
                         .font(.caption)
                         .monospacedDigit()
                         .lineLimit(1)
@@ -874,7 +874,7 @@ private struct GearDueWidgetView: View {
                         // truncates and is stale a second later.
                         HStack(spacing: 4) {
                             Text(booking.isOverdue ? "Overdue since" : "Due")
-                            Text(booking.endsAt, format: .dateTime.hour().minute()).monospacedDigit()
+                            Text(booking.endsAt, format: .chicago.hour().minute()).monospacedDigit()
                         }
                         .font(.caption)
                         .foregroundStyle(
@@ -930,7 +930,7 @@ private struct GearDueWidgetView: View {
                 Text(next.title)
                     .font(.gothamBold(12, relativeTo: .caption))
                     .lineLimit(1)
-                Text("\(next.isOverdue ? "Overdue since" : "Due") \(next.endsAt, format: .dateTime.hour().minute())")
+                Text("\(next.isOverdue ? "Overdue since" : "Due") \(next.endsAt, format: .chicago.hour().minute())")
                     .font(.caption2)
                     .foregroundStyle(
                         next.isOverdue
