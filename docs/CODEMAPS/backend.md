@@ -230,7 +230,7 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/dashboard-keys.ts` | 40 |
 | `src/lib/dashboard-payload.ts` | 376 |
-| `src/lib/db.ts` | 32 |
+| `src/lib/db.ts` | 39 |
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email-template.ts` | 207 |
 | `src/lib/email.ts` | 147 |
@@ -257,6 +257,7 @@
 | `src/lib/guide-search-result.ts` | 49 |
 | `src/lib/guides.ts` | 369 |
 | `src/lib/http.ts` | 139 |
+| `src/lib/ics-feed-cache.ts` | 97 |
 | `src/lib/ics-token.ts` | 26 |
 | `src/lib/image-search-modal.ts` | 59 |
 | `src/lib/image-search.ts` | 231 |
