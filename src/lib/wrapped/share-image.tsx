@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { isBlobUrl } from "@/lib/blob";
 import type { WrappedCard } from "@/lib/wrapped/recap";
 
 /** 4:5, the size that posts and saves cleanly almost everywhere. */
@@ -19,9 +20,25 @@ async function loadFonts() {
   return weights.map((weight, index) => ({ name: "Barlow", data: files[index]!, weight, style: "normal" as const }));
 }
 
+/**
+ * The person's photo inlined for the renderer, or null when there is none, it
+ * isn't one we host, or it doesn't arrive in time: the card then shows initials.
+ */
+export async function avatarDataUrl(url: string | null | undefined, fetcher: typeof fetch = fetch): Promise<string | null> {
+  if (!url || !isBlobUrl(url)) return null;
+  try {
+    const response = await fetcher(url, { signal: AbortSignal.timeout(2500) });
+    const type = response.headers.get("content-type") ?? "";
+    if (!response.ok || !type.startsWith("image/")) return null;
+    return `data:${type};base64,${Buffer.from(await response.arrayBuffer()).toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 /** The summary card as a PNG, shared by the web and iOS players. */
-export async function renderWrappedShareImage(person: { name: string }, summary: WrappedCard): Promise<ImageResponse> {
-  const fonts = await loadFonts();
+export async function renderWrappedShareImage(person: { name: string; avatarUrl?: string | null }, summary: WrappedCard): Promise<ImageResponse> {
+  const [fonts, avatar] = await Promise.all([loadFonts(), avatarDataUrl(person.avatarUrl)]);
   return new ImageResponse(
     (
       <div
@@ -42,9 +59,14 @@ export async function renderWrappedShareImage(person: { name: string }, summary:
         </div>
         <div style={{ display: "flex", flexDirection: "column", marginTop: 36, padding: 56, borderRadius: 56, backgroundColor: "#ffffff", color: "#111318" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 96, height: 96, borderRadius: 48, backgroundColor: "#fde7e7", color: "#c5050c", fontSize: 38, fontWeight: 800 }}>
-              {initials(person.name)}
-            </div>
+            {avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatar} alt="" width={96} height={96} style={{ width: 96, height: 96, borderRadius: 48, objectFit: "cover" }} />
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 96, height: 96, borderRadius: 48, backgroundColor: "#fde7e7", color: "#c5050c", fontSize: 38, fontWeight: 800 }}>
+                {initials(person.name)}
+              </div>
+            )}
             <div style={{ display: "flex", marginLeft: 28, fontSize: 44, fontWeight: 800 }}>{person.name}</div>
           </div>
           <div style={{ display: "flex", marginTop: 52, fontSize: 28, fontWeight: 700, letterSpacing: "0.14em", color: "#5b616e", textTransform: "uppercase" }}>

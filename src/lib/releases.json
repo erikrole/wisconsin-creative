@@ -118,6 +118,24 @@
   },
   {
     "date": "2026-10-31",
+    "title": "Creative Wrapped ready for December 1",
+    "type": "improvement",
+    "summary": "A launch pass over the fall recap: new students get an opening card, the share image shows your photo, and big numbers roll up on iPhone.",
+    "details": [
+      "Someone with no events or checkouts yet opens on their own cover before the team's cards instead of landing on a team stat.",
+      "The share image uses your profile photo when you have one, with initials as the fallback.",
+      "Counts of 1,000 or more now count up on iPhone instead of appearing all at once.",
+      "A whole number of days of call time reads as exactly that, not \"more than\".",
+      "Trips to a cancelled away game no longer count, and the story takes keyboard focus when it opens."
+    ],
+    "platforms": [
+      "Web",
+      "iOS"
+    ],
+    "pr": 744
+  },
+  {
+    "date": "2026-10-31",
     "title": "iPhone catches up with the website",
     "type": "improvement",
     "summary": "The iPhone app now shows the department Wi-Fi, lets admins change items on an active checkout, and names every scan and item change in a booking's history.",
