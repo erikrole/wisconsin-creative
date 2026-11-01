@@ -19,6 +19,7 @@ import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import {
   bookingInclude,
   dedupeIds,
+  reportedLostBulkBySku,
   upsertBulkBalancesAndMovements,
   type AuditJson,
 } from "./bookings-helpers";
@@ -596,10 +597,12 @@ export async function cancelBooking(
 
     const bulkItems = booking.bulkItems ?? [];
     if (booking.kind === BookingKind.CHECKOUT && (booking.status === BookingStatus.PENDING_PICKUP || booking.status === BookingStatus.OPEN) && bulkItems.length > 0) {
+      // A unit reported lost at check-in is gone; cancelling must not put it back on the shelf.
+      const lostBySku = booking.status === BookingStatus.OPEN ? await reportedLostBulkBySku(tx, bookingId) : new Map<string, number>();
       const outstandingBulk = bulkItems
         .map((item) => ({
           bulkSkuId: item.bulkSkuId,
-          quantity: item.plannedQuantity - (item.checkedInQuantity ?? 0),
+          quantity: item.plannedQuantity - (item.checkedInQuantity ?? 0) - (lostBySku.get(item.bulkSkuId) ?? 0),
         }))
         .filter((item) => item.quantity > 0);
 

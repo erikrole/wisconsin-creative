@@ -75,6 +75,7 @@ export const POST = withAuth(async (req, { user }) => {
         id: { not: currentSessionId },
       },
     });
+    await db.apiToken.deleteMany({ where: { userId: user.id } });
   }
 
   await createAuditEntry({

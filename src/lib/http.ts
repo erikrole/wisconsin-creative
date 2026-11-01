@@ -77,6 +77,15 @@ export function fail(error: unknown) {
     );
   }
 
+  // A dangling reference (an id that is not a row) is the caller's mistake,
+  // and a row that vanished before an update or delete is a 404, not a crash.
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+    return NextResponse.json({ error: "A referenced record does not exist." }, { status: 400 });
+  }
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
   // Serialization conflict (SERIALIZABLE isolation) — retryable by client.
   // Matches both the Prisma `P2034` shape and the raw `40001` driver code the
   // Neon adapter can surface, so a lost race never falls through to a 500.

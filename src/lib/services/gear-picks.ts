@@ -395,6 +395,7 @@ async function loadGearPickTopUps(cycleId: string): Promise<GearPickTopUpDto[]> 
       id: true,
       description: true,
       unitCostCents: true,
+      plannedOverrideCents: true,
       quantity: true,
       budget: { select: { id: true, name: true, fiscalYear: true } },
     },
@@ -405,7 +406,7 @@ async function loadGearPickTopUps(cycleId: string): Promise<GearPickTopUpDto[]> 
     budgetId: line.budget.id,
     budgetLabel: `${line.budget.name} ${line.budget.fiscalYear}`,
     description: line.description,
-    amountCents: line.unitCostCents * line.quantity,
+    amountCents: line.plannedOverrideCents ?? line.unitCostCents * line.quantity,
   }));
 }
 

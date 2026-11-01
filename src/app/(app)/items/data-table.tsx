@@ -285,18 +285,14 @@ export function DataTable({
                       className="shrink-0 rounded-lg"
                     />
                     <div className="relative z-0 min-w-0 flex-1">
-                      <div className="flex min-w-0 items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-[15px] font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
-                            {item.assetTag}
-                          </div>
-                          {subtitle && (
-                            <div className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</div>
-                          )}
-                        </div>
-                        <div className="shrink-0">{statusBadge(item)}</div>
+                      <div className="truncate text-[15px] font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
+                        {item.assetTag}
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      {subtitle && (
+                        <div className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</div>
+                      )}
+                      <div className="mt-2">{statusBadge(item)}</div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                         {showProductMeta && (
                           <span className="truncate text-[11px] font-medium text-foreground/80">{product}</span>
                         )}
@@ -351,7 +347,7 @@ export function DataTable({
                               </IconSwap>
                           </Button>
                         ) : (
-                          <div className="flex h-10 items-center gap-1">
+                          <div className="flex h-10 items-center gap-1 text-sm font-medium">
                             {flexRender(header.column.columnDef.header, header.getContext())}
                           </div>
                         )

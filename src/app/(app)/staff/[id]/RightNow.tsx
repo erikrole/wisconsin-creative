@@ -219,7 +219,7 @@ export default function RightNow({
               <h3 className="text-base font-black tracking-tight">This week</h3>
               <Link
                 href="/schedule"
-                className="text-[13px] font-bold text-[#2f4bb0] no-underline dark:text-[#aebdf5]"
+                className="text-[13px] font-semibold text-muted-foreground no-underline hover:text-foreground"
               >
                 Open schedule
               </Link>
@@ -260,7 +260,8 @@ export default function RightNow({
               <h3 className="text-base font-black tracking-tight">
                 Performance
               </h3>
-              <dl className="mt-3 grid grid-cols-3 gap-2 text-center md:grid-cols-1 md:text-left">
+              {/* Three numbers side by side keep this card short, so it doesn't outgrow "This week" beside it. */}
+              <dl className="mt-3 grid grid-cols-3 gap-2">
                 <div>
                   <dd className="text-2xl font-black tracking-tight">
                     {performance.onTimeRate === null
@@ -296,7 +297,7 @@ export default function RightNow({
                   <Link
                     href="?tab=badges"
                     scroll={false}
-                    className="text-[13px] font-bold text-[#2f4bb0] no-underline dark:text-[#aebdf5]"
+                    className="text-[13px] font-semibold text-muted-foreground no-underline hover:text-foreground"
                   >
                     See all
                   </Link>

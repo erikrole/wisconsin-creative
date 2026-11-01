@@ -114,12 +114,14 @@ export const PATCH = withAuth<{ id: string; blockId: string }>(async (req, { use
   const body = updateBlockSchema.parse(await req.json());
   assertBlockShape(body);
   const staffReview = user.role === "ADMIN" || user.role === "STAFF";
+  // A student's edit always goes back for review: keeping the old status
+  // would let an approved stretch be widened or re-typed without anyone looking.
+  const status = body.intent !== "TIME_OFF" ? "APPROVED"
+    : staffReview ? body.status ?? existing.status
+    : "PENDING";
   if (!staffReview && body.status && body.status !== existing.status) {
     throw new HttpError(403, "Only staff can review time-off requests");
   }
-  const status = body.intent === "TIME_OFF"
-    ? body.status ?? (staffReview ? existing.status : "PENDING")
-    : "APPROVED";
   const reviewed = body.intent === "TIME_OFF" && staffReview && status !== "PENDING";
   const times = normalizedTimes(body);
 

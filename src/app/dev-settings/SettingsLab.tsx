@@ -95,8 +95,9 @@ export default function SettingsLab({ fontClass }: { fontClass: string }) {
     client.setQueryDefaults(["quick-links"], { staleTime: Infinity });
     client.setQueryData(["quick-links", "manage"], SAMPLE_QUICK_LINKS);
     client.setQueryData(["quick-links"], SAMPLE_QUICK_LINKS);
-    // `?page=quick-links` also seeds a signed-in admin so the Settings shell renders DB-free.
-    if (new URLSearchParams(window.location.search).get("page") === "quick-links") {
+    // `?page=quick-links` and `?page=security` also seed a signed-in admin so the Settings shell renders DB-free.
+    const page = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("page");
+    if (page === "quick-links" || page === "security") {
       client.setQueryDefaults(["me"], { staleTime: Infinity });
       client.setQueryData(["me"], { id: "dev", name: "Erik Role", email: "dev@example.com", role: "ADMIN" });
     }

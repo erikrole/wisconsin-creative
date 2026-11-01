@@ -1,53 +1,5 @@
 import SwiftUI
 
-// MARK: - Option Picker
-
-struct OptionPickerView: View {
-    let title: String
-    let options: [(id: String, name: String)]
-    @Binding var selection: String
-    @Environment(\.dismiss) private var dismiss
-    @State private var search = ""
-
-    private var filtered: [(id: String, name: String)] {
-        guard !search.isEmpty else { return options }
-        return options.filter { $0.name.localizedCaseInsensitiveContains(search) }
-    }
-
-    var body: some View {
-        List {
-            ForEach(filtered, id: \.id) { option in
-                Button {
-                    selection = option.id
-                    Haptics.selection()
-                    dismiss()
-                } label: {
-                    HStack {
-                        Text(option.name)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if selection == option.id {
-                            Image(systemName: "checkmark")
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.statusText(.blue))
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(selection == option.id ? .isSelected : [])
-            }
-            if filtered.isEmpty && !search.isEmpty {
-                ContentUnavailableView.search(text: search)
-                    .listRowBackground(Color.clear)
-            }
-        }
-        .searchable(text: $search, prompt: "Search \(title.lowercased())")
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
 // MARK: - Requester Picker
 
 /// Requester-specific picker: avatars, the signed-in user pinned to the top

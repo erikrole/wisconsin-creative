@@ -364,7 +364,7 @@ describe("student field mobile contracts", () => {
     expect(profile).toContain("private var isStudentWorker: Bool");
     expect(profile).toContain("session.currentUser?.staffingType == \"ST\"");
     expect(models).toContain("let staffingType: String?");
-    expect(auth).toContain("staffingType: session.user.staffingType");
+    expect(auth).toContain("staffingType: user.staffingType");
     expect(meRoute).toContain("return ok({");
     expect(userPage).toContain("profile.staffingType === \"ST\"");
     expect(availabilityRoute).toContain("target.staffingType !== \"ST\"");

@@ -189,7 +189,7 @@ struct ItemActivityDay: Identifiable {
 }
 
 /// Sentences for the item History tab. The website builds the same lines in
-/// `describeAction` (`src/components/ActivityTimeline.tsx`) with an item context.
+/// `describeAction` (`src/lib/activity-timeline.ts`) with an item context.
 enum ItemActivityCopy {
     static let systemActions: Set<String> = [
         "auto_escalation",
@@ -360,6 +360,12 @@ enum ItemActivityCopy {
             return "Added \(auditItemName(entry.after) ?? "an item") at \(kioskPhrase(entry.after))"
         case "kiosk_checkout_item_removed":
             return "Removed \(auditItemName(entry.before) ?? "an item") at \(kioskPhrase(entry.before))"
+        case "checkout_item_added":
+            return "Added \(auditItemName(entry.after) ?? "an item") to the active checkout"
+        case "checkout_item_removed":
+            return "Removed \(auditItemName(entry.before) ?? "an item") from the active checkout"
+        case "auto_completed_by_item_removal":
+            return "Checkout closed after its last item was removed"
         case "pending_pickup_expired":
             return "Pickup window expired"
         case "fulfilled_by_kiosk_pickup":

@@ -11,8 +11,9 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 146 | 5 |
+| `User` | 147 | 5 |
 | `Session` | 7 | 2 |
+| `ApiToken` | 9 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
 | `PasskeyChallenge` | 10 | 3 |
@@ -135,8 +136,8 @@
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
-| `Budget` | 8 | 3 |
-| `BudgetLine` | 28 | 6 |
+| `Budget` | 12 | 3 |
+| `BudgetLine` | 34 | 6 |
 | `BudgetLineItem` | 10 | 5 |
 | `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |

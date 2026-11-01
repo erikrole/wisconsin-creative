@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LicenseCodeStatus, Prisma } from "@prisma/client";
+import { LicenseCodeStatus, Prisma, Role } from "@prisma/client";
+import { createAuditEntryTx } from "@/lib/audit";
 
 const { db } = vi.hoisted(() => {
   const db = {
@@ -257,6 +258,103 @@ describe("bulkRenewCodes", () => {
     expect(db.licenseCode.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ["a", "b", "c", "d"] }, status: { not: "RETIRED" } },
       data: { expiresAt: day(31) },
+    });
+  });
+});
+
+describe("releaseCode", () => {
+  const claimDb = db as unknown as typeof db & { licenseCodeClaim: typeof db.licenseCodeClaim & { findMany: ReturnType<typeof vi.fn>; findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> } };
+
+  beforeEach(() => {
+    claimDb.licenseCodeClaim.findMany = vi.fn().mockResolvedValue([]);
+    claimDb.licenseCodeClaim.findUnique = vi.fn();
+    claimDb.licenseCodeClaim.update = vi.fn().mockResolvedValue({});
+    claimDb.licenseCodeClaim.updateMany = vi.fn().mockResolvedValue({ count: 2 });
+    db.licenseCode.update.mockImplementation(async ({ data }: { data: object }) => ({ id: "code-1", ...data }));
+  });
+
+  it("lets an admin clear every seat at once and reopens the code", async () => {
+    const { releaseCode } = await import("@/lib/services/licenses");
+    claimDb.licenseCodeClaim.findMany.mockResolvedValue([{ id: "c1" }, { id: "c2" }]);
+
+    const code = await releaseCode("code-1", "admin-1", true, { releaseAll: true }, Role.ADMIN);
+
+    expect(code.status).toBe(LicenseCodeStatus.AVAILABLE);
+    expect(claimDb.licenseCodeClaim.updateMany).toHaveBeenCalledWith({
+      where: { licenseCodeId: "code-1", releasedAt: null },
+      data: { releasedAt: expect.any(Date), releasedById: "admin-1" },
+    });
+    expect(updatedData()).toEqual({ status: LicenseCodeStatus.AVAILABLE, claimedById: null, claimedAt: null, nagSentAt: null });
+    expect(vi.mocked(createAuditEntryTx)).toHaveBeenCalledWith(db, expect.objectContaining({
+      action: "release", after: { status: LicenseCodeStatus.AVAILABLE, claimId: null, releaseAll: true, releasedById: "admin-1" },
+    }));
+  });
+
+  it("refuses release-all from a non-admin and when nothing is claimed", async () => {
+    const { releaseCode } = await import("@/lib/services/licenses");
+    await expect(releaseCode("code-1", "maya", false, { releaseAll: true }, Role.STUDENT)).rejects.toMatchObject({ status: 403 });
+    await expect(releaseCode("code-1", "admin-1", true, { releaseAll: true }, Role.ADMIN)).rejects.toMatchObject({ status: 409 });
+    expect(claimDb.licenseCodeClaim.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("releases the caller's own seat and downgrades the code to partial when another seat stays", async () => {
+    const { releaseCode } = await import("@/lib/services/licenses");
+    db.licenseCodeClaim.findFirst.mockResolvedValue({ id: "c-maya", userId: "maya", licenseCodeId: "code-1", releasedAt: null });
+    claimDb.licenseCodeClaim.findMany.mockResolvedValue([{ id: "c-sam", userId: "sam", claimedAt: day(3) }]);
+
+    const code = await releaseCode("code-1", "maya", false, {}, Role.STUDENT);
+
+    expect(claimDb.licenseCodeClaim.update).toHaveBeenCalledWith({ where: { id: "c-maya" }, data: { releasedAt: expect.any(Date), releasedById: null } });
+    expect(code).toMatchObject({ status: LicenseCodeStatus.PARTIAL, claimedById: "sam", claimedAt: day(3), nagSentAt: null });
+    expect(vi.mocked(createAuditEntryTx)).toHaveBeenCalledWith(db, expect.objectContaining({
+      after: { status: LicenseCodeStatus.PARTIAL, claimId: "c-maya", releaseAll: false, releasedById: null },
+    }));
+  });
+
+  it("lets an admin release a specific claim, recording who did it, and 404s a stale or foreign claim id", async () => {
+    const { releaseCode } = await import("@/lib/services/licenses");
+    claimDb.licenseCodeClaim.findUnique.mockResolvedValue({ id: "c-sam", userId: "sam", licenseCodeId: "code-1", releasedAt: null });
+
+    const code = await releaseCode("code-1", "admin-1", true, { claimId: "c-sam" }, Role.ADMIN);
+
+    expect(claimDb.licenseCodeClaim.update).toHaveBeenCalledWith({ where: { id: "c-sam" }, data: { releasedAt: expect.any(Date), releasedById: "admin-1" } });
+    expect(code.status).toBe(LicenseCodeStatus.AVAILABLE);
+
+    await expect(releaseCode("code-1", "maya", false, { claimId: "c-sam" }, Role.STUDENT)).rejects.toMatchObject({ status: 403 });
+    claimDb.licenseCodeClaim.findUnique.mockResolvedValue({ id: "c-sam", userId: "sam", licenseCodeId: "other-code", releasedAt: null });
+    await expect(releaseCode("code-1", "admin-1", true, { claimId: "c-sam" }, Role.ADMIN)).rejects.toMatchObject({ status: 404 });
+    claimDb.licenseCodeClaim.findUnique.mockResolvedValue({ id: "c-sam", userId: "sam", licenseCodeId: "code-1", releasedAt: day(2) });
+    await expect(releaseCode("code-1", "admin-1", true, { claimId: "c-sam" }, Role.ADMIN)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("404s when the caller has no seat on the code", async () => {
+    const { releaseCode } = await import("@/lib/services/licenses");
+
+    await expect(releaseCode("code-1", "maya", false, {}, Role.STUDENT)).rejects.toMatchObject({ status: 404 });
+    expect(claimDb.licenseCodeClaim.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("claim history", () => {
+  it("lists a code's claims newest first with the claimant, and a person's claims with the code", async () => {
+    const { getClaimHistory, getClaimHistoryForUser } = await import("@/lib/services/licenses");
+    const findMany = vi.fn().mockResolvedValue([{ id: "c1" }]);
+    (db as unknown as { licenseCodeClaim: { findMany: typeof findMany } }).licenseCodeClaim.findMany = findMany;
+
+    await expect(getClaimHistory("code-1")).resolves.toEqual([{ id: "c1" }]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { licenseCodeId: "code-1" },
+      include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+      orderBy: { claimedAt: "desc" },
+      take: 50,
+    });
+
+    await getClaimHistoryForUser("maya", 5);
+    expect(findMany).toHaveBeenLastCalledWith({
+      where: { userId: "maya" },
+      include: { licenseCode: { select: { id: true, label: true, expiresAt: true } } },
+      orderBy: { claimedAt: "desc" },
+      take: 5,
     });
   });
 });

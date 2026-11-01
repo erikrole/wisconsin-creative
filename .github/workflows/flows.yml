@@ -1,0 +1,74 @@
+name: Flows
+
+# End-to-end flow tests (tests/e2e-flows): the production build of the app
+# against a disposable PostgreSQL cluster the runner script owns, driven with
+# Playwright through the real login, reservation wizard, Schedule, profile and
+# Wrapped pages plus the kiosk API. No deploy, no Neon, no credentials. Path
+# filters keep it off docs-only and iOS-only pushes; it is not a required check.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "prisma/**"
+      - "tests/e2e-flows/**"
+      - "scripts/test-e2e-flows.mjs"
+      - "playwright.flows.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/flows.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "prisma/**"
+      - "tests/e2e-flows/**"
+      - "scripts/test-e2e-flows.mjs"
+      - "playwright.flows.config.ts"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  flows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # The build never talks to a database; the runner script sets the real
+      # disposable connection for the server it starts.
+      DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+      DIRECT_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+      SESSION_SECRET: "0000000000000000000000000000000000000000000000000000000000000000"
+      SESSION_COOKIE_NAME: "wc_session"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/tasks/**
+            !/goldie/**
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install --global npm@11.17.0
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium-headless-shell
+      - run: npm run build:app
+      - run: npm run test:e2e:flows
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: failure()
+        with:
+          name: flow-test-results
+          path: test-results/e2e-flows/
+          retention-days: 7

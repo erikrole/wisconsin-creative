@@ -6,6 +6,7 @@ const dbMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
     update: vi.fn(),
   },
+  apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
   session: {
     findMany: vi.fn(),
     findUnique: vi.fn(),

@@ -147,20 +147,12 @@ export function CrewSummary({
   const assignedUsers = entry.shifts
     .map(shiftAssignee)
     .filter((user): user is NonNullable<ReturnType<typeof shiftAssignee>> => Boolean(user));
-  const openCount = openShiftCount(entry);
-
-  if (entry.shifts.length === 0) return null;
+  // Open seats are already in the coverage cell beside it; the crew cell only shows who is on.
+  if (assignedUsers.length === 0) return null;
 
   return (
-    <div className={cn("flex min-w-0 items-center gap-2", compact ? "justify-start" : "justify-end")}>
-      {assignedUsers.length > 0 && <UserAvatarGroup users={assignedUsers} max={compact ? 3 : 4} />}
-      {openCount > 0 ? (
-        <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
-          {openCount} open
-        </span>
-      ) : assignedUsers.length === 0 ? (
-        <span className="text-xs font-medium text-muted-foreground">No crew</span>
-      ) : null}
+    <div className={cn("flex min-w-0 items-center", compact ? "justify-start" : "justify-end")}>
+      <UserAvatarGroup users={assignedUsers} max={compact ? 3 : 4} />
     </div>
   );
 }

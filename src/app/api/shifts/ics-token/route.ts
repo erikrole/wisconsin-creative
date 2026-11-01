@@ -7,6 +7,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { requireInternalActor } from "@/lib/rbac";
 import { hashIcsToken, isHashedIcsToken } from "@/lib/ics-token";
 import { env } from "@/lib/env";
+import { forgetIcsFeed } from "@/lib/ics-feed-cache";
 
 /** The canonical feed URL, never the caller's origin (a legacy host dies). */
 function feedUrl(token: string) {
@@ -49,10 +50,13 @@ export const POST = withAuth(async (_req, { user }) => {
   requireInternalActor(user);
   await enforceRateLimit(`shifts:ics-token:${user.id}`, { max: 5, windowMs: 60 * 60_000 });
   const token = randomBytes(24).toString("hex");
+  const previous = await db.user.findUnique({ where: { id: user.id }, select: { icsToken: true } });
   await db.user.update({
     where: { id: user.id },
     data: { icsToken: hashIcsToken(token) },
   });
+  // The old link may still sit in a calendar app; its cached feed must die with it.
+  await forgetIcsFeed(previous?.icsToken);
   await createAuditEntry({
     actorId: user.id,
     actorRole: user.role,

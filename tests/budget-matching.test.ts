@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scoreLineItemMatch, tokens, type MatchItem, type MatchLine } from "@/lib/budget/matching";
+import { flagAmbiguousMatches, scoreLineItemMatch, tokens, type MatchItem, type MatchLine } from "@/lib/budget/matching";
 
 const line: MatchLine = {
   description: "Sony FE 24-70mm f/2.8 GM II Lens",
@@ -20,10 +20,17 @@ const lens: MatchItem = {
 };
 
 describe("budget line to item matching", () => {
+  it("marks equally supported individual records as possible rather than certain", () => {
+    const match = scoreLineItemMatch(line, lens)!;
+    const results = flagAmbiguousMatches([{ ...match, id: "a" }, { ...match, id: "b" }]);
+    expect(results.map((result) => result.confidence)).toEqual(["possible", "possible"]);
+    expect(results[0]!.reasons).toContain("Multiple records share this evidence; confirm the purchase");
+    expect(flagAmbiguousMatches([{ ...match, id: "a" }])[0]!.confidence).toBe("high");
+  });
   it("is high confidence when price, date, and words all agree", () => {
     const result = scoreLineItemMatch(line, lens);
     expect(result?.confidence).toBe("high");
-    expect(result?.reasons).toEqual(expect.arrayContaining(["Same price"]));
+    expect(result?.reasons).toEqual(expect.arrayContaining(["Same planned price"]));
   });
 
   it("treats a PO number in the item notes as the strongest signal", () => {
@@ -49,7 +56,19 @@ describe("budget line to item matching", () => {
     expect(result).toBeNull();
   });
 
+  it("uses product links and actual price, but excludes another department", () => {
+    const order = { ...line, budgetName: "Creative", productUrl: "https://www.bhphotovideo.com/c/product/1234/something?ref=tracking", actualUnitCents: 200_000 };
+    const item = { ...lens, departmentName: "Creative", productUrl: "https://www.bhphotovideo.com/c/product/1234/other", purchasePriceCents: 200_000 };
+    expect(scoreLineItemMatch(order, item)?.reasons).toEqual(expect.arrayContaining(["Same product link", "Same actual unit price"]));
+    expect(scoreLineItemMatch(order, { ...item, departmentName: "Football" })).toBeNull();
+    expect(scoreLineItemMatch({ ...order, poNumber: "PO-00177267" }, { ...item, departmentName: "Football", notes: "PO-00177267" })?.confidence).toBe("possible");
+  });
+
+  it("does not suggest an item solely because its brand and price match", () => {
+    expect(scoreLineItemMatch(line, { ...lens, model: "Different", purchaseDate: null })).toBeNull();
+  });
+
   it("drops filler words when comparing text", () => {
-    expect(tokens("The Sony Camera Kit, 24-70mm!")).toEqual(["sony", "24", "70mm"]);
+    expect(tokens("The Sony Camera Kit, 24-70mm!")).toEqual(["24", "70mm"]);
   });
 });

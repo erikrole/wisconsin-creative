@@ -12,6 +12,7 @@ export type AutofillLine = {
   description: string;
   supplier: string | null;
   unitCostCents: number;
+  unitCostKnown?: boolean;
   quantityBought: number | null;
   spentCents: number | null;
   purchasedOn: string | null; // YYYY-MM-DD
@@ -40,11 +41,11 @@ export type AutofillProposal = {
 };
 
 /** Price per unit: the real spend divided by what was bought when known, otherwise the planned unit cost. */
-export function unitPriceCents(line: Pick<AutofillLine, "unitCostCents" | "quantityBought" | "spentCents">): number {
+export function unitPriceCents(line: Pick<AutofillLine, "unitCostCents" | "unitCostKnown" | "quantityBought" | "spentCents">): number | null {
   if (line.spentCents !== null && line.quantityBought !== null && line.quantityBought > 0) {
     return Math.round(line.spentCents / line.quantityBought);
   }
-  return line.unitCostCents;
+  return line.unitCostKnown === false ? null : line.unitCostCents;
 }
 
 /** The one-line trail left in the item's notes so the order can be found again. */
@@ -80,9 +81,9 @@ export function buildAutofill(line: AutofillLine, asset: AutofillAsset): Autofil
   }
 
   const price = unitPriceCents(line);
-  out.push({
+  if (price !== null) out.push({
     field: "purchasePrice",
-    label: "Purchase price",
+    label: line.spentCents !== null && line.quantityBought !== null && line.quantityBought > 0 ? "Purchase price" : "Planned unit price",
     current: asset.purchasePriceCents === null ? null : money(asset.purchasePriceCents),
     proposed: money(price),
     status: asset.purchasePriceCents === null ? "fill" : asset.purchasePriceCents === price ? "same" : "differs",

@@ -34,6 +34,12 @@ extension APIClient {
         return resp.data
     }
 
+    /// Every shift this person is on, newest first. One read, capped at 500.
+    func personShifts(userId: String) async throws -> [PersonShift] {
+        let resp: DataWrapper<[PersonShift]> = try await perform(request(path: "/api/users/\(userId)/shifts"))
+        return resp.data
+    }
+
     /// Next shift, gear in hand, this week's shifts and returns performance.
     func userRightNow(userId: String) async throws -> RightNowPayload {
         let resp: DataWrapper<RightNowPayload> = try await perform(request(path: "/api/users/\(userId)/right-now"))

@@ -19,7 +19,7 @@ vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
   after: mocks.after,
 }));
-vi.mock("next/headers", () => ({ cookies: vi.fn(async () => mocks.cookieStore) }));
+vi.mock("next/headers", () => ({ cookies: vi.fn(async () => mocks.cookieStore), headers: vi.fn(async () => new Headers()) }));
 vi.mock("@/lib/db", () => ({ db: mocks.db }));
 vi.mock("@/lib/env", () => ({ env: { sessionSecret: "test-session-secret-value-32chars", sessionCookieName: "wc_session" } }));
 vi.mock("@/lib/role-preview", () => ({

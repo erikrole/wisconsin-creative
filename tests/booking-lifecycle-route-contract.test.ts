@@ -14,6 +14,7 @@ vi.mock("@/lib/services/bookings", () => ({
 vi.mock("@/lib/db", () => ({
   db: {
     location: { findUnique: vi.fn() },
+    systemConfig: { findUnique: vi.fn(async () => null) },
   },
 }));
 
@@ -220,6 +221,8 @@ describe("booking lifecycle route contract", () => {
 
   it("dispatches reservation edits to updateReservation", async () => {
     vi.mocked(getBookingDetail).mockResolvedValue(bookingDetail({ ...baseDetail, kind: "RESERVATION" }));
+    // The moved start must still be in the future for the reservation start rules.
+    vi.useFakeTimers({ now: new Date("2026-05-20T12:00:00.000Z") });
 
     const res = await PATCH(
       request(
@@ -247,6 +250,7 @@ describe("booking lifecycle route contract", () => {
       notes: undefined,
     }, new Date("2026-06-01T09:00:00.000Z"));
     expect(updateCheckout).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it("rejects Field House as a reservation pickup location before dispatching the update", async () => {
@@ -263,5 +267,50 @@ describe("booking lifecycle route contract", () => {
 
     expect(res.status).toBe(400);
     expect(updateReservation).not.toHaveBeenCalled();
+  });
+});
+
+describe("moving a reservation start follows the creation rules", () => {
+  const reservation = { ...baseDetail, kind: "RESERVATION" };
+  const snapshot = { "if-unmodified-since": "Mon, 01 Jun 2026 09:00:00 GMT" };
+
+  beforeEach(() => {
+    vi.mocked(getBookingDetail).mockResolvedValue(bookingDetail(reservation));
+    vi.useFakeTimers({ now: new Date("2026-05-20T12:00:00.000Z") });
+  });
+
+  it("rejects a start moved into the past", async () => {
+    const res = await PATCH(
+      request({ startsAt: "2026-05-19T10:00:00.000Z", endsAt: "2026-06-01T12:00:00.000Z" }, snapshot),
+      { params: Promise.resolve({ id: baseDetail.id }) },
+    );
+
+    expect(res.status).toBe(400);
+    expect(updateReservation).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("rejects a start moved past the advance booking window", async () => {
+    vi.mocked(db.systemConfig.findUnique).mockResolvedValueOnce({ value: { advanceWindowDays: 7 } } as never);
+    const res = await PATCH(
+      request({ startsAt: "2026-06-10T10:00:00.000Z", endsAt: "2026-06-10T12:00:00.000Z" }, snapshot),
+      { params: Promise.resolve({ id: baseDetail.id }) },
+    );
+
+    expect(res.status).toBe(409);
+    expect(updateReservation).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("leaves the start alone when only the end moves on a reservation that already began", async () => {
+    vi.useFakeTimers({ now: new Date("2026-06-01T11:00:00.000Z") });
+    const res = await PATCH(
+      request({ endsAt: "2026-06-01T14:00:00.000Z" }, snapshot),
+      { params: Promise.resolve({ id: baseDetail.id }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(updateReservation).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });

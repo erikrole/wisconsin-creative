@@ -1,4 +1,5 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { attachDatabasePool } from "@vercel/functions/db-connections";
 
@@ -13,12 +14,18 @@ class ManagedNeonAdapter extends PrismaNeon {
 }
 
 function createPrismaClient() {
-  const adapter = new ManagedNeonAdapter({
-    connectionString: process.env.DATABASE_URL,
-    max: 5,
-    idleTimeoutMillis: 5_000,
-    connectionTimeoutMillis: 10_000,
-  });
+  const connectionString = process.env.DATABASE_URL;
+  // Neon speaks WebSockets through its serverless driver. Any other Postgres
+  // (the end-to-end flow tests' disposable cluster, a plain local server) takes
+  // the standard pg driver, which the seed script already does the same way.
+  const adapter = connectionString && !connectionString.includes(".neon.tech")
+    ? new PrismaPg({ connectionString, max: 5 })
+    : new ManagedNeonAdapter({
+      connectionString,
+      max: 5,
+      idleTimeoutMillis: 5_000,
+      connectionTimeoutMillis: 10_000,
+    });
   return new PrismaClient({ adapter });
 }
 

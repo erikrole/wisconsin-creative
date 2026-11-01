@@ -13,7 +13,7 @@ import { toast } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { formatCalendarEventDateRange, eventSpansMultipleDays } from "@/lib/calendar-event-dates";
-import { sportLabel } from "@/lib/sports";
+import { sportDotColor } from "@/lib/sport-color";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -1005,19 +1005,24 @@ export function ListView({
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground flex gap-2 flex-wrap pl-5">
-                    <span>
-                      {entry.allDay
-                        ? formatCalendarEventDateRange(entry)
-                        : formatDateShort(entry.startsAt, entry.allDay)}
-                    </span>
-                    {entry.sportCode && (
-                      <span>{sportLabel(entry.sportCode)}</span>
+                  {/* The day header above already carries the date, and the title the sport. */}
+                  <div className="text-xs text-muted-foreground flex items-center gap-x-2 gap-y-1 flex-wrap pl-5">
+                    {entry.allDay && (
+                      <span>{formatCalendarEventDateRange(entry)}</span>
                     )}
+                    <span className="inline-flex items-center gap-1.5">
+                      {entry.sportCode && (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: sportDotColor(entry.sportCode) ?? undefined }}
+                        />
+                      )}
+                      {venueTone.label}
+                    </span>
                     {titleParts.detail && (
                       <span>{titleParts.detail}</span>
                     )}
-                    <span>{venueTone.label}</span>
                     {(entry.combinedEventCount ?? 0) > 1 && (
                       <span>{entry.combinedEventCount} events · shared crew</span>
                     )}

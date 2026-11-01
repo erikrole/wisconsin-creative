@@ -1,3 +1,5 @@
+import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
+
 const TZ = process.env.INSTITUTION_TZ ?? "America/Chicago";
 
 export type AvailabilityKind = "WEEKLY" | "AD_HOC";
@@ -140,7 +142,43 @@ function formatConflictNote(block: AvailabilityBlockLike, intent = blockIntent(b
   return label ? `Conflicts with ${label} (${detail})` : `Conflicts with ${fallback} ${detail}`;
 }
 
-function overlapsAvailabilityBlock(block: AvailabilityBlockLike, start: ReturnType<typeof toLocalParts>, end: ReturnType<typeof toLocalParts>) {
+type LocalSegment = { date: string; dayOfWeek: number; from: string; to: string };
+
+function nextDate(date: string): string {
+  return dateOnly(new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000))!;
+}
+
+/**
+ * Split a window into the local calendar days it touches, each with the
+ * wall-clock range covered on that day. A game that runs past midnight is
+ * two segments, so a block late on the second day still counts.
+ */
+function toLocalSegments(window: AvailabilityWindow): LocalSegment[] {
+  // An inherited all-day window is stored as UTC midnights (the all-day
+  // CalendarEvent convention), which reads as the previous evening in
+  // Madison. It means "those whole dates", not a clock range.
+  if (isFullDayBoundaryWindow({ startsAt: window.startsAt.toISOString(), endsAt: window.endsAt.toISOString() })) {
+    const segments: LocalSegment[] = [];
+    const last = dateOnly(window.endsAt)!;
+    for (let date = dateOnly(window.startsAt)!; date < last; date = nextDate(date)) {
+      segments.push({ date, dayOfWeek: new Date(`${date}T00:00:00Z`).getUTCDay(), from: "00:00", to: "24:00" });
+    }
+    return segments;
+  }
+  const start = toLocalParts(window.startsAt);
+  const end = toLocalParts(window.endsAt);
+  if (start.date >= end.date) {
+    return [{ date: start.date, dayOfWeek: start.dayOfWeek, from: start.hhmm, to: end.hhmm }];
+  }
+  const segments: LocalSegment[] = [{ date: start.date, dayOfWeek: start.dayOfWeek, from: start.hhmm, to: "24:00" }];
+  for (let date = nextDate(start.date); date < end.date; date = nextDate(date)) {
+    segments.push({ date, dayOfWeek: new Date(`${date}T00:00:00Z`).getUTCDay(), from: "00:00", to: "24:00" });
+  }
+  segments.push({ date: end.date, dayOfWeek: end.dayOfWeek, from: "00:00", to: end.hhmm });
+  return segments;
+}
+
+function overlapsAvailabilityBlock(block: AvailabilityBlockLike, segments: LocalSegment[]) {
   if (block.kind === "AD_HOC") {
     const blockStart = dateOnly(block.date);
     const blockEnd = dateOnly(block.dateEndsOn) ?? blockStart;
@@ -149,27 +187,28 @@ function overlapsAvailabilityBlock(block: AvailabilityBlockLike, start: ReturnTy
     // A dated range is inclusive. All-day ranges intentionally ignore the
     // stored canonical 00:00–23:59 wall-clock values so a full-day trip still
     // conflicts with any call window on any covered date.
-    const datesOverlap = start.date <= blockEnd && end.date >= blockStart;
-    if (!datesOverlap) return false;
+    const covered = segments.filter((segment) => segment.date >= blockStart && segment.date <= blockEnd);
+    if (covered.length === 0) return false;
     if (block.allDay) return true;
-    return timeOverlaps(start.hhmm, end.hhmm, block.startsAt, block.endsAt);
+    return covered.some((segment) => timeOverlaps(segment.from, segment.to, block.startsAt, block.endsAt));
   }
 
-  if (!timeOverlaps(start.hhmm, end.hhmm, block.startsAt, block.endsAt)) return false;
-  if (block.dayOfWeek !== start.dayOfWeek) return false;
-  return isWithinDateBounds(start.date, block);
+  return segments.some((segment) =>
+    segment.dayOfWeek === block.dayOfWeek
+    && timeOverlaps(segment.from, segment.to, block.startsAt, block.endsAt)
+    && isWithinDateBounds(segment.date, block)
+  );
 }
 
 export function evaluateAvailabilityPreferences(
   blocks: AvailabilityBlockLike[],
   window: AvailabilityWindow,
 ): AvailabilityPreferenceEvaluation {
-  const start = toLocalParts(window.startsAt);
-  const end = toLocalParts(window.endsAt);
+  const segments = toLocalSegments(window);
   const conflicts: AvailabilityConflict[] = [];
 
   for (const block of blocks) {
-    if (!overlapsAvailabilityBlock(block, start, end)) continue;
+    if (!overlapsAvailabilityBlock(block, segments)) continue;
     const intent = blockIntent(block);
     const status = blockStatus(block);
     if (status === "DENIED") continue;

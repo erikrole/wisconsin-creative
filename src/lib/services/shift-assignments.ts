@@ -4,6 +4,7 @@ import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES, allowsOverlappingShifts } from "@/lib/shift-constants";
 import {
   buildShiftAssignmentOverlapWhere,
+  inheritsMultiDayAllDayWindow,
   resolveEffectiveAssignmentWindow,
   resolveEffectiveShiftWindow,
   scheduleWindowsOverlap,
@@ -245,6 +246,9 @@ function matchTimeConflict(
 ): string | null {
   for (const conflict of conflicts) {
     if (allowsOverlappingShifts(conflict.user?.role)) continue;
+    // A tournament crew with no call times spans whole days, not booked hours;
+    // pickup already lets it through, so approval and assignment must agree.
+    if (inheritsMultiDayAllDayWindow(conflict)) continue;
     const window = effectiveAssignmentWindow(conflict);
     if (!scheduleWindowsOverlap(requestedWindow, window)) continue;
     const message = `User already has a shift during this time (${conflict.shift.area})`;
