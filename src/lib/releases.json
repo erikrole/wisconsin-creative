@@ -9,7 +9,7 @@
       "The shared Wi-Fi name and password come from a server setting instead of the code; the Wi-Fi card stays hidden until the password is set.",
       "The old web route for reporting damaged or missing gear at check-in is removed; returns and reports happen at the kiosk."
     ],
-    "pr": 0,
+    "pr": 755,
     "platforms": [
       "Web"
     ]
