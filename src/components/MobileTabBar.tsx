@@ -71,7 +71,6 @@ export function MobileTabBar({
               key={item.href}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              aria-label={badgeCount > 0 ? `${item.label}, ${badgeCount} overdue` : item.label}
               className={tabClass}
             >
               <span className="relative flex size-6 items-center justify-center" aria-hidden="true">
@@ -89,6 +88,7 @@ export function MobileTabBar({
                 )}
               </span>
               <span className={labelClass(isActive)}>{item.label}</span>
+              {badgeCount > 0 && <span className="sr-only">, {badgeCount} overdue</span>}
             </Link>
           );
         })}

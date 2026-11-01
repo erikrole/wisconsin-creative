@@ -721,9 +721,9 @@ export function ListView({
         {/* ── Header ── */}
         <div className="flex items-center justify-between border-b border-border/60 bg-muted/15 px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm! font-semibold! text-foreground">
+            <h2 className="text-sm! font-semibold! text-foreground">
               {myShiftsOnly ? "My shifts timeline" : "Timeline"}
-            </h3>
+            </h2>
             <span className="text-xs font-medium tabular-nums text-muted-foreground">
               {filteredEntries.length !== entries.length
                 ? `${filteredEntries.length} of ${entries.length}`

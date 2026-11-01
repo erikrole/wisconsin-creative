@@ -369,6 +369,7 @@ export default function NotificationsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-2">
           <Tabs
+            panels={false}
             value={unreadOnly ? "unread" : "all"}
             onValueChange={(value) => {
               setUnreadOnly(value === "unread");

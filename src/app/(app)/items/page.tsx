@@ -674,6 +674,7 @@ export default function ItemsPage() {
 
       {statusTabs.length > 0 && (
         <Tabs
+          panels={false}
           value={activeStatusTab}
           onValueChange={(value) => {
             filters.setStatusFilter(new Set(value === "all" ? [] : [value]));

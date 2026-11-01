@@ -123,14 +123,14 @@ export function GearItemCard({
             sizes="(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
             className="object-contain p-3 transition-transform duration-200 group-hover:scale-[1.02] motion-reduce:transition-none"
           />
-          {color.imageNote && (
-            <Badge variant="gray" size="sm" className="absolute left-2 top-2">
-              {color.imageNote}
-            </Badge>
-          )}
         </button>
+        {color.imageNote && (
+          <Badge variant="gray" size="sm" className="pointer-events-none absolute left-2 top-2">
+            {color.imageNote}
+          </Badge>
+        )}
         {picked && (
-          <Badge variant="green" className={cn("absolute right-2 text-[11px]", color.imageNote ? "bottom-2" : "top-2")}>
+          <Badge variant="green" className={cn("pointer-events-none absolute right-2 text-[11px]", color.imageNote ? "bottom-2" : "top-2")}>
             <CheckIcon aria-hidden="true" /> Picked · {pickedCount}
           </Badge>
         )}

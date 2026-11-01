@@ -15,7 +15,7 @@ describe("Settings UI polish contracts", () => {
     const command = source("src/app/(app)/settings/SettingsCommand.tsx");
 
     expect(command).toContain('className="size-10 text-muted-foreground sm:w-auto sm:px-3"');
-    expect(command).toContain('<span className="hidden sm:inline">Search settings</span>');
+    expect(command).toContain('<span className="sr-only sm:not-sr-only">Search settings</span>');
     expect(command).toContain('className="min-h-11 transition-[background-color,color]"');
   });
 

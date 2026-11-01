@@ -1,0 +1,55 @@
+name: Accessibility
+
+# axe-core (WCAG 2.1 A/AA) over the DB-free dev labs rendered by `next dev`:
+# the real Home, Items, Bookings, Schedule, Settings, Notifications and more
+# with sample data and no database, credentials or deploy. Not a required check.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/browser/**"
+      - "playwright.a11y.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/a11y.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/browser/**"
+      - "playwright.a11y.config.ts"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  axe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/tasks/**
+            !/goldie/**
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.17.0
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium-headless-shell
+      - run: npm run test:a11y
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: failure()
+        with:
+          name: a11y-test-results
+          path: test-results/
+          retention-days: 7
