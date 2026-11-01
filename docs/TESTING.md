@@ -111,6 +111,18 @@ The harness rejects `wisconsincreative.com` and its known legacy production host
 
 Without any credential variables, local tests skip explicitly so `npx playwright test --list` remains useful. Partial credentials fail instead of skipping. Whenever `CI` is set, missing credentials, missing isolation opt-in, or an admin-only identity fail before tests start. Release verification must also add `PLAYWRIGHT_RELEASE=1` to enforce the same strict contract outside CI.
 
+## End-to-End Flow Tests
+
+`tests/e2e-flows/` drives the real app through the flows people depend on: a student reserves gear in the wizard, picks it up and returns it at the kiosk; a walk-up kiosk checkout with an admin adding and removing items on the web; a shift claim, admin approval, trade post, claim and approval; class time and time off with staff review; and Creative Wrapped opening on time. Custody only ever changes at the kiosk, so those steps go through the kiosk API with a real activated kiosk session while everything else goes through the browser.
+
+```bash
+npm run test:e2e:flows            # production build must exist: npm run build:app first
+npm run test:e2e:flows -- --dev   # next dev instead, no build needed
+npm run test:e2e:flows -- --keep  # leave the database and server up to write tests by hand
+```
+
+`scripts/test-e2e-flows.mjs` owns a disposable PostgreSQL cluster (Unix socket only, schema baseline plus the repair migrations that add the sequence, trigger and overlap guard), seeds four people and a few cameras with `tests/e2e-flows/seed.mjs`, starts the app on port 3100 with the standard `pg` driver (`src/lib/db.ts` uses it for any non-Neon `DATABASE_URL`), signs each person in once through the login form, and runs the `*.flow.ts` specs in order on a single worker. Nothing touches Neon or a deployed host. The `Flows` workflow runs the same thing on pull requests that change app, schema or flow-test code; it is not a required check.
+
 ## Test Layers
 
 - **Service tests:** Pure or DB-mocked business logic, such as booking rules, availability, reports, badge evaluation, schedule health, and status derivation.

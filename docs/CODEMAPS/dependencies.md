@@ -9,6 +9,7 @@
 | `@mdxeditor/editor` | `^4.3.3` |
 | `@neondatabase/serverless` | `1.2.0` |
 | `@prisma/adapter-neon` | `^7.10.1` |
+| `@prisma/adapter-pg` | `^7.10.1` |
 | `@prisma/client` | `^7.10.1` |
 | `@sentry/nextjs` | `^11.8.0` |
 | `@simplewebauthn/browser` | `^14.0.0` |
@@ -60,7 +61,6 @@
 | `@eslint/eslintrc` | `^3.3.7` |
 | `@next/bundle-analyzer` | `^16.4.2` |
 | `@playwright/test` | `^1.64.1` |
-| `@prisma/adapter-pg` | `^7.10.1` |
 | `@types/node` | `^24.19.2` |
 | `@types/qrcode` | `^1.5.6` |
 | `@types/react` | `^19.3.0` |
@@ -139,6 +139,7 @@
 - `test`: `vitest run`
 - `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts && playwright test -c playwright.schedule.config.ts && playwright test -c playwright.labels.config.ts`
 - `test:coverage`: `vitest run --coverage`
+- `test:e2e:flows`: `node scripts/test-e2e-flows.mjs`
 - `test:e2e:smoke`: `playwright test`
 - `test:performance:web`: `node scripts/check-web-performance.mjs`
 - `test:postgres`: `node scripts/test-onboarding-postgres.mjs`

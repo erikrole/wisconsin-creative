@@ -31,7 +31,8 @@ setup("authenticate through the normal sign-in flow", async ({ page }) => {
   expect(page.url(), "The smoke identity must not require a password change").not.toContain(
     "/change-password",
   );
-  await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+  // Home greets the person by first name ("Good evening, Erin").
+  await expect(page.getByRole("heading", { level: 1, name: /^Good \w+, / })).toBeVisible();
 
   mkdirSync(dirname(AUTH_FILE), { recursive: true });
   await page.context().storageState({ path: AUTH_FILE });

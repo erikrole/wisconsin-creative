@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-11-01",
+    "title": "Automated checks on the core flows",
+    "type": "improvement",
+    "summary": "Every change now runs a browser through the flows students and admins rely on most, so a broken reservation, kiosk return or shift trade is caught before it ships.",
+    "details": [
+      "Covered: reserving gear and picking it up and returning it at the kiosk, kiosk walk-ups with admin edits to the checkout, shift claims, approvals and trades, time off approval, and the Wrapped countdown.",
+      "The confirm step of a new reservation showed the event's time in the wrong time zone when the page was first loaded; it now shows Madison time like everywhere else.",
+      "Nothing else changes in what you see."
+    ],
+    "pr": 751,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Bug hunt follow-ups: availability, contacts, bulk assign",
     "type": "fixes",
     "summary": "Five more findings from the web bug hunt are closed: late-night availability blocks now count, staff contact details stay out of student reads, reservation edits follow the same start rules as new reservations, and bulk assignment keeps every pick that still fits.",
