@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-11-01",
+    "title": "Faster, cheaper calendar subscriptions",
+    "type": "improvement",
+    "summary": "Your subscribed shift calendar is now answered from a cache, so the thousands of overnight refreshes calendar apps make no longer wake the database.",
+    "details": [
+      "A subscribed feed refreshes from the cache until the schedule actually changes, then rebuilds on the next poll.",
+      "Calendar apps that already have the latest version get a quick \"nothing new\" reply instead of the whole file.",
+      "Old links from a reset or revoked calendar token stop reaching the database.",
+      "Nothing changes in what your calendar shows."
+    ],
+    "pr": 747,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
     "date": "2026-10-31",
     "title": "Bug hunt: accounts, times, checkouts",
     "type": "fixes",
