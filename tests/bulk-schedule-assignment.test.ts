@@ -1,3 +1,4 @@
+import { HttpError } from "@/lib/http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BulkAssignmentScope } from "@/lib/bulk-schedule-assignment-types";
 import type { CandidateScoringUser } from "@/lib/services/candidate-scoring";
@@ -467,15 +468,33 @@ describe("applyBulkScheduleAssignment", () => {
       .rejects.toMatchObject({ status: 409, message: expect.stringContaining("available anymore") });
   });
 
-  it("re-checks the roster inside the transaction", async () => {
+  it("re-checks the roster inside the transaction and keeps the picks that still fit", async () => {
     const { input } = await previewed();
     mocks.tx.user.findMany.mockResolvedValue([
       liveUser(person("staff-1")),
       liveUser(person("st-1"), { sportAssignments: [] }),
     ]);
 
+    const result = await applyBulkScheduleAssignment(input, actor, release);
+
+    expect(result).toMatchObject({ eventCount: 1, assignmentCount: 1, droppedCount: 1 });
+    expect(mocks.tx.scheduleBulkAssignmentItem.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ proposalPayload: [{ shiftId: "s-ft", userId: "staff-1" }] })],
+    });
+    const working = mocks.tx.shiftGroupWorkingCopy.create.mock.calls[0]?.[0].data;
+    expect(working.payload.slots.map((slot: { assignment: { userId: string } | null }) => slot.assignment?.userId ?? null))
+      .toEqual(["staff-1", null]);
+  });
+
+  it("gives up only when nothing is left to stage", async () => {
+    const { input } = await previewed();
+    mocks.tx.user.findMany.mockResolvedValue([
+      liveUser(person("staff-1"), { active: false }),
+      liveUser(person("st-1"), { sportAssignments: [] }),
+    ]);
+
     await expect(applyBulkScheduleAssignment(input, actor, release))
-      .rejects.toMatchObject({ status: 409, message: "One of the proposed workers is no longer on this event's sport roster." });
+      .rejects.toMatchObject({ status: 409, message: expect.stringContaining("available anymore") });
     expect(mocks.tx.shiftGroupWorkingCopy.create).not.toHaveBeenCalled();
   });
 
@@ -486,12 +505,20 @@ describe("applyBulkScheduleAssignment", () => {
     await expect(applyBulkScheduleAssignment(input, actor, release)).rejects.toMatchObject({ status: 409 });
   });
 
-  it("stops if someone was deactivated after the preview", async () => {
+  it("drops someone deactivated after the preview and stages the rest", async () => {
     const { input } = await previewed();
     mocks.tx.user.findMany.mockResolvedValue([liveUser(person("staff-1")), liveUser(person("st-1"), { active: false })]);
 
-    await expect(applyBulkScheduleAssignment(input, actor, release))
-      .rejects.toMatchObject({ message: "One of the proposed workers is no longer active." });
+    await expect(applyBulkScheduleAssignment(input, actor, release)).resolves.toMatchObject({ assignmentCount: 1, droppedCount: 1 });
+  });
+
+  it("drops a pick whose live conflict check fails and stages the rest", async () => {
+    const { input } = await previewed();
+    mocks.checkTimeConflict.mockImplementation(async (_tx: unknown, userId: string) => {
+      if (userId === "st-1") throw new HttpError(409, "Already scheduled then");
+    });
+
+    await expect(applyBulkScheduleAssignment(input, actor, release)).resolves.toMatchObject({ assignmentCount: 1, droppedCount: 1 });
   });
 
   it("re-runs the live conflict check for every pick", async () => {

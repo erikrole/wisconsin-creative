@@ -33,7 +33,7 @@
 | `src/lib/services/bookings.ts` | 7 |
 | `src/lib/services/budget.ts` | 1055 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
-| `src/lib/services/bulk-schedule-assignment.ts` | 976 |
+| `src/lib/services/bulk-schedule-assignment.ts` | 994 |
 | `src/lib/services/bulk-unit-scans.ts` | 722 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 764 |
