@@ -1,3 +1,5 @@
+import { INSTITUTION_TZ, institutionDayParts } from "@/lib/format";
+
 type CalendarEventDateLike = {
   startsAt: string | Date;
   endsAt: string | Date;
@@ -14,10 +16,10 @@ function utcDayStartMs(date: Date): number {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
-function localDayStartMs(date: Date): number {
-  const day = new Date(date);
-  day.setHours(0, 0, 0, 0);
-  return day.getTime();
+/** Midnight (as a UTC-encoded day key) of the Central calendar day an instant falls on. */
+function centralDayStartMs(date: Date): number {
+  const { year, month, day } = institutionDayParts(date);
+  return Date.UTC(year, month - 1, day);
 }
 
 function utcDateFromMs(ms: number): Date {
@@ -41,18 +43,20 @@ function formatUtcMonthDayYear(date: Date): string {
   });
 }
 
-function formatLocalMonthDay(date: Date): string {
+function formatCentralMonthDay(date: Date): string {
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: INSTITUTION_TZ,
   });
 }
 
-function formatLocalMonthDayYear(date: Date): string {
+function formatCentralMonthDayYear(date: Date): string {
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: INSTITUTION_TZ,
   });
 }
 
@@ -64,12 +68,8 @@ function sameUtcDay(a: Date, b: Date): boolean {
   );
 }
 
-function sameLocalDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+function sameCentralDay(a: Date, b: Date): boolean {
+  return centralDayStartMs(a) === centralDayStartMs(b);
 }
 
 function allDayStartMs(event: CalendarEventDateLike): number {
@@ -86,14 +86,15 @@ function displayDayKey(event: CalendarEventDateLike): number {
   const start = toDate(event.startsAt);
   return event.allDay
     ? Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
-    : Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+    : centralDayStartMs(start);
 }
 
 /**
- * Sort schedule rows in the order they appear to a local/Central user.
- * All-day starts are encoded date values at UTC midnight, so only their
- * encoded calendar date is used for ordering. Timed starts remain local
- * instants and are ordered by their actual start time within that day.
+ * Sort schedule rows in the order they appear to a Central user, whether the
+ * code runs in a Madison browser or on the UTC server. All-day starts are
+ * encoded date values at UTC midnight, so only their encoded calendar date is
+ * used for ordering. Timed starts are instants, filed under their Central
+ * calendar day and ordered by their actual start time within it.
  */
 export function sortCalendarEventsForDisplay<T extends CalendarEventDateLike>(events: readonly T[]): T[] {
   return events
@@ -112,17 +113,25 @@ export function sortCalendarEventsForDisplay<T extends CalendarEventDateLike>(ev
     .map(({ event }) => event);
 }
 
+/**
+ * The last instant a timed event covers. Ending exactly at midnight means "through
+ * the end of that day", so the range it spans and the days it occurs on stop there.
+ */
+function timedInclusiveEnd(event: CalendarEventDateLike): Date {
+  const start = toDate(event.startsAt).getTime();
+  return new Date(Math.max(toDate(event.endsAt).getTime() - 1, start));
+}
+
 function allDayInclusiveEndDate(event: CalendarEventDateLike): Date {
   return utcDateFromMs(allDayEndExclusiveMs(event) - DAY_MS);
 }
 
 export function eventSpansMultipleDays(event: CalendarEventDateLike): boolean {
   const start = toDate(event.startsAt);
-  const end = toDate(event.endsAt);
   if (event.allDay) {
     return !sameUtcDay(start, allDayInclusiveEndDate(event));
   }
-  return !sameLocalDay(start, end);
+  return !sameCentralDay(start, timedInclusiveEnd(event));
 }
 
 export function formatCalendarEventDateRange(
@@ -151,21 +160,23 @@ export function formatCalendarEventDateRange(
     return `${formatUtcMonthDayYear(startDay)}-${formatUtcMonthDayYear(endDay)}`;
   }
 
-  const end = toDate(event.endsAt);
-  if (sameLocalDay(start, end)) {
-    return includeYear ? formatLocalMonthDayYear(start) : formatLocalMonthDay(start);
+  const end = timedInclusiveEnd(event);
+  if (sameCentralDay(start, end)) {
+    return includeYear ? formatCentralMonthDayYear(start) : formatCentralMonthDay(start);
   }
-  const sameYear = start.getFullYear() === end.getFullYear();
-  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+  const startParts = institutionDayParts(start);
+  const endParts = institutionDayParts(end);
+  const sameYear = startParts.year === endParts.year;
+  const sameMonth = sameYear && startParts.month === endParts.month;
   if (sameMonth) {
-    const base = `${formatLocalMonthDay(start)}-${end.getDate()}`;
-    return includeYear ? `${base}, ${start.getFullYear()}` : base;
+    const base = `${formatCentralMonthDay(start)}-${endParts.day}`;
+    return includeYear ? `${base}, ${startParts.year}` : base;
   }
   if (sameYear) {
-    const base = `${formatLocalMonthDay(start)}-${formatLocalMonthDay(end)}`;
-    return includeYear ? `${base}, ${start.getFullYear()}` : base;
+    const base = `${formatCentralMonthDay(start)}-${formatCentralMonthDay(end)}`;
+    return includeYear ? `${base}, ${startParts.year}` : base;
   }
-  return `${formatLocalMonthDayYear(start)}-${formatLocalMonthDayYear(end)}`;
+  return `${formatCentralMonthDayYear(start)}-${formatCentralMonthDayYear(end)}`;
 }
 
 export function formatCalendarEventAllDayLabel(event: CalendarEventDateLike): string {
@@ -181,10 +192,10 @@ export function eventOccursOnCalendarDay(event: CalendarEventDateLike, day: Date
     return dayMs >= allDayStartMs(event) && dayMs < allDayEndExclusiveMs(event);
   }
 
-  const dayMs = localDayStartMs(day);
-  const startMs = localDayStartMs(toDate(event.startsAt));
-  const rawEnd = toDate(event.endsAt);
-  const endMs = localDayStartMs(rawEnd);
-  const endExclusiveMs = rawEnd.getTime() === endMs ? endMs : endMs + DAY_MS;
+  // `day` is a calendar cell (its own year/month/date); the event's instants are
+  // read on the Central calendar.
+  const dayMs = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+  const startMs = centralDayStartMs(toDate(event.startsAt));
+  const endExclusiveMs = centralDayStartMs(timedInclusiveEnd(event)) + DAY_MS;
   return dayMs >= startMs && dayMs < endExclusiveMs;
 }
