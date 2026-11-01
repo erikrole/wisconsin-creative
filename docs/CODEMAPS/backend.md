@@ -206,7 +206,7 @@
 | `src/lib/bulk-schedule-assignment-types.ts` | 170 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |
-| `src/lib/calendar-event-dates.ts` | 191 |
+| `src/lib/calendar-event-dates.ts` | 202 |
 | `src/lib/calendar-source-freshness.ts` | 256 |
 | `src/lib/candidate-scoring-types.ts` | 26 |
 | `src/lib/category-options.ts` | 34 |
@@ -247,7 +247,7 @@
 | `src/lib/football-gameday-kits-schema.ts` | 17 |
 | `src/lib/football-gameday-kits.ts` | 63 |
 | `src/lib/football-results.ts` | 233 |
-| `src/lib/format.ts` | 334 |
+| `src/lib/format.ts` | 346 |
 | `src/lib/getting-started.ts` | 55 |
 | `src/lib/guide-categories.ts` | 140 |
 | `src/lib/guide-content.ts` | 280 |
