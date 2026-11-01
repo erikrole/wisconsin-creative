@@ -45,7 +45,8 @@ vi.mock("@/lib/services/checkout-policies", () => ({
   loadCheckoutPolicies: vi.fn(),
 }));
 
-vi.mock("@/lib/services/reservation-rules", () => ({
+vi.mock("@/lib/services/reservation-rules", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/services/reservation-rules")>(),
   loadReservationRules: vi.fn(),
 }));
 

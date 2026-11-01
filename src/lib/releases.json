@@ -18,6 +18,38 @@
   },
   {
     "date": "2026-11-01",
+    "title": "Automated checks on the core flows",
+    "type": "improvement",
+    "summary": "Every change now runs a browser through the flows students and admins rely on most, so a broken reservation, kiosk return or shift trade is caught before it ships.",
+    "details": [
+      "Covered: reserving gear and picking it up and returning it at the kiosk, kiosk walk-ups with admin edits to the checkout, shift claims, approvals and trades, time off approval, and the Wrapped countdown.",
+      "The confirm step of a new reservation showed the event's time in the wrong time zone when the page was first loaded; it now shows Madison time like everywhere else.",
+      "Nothing else changes in what you see."
+    ],
+    "pr": 751,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
+    "title": "Bug hunt follow-ups: availability, contacts, bulk assign",
+    "type": "fixes",
+    "summary": "Five more findings from the web bug hunt are closed: late-night availability blocks now count, staff contact details stay out of student reads, reservation edits follow the same start rules as new reservations, and bulk assignment keeps every pick that still fits.",
+    "details": [
+      "Availability blocks are checked on every day a shift touches, so a game that runs past midnight no longer misses a block early the next morning, and all-day events check the event's own weekday.",
+      "Students and collaborators no longer receive staff and admin phone numbers, athletics emails or birthdays through the user list and profile responses; student contact details stay shared with the team.",
+      "Moving a reservation's start now follows the same rules as creating one: not into the past, and not beyond the advance-booking window.",
+      "Applying a bulk assignment now stages every pick that still fits and reports the ones that no longer do, instead of refusing the whole batch when one person was reassigned or deactivated after the preview.",
+      "The test-notification buttons send at most a few pushes per minute."
+    ],
+    "pr": 748,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Faster, cheaper calendar subscriptions",
     "type": "improvement",
     "summary": "Your subscribed shift calendar is now answered from a cache, so the thousands of overnight refreshes calendar apps make no longer wake the database.",
@@ -30,6 +62,21 @@
     "pr": 747,
     "platforms": [
       "Web"
+    ]
+  },
+  {
+    "date": "2026-10-31",
+    "title": "iPhone times stay on Madison time",
+    "type": "fixes",
+    "summary": "Every clock in the iPhone app, its widgets and the Live Activity now reads in Central time, and report charts label the right day.",
+    "details": [
+      "Return times on the lock screen Live Activity, shift and gear widgets, blast acknowledgements and What's new dates showed the phone's own time zone when travelling. They now read in Central like the rest of the app.",
+      "Picking a date or time in the app now means Central time, so a return time chosen on the road matches the labels around it.",
+      "The daily checkout charts in Reports labelled each day as the day before for anyone in the Americas."
+    ],
+    "pr": 745,
+    "platforms": [
+      "iOS"
     ]
   },
   {

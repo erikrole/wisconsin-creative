@@ -124,3 +124,53 @@ describe("kiosk heartbeat wiring", () => {
     expect(source("src/lib/services/companion-projection.ts")).toContain("withLatestKioskBeats(storedDevices)");
   });
 });
+
+describe("cached session reads and writes", () => {
+  function sessionRedis(behaviour: { failing?: boolean } = {}) {
+    const store = new Map<string, unknown>();
+    const fail = async () => { throw new Error("upstash down"); };
+    const client = behaviour.failing
+      ? { get: fail, set: fail, del: fail, hdel: fail, hset: fail }
+      : {
+          get: async (key: string) => (store.get(key) as { value: unknown } | undefined)?.value ?? null,
+          set: async (key: string, value: unknown, opts: { px: number }) => { store.set(key, { value, opts }); },
+          del: async (key: string) => store.delete(key),
+        };
+    return { store, client: client as unknown as Redis };
+  }
+
+  it("remembers a session under the token hash with the refresh window as its TTL, and forgets it on request", async () => {
+    const { readCachedKioskHeartbeat, rememberKioskHeartbeat, forgetKioskHeartbeat } = await import("@/lib/kiosk-heartbeat-cache");
+    const { store, client } = sessionRedis();
+    resetKioskHeartbeatRedisForTests(client);
+
+    await expect(readCachedKioskHeartbeat("hash-1")).resolves.toBeNull();
+    await rememberKioskHeartbeat("hash-1", cached());
+    const [key, entry] = [...store.entries()][0]! as [string, { value: unknown; opts: { px: number } }];
+    expect(key).toMatch(/kiosk:heartbeat-session:v1:hash-1$/);
+    expect(entry.opts).toEqual({ px: KIOSK_HEARTBEAT_DB_REFRESH_MS });
+    await expect(readCachedKioskHeartbeat("hash-1")).resolves.toEqual(cached());
+
+    await forgetKioskHeartbeat("hash-1");
+    expect(store.size).toBe(0);
+    await expect(readCachedKioskHeartbeat("hash-1")).resolves.toBeNull();
+  });
+
+  it("is a no-op without Redis and swallows Redis failures so a heartbeat never fails on the cache", async () => {
+    const { readCachedKioskHeartbeat, rememberKioskHeartbeat, forgetKioskHeartbeat } = await import("@/lib/kiosk-heartbeat-cache");
+    resetKioskHeartbeatRedisForTests(null);
+    await expect(readCachedKioskHeartbeat("hash-1")).resolves.toBeNull();
+    await expect(rememberKioskHeartbeat("hash-1", cached())).resolves.toBeUndefined();
+    await expect(forgetKioskHeartbeat("hash-1")).resolves.toBeUndefined();
+    await expect(forgetKioskHeartbeat(null)).resolves.toBeUndefined();
+    await expect(clearKioskBeat("kiosk-1")).resolves.toBeUndefined();
+    await expect(recordKioskBeat("kiosk-1", now)).resolves.toBeUndefined();
+
+    resetKioskHeartbeatRedisForTests(sessionRedis({ failing: true }).client);
+    await expect(readCachedKioskHeartbeat("hash-1")).resolves.toBeNull();
+    await expect(rememberKioskHeartbeat("hash-1", cached())).resolves.toBeUndefined();
+    await expect(forgetKioskHeartbeat("hash-1")).resolves.toBeUndefined();
+    await expect(clearKioskBeat("kiosk-1")).resolves.toBeUndefined();
+    await expect(recordKioskBeat("kiosk-1", now)).resolves.toBeUndefined();
+  });
+});

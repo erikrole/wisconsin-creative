@@ -583,7 +583,7 @@ struct SentBlastDetailView: View {
                         ForEach(detail.acknowledged) { recipient in
                             LabeledContent(recipient.user.name) {
                                 if let at = recipient.acknowledgedAt {
-                                    Text(at, format: .dateTime.hour().minute())
+                                    Text(at, format: .chicago.hour().minute())
                                 }
                             }
                         }

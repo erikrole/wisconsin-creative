@@ -712,7 +712,7 @@ function proposalsByGroup(input: BulkAssignmentApplyInput, preview: BulkAssignme
     list.push(proposal);
     grouped.set(proposal.shiftGroupId, list);
   }
-  return { grouped, applied: selected.length, dropped: input.proposals.length - selected.length };
+  return { grouped };
 }
 
 function addTentativeWindow(windowsByUser: Map<string, Array<{ startsAt: Date; endsAt: Date }>>, userId: string, window: { startsAt: Date; endsAt: Date }) {
@@ -724,6 +724,13 @@ function addTentativeWindow(windowsByUser: Map<string, Array<{ startsAt: Date; e
   windowsByUser.set(userId, windows);
 }
 
+const NOTHING_LEFT = "None of the selected assignments are available anymore. Build the preview again.";
+
+/** A live re-check that fails with 409 drops that pick; anything else is a real error. */
+function isStalePick(error: unknown): boolean {
+  return error instanceof HttpError && error.status === 409;
+}
+
 export async function applyBulkScheduleAssignment(
   rawInput: BulkAssignmentApplyInput,
   actor: { id: string; role: Role },
@@ -731,8 +738,8 @@ export async function applyBulkScheduleAssignment(
 ) {
   const input = bulkAssignmentApplySchema.parse(rawInput);
   const preview = await getBulkAssignmentPreview(input.scope);
-  const { grouped, applied, dropped } = proposalsByGroup(input, preview);
-  if (grouped.size === 0) throw new HttpError(409, "None of the selected assignments are available anymore. Build the preview again.");
+  const { grouped } = proposalsByGroup(input, preview);
+  if (grouped.size === 0) throw new HttpError(409, NOTHING_LEFT);
 
   const batchId = randomUUID();
   const now = new Date();
@@ -790,70 +797,81 @@ export async function applyBulkScheduleAssignment(
     const userById = new Map(users.map((user) => [user.id, user]));
     const tentativeWindows = new Map<string, Array<{ startsAt: Date; endsAt: Date }>>();
     const workingByGroup = new Map<string, WorkingSchedulePayload>();
+    // Every pick is re-checked live. A pick (or a whole event) that no longer
+    // fits is left out and counted, never allowed to sink the rest: the rule
+    // is to fill whatever can be filled.
+    const appliedByGroup = new Map<string, BulkAssignmentPreviewProposal[]>();
     const auditEntries: Parameters<typeof createAuditEntriesTx>[1] = [];
 
     for (const [shiftGroupId, proposals] of grouped) {
-      const group = groupById.get(shiftGroupId)!;
-      if (group.workingCopy) throw new HttpError(409, "One or more selected events now has pending changes. Review the preview again.");
+      const group = groupById.get(shiftGroupId);
+      if (!group || group.workingCopy) continue;
       const matchingPreview = preview.events.find((event) => event.shiftGroupId === group.id);
-      if (!matchingPreview || matchingPreview.publishedVersion !== group.publishedVersion || matchingPreview.status !== "ready") {
-        throw new HttpError(409, "One or more selected events changed. Review the preview again.");
-      }
+      if (!matchingPreview || matchingPreview.publishedVersion !== group.publishedVersion || matchingPreview.status !== "ready") continue;
 
       const groupPolicy = resolveSportAutoAssignPolicy(livePolicies, group.event.sportCode);
-      if (groupPolicy === SportAutoAssignPolicy.HOLD) {
-        throw new HttpError(409, "One of these sports was put on hold for auto assignment. Review the preview again.");
-      }
+      if (groupPolicy === SportAutoAssignPolicy.HOLD) continue;
 
       let working = parseWorkingPayload(group);
       const assignedWithinEvent = new Set(
         working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : []),
       );
+      const appliedHere: BulkAssignmentPreviewProposal[] = [];
       for (const proposal of proposals) {
         const slot = working.slots.find((candidate) => candidate.sourceShiftId === proposal.shiftId || candidate.key === proposal.shiftId);
-        if (!slot || slot.assignment) throw new HttpError(409, "One or more selected slots is no longer open. Review the preview again.");
-        const user = userById.get(proposal.userId);
-        if (!user?.active) throw new HttpError(409, "One of the proposed workers is no longer active.");
-        if (user.role === Role.COLLABORATOR || scheduleAssigneeWorkerType(user) !== slot.workerType) {
-          throw new HttpError(409, "One of the proposed workers no longer matches the slot rules.");
+        try {
+          if (!slot || slot.assignment) throw new HttpError(409, "One or more selected slots is no longer open. Review the preview again.");
+          const user = userById.get(proposal.userId);
+          if (!user?.active) throw new HttpError(409, "One of the proposed workers is no longer active.");
+          if (user.role === Role.COLLABORATOR || scheduleAssigneeWorkerType(user) !== slot.workerType) {
+            throw new HttpError(409, "One of the proposed workers no longer matches the slot rules.");
+          }
+          if (!isOnSportRoster(user.sportAssignments, group.event.sportCode)) {
+            throw new HttpError(409, "One of the proposed workers is no longer on this event's sport roster.");
+          }
+          if (!policyAllowsWorkerType(groupPolicy, slot.workerType)) {
+            throw new HttpError(409, "One of these sports no longer auto-assigns this kind of slot. Review the preview again.");
+          }
+          if (!isTravelEligible(
+            user.sportAssignments,
+            group.event.sportCode,
+            group.event.isHome,
+            sportHasTravelRoster(liveTravelCounts, group.event.sportCode),
+          )) {
+            throw new HttpError(409, "One of the proposed workers is no longer on the travel roster for an away game.");
+          }
+          if (assignedWithinEvent.has(user.id)) {
+            throw new HttpError(409, "A worker cannot receive two assignments in the same event.");
+          }
+          const window = effectiveSlotWindow(slot);
+          const availability = evaluateAvailabilityPreferences(user.availabilityBlocks, window);
+          if (availability.blocking) throw new HttpError(409, availability.blocking.note);
+          await checkTimeConflict(tx, user.id, window.startsAt, window.endsAt);
+          // Last check that can fail, so a dropped pick never leaves a window behind.
+          if (!allowsOverlappingShifts(user.role)) addTentativeWindow(tentativeWindows, user.id, window);
+          working = applyWorkingScheduleCommand(working, {
+            type: "assign",
+            slotKey: slot.key,
+            userId: user.id,
+          }, () => `bulk:${randomUUID()}`);
+          working = {
+            ...working,
+            slots: working.slots.map((candidate) => candidate.key === slot.key && candidate.assignment
+              ? { ...candidate, assignment: { ...candidate.assignment, source: "AUTO_FILL" } }
+              : candidate),
+          };
+          assignedWithinEvent.add(user.id);
+          appliedHere.push(proposal);
+        } catch (error) {
+          if (!isStalePick(error)) throw error;
         }
-        if (!isOnSportRoster(user.sportAssignments, group.event.sportCode)) {
-          throw new HttpError(409, "One of the proposed workers is no longer on this event's sport roster.");
-        }
-        if (!policyAllowsWorkerType(groupPolicy, slot.workerType)) {
-          throw new HttpError(409, "One of these sports no longer auto-assigns this kind of slot. Review the preview again.");
-        }
-        if (!isTravelEligible(
-          user.sportAssignments,
-          group.event.sportCode,
-          group.event.isHome,
-          sportHasTravelRoster(liveTravelCounts, group.event.sportCode),
-        )) {
-          throw new HttpError(409, "One of the proposed workers is no longer on the travel roster for an away game.");
-        }
-        if (assignedWithinEvent.has(user.id)) {
-          throw new HttpError(409, "A worker cannot receive two assignments in the same event.");
-        }
-        const window = effectiveSlotWindow(slot);
-        await checkTimeConflict(tx, user.id, window.startsAt, window.endsAt);
-        if (!allowsOverlappingShifts(user.role)) addTentativeWindow(tentativeWindows, user.id, window);
-        const availability = evaluateAvailabilityPreferences(user.availabilityBlocks, window);
-        if (availability.blocking) throw new HttpError(409, availability.blocking.note);
-        working = applyWorkingScheduleCommand(working, {
-          type: "assign",
-          slotKey: slot.key,
-          userId: user.id,
-        }, () => `bulk:${randomUUID()}`);
-        working = {
-          ...working,
-          slots: working.slots.map((candidate) => candidate.key === slot.key && candidate.assignment
-            ? { ...candidate, assignment: { ...candidate.assignment, source: "AUTO_FILL" } }
-            : candidate),
-        };
-        assignedWithinEvent.add(user.id);
       }
+      if (appliedHere.length === 0) continue;
+      appliedByGroup.set(group.id, appliedHere);
       workingByGroup.set(group.id, workingSchedulePayloadSchema.parse(working));
     }
+    if (appliedByGroup.size === 0) throw new HttpError(409, NOTHING_LEFT);
+    const applied = [...appliedByGroup.values()].reduce((sum, list) => sum + list.length, 0);
 
     await tx.scheduleBulkAssignment.create({
       data: {
@@ -870,7 +888,7 @@ export async function applyBulkScheduleAssignment(
       },
     });
     await tx.scheduleBulkAssignmentItem.createMany({
-      data: [...grouped.entries()].map(([shiftGroupId, proposals]) => ({
+      data: [...appliedByGroup.entries()].map(([shiftGroupId, proposals]) => ({
         bulkAssignmentId: batchId,
         shiftGroupId,
         expectedVersion: 1,
@@ -904,7 +922,7 @@ export async function applyBulkScheduleAssignment(
         after: {
           shiftGroupId,
           workingVersion: 1,
-          proposalCount: grouped.get(shiftGroupId)?.length ?? 0,
+          proposalCount: appliedByGroup.get(shiftGroupId)?.length ?? 0,
           releaseAt: release.at.toISOString(),
           batchId,
           scope: {
@@ -923,9 +941,9 @@ export async function applyBulkScheduleAssignment(
     return {
       batchId,
       releaseAt: releaseAt.toISOString(),
-      eventCount: grouped.size,
+      eventCount: appliedByGroup.size,
       assignmentCount: applied,
-      droppedCount: dropped,
+      droppedCount: input.proposals.length - applied,
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 

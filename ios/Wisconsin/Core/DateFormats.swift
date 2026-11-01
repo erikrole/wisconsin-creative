@@ -216,3 +216,23 @@ extension Date {
         return pinned.format(self)
     }
 }
+
+/// `Text(date, format:)` and Swift Charts axis labels take a `FormatStyle`
+/// directly, so the `formatted` overloads above never see them and they read
+/// the device zone. Build those styles from here instead.
+extension FormatStyle where Self == Date.FormatStyle {
+    /// `.dateTime` in America/Chicago, for clock times and day labels.
+    static var chicago: Date.FormatStyle {
+        var style = Date.FormatStyle.dateTime
+        style.timeZone = NotificationPrefsViewModel.appTimeZone
+        return style
+    }
+
+    /// `.dateTime` in GMT, for dates that are really `YYYY-MM-DD` buckets
+    /// parsed at UTC midnight (report trends). Central would show the day before.
+    static var utcDay: Date.FormatStyle {
+        var style = Date.FormatStyle.dateTime
+        style.timeZone = .gmt
+        return style
+    }
+}

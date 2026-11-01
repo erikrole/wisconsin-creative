@@ -35,9 +35,6 @@ struct KioskIdleView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let compact = proxy.size.width < KioskLayout.compactBreakpoint || dynamicTypeSize.isAccessibilitySize
-            let rosterWidth = KioskLayout.rosterWidth(for: proxy.size.width)
-
             ZStack {
                 KioskHomeView(
                     locationName: store.info?.locationName,
@@ -296,7 +293,7 @@ struct KioskIdleView: View {
                             .fill(KioskText.primary)
                             .frame(width: 3, height: 26)
                             .accessibilityHidden(true)
-                        Text(context.date, format: .dateTime.weekday(.wide).month(.wide).day())
+                        Text(context.date, format: .chicago.weekday(.wide).month(.wide).day())
                             .font(.system(size: 32, weight: .bold))
                             .foregroundStyle(KioskText.primary)
                             .lineLimit(1)
