@@ -82,7 +82,7 @@ function primaryControl(page: Page, path: string): Locator {
 }
 
 const routes = [
-  { path: "/", heading: "Dashboard" },
+  { path: "/", heading: "Home" },
   { path: "/bookings", heading: "Bookings" },
   { path: "/items", heading: "Items" },
   { path: "/search", heading: "Search" },
@@ -285,7 +285,7 @@ test("Dashboard preserves trusted counts through failure and manual refresh", as
   });
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
   const overdueCard = page.locator('a[href="/checkouts?filter=overdue"]').first();
   await expect(overdueCard).toContainText("7");
 
