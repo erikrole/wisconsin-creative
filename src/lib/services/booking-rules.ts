@@ -86,10 +86,9 @@ export function getAllowedBookingActions(
  * Columns `requireBookingAction` returns.
  *
  * Covers the policy inputs (kind/status/ownership/custody) plus the fields the
- * two callers that consume the returned row read: `endsAt` and `title` in
- * `POST /api/bookings/[id]/nudge`, and `title` in
- * `POST /api/checkouts/[id]/checkin-report`. Every other caller discards the
- * result. Widen this only alongside a caller that needs the extra column.
+ * one caller that consumes the returned row reads: `endsAt` and `title` in
+ * `POST /api/bookings/[id]/nudge`. Every other caller discards the result.
+ * Widen this only alongside a caller that needs the extra column.
  */
 const BOOKING_ACTION_SELECT = {
   id: true,

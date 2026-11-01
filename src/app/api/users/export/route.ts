@@ -8,16 +8,12 @@ import { db } from "@/lib/db";
 import { type StudentYear } from "@prisma/client";
 import { sportLabel } from "@/lib/sports";
 import { csvField } from "@/lib/csv";
-import { shouldIncludeHiddenUsers } from "@/lib/user-visibility";
+import { canReadContactDetails, shouldIncludeHiddenUsers } from "@/lib/user-visibility";
 
 import { buildUserDirectoryQuery } from "@/lib/user-directory-query";
 
 const MAX_EXPORT_ROWS = 5000;
 const EXPORT_LIMIT = { max: 5, windowMs: 60_000 };
-
-function canExportSensitiveContact(actorRole: string, targetRole: string): boolean {
-  return actorRole === "ADMIN" || targetRole === "STUDENT";
-}
 
 // Derive student year from grad year using Sept→Aug academic calendar.
 // Mirrors src/app/(app)/staff/types.ts deriveStudentYear so list and export agree.
@@ -95,7 +91,7 @@ export const GET = withAuth(async (req, { user }) => {
       .map((a) => `${a.area}${a.isPrimary ? "*" : ""}`)
       .join(" ");
     const sports = u.sportAssignments.map((s) => sportLabel(s.sportCode)).join(" ");
-    const includeSensitiveContact = canExportSensitiveContact(user.role, u.role);
+    const includeSensitiveContact = canReadContactDetails(user, u);
     return [
       csvField(u.name),
       csvField(u.role),

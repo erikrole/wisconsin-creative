@@ -68,6 +68,7 @@ All mutations use the existing authenticated audit path. Secret endpoints return
 
 ## Change Log
 
+- 2026-11-01: **Wi-Fi password moves out of source.** `src/lib/wifi.ts` reads `WIFI_SSID` (default `creative`) and `WIFI_PASSWORD` from the environment. Until the password is set, `GET /api/wifi` returns 404 and the web Wi-Fi card stays hidden (iOS shows its load error). Erik sets the value in Vercel; it was hard-coded before and served to anyone with `SOFTWARE_VAULT_VIEW`.
 - 2026-10-17: **Native iOS can read and copy shared logins.** Browse lists the audience-filtered active records from `GET /api/software` and requests a password only for Show or Copy. The phone does not create, edit, archive, or restore records. Source contracts pass. An Xcode build and a signed-in phone walkthrough are still required; no secret was read during this slice.
 - 2026-08-23: Made Photo Mechanic the default `/licenses` landing. Shared logins moved to `?tab=shared-logins`; `?tab=photo-mechanic` remains compatible. Quiet Shared logins chrome so it no longer restates the tab title or treats Photo Mechanic as a footnote.
 

@@ -38,6 +38,13 @@ export const env = {
   get youtubeTokenKey() {
     return isolatedIntegrationValue("YOUTUBE_TOKEN_KEY");
   },
+  /** Shared department Wi-Fi shown on Shared logins and in the iOS app. Unset password hides the card. */
+  get wifiSsid() {
+    return process.env.WIFI_SSID || "creative";
+  },
+  get wifiPassword() {
+    return process.env.WIFI_PASSWORD || "";
+  },
   get appTimezone() {
     return process.env.APP_TIMEZONE || "America/Chicago";
   },

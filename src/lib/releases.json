@@ -1,6 +1,21 @@
 [
   {
     "date": "2026-11-01",
+    "title": "People export, Wi-Fi setting, cleanup",
+    "type": "fixes",
+    "summary": "Staff get the same contact details in the people export as on profile pages, the shared Wi-Fi password is now a server setting, and an unused web check-in report route is gone.",
+    "details": [
+      "The people CSV export shows staff and admin phone numbers and athletics emails to staff, matching what profile pages show.",
+      "The shared Wi-Fi name and password come from a server setting instead of the code; the Wi-Fi card stays hidden until the password is set.",
+      "The old web route for reporting damaged or missing gear at check-in is removed; returns and reports happen at the kiosk."
+    ],
+    "pr": 0,
+    "platforms": [
+      "Web"
+    ]
+  },
+  {
+    "date": "2026-11-01",
     "title": "Automated checks on the core flows",
     "type": "improvement",
     "summary": "Every change now runs a browser through the flows students and admins rely on most, so a broken reservation, kiosk return or shift trade is caught before it ships.",

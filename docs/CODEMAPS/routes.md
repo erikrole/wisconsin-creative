@@ -317,7 +317,6 @@
 - `/api/checkouts/[id]/admin-override` -> `src/app/api/checkouts/[id]/admin-override/route.ts`
 - `/api/checkouts/[id]/checkin-bulk` -> `src/app/api/checkouts/[id]/checkin-bulk/route.ts`
 - `/api/checkouts/[id]/checkin-items` -> `src/app/api/checkouts/[id]/checkin-items/route.ts`
-- `/api/checkouts/[id]/checkin-report` -> `src/app/api/checkouts/[id]/checkin-report/route.ts`
 - `/api/checkouts/[id]/checkin-scan` -> `src/app/api/checkouts/[id]/checkin-scan/route.ts`
 - `/api/checkouts/[id]/complete-checkin` -> `src/app/api/checkouts/[id]/complete-checkin/route.ts`
 - `/api/checkouts/[id]/complete-checkout` -> `src/app/api/checkouts/[id]/complete-checkout/route.ts`

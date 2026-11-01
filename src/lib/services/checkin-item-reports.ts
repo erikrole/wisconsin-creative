@@ -34,7 +34,7 @@ const REPORT_DEDUP_WINDOW_MS = 5_000;
 /**
  * A missing report on the last outstanding item finished the return: the same
  * follow-through as every other completion path (return badge for a personal
- * checkout, end the return Live Activity). Shared by the web and kiosk routes.
+ * checkout, end the return Live Activity).
  */
 export async function finishReportCompletedReturn(
   booking: { id: string; custodyScope: BookingCustodyScope; requesterUserId: string | null; endsAt: Date },
@@ -55,7 +55,7 @@ export async function finishReportCompletedReturn(
 
 /**
  * Read a damaged/lost report from JSON or multipart (`file` is the optional
- * photo). `actorId` is read for kiosk callers; the web route ignores it.
+ * photo), including who is reporting (`actorId`).
  */
 export async function readCheckinReportPayload(req: Request) {
   const contentType = req.headers.get("content-type") ?? "";

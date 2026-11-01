@@ -39,7 +39,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_CHECKOUTS.md`
 - Pages: `/checkouts/[id]`, `/checkouts/new`, `/checkouts`, `/reports/checkouts`
-- APIs: `/api/checkouts/[id]/admin-override`, `/api/checkouts/[id]/checkin-bulk`, `/api/checkouts/[id]/checkin-items`, `/api/checkouts/[id]/checkin-report`, `/api/checkouts/[id]/checkin-scan`, `/api/checkouts/[id]/complete-checkin`, `/api/checkouts/[id]/complete-checkout`, `/api/checkouts/[id]/scan-status`, `/api/checkouts/[id]/scan`, `/api/checkouts/[id]/start-scan-session`
+- APIs: `/api/checkouts/[id]/admin-override`, `/api/checkouts/[id]/checkin-bulk`, `/api/checkouts/[id]/checkin-items`, `/api/checkouts/[id]/checkin-scan`, `/api/checkouts/[id]/complete-checkin`, `/api/checkouts/[id]/complete-checkout`, `/api/checkouts/[id]/scan-status`, `/api/checkouts/[id]/scan`, `/api/checkouts/[id]/start-scan-session`, `/api/checkouts/merge/preview`
 - Services: _none matched_
 - Tests: _none matched_
 
@@ -57,7 +57,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: _none matched_
 - APIs: `/api/dashboard/activity`, `/api/dashboard`, `/api/dashboard/stats`, `/api/kiosk/dashboard`
 - Services: `src/lib/services/dashboard-counts.ts`, `src/lib/services/kiosk-dashboard-home.ts`
-- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-route.test.ts`, `tests/dashboard-stats-route.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`, `tests/kiosk-dashboard-home.test.ts`
+- Tests: `tests/dashboard-activity-route.test.ts`, `tests/dashboard-event-title.test.ts`, `tests/dashboard-fast-count-truth.test.ts`, `tests/dashboard-keys.test.ts`, `tests/dashboard-pending-pickup-link.test.ts`, `tests/dashboard-route.test.ts`, `tests/dashboard-stats-route.test.ts`, `tests/dashboard-stats-transient-lanes.test.ts`
 
 ## error-reporting
 
@@ -97,7 +97,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/items/[id]`, `/items/hygiene`, `/items`, `/dev-items/[id]`, `/dev-items`
 - APIs: `/api/assets/[id]/accessories`, `/api/assets/[id]/activity`, `/api/assets/[id]/duplicate`, `/api/assets/[id]/favorite`, `/api/assets/[id]/generate-qr`, `/api/assets/[id]/image`, `/api/assets/[id]/insights`, `/api/assets/[id]/maintenance`, `/api/assets/[id]/report`, `/api/assets/[id]/retire`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`
-- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-list-route-extras.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/bulk-assets-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`, `tests/ios-items-error-copy.test.ts`
+- Tests: `tests/api-assets-item-families.test.ts`, `tests/assets-list-route-extras.test.ts`, `tests/assets-missing-gaps-route.test.ts`, `tests/booking-items-route.test.ts`, `tests/bulk-assets-route.test.ts`, `tests/collaborator-visible-assets.test.ts`, `tests/ios-brand-assets-browse.test.ts`, `tests/ios-items-empty-state-recovery.test.ts`
 
 ## kiosk
 
@@ -225,7 +225,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/staff/onboarding-status`, `/dev-onboarding-checklist`, `/dev-profile/[id]`
 - APIs: `/api/allowed-emails/[id]/resend`, `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/gear-picks/users/[userId]`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/onboarding-checklist/bulk`, `/api/profile`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`, `src/lib/services/onboarding-readiness.ts`
-- Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/ios-profile-refresh-keeps-data.test.ts`, `tests/me-profile-route.test.ts`, `tests/onboarding-checklist.test.ts`
+- Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/ios-profile-refresh-keeps-data.test.ts`, `tests/me-profile-route.test.ts`, `tests/onboarding-checklist-bulk-route.test.ts`
 
 ## youtube
 

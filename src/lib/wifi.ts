@@ -1,15 +1,18 @@
-// Shared department Wi-Fi. Server-only: served by /api/wifi to signed-in users, never bundled into client code.
-const WIFI_SSID = "creative";
-const WIFI_PASSWORD = "bucky2025";
+import { env } from "@/lib/env";
 
+// Shared department Wi-Fi. Server-only: served by /api/wifi to signed-in users, never bundled into client code.
 function escapeWifiField(value: string) {
-  return value.replace(/([\;,:"])/g, "\\$1");
+  return value.replace(/([\\;,:"])/g, "\\$1");
 }
 
+/** Null until WIFI_PASSWORD is set in the environment. */
 export function getSharedWifi() {
+  const ssid = env.wifiSsid;
+  const password = env.wifiPassword;
+  if (!password) return null;
   return {
-    ssid: WIFI_SSID,
-    password: WIFI_PASSWORD,
-    qrPayload: `WIFI:T:WPA;S:${escapeWifiField(WIFI_SSID)};P:${escapeWifiField(WIFI_PASSWORD)};;`,
+    ssid,
+    password,
+    qrPayload: `WIFI:T:WPA;S:${escapeWifiField(ssid)};P:${escapeWifiField(password)};;`,
   };
 }

@@ -155,7 +155,9 @@ beforeEach(() => {
 });
 
 describe("user PII scope hardening", () => {
-  it("redacts staff and admin sensitive contact fields from STAFF user exports", async () => {
+  it("gives STAFF user exports the same contact details the profile pages show them", async () => {
+    // Erik, 2026-11-01: staff manage every profile, so the export matches the
+    // profile JSON rule (canReadContactDetails) instead of a stricter one.
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
     mockExportUsers();
 
@@ -163,10 +165,10 @@ describe("user PII scope hardening", () => {
     const body = await res.text();
 
     expect(res.status).toBe(200);
-    expect(body).not.toContain("admin-athletics@test.com");
-    expect(body).not.toContain("111-111-1111");
-    expect(body).not.toContain("staff-athletics@test.com");
-    expect(body).not.toContain("222-222-2222");
+    expect(body).toContain("admin-athletics@test.com");
+    expect(body).toContain("111-111-1111");
+    expect(body).toContain("staff-athletics@test.com");
+    expect(body).toContain("222-222-2222");
     expect(body).toContain("student-athletics@test.com");
     expect(body).toContain("333-333-3333");
   });

@@ -24,7 +24,7 @@
 | `src/lib/services/booking-notifications.ts` | 192 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 215 |
-| `src/lib/services/booking-rules.ts` | 136 |
+| `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 742 |
 | `src/lib/services/bookings-helpers.ts` | 310 |
 | `src/lib/services/bookings-lifecycle-shared.ts` | 274 |
@@ -234,7 +234,7 @@
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email-template.ts` | 207 |
 | `src/lib/email.ts` | 147 |
-| `src/lib/env.ts` | 144 |
+| `src/lib/env.ts` | 151 |
 | `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 64 |
@@ -397,7 +397,7 @@
 | `src/lib/venue-tone.ts` | 135 |
 | `src/lib/web-tools.ts` | 28 |
 | `src/lib/webmcp-tools.ts` | 504 |
-| `src/lib/wifi.ts` | 16 |
+| `src/lib/wifi.ts` | 19 |
 | `src/lib/working-schedule-limits.ts` | 6 |
 
 ## API Route Groups
@@ -600,7 +600,6 @@
 - `/api/checkouts/[id]/admin-override`
 - `/api/checkouts/[id]/checkin-bulk`
 - `/api/checkouts/[id]/checkin-items`
-- `/api/checkouts/[id]/checkin-report`
 - `/api/checkouts/[id]/checkin-scan`
 - `/api/checkouts/[id]/complete-checkin`
 - `/api/checkouts/[id]/complete-checkout`
