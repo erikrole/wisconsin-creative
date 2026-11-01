@@ -49,7 +49,9 @@ const baseConfig: NextConfig = {
     webpackMemoryOptimizations: true,
   },
   transpilePackages: ["@mdxeditor/editor"],
-  serverExternalPackages: ["web-push"],
+  // @prisma/adapter-pg serves a non-Neon DATABASE_URL (the end-to-end flow
+  // tests' disposable cluster); external so the pg driver stays out of the bundle.
+  serverExternalPackages: ["web-push", "@prisma/adapter-pg"],
   // These routes read files at runtime: the department's workbook template,
   // the Wrapped share image's fonts and the migration folders Database Health
   // compares against.

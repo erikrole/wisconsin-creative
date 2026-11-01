@@ -47,6 +47,11 @@ struct WisconsinApp: App {
                 .environment(network)
                 .nativeRemoteImageSession()
                 .providesCurrentDay()
+                // DatePicker, `Text(date, format:)` and Swift Charts read the
+                // environment, not `NSTimeZone.default`. Without this a phone
+                // set to Pacific edited return times two hours off the labels.
+                .environment(\.timeZone, NotificationPrefsViewModel.appTimeZone)
+                .environment(\.calendar, NotificationPrefsViewModel.appCalendar)
                 .preferredColorScheme(themeChoice.colorScheme)
                 .onAppear {
                     sharedAppState = appState
