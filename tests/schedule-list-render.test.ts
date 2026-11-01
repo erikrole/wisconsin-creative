@@ -129,7 +129,7 @@ describe("schedule list timeline edges", () => {
 
   it("explains an empty list by what is narrowing it", () => {
     expect(text(render([], { isTimeline: false, hasFilters: true }))).toContain("No events match these filters Try adjusting or clearing filters");
-    expect(text(render([], { isTimeline: false, myShiftsOnly: true }))).toContain("No shifts assigned");
+    expect(text(render([], { isTimeline: false, myShiftsOnly: true }))).toContain("No shifts yet");
   });
 });
 

@@ -56,7 +56,7 @@ export const WEBMCP_ITEM_TYPES = [
 type WebMcpItemType = (typeof WEBMCP_ITEM_TYPES)[number];
 
 const WEBMCP_PAGE_DEFINITIONS = [
-  { key: "dashboard", label: "Dashboard", href: "/" },
+  { key: "dashboard", label: "Home", href: "/" },
   { key: "schedule", label: "Schedule", href: "/schedule" },
   { key: "events", label: "Events", href: "/events" },
   { key: "items", label: "Items", href: "/items" },

@@ -37,7 +37,7 @@ function Palette() {
   const user = { id: "dev", name: "Erik Role", email: "dev@example.com", role: "ADMIN" } as CurrentUser;
   return (
     <>
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Home" />
       <CommandPalette open={open} onOpenChange={setOpen} user={user} pathname={pathname} />
     </>
   );

@@ -198,6 +198,7 @@ export function formatDateFull(iso: string | null, allDay = false) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    ...(allDay ? {} : { timeZone: INSTITUTION_TZ }),
   });
 }
 

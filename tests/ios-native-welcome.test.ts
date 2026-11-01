@@ -206,6 +206,9 @@ describe("native iOS Welcome flow", () => {
     expect(card).toContain('"WisconsinGettingStarted.\\(userId)"');
     expect(card).not.toMatch(/phone|wiscard|topSize|shoeSize|avatarUrl/i);
     expect(home).toContain("GettingStartedCard(model: gettingStarted)");
+    // After setup the only profile ask left is the photo, same as the web card.
+    expect(card).toContain('requiredDone ? "Add a profile photo" : "Finish your profile"');
+    expect(card).toContain('completeByField["photo"] == true');
     // The finish screen and the card open the same screens.
     expect(welcome).toContain("step.destination.open(in: appState)");
     expect(welcome).toContain("case .schedule: .schedule");
