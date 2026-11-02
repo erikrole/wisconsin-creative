@@ -93,7 +93,7 @@ function dayLabel(iso: string, now: Date) {
 
 const NOTICE_STYLE: Record<BoardNotice["tone"], string> = {
   warn: "text-[var(--orange-text)]",
-  block: "text-destructive",
+  block: "text-red-700 dark:text-red-300",
   info: "text-muted-foreground",
 };
 
@@ -109,7 +109,7 @@ function Row({ row }: { row: BoardRow }) {
     <article
       className={cn(
         "grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/30 sm:grid-cols-[4.75rem_minmax(0,1fr)_auto]",
-        row.muted && "opacity-60",
+        row.muted && "text-muted-foreground [&_h3]:font-medium",
       )}
     >
       <div className="pt-px tabular-nums leading-tight">
@@ -123,7 +123,7 @@ function Row({ row }: { row: BoardRow }) {
           {row.detail && <span className="font-normal text-muted-foreground"> · {row.detail}</span>}
         </h3>
         <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
-          <span className="font-medium text-foreground/70">{row.area}</span> · {row.summary}
+          <span className={cn("font-medium", row.muted ? "text-muted-foreground" : "text-foreground/70")}>{row.area}</span> · {row.summary}
         </p>
         {row.notices.map((notice) => (
           <p key={notice.text} className={cn("flex items-start gap-1.5 text-xs leading-snug", NOTICE_STYLE[notice.tone])}>
@@ -152,7 +152,7 @@ function Row({ row }: { row: BoardRow }) {
           {row.actions.map((action) => (
             <Button
               key={action.label}
-              className={cn("h-10 gap-1.5 rounded-full px-4", action.variant === "primary" && "bg-green-600 font-semibold text-white hover:bg-green-700")}
+              className={cn("h-10 gap-1.5 rounded-full px-4", action.variant === "primary" && "bg-green-700 font-semibold text-white hover:bg-green-800")}
               variant={action.variant === "primary" ? "secondary" : "outline"}
               disabled={action.disabled}
               onClick={action.onClick}

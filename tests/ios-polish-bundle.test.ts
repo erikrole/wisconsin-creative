@@ -26,7 +26,7 @@ describe("iOS widgets: Lock Screen and larger families", () => {
 
   it("never ticks seconds on gear and keeps the countdown in the list header", () => {
     expect(widgets).not.toContain('Overdue" : "Due") \\(next.endsAt, style: .relative)');
-    expect(widgets).toContain("format: .dateTime.hour().minute()");
+    expect(widgets).toContain("format: .chicago.hour().minute()");
     expect(widgets).toContain("private var gearSummary: AnyView?");
   });
 

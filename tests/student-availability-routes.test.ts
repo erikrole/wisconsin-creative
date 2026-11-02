@@ -606,6 +606,55 @@ describe("student availability routes", () => {
     }));
   });
 
+  it("sends a student's edit of approved time off back for review", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(studentUser);
+    vi.mocked(db.studentAvailabilityBlock.findUnique).mockResolvedValue({
+      id: "block-2",
+      userId: "student-1",
+      kind: "AD_HOC",
+      intent: "TIME_OFF",
+      status: "APPROVED",
+      dayOfWeek: null,
+      date: new Date("2026-10-10T00:00:00.000Z"),
+      dateEndsOn: new Date("2026-10-10T00:00:00.000Z"),
+      allDay: true,
+      startsAt: null,
+      endsAt: null,
+      label: "Family trip",
+      semesterLabel: null,
+      semesterStartsOn: null,
+      semesterEndsOn: null,
+      reviewedAt: new Date("2026-10-01T00:00:00.000Z"),
+      reviewedById: "staff-1",
+      reviewNote: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    vi.mocked(db.studentAvailabilityBlock.update).mockImplementation((async (args: { data: Record<string, unknown> }) => ({
+      id: "block-2", userId: "student-1", ...args.data,
+    })) as never);
+
+    const res = await updateAvailability(
+      jsonRequest("/api/users/student-1/availability/block-2", "PATCH", {
+        kind: "AD_HOC",
+        intent: "TIME_OFF",
+        status: "APPROVED",
+        date: "2026-10-10",
+        dateEndsOn: "2026-10-17",
+        allDay: true,
+        startsAt: "00:00",
+        endsAt: "23:59",
+        label: "Family trip",
+      }),
+      { params: Promise.resolve({ id: "student-1", blockId: "block-2" }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.studentAvailabilityBlock.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: "PENDING", reviewedAt: null, reviewedById: null }),
+    }));
+  });
+
   it("denies a student trying to approve their own time off", async () => {
     vi.mocked(db.studentAvailabilityBlock.findUnique).mockResolvedValue({
       id: "block-2",
@@ -895,6 +944,18 @@ describe("shift conflict route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
+  });
+
+  it("keeps other students' availability notes away from students", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(studentUser);
+
+    const res = await getShiftConflicts(
+      jsonRequest("/api/shifts/shift-1/conflicts", "GET"),
+      { params: Promise.resolve({ id: "shift-1" }) },
+    );
+
+    expect(res.status).toBe(403);
+    expect(db.user.findMany).not.toHaveBeenCalled();
   });
 
   it("returns conflicts from weekly and ad hoc blocks using the effective slot call window", async () => {

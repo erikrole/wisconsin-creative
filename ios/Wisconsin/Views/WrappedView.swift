@@ -61,6 +61,8 @@ struct WrappedSlide: Identifiable {
 /// Dec 1 until mid-January; admins see a preview entry before that.
 enum WrappedPromo {
     static let unlockAt = ISO8601DateFormatter().date(from: "2026-12-01T06:00:00Z")!
+    /// The admin preview stays hidden until the real-data check in mid-November.
+    static let previewStartsAt = ISO8601DateFormatter().date(from: "2026-11-15T06:00:00Z")!
     static let promoEndsAt = ISO8601DateFormatter().date(from: "2027-01-16T06:00:00Z")!
 
     enum State: Equatable { case hidden, preview, open }
@@ -70,7 +72,7 @@ enum WrappedPromo {
         guard let role, role != "COLLABORATOR" else { return .hidden }
         let isAdmin = role == "ADMIN"
         if now >= unlockAt { return now < promoEndsAt ? .open : .hidden }
-        return isAdmin ? .preview : .hidden
+        return isAdmin && now >= previewStartsAt ? .preview : .hidden
     }
 }
 
@@ -107,6 +109,13 @@ private extension Color {
             green: Double((hex >> 8) & 0xFF) / 255,
             blue: Double(hex & 0xFF) / 255
         )
+    }
+}
+
+/// Counts spelled the way `formatCount` spells them on the server.
+enum WrappedCount {
+    static func text(_ value: Int) -> String {
+        value.formatted(.number.locale(Locale(identifier: "en_US")))
     }
 }
 
@@ -343,6 +352,7 @@ struct WrappedPlayerView: View {
     @State private var paused = false
     @State private var holding = false
     @State private var showsGrid = false
+    @State private var cardWidth: CGFloat = 0
 
     private static let cardSeconds: Double = 6.5
     private var last: Int { slides.count - 1 }
@@ -359,6 +369,7 @@ struct WrappedPlayerView: View {
                     removal: .opacity
                 ))
                 .contentShape(Rectangle())
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { cardWidth = $0 }
                 .gesture(tapGesture)
                 .simultaneousGesture(holdGesture)
                 .accessibilityElement(children: .combine)
@@ -462,9 +473,9 @@ struct WrappedPlayerView: View {
 
     private var tapGesture: some Gesture {
         SpatialTapGesture().onEnded { value in
-            // Left third goes back, the rest goes forward, like stories.
-            let width = UIScreen.main.bounds.width
-            if value.location.x < width * 0.3 { go(index - 1) } else { go(index + 1) }
+            // Left third goes back, the rest goes forward, like stories. The
+            // card's own width, not the screen's: an iPad window can be narrower.
+            if value.location.x < cardWidth * 0.3 { go(index - 1) } else { go(index + 1) }
         }
     }
 
@@ -612,7 +623,9 @@ struct WrappedCardView: View {
         let size: CGFloat = numeric ? 96 : (card.value.count <= 12 ? 56 : 42)
         return Group {
             if let countTo = card.countTo {
-                Text(card.value.replacingOccurrences(of: String(countTo), with: String(rolled)))
+                // The server writes counts with en-US grouping ("1,234"), so the
+                // swap has to match that spelling or the number never rolls.
+                Text(card.value.replacingOccurrences(of: WrappedCount.text(countTo), with: WrappedCount.text(rolled)))
                     .contentTransition(.numericText(value: Double(rolled)))
             } else {
                 Text(card.value)

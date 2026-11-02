@@ -216,3 +216,49 @@ final class BookingModelsTests: XCTestCase {
         return try decoder.decode(Booking.self, from: json)
     }
 }
+
+/// Booking history rows for the actions web #721 and #724 added.
+final class BookingActivityCopyTests: XCTestCase {
+    private func entries(_ json: String) throws -> [BookingActivityEntry] {
+        try JSONDecoder().decode([BookingActivityEntry].self, from: Data(json.utf8))
+    }
+
+    func testScanBurstFoldsIntoOneRowNamingEveryItem() throws {
+        let rows = BookingActivityCopy.rows(try entries(#"""
+        [
+          {"id":"scan_3","action":"scan_checkout","createdAt":"2026-10-31T15:00:40.000Z","actor":{"id":"u1","name":"Sam"},"beforeJson":null,"afterJson":{"itemName":"SLOW1"}},
+          {"id":"scan_2","action":"scan_checkout","createdAt":"2026-10-31T15:00:20.000Z","actor":{"id":"u1","name":"Sam"},"beforeJson":null,"afterJson":{"itemName":"ROAM2"}},
+          {"id":"scan_1","action":"scan_checkout","createdAt":"2026-10-31T14:50:00.000Z","actor":{"id":"u1","name":"Sam"},"beforeJson":null,"afterJson":{"itemName":"CAM3","quantity":2}}
+        ]
+        """#), filter: .all)
+
+        XCTAssertEqual(rows.count, 2)
+        XCTAssertEqual(BookingActivityCopy.sentence(rows[0]), "Scanned out SLOW1 and ROAM2")
+        XCTAssertEqual(BookingActivityCopy.sentence(rows[1]), "Scanned out CAM3 ×2")
+    }
+
+    func testAdminItemEditsAndOverridesReadAsSentences() throws {
+        let rows = try entries(#"""
+        [
+          {"id":"a3","action":"auto_completed_by_item_removal","createdAt":"2026-10-31T15:02:00.000Z","actor":null,"beforeJson":null,"afterJson":null},
+          {"id":"a2","action":"checkout_item_removed","createdAt":"2026-10-31T15:01:00.000Z","actor":null,"beforeJson":{"itemName":"ROAM2"},"afterJson":null},
+          {"id":"a1","action":"checkout_item_added","createdAt":"2026-10-31T15:00:00.000Z","actor":null,"beforeJson":null,"afterJson":{"itemName":"Battery #19"}}
+        ]
+        """#)
+
+        XCTAssertEqual(rows.map(BookingActivityCopy.sentence), [
+            "Checkout closed after its last item was removed",
+            "Removed ROAM2 from the active checkout",
+            "Added Battery #19 to the active checkout",
+        ])
+    }
+
+    func testPickerSearchRowsDecodeForAddItem() throws {
+        struct Page: Decodable { let assets: [CheckoutAddCandidate] }
+        let page = try JSONDecoder().decode(Page.self, from: Data(#"""
+        {"assets":[{"id":"a1","assetTag":"ROAM2","name":null,"imageUrl":null,"computedStatus":"AVAILABLE","currentHolder":null}],"total":1}
+        """#.utf8))
+        XCTAssertEqual(page.assets.first?.assetTag, "ROAM2")
+        XCTAssertNil(page.assets.first?.name)
+    }
+}

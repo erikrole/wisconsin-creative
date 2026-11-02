@@ -220,3 +220,79 @@ describe("student availability conflict helpers", () => {
     })).toBe("Conflicts with Exam (10:00-11:00)");
   });
 });
+
+describe("student availability conflicts across midnight", () => {
+  // Saturday 19:00 to Sunday 01:30 Madison time (CST, UTC-6).
+  const overnightShift = {
+    startsAt: new Date("2026-11-15T01:00:00.000Z"),
+    endsAt: new Date("2026-11-15T07:30:00.000Z"),
+  };
+
+  it("matches a weekly block late on the shift's start day", () => {
+    expect(availabilityConflictNote([
+      { kind: "WEEKLY", dayOfWeek: 6, startsAt: "20:00", endsAt: "21:00", label: "Shabbat dinner" },
+    ], overnightShift)).toBe("Conflicts with Shabbat dinner (20:00-21:00)");
+  });
+
+  it("matches a weekly block on the day the shift ends", () => {
+    expect(availabilityConflictNote([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "00:30", endsAt: "02:00", label: "Sunday shift" },
+    ], overnightShift)).toBe("Conflicts with Sunday shift (00:30-02:00)");
+  });
+
+  it("ignores a block on the end day that starts after the shift ends", () => {
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "02:00", endsAt: "03:00" },
+    ], overnightShift)).toBeNull();
+  });
+
+  it("matches a timed one-time block on the day the shift ends", () => {
+    expect(availabilityConflictNote([
+      { kind: "AD_HOC", date: "2026-11-15", startsAt: "01:00", endsAt: "03:00", label: "Flight" },
+    ], overnightShift)).toBe("Conflicts with Flight (01:00-03:00)");
+  });
+
+  it("checks the semester bounds against the day each segment falls on", () => {
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "00:30", endsAt: "02:00", semesterStartsOn: "2026-11-15", semesterEndsOn: "2026-12-18" },
+    ], overnightShift)).not.toBeNull();
+  });
+
+  it("ends a window exactly at midnight without touching the next day", () => {
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "00:00", endsAt: "01:00" },
+    ], {
+      startsAt: new Date("2026-11-15T01:00:00.000Z"),
+      endsAt: new Date("2026-11-15T06:00:00.000Z"),
+    })).toBeNull();
+  });
+});
+
+describe("inherited all-day windows", () => {
+  // All-day Saturday 2026-11-14, stored as UTC midnights.
+  const allDaySaturday = {
+    startsAt: new Date("2026-11-14T00:00:00.000Z"),
+    endsAt: new Date("2026-11-15T00:00:00.000Z"),
+  };
+
+  it("matches weekly blocks anywhere on the event's own weekday", () => {
+    expect(availabilityConflictNote([
+      { kind: "WEEKLY", dayOfWeek: 6, startsAt: "10:00", endsAt: "11:00", label: "Sat lab" },
+    ], allDaySaturday)).toBe("Conflicts with Sat lab (10:00-11:00)");
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 6, startsAt: "20:00", endsAt: "21:00" },
+    ], allDaySaturday)).not.toBeNull();
+  });
+
+  it("does not read the UTC midnight start as the previous evening in Madison", () => {
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 5, startsAt: "19:00", endsAt: "21:00", label: "Friday night" },
+    ], allDaySaturday)).toBeNull();
+  });
+
+  it("covers every date of a multi-day all-day event", () => {
+    expect(findAvailabilityConflict([
+      { kind: "AD_HOC", date: "2026-11-15", startsAt: "09:00", endsAt: "10:00" },
+    ], { startsAt: new Date("2026-11-14T00:00:00.000Z"), endsAt: new Date("2026-11-16T00:00:00.000Z") })).not.toBeNull();
+  });
+});

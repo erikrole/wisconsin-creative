@@ -4,8 +4,8 @@
 
 - Area: Department budgets and purchases (planned vs. actual spend by fiscal year and budget name)
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-16
-- Status: Slices 1 and 2 built on `claude/project-thread-a6omy6`: tables, admin-only API, the Budget page, and links between purchases and inventory with match suggestions. Importer is next. Authenticated preview proof pending.
+- Last Updated: 2026-10-30
+- Status: Budget imports and links are available. The 2026-10-30 reconciliation changes are prepared locally; migration, deployment, and authenticated preview proof are pending.
 - Routes: `/budget` (ADMIN only)
 - Plan: the interactive-sheets plan in the project files (`plans/interactive-sheets-plan-2026-10-16.md`)
 
@@ -17,22 +17,24 @@ The team's budget lives in a Google Sheet with one tab per fiscal year plus a fo
 
 1. Admin only. `budget.view` and `budget.manage` are ADMIN. Staff, students, and collaborators get 403 from every route and a redirect from the page, including an admin previewing as Staff.
 2. A `Budget` is one named budget (Creative, Football) for one fiscal year (`Creative` + `2026-27`). The pair is unique. `fiscalYear` is `YYYY-YY` and runs July 1 to June 30 (`2025-26` is Jul 2025 to Jun 2026, shown as "FY26 · Jul 2025 – Jun 2026").
-3. A `BudgetLine` holds both the plan and the result. Planned cost is `unitCostCents x quantity` and is never stored. `spentCents` and `quantityBought` are recorded once bought and may differ from the plan.
+3. A `BudgetLine` holds both the plan and the result. Unit price and budget total can each be unknown; the budget total may be recorded independently or calculated from unit price and quantity. An explicit $0 remains distinct from unknown. `spentCents` and `quantityBought` are recorded once bought and may differ from the plan.
 4. Status is `PLANNED`, `ORDERED`, `PURCHASED`, or `CANCELLED`. `CANCELLED` is shown as Dropped and is excluded from every total except the submitted plan.
 5. Categories are the department's closed list of eleven (equipment, IT & services, rentals, and so on).
 6. Money is whole cents, capped at $10,000,000 per value. Links must be http(s).
-7. The submitted plan is fixed: it sums every line that was on it, dropped ones included. A line added later is marked `unplanned` (migration `0178`) and stays out of the submitted plan. Freed up is what dropped lines gave back; Unplanned is what late additions cost. Vs plan is spent minus planned per line.
+7. The saved plan snapshots the amount and membership of each line, including dropped lines. Admins deliberately save or revise it, with an audit entry. Migration 0211 creates a clearly labeled upgrade-time baseline rather than claiming to reconstruct the historical submission. New lines after a save start unplanned; line edits do not alter the snapshot. Unknown amounts keep the plan incomplete; planned or dropped lines with recorded spending flag a status conflict and prevent a complete forecast.
 7. Summary: planned = non-cancelled planned total; spent = recorded spend; outstanding = planned for lines not yet bought (planned or ordered with no spend); forecast = spent + outstanding; remaining = (allocation, or planned when there is no cap) - forecast. Negative means over.
 8. Every mutation is audited with before and after (`budget`, `budget_line`).
 9. `poNumber` and `orderNumber` come from order confirmations and are the strongest keys for linking a line to inventory items.
 10. A line links to inventory through `BudgetLineItem`: one serialized asset (quantity 1) or a quantity of one bulk SKU, never both. The same item can't be linked twice to a line. An asset may be linked to more than one line only by hand; suggestions skip assets that already have a link and retired assets.
-11. Suggestions are hints, never automatic. `src/lib/budget/matching.ts` scores price (exact or within about 3%), purchase date (within 14 or 60 days), a PO or order number (5+ characters) appearing in the item's notes, and shared words. A score under 45 is dropped; 65+ is "likely" and 90+ "high". An admin confirms every link, and every link or unlink is audited.
+11. Suggestions are hints, never automatic. `src/lib/budget/matching.ts` scores matching product links, actual or planned unit price, purchase date, PO or order number, and meaningful shared words. Creative and Football items from a different recorded department are excluded unless they share an order reference, in which case confidence is capped. A score under 45 is dropped; 65+ is "likely" and 90+ "high". Equally supported high-confidence candidates are shown as possible matches with an ambiguity warning. An admin confirms every link, and every link or unlink is audited.
 12. Linking does not change the item. Price and purchase date on the item stay as they are.
 13. Autofill is a separate, explicit step (`src/lib/budget/autofill.ts`). From a linked item an admin can fill purchase date, purchase price (spend / units bought, else the planned unit cost), product link, and a notes trail ("Bought from X · PO · Order N · Budget FY budget"). The item page offers only fields that are empty (`fill`); a field that holds another value (`differs`) is shown but never overwritten, and notes are appended, never replaced. The serial number is not on an order, so it stays an item field and is displayed beside the PO. Each apply is audited on the asset as `fill_from_order`.
-14. Navigation runs both ways. The item's Purchase card links to `/budget?b=<budgetId>&line=<lineId>`, which opens that budget and highlights the line. The line shows each linked item's tag and serial. A bought line with fewer linked units than `quantityBought ?? quantity` shows "N not linked", and a callout filters to those lines.
+14. Navigation runs both ways. The item's Purchase card links to `/budget?b=<budgetId>&line=<lineId>`, which opens that budget and highlights the line. The line shows each linked item's tag and serial; bulk links open the specific stockroom item. A purchased equipment line with a known bought quantity can show missing linked units. Other purchases and unknown quantities do not create a misleading requirement to link items.
 15. The lines table can be searched (description, supplier, PO, order number, category; every word must match), filtered by status, and sorted (as entered, biggest, newest, A to Z). `src/lib/budget/table.ts` is pure and tested; nothing here hits the server.
 
 ## Data Model
+
+Migration `0211_budget_trustworthy_amounts` adds amount/status completeness flags, an independent planned-total override, and saved-plan snapshots. Its data repair is restricted to explicit import annotations, retains the notes, and labels existing snapshots as captured during upgrade.
 
 Migration `0192_budget_line_ua_topup` adds nullable `budget_lines.gear_pick_cycle_id` (`SetNull` on cycle delete): the Under Armour year this Creative line tops up. The UA allotment stays on `gear_pick_cycles.budget_cents`; the top-up amount lives only on the line. Each dollar lives in one place, so a top-up is never typed into the allotment too.
 
@@ -54,6 +56,7 @@ Migration `0176_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 | POST | `/api/budget` | `budget:manage` | Create a budget |
 | GET | `/api/budget/[id]` | `budget:view` | Budget, lines, and summary |
 | PATCH | `/api/budget/[id]` | `budget:manage` | Allocation and notes |
+| POST | `/api/budget/[id]/submitted-plan` | `budget:manage` | Explicitly save or revise the plan snapshot |
 | POST | `/api/budget/[id]/lines` | `budget:manage` | Add a line |
 | PATCH | `/api/budget/lines/[lineId]` | `budget:manage` | Edit a line |
 | DELETE | `/api/budget/lines/[lineId]` | `budget:manage` | Delete a line |
@@ -79,9 +82,11 @@ Migration `0176_budget`: enums `BudgetLineStatus` and `BudgetCategory`; `budgets
 - Wish list: fill the title, photo, and price from a pasted link (needs a safe server-side fetch), notify the requester on approval, filter by fiscal year.
 - Import reads one tab into one budget at a time. Backfilling every year is a run per tab (Creative and Football tabs go to their own budgets); there is no one-click "import all tabs".
 - Bulk matching of an imported sheet to inventory in one pass (today suggestions are per line or per item).
-- Football-aware link suggestions, requester picker from Staff, XLSX export, per-category limits (the Insights bars compare spent to planned).
+- Requester picker from Staff, XLSX export, per-category limits (the Insights bars compare spent to planned).
 
 ## Changelog
+
+- 2026-10-30: Prepared unknown amount and status handling, durable saved-plan snapshots, stronger team and product matching, clearer linking guidance, and targeted migration recovery. Authenticated preview and deployment remain pending.
 
 - 2026-10-16: Slice 1 added (schema, admin-only API, page, tests).
 - 2026-10-16: Slice 2 added: links between lines and inventory, match suggestions, a Purchase card on the item page (admins only).

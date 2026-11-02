@@ -198,15 +198,16 @@ export function formatDateFull(iso: string | null, allDay = false) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    ...(allDay ? {} : { timeZone: INSTITUTION_TZ }),
   });
 }
 
 /** "Mon 3:00 pm" — compact day + time, used in event chips */
 export function formatChipTime(iso: string) {
   const d = new Date(iso);
-  const day = d.toLocaleDateString("en-US", { weekday: "short" });
+  const day = d.toLocaleDateString("en-US", { weekday: "short", timeZone: INSTITUTION_TZ });
   const time = d
-    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: INSTITUTION_TZ })
     .toLowerCase();
   return `${day} ${time}`;
 }

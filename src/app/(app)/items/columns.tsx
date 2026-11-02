@@ -30,6 +30,7 @@ import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { STATUS_STYLES, type StatusColor } from "@/lib/status-styles";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatOperationalDateTime } from "@/lib/format";
 import { isBulkRowId } from "./lib/item-href";
 
 type ActiveBooking = {
@@ -70,26 +71,14 @@ export type Asset = {
 function StatusDot({ color }: { color: StatusColor }) {
   return (
     <span
-      className={`size-1.5 rounded-full ${STATUS_STYLES[color].dot}`}
+      className={`size-1.5 shrink-0 rounded-full ${STATUS_STYLES[color].dot}`}
       aria-hidden="true"
     />
   );
 }
 
-function formatDueAt(endsAt: string | undefined): string | null {
-  if (!endsAt) return null;
-  const d = new Date(endsAt);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function AssigneeStatus({
+/** A colored dot and label, with the person holding the item and when it is due on a quiet second line. */
+function ItemStatus({
   color,
   label,
   name,
@@ -102,128 +91,58 @@ function AssigneeStatus({
   avatarUrl?: string | null;
   endsAt?: string;
 }) {
-  const dueAt = formatDueAt(endsAt);
-  const labelTooltip = dueAt ? `${label} · Due ${dueAt}` : label;
-
-  if (!name) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge className={STATUS_STYLES[color].badge}>
-            <StatusDot color={color} />
-            {label}
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent>{labelTooltip}</TooltipContent>
-      </Tooltip>
-    );
-  }
-
+  const due = endsAt && !Number.isNaN(new Date(endsAt).getTime())
+    ? formatOperationalDateTime(endsAt, new Date(), { month: "short" })
+    : null;
   return (
-    <div className={`inline-flex items-center gap-1 rounded-full pl-[3px] pr-2 py-[3px] ${STATUS_STYLES[color].badge}`}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="cursor-default">
-            <UserAvatar
-              name={name}
-              avatarUrl={avatarUrl}
-              size="xs"
-              className="outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
-            />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{name}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="cursor-default text-[11px] font-semibold">
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${color === "red" ? "text-[var(--red-text)]" : "text-foreground"}`}>
+        <StatusDot color={color} />
+        {label}
+      </span>
+      {name && (
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <UserAvatar name={name} avatarUrl={avatarUrl} size="xs" className="shrink-0 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10" />
+          <span className="truncate">
             {name}
+            {due && <span className="tabular-nums"> · {due}</span>}
           </span>
-        </TooltipTrigger>
-        <TooltipContent>{labelTooltip}</TooltipContent>
-      </Tooltip>
+        </span>
+      )}
     </div>
   );
 }
 
 export function statusBadge(asset: Asset) {
   const { computedStatus, activeBooking } = asset;
+  const holder = { name: activeBooking?.requesterName, avatarUrl: activeBooking?.requesterAvatarUrl };
 
   switch (computedStatus) {
     case "AVAILABLE":
-      return (
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
-          <StatusDot color="green" />
-          Available
-        </span>
-      );
+      return <ItemStatus color="green" label="Available" />;
     case "CHECKED_OUT": {
-      const isOverdue = activeBooking?.isOverdue;
-      const color = isOverdue ? "red" : "blue";
-      return (
-        <AssigneeStatus
-          color={color}
-          label={isOverdue ? "Overdue" : "Checked out"}
-          name={activeBooking?.requesterName}
-          avatarUrl={activeBooking?.requesterAvatarUrl}
-          endsAt={activeBooking?.endsAt}
-        />
-      );
+      const isOverdue = !!activeBooking?.isOverdue;
+      return <ItemStatus color={isOverdue ? "red" : "blue"} label={isOverdue ? "Overdue" : "Checked out"} {...holder} endsAt={activeBooking?.endsAt} />;
     }
-    case "PENDING_PICKUP": {
-      return (
-        <AssigneeStatus
-          color="orange"
-          label="Pending pickup"
-          name={activeBooking?.requesterName}
-          avatarUrl={activeBooking?.requesterAvatarUrl}
-        />
-      );
-    }
-    case "RESERVED": {
-      return (
-        <AssigneeStatus
-          color="purple"
-          label="Reserved"
-          name={activeBooking?.requesterName}
-          avatarUrl={activeBooking?.requesterAvatarUrl}
-          endsAt={activeBooking?.endsAt}
-        />
-      );
-    }
+    case "PENDING_PICKUP":
+      return <ItemStatus color="orange" label="Pending pickup" {...holder} />;
+    case "RESERVED":
+      return <ItemStatus color="purple" label="Reserved" {...holder} endsAt={activeBooking?.endsAt} />;
     case "MAINTENANCE":
-      return (
-        <Badge className={STATUS_STYLES[asset.missing ? "red" : "orange"].badge}>
-          <StatusDot color={asset.missing ? "red" : "orange"} />
-          {asset.missing ? "Missing" : "Maintenance"}
-        </Badge>
-      );
+      return asset.missing
+        ? <ItemStatus color="red" label="Missing" />
+        : <ItemStatus color="orange" label="Maintenance" />;
     case "RETIRED":
-      return (
-        <Badge className={STATUS_STYLES.gray.badge}>
-          <StatusDot color="gray" />
-          Retired
-        </Badge>
-      );
-    default:
+      return <ItemStatus color="gray" label="Retired" />;
+    default: {
       // Item families: "43/46 available"
       const familyAvailability = computedStatus.match(/^(\d+)\/(\d+) available$/);
       if (familyAvailability) {
         const qty = parseInt(familyAvailability[1]!, 10);
-        const color = qty === 0 ? "red" : "green";
-        return (
-          <Badge className={STATUS_STYLES[color].badge}>
-            <StatusDot color={color} />
-            {qty === 0 ? "None available" : computedStatus}
-          </Badge>
-        );
+        return <ItemStatus color={qty === 0 ? "red" : "green"} label={qty === 0 ? "None available" : computedStatus} />;
       }
-      return (
-        <Badge className={STATUS_STYLES.gray.badge}>
-          <StatusDot color="gray" />
-          {computedStatus}
-        </Badge>
-      );
+      return <ItemStatus color="gray" label={computedStatus} />;
+    }
   }
 }
 
@@ -377,7 +296,7 @@ export function getColumns(meta: ColumnMeta): ColumnDef<Asset>[] {
         </div>
       ),
       enableSorting: false,
-      meta: { thClassName: "w-[200px]" },
+      meta: { thClassName: "w-[260px]" },
     },
     {
       header: "Category",

@@ -78,6 +78,11 @@ struct BookingActivityJSON: Decodable, Hashable {
     var strings: [String: String]
     var stringLists: [String: [String]]
 
+    init(strings: [String: String], stringLists: [String: [String]]) {
+        self.strings = strings
+        self.stringLists = stringLists
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicCodingKey.self)
         var strings: [String: String] = [:]
@@ -162,6 +167,13 @@ enum BookingActivityCopy {
         "booking.items_removed",
         "booking.items_qty_changed",
         "booking.item_substituted",
+        "checkout_item_added",
+        "checkout_item_removed",
+        "kiosk_checkout_item_added",
+        "kiosk_checkout_item_removed",
+        "kiosk_checkout_item_swapped",
+        "scan_checkout",
+        "scan_checkin",
     ]
 
     /// Fields the website hides, plus addresses that do not belong on a phone row.
@@ -172,7 +184,7 @@ enum BookingActivityCopy {
     ]
 
     static func rows(_ entries: [BookingActivityEntry], filter: BookingActivityFilter) -> [BookingActivityEntry] {
-        entries.filter { entry in
+        let visible = entries.filter { entry in
             guard isVisible(entry) else { return false }
             switch filter {
             case .all:
@@ -183,6 +195,35 @@ enum BookingActivityCopy {
                 return !equipmentActions.contains(entry.action)
             }
         }
+        return foldScanBursts(visible)
+    }
+
+    /// One person scanning a stack of gear is one row that names every item,
+    /// like the website's `coalesceEntries`: same scanner, same direction,
+    /// within a minute of the oldest scan already folded in. Newest first.
+    static func foldScanBursts(_ entries: [BookingActivityEntry]) -> [BookingActivityEntry] {
+        var out: [BookingActivityEntry] = []
+        var oldestInRow: Date?
+        for entry in entries {
+            if var last = out.last, let oldest = oldestInRow,
+               entry.action == "scan_checkout" || entry.action == "scan_checkin",
+               last.action == entry.action,
+               last.actor?.id == entry.actor?.id,
+               abs(oldest.timeIntervalSince(entry.createdAt)) <= 60 {
+                let names = last.afterJson?.stringLists["itemNames"] ?? [itemName(last.afterJson) ?? "an item"]
+                var strings = last.afterJson?.strings ?? [:]
+                strings["quantity"] = nil
+                var lists = last.afterJson?.stringLists ?? [:]
+                lists["itemNames"] = names + [itemName(entry.afterJson) ?? "an item"]
+                last.afterJson = BookingActivityJSON(strings: strings, stringLists: lists)
+                out[out.count - 1] = last
+                oldestInRow = entry.createdAt
+                continue
+            }
+            out.append(entry)
+            oldestInRow = entry.createdAt
+        }
+        return out
     }
 
     static func isVisible(_ entry: BookingActivityEntry) -> Bool {
@@ -282,6 +323,47 @@ enum BookingActivityCopy {
             return "Fulfilled by kiosk pickup"
         case "partially_fulfilled_by_kiosk_pickup":
             return "Recorded a partial kiosk pickup"
+        // Item edits on an active checkout and every scan (web #721, #724).
+        case "checkout_item_added":
+            return "Added \(itemName(entry.afterJson) ?? "an item") to the active checkout"
+        case "checkout_item_removed":
+            return "Removed \(itemName(entry.beforeJson) ?? "an item") from the active checkout"
+        case "auto_completed_by_item_removal":
+            return "Checkout closed after its last item was removed"
+        case "kiosk_checkout_item_added":
+            return "Added \(itemName(entry.afterJson) ?? "an item")\(kioskPhrase(entry.afterJson))"
+        case "kiosk_checkout_item_removed":
+            return "Removed \(itemName(entry.beforeJson) ?? "an item")\(kioskPhrase(entry.beforeJson))"
+        case "kiosk_checkout_item_swapped":
+            if let from = itemName(entry.beforeJson), let to = itemName(entry.afterJson) {
+                return "Swapped \(from) for \(to)\(kioskPhrase(entry.afterJson))"
+            }
+            return "Swapped an item\(kioskPhrase(entry.afterJson))"
+        case "scan_checkout", "scan_checkin":
+            let item = itemList(entry.afterJson) ?? itemName(entry.afterJson) ?? "an item"
+            let quantity = entry.afterJson?.string("quantity").map { " ×\($0)" } ?? ""
+            return entry.action == "scan_checkout"
+                ? "Scanned out \(item)\(quantity)"
+                : "Scanned in \(item)\(quantity)"
+        case "admin_override":
+            if let reason = entry.afterJson?.string("reason") {
+                return "Overrode a scan check: \(reason)"
+            }
+            return "Overrode a scan check"
+        case "custody_scope_changed":
+            return "Changed who can hold this gear"
+        case "kiosk_checkin_scan_undone":
+            return "Undid a return scan at a kiosk"
+        case "kiosk_pickup_scan_removed":
+            return "Removed a scan at kiosk pickup"
+        case "kiosk_quantity_returned":
+            return "Returned a quantity at a kiosk"
+        case "checkin_report_unit_damaged":
+            return "Reported a unit damaged at return"
+        case "checkin_report_unit_lost":
+            return "Reported a unit lost at return"
+        case "reservation_leftover_expired":
+            return "Released gear that was never picked up"
         default:
             return humanized(entry.action)
         }
@@ -360,6 +442,25 @@ enum BookingActivityCopy {
         if count == 1 { return "\(verb) 1 item" }
         if count > 1 { return "\(verb) \(count) items" }
         return "\(verb) gear"
+    }
+
+    /// Same order as the website's `auditItemName`: name, then tag, then unit.
+    private static func itemName(_ json: BookingActivityJSON?) -> String? {
+        if let name = json?.string("itemName") ?? json?.string("tagName") { return name }
+        if let unit = json?.string("unitNumber") { return "unit #\(unit)" }
+        return nil
+    }
+
+    /// "ROAM2, SLOW1, and 3 more", the website's `formatAuditItemNames`.
+    private static func itemList(_ json: BookingActivityJSON?) -> String? {
+        let names = (json?.stringLists["itemNames"] ?? []).compactMap(\.nonBlankText)
+        switch names.count {
+        case 0: return nil
+        case 1: return names[0]
+        case 2: return "\(names[0]) and \(names[1])"
+        case 3: return "\(names[0]), \(names[1]), and \(names[2])"
+        default: return "\(names.prefix(3).joined(separator: ", ")), and \(names.count - 3) more"
+        }
     }
 
     private static func kioskPhrase(_ json: BookingActivityJSON?) -> String {

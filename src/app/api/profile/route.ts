@@ -5,6 +5,7 @@ import { HttpError, ok } from "@/lib/http";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { changePasswordSchema, normalizeSlackHandle, normalizeSlackProfileUrl, normalizeWiscardNumber, updateProfileSchema } from "@/lib/validation";
 import { createAuditEntry } from "@/lib/audit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { normalizeProfilePhone, phoneAuditValue } from "@/lib/profile-phone";
 import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import { revokeCompanionUser } from "@/lib/companion-store";
@@ -97,6 +98,9 @@ export const PATCH = withAuth(async (req, { user }) => {
   }
 
   if ("action" in body && body.action === "change_password") {
+    if (user.apiTokenScope) throw new HttpError(403, "This route needs a signed-in session, not an API token");
+    // Shares the budget of /api/me/change-password so neither route is a free guess loop.
+    await enforceRateLimit(`change-password:${user.id}`, { max: 5, windowMs: 60_000 });
     const payload = body;
     const existing = await db.user.findUniqueOrThrow({ where: { id: user.id } });
     const valid = await verifyPassword(existing.passwordHash, payload.currentPassword);
@@ -114,6 +118,7 @@ export const PATCH = withAuth(async (req, { user }) => {
       db.session.deleteMany({
         where: { userId: user.id },
       }),
+      db.apiToken.deleteMany({ where: { userId: user.id } }),
     ]);
 
     try {

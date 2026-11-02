@@ -146,7 +146,7 @@ async function activitySection(days: number, timeZone: string) {
   const since = new Date(Date.now() - days * 86_400_000);
   const [daily, platforms, overall, surfaces, versionDays] = await Promise.all([
     db.$queryRaw<DailyRow[]>(Prisma.sql`
-      SELECT to_char((occurred_at AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS day,
+      SELECT to_char((occurred_at AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS day,
              platform,
              COUNT(DISTINCT actor_hash)::int AS people
       FROM product_events
@@ -173,7 +173,7 @@ async function activitySection(days: number, timeZone: string) {
     }),
     // iPhone people per app version per day, for the release adoption curve.
     db.$queryRaw<VersionDayRow[]>(Prisma.sql`
-      SELECT to_char((occurred_at AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS day,
+      SELECT to_char((occurred_at AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS day,
              app_version AS version,
              COUNT(DISTINCT actor_hash)::int AS people
       FROM product_events

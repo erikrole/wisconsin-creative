@@ -113,13 +113,14 @@ describe("schedule list rows", () => {
     expect(empty).not.toContain("Today");
   });
 
-  it("summarizes crew as open seats and hides it for events without shifts", () => {
+  it("summarizes crew as avatars only and hides it when nobody is on", () => {
     const summary = (shifts: Shift[]) =>
       renderToStaticMarkup(createElement(TooltipProvider, null, createElement(CrewSummary, { entry: entry(shifts) })));
     const staffed = shift({ assignments: [assignment("APPROVED", "Ava")] });
 
-    expect(summary([staffed, shift({ id: "s-2" })])).toContain("1 open");
-    expect(summary([staffed])).not.toContain("open");
+    expect(summary([staffed, shift({ id: "s-2" })])).not.toContain("open");
+    expect(summary([staffed, shift({ id: "s-2" })])).not.toBe("");
+    expect(summary([shift({ id: "s-2" })])).toBe("");
     expect(summary([])).toBe("");
   });
 

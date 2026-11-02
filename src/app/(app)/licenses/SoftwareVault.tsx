@@ -4,15 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import {
   Archive,
+  ArchiveRestore,
   Check,
   Copy,
   Eye,
   EyeOff,
   ExternalLink,
   LockKeyhole,
+  MoreHorizontal,
   Pencil,
   Plus,
   RefreshCw,
+  Search,
   ShieldCheck,
 } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
@@ -21,7 +24,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -43,10 +45,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFetch } from "@/hooks/use-fetch";
@@ -56,6 +64,7 @@ import type { SoftwareCredentialAudience, SoftwareCredentialSummary } from "./ty
 import { useAdjustState } from "@/hooks/use-synced-draft";
 
 const SUGGESTED_SOFTWARE = ["Envato Elements", "APM Music", "Motion Array"];
+const SEARCH_THRESHOLD = 6;
 const DEFAULT_VISIBLE_TO: SoftwareCredentialAudience[] = ["STAFF", "STUDENT"];
 const AUDIENCE_OPTIONS: Array<{
   value: SoftwareCredentialAudience;
@@ -73,6 +82,29 @@ function formatAudience(visibleTo: SoftwareCredentialAudience[]) {
   if (labels.length === 1) return labels[0];
   if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
   return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1)}`;
+}
+
+function siteDomain(url: string | null) {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+// Section headings only help once the list is long; short lists stay one grid.
+function groupByCategory(records: SoftwareCredentialSummary[], grouped: boolean) {
+  if (!grouped) return [{ label: null, records }];
+  const groups = new Map<string, SoftwareCredentialSummary[]>();
+  for (const record of records) {
+    const label = record.category?.trim() || "Other";
+    groups.set(label, [...(groups.get(label) ?? []), record]);
+  }
+  if (groups.size < 2) return [{ label: null, records }];
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)))
+    .map(([label, items]) => ({ label, records: items }));
 }
 
 function SecretAction({
@@ -321,6 +353,7 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
   const [pendingSecretIds, setPendingSecretIds] = useState<Set<string>>(new Set());
   const [pendingMutationIds, setPendingMutationIds] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const revealTimers = useRef<Record<string, number>>({});
   const copyTimer = useRef<number | null>(null);
   const secretRequestIds = useRef(new Set<string>());
@@ -342,6 +375,11 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
   const records = data ?? [];
   const activeRecords = records.filter((record) => !record.archivedAt);
   const archivedRecords = records.filter((record) => record.archivedAt);
+  const needle = query.trim().toLowerCase();
+  const visibleRecords = needle
+    ? activeRecords.filter((record) =>
+      [record.name, record.category, record.accountEmail, record.websiteUrl].some((field) => field?.toLowerCase().includes(needle)))
+    : activeRecords;
 
   function openNewForm() {
     setEditing(null);
@@ -451,16 +489,32 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
-  async function copyPassword(record: SoftwareCredentialSummary) {
+  async function copyPassword(record: SoftwareCredentialSummary, successMessage = "Password copied") {
     try {
       const password = revealedPasswords[record.id]
         ?? await runSecretRequest(record.id, () => requestPassword(record.id));
-      if (!password) return;
+      if (!password) return false;
       await navigator.clipboard.writeText(password);
       showCopied(`${record.id}:password`);
-      toast.success("Password copied");
+      toast.success(successMessage);
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not copy the password");
+      return false;
+    }
+  }
+
+  // Copy first, while this tab still has focus, then open the site to paste into.
+  async function copyAndOpen(record: SoftwareCredentialSummary) {
+    const url = record.websiteUrl;
+    if (!url || !(await copyPassword(record, `Password copied. Opening ${record.name}.`))) return;
+    const tab = window.open(url, "_blank");
+    if (tab) {
+      tab.opener = null;
+    } else {
+      toast.info(`Open ${record.name} to paste the password`, {
+        action: { label: "Open", onClick: () => { window.open(url, "_blank", "noopener,noreferrer"); } },
+      });
     }
   }
 
@@ -518,72 +572,90 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
     const isArchived = Boolean(record.archivedAt);
     const secretPending = pendingSecretIds.has(record.id);
     const mutationPending = pendingMutationIds.has(record.id);
+    const domain = siteDomain(record.websiteUrl);
+    const subtitle = [record.category, domain].filter(Boolean).join(" · ") || "Department login";
 
     return (
       <Card key={record.id} className={isArchived ? "opacity-70" : undefined} aria-busy={secretPending || mutationPending || undefined}>
-        <CardHeader className="gap-3 pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={isArchived ? "gray" : "outline"} size="sm">
-                  {isArchived ? "Archived" : record.category || "Department account"}
-                </Badge>
-                {!isArchived && <LockKeyhole className="size-3.5 text-muted-foreground" aria-label="Password protected" />}
-              </div>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-base font-semibold text-foreground">
+              {record.name.trim().charAt(0).toUpperCase() || "?"}
+            </span>
+            <div className="min-w-0 flex-1">
               <CardTitle className="truncate text-base">{record.name}</CardTitle>
+              <CardDescription className="truncate text-xs">{isArchived ? "Archived" : subtitle}</CardDescription>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center">
               {record.websiteUrl && !isArchived && (
-                <Button asChild type="button" variant="ghost" size="icon" className="size-10 text-muted-foreground hover:text-foreground">
-                  <a href={record.websiteUrl} target="_blank" rel="noreferrer" aria-label={`Open ${record.name} website`}>
-                    <ExternalLink className="size-4" />
-                  </a>
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-10 text-muted-foreground hover:text-foreground"
+                      aria-label={`Copy password and open ${record.name}`}
+                      onClick={() => copyAndOpen(record)}
+                      disabled={secretPending}
+                    >
+                      <ExternalLink className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy password and open site</TooltipContent>
+                </Tooltip>
               )}
-              {isAdmin && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-10 text-muted-foreground hover:text-foreground"
-                  aria-label={`Edit ${record.name}`}
-                  onClick={() => openEditForm(record)}
-                  disabled={mutationPending}
-                >
-                  <Pencil className="size-4" />
-                </Button>
+              {isAdmin && !isArchived && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-10 text-muted-foreground hover:text-foreground"
+                      aria-label={`More actions for ${record.name}`}
+                      disabled={mutationPending}
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => openEditForm(record)}>
+                      <Pencil />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onSelect={() => setArchiveTarget(record)}>
+                      <Archive />
+                      Archive
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
-          <CardDescription>
-            <span className="block">{isArchived ? "Archived from the shared-login list." : "Department login · available to the authorized team"}</span>
-            {!isArchived && (
-              <>
-                <span className="mt-1 block text-xs">Shared with {formatAudience(record.visibleTo)}. Staff operators can always manage it.</span>
-                <span className="mt-1 block text-xs">Updated {formatRelativeTime(record.updatedAt, new Date())}</span>
-              </>
-            )}
-          </CardDescription>
         </CardHeader>
         {!isArchived ? (
-          <CardContent className="space-y-3 pt-2">
-            <div className="rounded-md border bg-muted/20 px-3 py-2">
-              <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Login email</p>
-              <div className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">{record.accountEmail}</span>
+          <CardContent className="space-y-2 pt-0">
+            <div className="divide-y rounded-lg border">
+              <div className="flex items-center gap-2 py-1 pl-3 pr-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="truncate text-sm text-foreground" title={record.accountEmail}>{record.accountEmail}</p>
+                </div>
                 <SecretAction
                   label={`Copy ${record.name} login email`}
                   onClick={() => copyEmail(record)}
                   copied={copiedId === `${record.id}:email`}
                 />
               </div>
-            </div>
-            <div className="rounded-md border bg-muted/20 px-3 py-2">
-              <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Password</p>
-              <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 break-all font-mono text-sm text-foreground" aria-live="polite">
-                  {password ?? "••••••••••••"}
-                </code>
+              <div className="flex items-center gap-2 py-1 pl-3 pr-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">Password</p>
+                  <code className="block break-all font-mono text-sm text-foreground" aria-live="polite">
+                    {password ?? "••••••••••••"}
+                  </code>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -605,28 +677,19 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
                   disabled={secretPending}
                 />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Reveal or copy only when you need it. Reveals are logged.</p>
             </div>
+            <p className="text-xs text-muted-foreground">
+              {isAdmin && <>Shared with {formatAudience(record.visibleTo)} · </>}
+              Updated {formatRelativeTime(record.updatedAt, new Date())}
+            </p>
           </CardContent>
         ) : (
-          <CardContent className="pt-2">
-            <p className="text-sm text-muted-foreground">Restore this account to make its login available again.</p>
+          <CardContent className="pt-0">
+            <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => restoreRecord(record)} loading={mutationPending}>
+              <ArchiveRestore data-icon="inline-start" />
+              Restore login
+            </Button>
           </CardContent>
-        )}
-        {isAdmin && (
-          <CardFooter className="justify-between gap-3 border-t pt-4">
-            {isArchived ? (
-              <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => restoreRecord(record)} loading={mutationPending}>
-                Restore account
-              </Button>
-            ) : (
-              <Button type="button" variant="ghost" size="sm" className="h-10 text-muted-foreground hover:text-destructive" onClick={() => setArchiveTarget(record)} disabled={mutationPending}>
-                <Archive data-icon="inline-start" />
-                Archive
-              </Button>
-            )}
-            <span className="text-xs text-muted-foreground">Admin / staff control</span>
-          </CardFooter>
         )}
       </Card>
     );
@@ -634,19 +697,31 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <section aria-labelledby="shared-logins-title" className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="shared-logins-title" className="sr-only">Shared logins</h2>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            {!loading && !error ? `${activeRecords.length} active. ` : null}
-            Copy a department email or password. Reveals are logged.
+      <h2 id="shared-logins-title" className="sr-only">Shared logins</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        {activeRecords.length > SEARCH_THRESHOLD ? (
+          <div className="relative min-w-48 flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search logins"
+              aria-label="Search shared logins"
+              className="h-10 pl-9"
+            />
+          </div>
+        ) : (
+          <p className="min-w-56 flex-1 text-sm text-muted-foreground">
+            <ShieldCheck className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
+            Encrypted. Reveals are logged.
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+        )}
+        <div className="ml-auto flex items-center gap-1">
           {isAdmin && archivedRecords.length > 0 && (
             <Button
               type="button"
-              variant={showArchived ? "secondary" : "outline"}
+              variant={showArchived ? "secondary" : "ghost"}
               size="sm"
               className="h-10"
               onClick={() => setShowArchived((current) => !current)}
@@ -675,19 +750,12 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-lg border border-[var(--blue)]/25 bg-[var(--blue-bg)]/35 px-4 py-3 text-sm">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--blue-text)]" />
-        <p className="leading-relaxed text-muted-foreground">
-          Account emails and passwords are encrypted. Password access is always deliberate, rate-limited, and logged.
-        </p>
-      </div>
-
       {loading && activeRecords.length === 0 ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Loading shared logins">
           {Array.from({ length: 3 }, (_, index) => (
             <Card key={index}>
-              <CardHeader><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-44" /></CardHeader>
-              <CardContent className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></CardContent>
+              <CardHeader><Skeleton className="h-10 w-44" /></CardHeader>
+              <CardContent><Skeleton className="h-28 w-full" /></CardContent>
             </Card>
           ))}
         </div>
@@ -713,8 +781,17 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
             ) : null}
           </CardContent>
         </Card>
+      ) : visibleRecords.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">No logins match “{query.trim()}”.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{activeRecords.map(renderCard)}</div>
+        <div className="space-y-6">
+          {groupByCategory(visibleRecords, !needle && visibleRecords.length > SEARCH_THRESHOLD).map((group) => (
+            <div key={group.label ?? "all"} className="space-y-3">
+              {group.label && <h3 className="text-sm font-semibold text-muted-foreground">{group.label}</h3>}
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{group.records.map(renderCard)}</div>
+            </div>
+          ))}
+        </div>
       )}
 
       {isAdmin && showArchived && archivedRecords.length > 0 && (

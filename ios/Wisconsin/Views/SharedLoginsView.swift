@@ -1,3 +1,4 @@
+import CoreImage.CIFilterBuiltins
 import SwiftUI
 import UIKit
 
@@ -13,6 +14,8 @@ final class SharedLoginsViewModel {
     private(set) var refreshError: String?
     private(set) var revealed: [String: String] = [:]
     private(set) var pendingSecretIds: Set<String> = []
+    private(set) var wifi: SharedWifi?
+    var showWifiPassword = false
     var searchText = ""
     var toast: Toast?
 
@@ -33,8 +36,12 @@ final class SharedLoginsViewModel {
         if forceRefresh { refreshError = nil }
 
         do {
+            // Wi-Fi is a bonus section: if it fails, the logins still show.
+            async let wifiResult = try? await APIClient.shared.sharedWifi()
             let page = try await APIClient.shared.softwareLogins()
+            let loadedWifi = await wifiResult
             guard generation == loadGeneration else { return }
+            wifi = loadedWifi
             logins = page.filter(\.isActive)
             error = nil
             refreshError = nil
@@ -64,6 +71,12 @@ final class SharedLoginsViewModel {
         scheduleHide(login.id)
     }
 
+    func copyWifi(_ value: String, message: String) {
+        copyToThisPhone(value)
+        toast = Toast(message: message, icon: "doc.on.doc", role: .success)
+        Haptics.success()
+    }
+
     func copyEmail(_ login: SoftwareLogin) {
         copyToThisPhone(login.accountEmail)
         toast = Toast(message: "Login email copied", icon: "doc.on.doc", role: .success)
@@ -91,6 +104,7 @@ final class SharedLoginsViewModel {
             revealGeneration[id, default: 0] += 1
         }
         revealed.removeAll()
+        showWifiPassword = false
     }
 
     private func hide(_ id: String) {
@@ -144,6 +158,7 @@ struct SharedLoginsView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @State private var vm = SharedLoginsViewModel()
+    @State private var showWifiQR = false
 
     var body: some View {
         if wrapsInNavigationStack {
@@ -166,6 +181,11 @@ struct SharedLoginsView: View {
                 if phase != .active { vm.clearSecrets() }
             }
             .toast($vm.toast)
+            // On the screen, not the row: a List can drop an offscreen row and
+            // its sheet with it.
+            .sheet(isPresented: $showWifiQR) {
+                if let wifi = vm.wifi { WifiQRSheet(wifi: wifi) }
+            }
     }
 
     @ViewBuilder
@@ -182,7 +202,7 @@ struct SharedLoginsView: View {
                 Button("Retry") { Task { await vm.load(forceRefresh: true) } }
                     .buttonStyle(.borderedProminent)
             }
-        } else if vm.visibleLogins.isEmpty {
+        } else if vm.visibleLogins.isEmpty && (vm.wifi == nil || !vm.searchText.isEmpty) {
             ContentUnavailableView {
                 Label(
                     vm.searchText.isEmpty ? "No shared logins" : "No logins match",
@@ -209,6 +229,17 @@ struct SharedLoginsView: View {
                     }
                 }
 
+                if let wifi = vm.wifi, vm.searchText.isEmpty {
+                    Section {
+                        wifiCard(wifi)
+                    } header: {
+                        Text("Wi-Fi")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .textCase(nil)
+                    }
+                }
+
                 ForEach(vm.visibleLogins) { login in
                     Section {
                         loginCard(login)
@@ -228,6 +259,61 @@ struct SharedLoginsView: View {
             }
             .listStyle(.insetGrouped)
         }
+    }
+
+    @ViewBuilder
+    private func wifiCard(_ wifi: SharedWifi) -> some View {
+        VStack(alignment: .leading, spacing: Brand.Space.sm) {
+            secretRow(
+                title: "Network",
+                value: wifi.ssid,
+                isSecret: false,
+                accessibilityValue: wifi.ssid
+            ) {
+                Button {
+                    vm.copyWifi(wifi.ssid, message: "Network name copied")
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel("Copy Wi-Fi network name")
+            }
+
+            secretRow(
+                title: "Password",
+                value: vm.showWifiPassword ? wifi.password : "••••••••",
+                isSecret: true,
+                accessibilityValue: vm.showWifiPassword ? "Visible" : "Hidden"
+            ) {
+                Button {
+                    vm.showWifiPassword.toggle()
+                } label: {
+                    Image(systemName: vm.showWifiPassword ? "eye.slash" : "eye")
+                }
+                .buttonStyle(.borderless)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel(vm.showWifiPassword ? "Hide Wi-Fi password" : "Show Wi-Fi password")
+
+                Button {
+                    vm.copyWifi(wifi.password, message: "Wi-Fi password copied for 2 minutes")
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel("Copy Wi-Fi password")
+            }
+
+            Button {
+                showWifiQR = true
+            } label: {
+                Label("Show QR code", systemImage: "qrcode")
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.vertical, Brand.Space.xs)
     }
 
     @ViewBuilder
@@ -351,5 +437,50 @@ private extension View {
         } else {
             textSelection(.disabled)
         }
+    }
+}
+
+/// Big code for someone else's camera: the standard Wi-Fi join string, drawn
+/// with Core Image so it works offline.
+private struct WifiQRSheet: View {
+    let wifi: SharedWifi
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: Brand.Space.md) {
+                if let image = Self.qrImage(wifi.qrPayload) {
+                    Image(uiImage: image)
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(Brand.Space.sm)
+                        .background(.white, in: RoundedRectangle(cornerRadius: 16))
+                        .accessibilityLabel("QR code to join the \(wifi.ssid) Wi-Fi network")
+                }
+                Text(wifi.ssid)
+                    .font(.title3.weight(.semibold))
+            }
+            .padding()
+            .frame(maxWidth: 420)
+            .navigationTitle("Join the Wi-Fi")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private static func qrImage(_ payload: String) -> UIImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(payload.utf8)
+        filter.correctionLevel = "M"
+        guard let output = filter.outputImage else { return nil }
+        let scaled = output.transformed(by: CGAffineTransform(scaleX: 12, y: 12))
+        guard let cgImage = CIContext().createCGImage(scaled, from: scaled.extent) else { return nil }
+        return UIImage(cgImage: cgImage)
     }
 }

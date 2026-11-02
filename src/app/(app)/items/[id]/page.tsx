@@ -106,7 +106,6 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
     setAsset,
     fetchError,
     refreshing,
-    lastRefreshed,
     currentUserRole,
     categories,
     departments,
@@ -263,7 +262,6 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
         canEdit={canEdit}
         refreshing={refreshing}
         actionBusy={actionBusy}
-        lastRefreshed={lastRefreshed}
         onRefresh={loadAsset}
         onToggleFavorite={handleToggleFavorite}
         onSaveHeaderField={saveHeaderField}
@@ -274,7 +272,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
       <ReportProblemDialog assetId={asset.id} assetTag={asset.assetTag} open={reportOpen} onOpenChange={setReportOpen} onReported={loadAsset} />
 
       {/* Tabs — sticky on scroll, horizontally scrollable on mobile */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
+      <Tabs panels={false} value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
         <TabsList className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm overflow-x-auto scrollbar-hide">
           {availableTabs.map((tab) => {
             const count =
@@ -288,7 +286,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
               >
                 <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>{tab.label}</span>
                 {count > 0 && (
-                  <span className="text-[11px] tabular-nums text-muted-foreground">
+                  <span className="ml-1.5 text-xs font-normal tabular-nums text-muted-foreground">
                     {count}
                   </span>
                 )}

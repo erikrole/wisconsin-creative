@@ -63,7 +63,7 @@ describe("POST /api/assets/[id]/duplicate", () => {
     expect(mocks.db.asset.create).toHaveBeenCalledTimes(5);
     expect(mocks.audit).not.toHaveBeenCalled();
 
-    mocks.db.asset.create.mockReset().mockRejectedValue(collision("P2003"));
+    mocks.db.asset.create.mockReset().mockRejectedValue(collision("P2010"));
     expect((await duplicate(jsonRequest(`/api/assets/${CUID_A}/duplicate`, "POST"), ctx)).status).toBe(500);
     expect(mocks.db.asset.create).toHaveBeenCalledTimes(1);
   });
@@ -103,7 +103,7 @@ describe("POST /api/assets/[id]/generate-qr", () => {
     mocks.db.asset.findUnique.mockResolvedValueOnce(null);
     expect((await generateQr(jsonRequest(`/api/assets/${CUID_A}/generate-qr`, "POST"), ctx)).status).toBe(404);
 
-    mocks.db.asset.update.mockRejectedValue(collision("P2003"));
+    mocks.db.asset.update.mockRejectedValue(collision("P2010"));
     expect((await generateQr(jsonRequest(`/api/assets/${CUID_A}/generate-qr`, "POST"), ctx)).status).toBe(500);
     expect(mocks.db.asset.update).toHaveBeenCalledTimes(1);
   });

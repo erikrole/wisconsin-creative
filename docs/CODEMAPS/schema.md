@@ -135,7 +135,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 146
+Fields: 147
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -169,6 +169,7 @@ Fields: 146
 - `lastActiveAt                  DateTime?                        @map("last_active_at")`
 - `location                      Location?                        @relation(fields: [locationId], references: [id], onDelete: SetNull)`
 - `sessions                      Session[]`
+- `apiTokens                     ApiToken[]`
 - `passkeyCredentials            PasskeyCredential[]`
 - `passkeyChallenges             PasskeyChallenge[]`
 - `requested                     Booking[]                        @relation("BookingRequester")`
@@ -228,7 +229,6 @@ Fields: 146
 - `resourceAssetUploads          ResourceAssetUpload[]            @relation("ResourceAssetUploadActor")`
 - `resourceAssetFavorites        ResourceAssetFavorite[]          @relation("ResourceAssetFavoriteUser")`
 - `availabilityBlocks            StudentAvailabilityBlock[]`
-- `availabilitySaves             StudentAvailabilitySave[]`
 - `availabilityReviewed          StudentAvailabilityBlock[]       @relation("AvailabilityReviewer")`
 - `travelMemberships             EventTravelMember[]              @relation("TravelMembers")`
 - `badges                        StudentBadge[]`
@@ -238,6 +238,7 @@ Fields: 146
 - `notificationPrefs             Json?                            @map("notification_prefs")`
 - `sidebarPrefs                  Json?                            @map("sidebar_prefs")`
 - `gettingStarted                Json?                            @map("getting_started")`
+- `onboardingChecks              Json?                            @map("onboarding_checks")`
 - `icsToken                      String?                          @unique @map("ics_token")`
 - `scheduleEventFollows          ScheduleEventFollow[]`
 - `collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
@@ -308,6 +309,25 @@ Indexes and constraints:
 
 - `@@index([userId])`
 - `@@map("sessions")`
+
+## Model `ApiToken`
+
+Fields: 9
+
+- `id         String    @id @default(cuid())`
+- `userId     String    @map("user_id")`
+- `name       String`
+- `tokenHash  String    @unique @map("token_hash")`
+- `scope      String`
+- `expiresAt  DateTime  @map("expires_at")`
+- `lastUsedAt DateTime? @map("last_used_at")`
+- `createdAt  DateTime  @default(now()) @map("created_at")`
+- `user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([userId])`
+- `@@map("api_tokens")`
 
 ## Model `PasswordResetToken`
 
@@ -2431,7 +2451,7 @@ Indexes and constraints:
 
 ## Model `ShiftAssignment`
 
-Fields: 28
+Fields: 29
 
 - `id               String                @id @default(cuid())`
 - `shiftId          String                @map("shift_id")`
@@ -2445,6 +2465,7 @@ Fields: 28
 - `callNote         String?               @map("call_note")`
 - `crewLabel        String?               @map("crew_label")`
 - `crewHalf         ShiftAssignmentHalf?  @map("crew_half")`
+- `crewTags         Json?                 @map("crew_tags")`
 - `notes            String?`
 - `hasConflict      Boolean               @default(false) @map("has_conflict")`
 - `conflictNote     String?               @map("conflict_note")`
@@ -2529,22 +2550,6 @@ Indexes and constraints:
 - `@@index([postedByUserId])`
 - `@@index([claimedByUserId])`
 - `@@map("shift_trades")`
-
-## Model `StudentAvailabilitySave`
-
-Fields: 6
-
-- `actorId     String   @map("actor_id")`
-- `requestId   String   @map("request_id") @db.Uuid`
-- `payloadHash String   @map("payload_hash")`
-- `blockIds    String[] @default([]) @map("block_ids")`
-- `createdAt   DateTime @default(now()) @map("created_at")`
-- `actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)`
-
-Indexes and constraints:
-
-- `@@id([actorId, requestId])`
-- `@@map("student_availability_saves")`
 
 ## Model `StudentAvailabilityBlock`
 
@@ -3426,12 +3431,16 @@ Values: `AWARDS_PRIZES`, `BUSINESS_TRAVEL`, `EQUIPMENT`, `IT_SERVICES`, `LEASES`
 
 ## Model `Budget`
 
-Fields: 8
+Fields: 12
 
 - `id              String       @id @default(cuid())`
 - `name            String`
 - `fiscalYear      String       @map("fiscal_year")`
 - `allocationCents Int?         @map("allocation_cents")`
+- `submittedCents  Int?         @map("submitted_cents")`
+- `submittedUnknownCount Int    @default(0) @map("submitted_unknown_count")`
+- `submittedAt     DateTime?    @map("submitted_at")`
+- `submittedSource String?      @map("submitted_source")`
 - `notes           String?`
 - `createdAt       DateTime     @default(now()) @map("created_at")`
 - `updatedAt       DateTime     @updatedAt @map("updated_at")`
@@ -3445,7 +3454,7 @@ Indexes and constraints:
 
 ## Model `BudgetLine`
 
-Fields: 28
+Fields: 34
 
 - `id              String           @id @default(cuid())`
 - `budgetId        String           @map("budget_id")`
@@ -3454,6 +3463,12 @@ Fields: 28
 - `description     String`
 - `supplier        String?`
 - `unitCostCents   Int              @map("unit_cost_cents")`
+- `unitCostKnown   Boolean          @default(true) @map("unit_cost_known")`
+- `plannedOverrideCents Int?        @map("planned_override_cents")`
+- `plannedTotalKnown Boolean        @default(true) @map("planned_total_known")`
+- `statusKnown     Boolean          @default(true) @map("status_known")`
+- `submittedIncluded Boolean        @default(false) @map("submitted_included")`
+- `submittedAmountCents Int?        @map("submitted_amount_cents")`
 - `quantity        Int              @default(1)`
 - `quantityBought  Int?             @map("quantity_bought")`
 - `spentCents      Int?             @map("spent_cents")`

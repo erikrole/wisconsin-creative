@@ -274,7 +274,7 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
       value: formatCount(hours),
       countTo: hours,
       sentence: hours >= 24
-        ? `That's more than ${plural(Math.floor(hours / 24), "full day")} of call time.`
+        ? `That's ${hours % 24 === 0 ? "" : "more than "}${plural(Math.floor(hours / 24), "full day")} of call time.`
         : hours === 1 ? "Every minute of it counted." : "Every one of them counted.",
     });
   }
@@ -468,6 +468,24 @@ export function buildPersonCards(input: WrappedPersonInput): WrappedCard[] {
   });
 
   return cards;
+}
+
+/**
+ * The opening card for someone with no events and no checkouts yet, so the
+ * team's story doesn't start cold on a stat. Reads as their cover, hands off
+ * to the team, and promises nothing about why the card is empty.
+ */
+export function buildWelcomeCard(user: { name: string; primaryArea: ShiftArea | null }): WrappedCard {
+  return {
+    id: "welcome",
+    layout: "cover",
+    tone: "red",
+    eyebrow: WRAPPED_WINDOW_LABEL,
+    value: `${firstName(user.name)}'s fall in Creative`,
+    sentence: user.primaryArea
+      ? `${AREA_LABELS[user.primaryArea]} crew. Your story starts with your first event. Here's the team's fall.`
+      : "Your story starts with your first event. Here's the team's fall.",
+  };
 }
 
 export function buildTeamCards(input: WrappedTeamInput): WrappedCard[] {

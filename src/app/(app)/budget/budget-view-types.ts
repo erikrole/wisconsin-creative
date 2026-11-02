@@ -8,6 +8,12 @@ export type LineView = {
   description: string;
   supplier: string | null;
   unitCostCents: number;
+  unitCostKnown: boolean;
+  plannedTotalKnown: boolean;
+  plannedOverrideCents: number | null;
+  statusKnown: boolean;
+  submittedIncluded: boolean;
+  submittedAmountCents: number | null;
   quantity: number;
   quantityBought: number | null;
   spentCents: number | null;
@@ -42,14 +48,14 @@ export type Suggestion = {
   imageUrl: string | null;
   detail: string | null;
   href: string;
-  suggestedQuantity: number;
+  suggestedQuantity: number | null;
   score: number;
   confidence: "high" | "likely" | "possible";
   reasons: string[];
 };
 export type SearchResult = { kind: "asset" | "bulk"; targetId: string; label: string; imageUrl: string | null; detail: string | null };
 export type Detail = {
-  budget: { id: string; name: string; fiscalYear: string; allocationCents: number | null; notes: string | null };
+  budget: { id: string; name: string; fiscalYear: string; allocationCents: number | null; notes: string | null; submittedCents: number | null; submittedUnknownCount: number; submittedAt: string | null; submittedSource: string | null };
   lines: LineView[];
   summary: BudgetSummary;
   /** Under Armour allotment years a line can top up. */

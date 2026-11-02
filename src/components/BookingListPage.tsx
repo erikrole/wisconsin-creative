@@ -838,6 +838,7 @@ export default function BookingListPage({
                           overdueStatus={config.overdueStatus}
                           onClick={() => openBookingDetails(item.id)}
                           selectable={isMergeSelectable(item)}
+                          selectionColumn={canMergeBookings}
                           selected={selectedBookingIds.includes(item.id)}
                           onSelectedChange={(selected) => toggleBookingSelection(item.id, selected)}
                           menuProps={{

@@ -152,7 +152,7 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
-- 2026-10-29: **Duplicate-safe availability saves (preview preparation).** Web and native create forms retain a save UUID; an actor-scoped database receipt replays current saved entries without another create/audit/conflict refresh. Migration `0208_student_availability_saves` and six real-PostgreSQL retry/rollback regressions cover the contract. [Preview acceptance ledger](../tasks/student-availability-roundout-2026-10-29.md).
+- 2026-10-29: **Duplicate-safe availability saves (preview preparation).** Web and native create forms retain a save UUID; an actor-scoped database receipt replays current saved entries without another create/audit/conflict refresh. Migration `0213_student_availability_saves` and six real-PostgreSQL retry/rollback regressions cover the contract. [Preview acceptance ledger](../tasks/student-availability-roundout-2026-10-29.md).
 
 - 2026-10-29: **My Availability follow-through (local, unreleased).** The existing native List shows current entries separately from History, preserves weekday context and displays staff review notes. Dates and controls use Madison time. Edits send optional `expectedUpdatedAt`; a stale response retains the draft and refreshes the underlying list before cancel/reopen. Student-role copy explains that editing time off submits it for review again. Acceptance: source-contract tests and the required iPhone 18 Pro Max build; offline simulator evidence is after-only, with no authenticated API mutation or distributed-build claim. See the [active ledger](../tasks/student-availability-roundout-2026-10-29.md).
 

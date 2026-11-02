@@ -16,5 +16,5 @@
   "src/lib/student-availability.ts": "ce72fcbab2aba0e9c37014a3742a54e66ef429f1e153afa7919a6e9efc3a0544",
   "src/lib/unavailable-times.ts": "f8d5b0923e05867cc92b7ee7d559dac3a127ef583a0d7a7fd1fc43b84075cfd3",
   "prisma/schema.prisma": "c14c33d83e31f9a9ae9112be81439f95d7d1d6c59c90cfc3392d8d23a180899c",
-  "prisma/migrations/0208_student_availability_saves/migration.sql": "42a7a1083d3c162b46bec6540896ab071538b953b21eca54b4818608d0709453"
+  "prisma/migrations/0213_student_availability_saves/migration.sql": "42a7a1083d3c162b46bec6540896ab071538b953b21eca54b4818608d0709453"
 }

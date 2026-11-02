@@ -86,7 +86,7 @@ export default function PageBreadcrumb() {
 
   // On the dashboard the trail is just the page itself, named as the sidebar names it; everywhere
   // else the root is implied.
-  const trail = allItems.length > 1 ? allItems.slice(1) : [{ href: "/", label: "Dashboard", isPage: true }];
+  const trail = allItems.length > 1 ? allItems.slice(1) : [{ href: "/", label: "Home", isPage: true }];
   if (trail.length === 0) return null;
 
   const shouldCollapse = !expanded && trail.length > COLLAPSE_THRESHOLD;

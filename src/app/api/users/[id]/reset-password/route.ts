@@ -34,6 +34,7 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
     db.session.deleteMany({ where: { userId: id } }),
     db.passkeyCredential.deleteMany({ where: { userId: id } }),
     db.passwordResetToken.deleteMany({ where: { userId: id } }),
+    db.apiToken.deleteMany({ where: { userId: id } }),
   ]);
 
   try {

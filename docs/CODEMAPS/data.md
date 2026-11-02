@@ -11,8 +11,9 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 146 | 5 |
+| `User` | 147 | 5 |
 | `Session` | 7 | 2 |
+| `ApiToken` | 9 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
 | `PasskeyChallenge` | 10 | 3 |
@@ -95,11 +96,10 @@
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
 | `Shift` | 14 | 4 |
-| `ShiftAssignment` | 28 | 5 |
+| `ShiftAssignment` | 29 | 5 |
 | `StudentSportAssignment` | 6 | 3 |
 | `StudentAreaAssignment` | 6 | 3 |
 | `ShiftTrade` | 14 | 4 |
-| `StudentAvailabilitySave` | 6 | 2 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
 | `CheckinItemReport` | 25 | 8 |
@@ -136,8 +136,8 @@
 | `GearPickParticipant` | 10 | 3 |
 | `GearPickSubmission` | 9 | 1 |
 | `GearPickLine` | 9 | 2 |
-| `Budget` | 8 | 3 |
-| `BudgetLine` | 28 | 6 |
+| `Budget` | 12 | 3 |
+| `BudgetLine` | 34 | 6 |
 | `BudgetLineItem` | 10 | 5 |
 | `WishItem` | 15 | 3 |
 | `Announcement` | 18 | 3 |

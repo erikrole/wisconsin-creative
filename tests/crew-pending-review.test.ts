@@ -74,14 +74,16 @@ describe("inline crew claim review", () => {
     }), trades)?.id).toBe("trade-1");
   });
 
-  it("keeps student shift-group pending requests private while staff crew review lives on the working copy", () => {
+  it("keeps pending requests admin-only in shift groups while crew review lives on the working copy", () => {
     const route = readFileSync("src/app/api/shift-groups/route.ts", "utf8");
     const editor = readFileSync("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx", "utf8");
     const service = readFileSync("src/lib/services/schedule-working-copy.ts", "utf8");
     const review = readFileSync("src/components/shift-detail/CrewPendingReview.tsx", "utf8");
 
     expect(route).toContain("viewerRequestByShiftId");
-    expect(route).not.toContain("pendingClaims");
+    expect(route).toContain('const isAdmin = user.role === "ADMIN"');
+    expect(route).toContain("const pendingClaims = isAdmin &&");
+    expect(route).toContain("const pendingReview = isAdmin");
     expect(service).toContain('status: "REQUESTED"');
     expect(service).toContain('status: "CLAIMED"');
     expect(service).toContain("pendingClaims");
@@ -90,7 +92,7 @@ describe("inline crew claim review", () => {
     expect(editor).toContain("canReviewClaims");
     expect(editor).toContain('currentUser?.role === "ADMIN"');
     expect(review).toContain("UserAvatarGroup");
-    expect(review).toContain("Approving one student declines the others.");
+    expect(review).toContain("Approving one request for a slot declines the others.");
     expect(editor).toContain("/api/shift-assignments/${id}/${decision}");
     expect(editor).toContain("/api/shift-trades/${id}/${decision}");
   });

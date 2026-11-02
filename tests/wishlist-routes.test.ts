@@ -114,6 +114,17 @@ describe("wish list routes", () => {
     expect(tx.wishItem!.update!.mock.calls[0]![0].data).toEqual({ status: "IN_BUDGET", budgetLineId: "line-9" });
   });
 
+  it("marks a wish added after a saved plan as unplanned", async () => {
+    (requireAuth as unknown as MockFn).mockResolvedValue(admin);
+    tx.wishItem!.findUnique!.mockResolvedValue(row());
+    tx.budget!.findUnique!.mockResolvedValue({ id: "budget-1", submittedAt: new Date("2026-10-30T12:00:00Z") });
+    tx.budgetLine!.create!.mockResolvedValue({ id: "line-9", budgetId: "budget-1" });
+    tx.wishItem!.update!.mockResolvedValue(row({ status: "IN_BUDGET", budgetLineId: "line-9", budgetLine: { id: "line-9", budgetId: "budget-1" } }));
+    const res = await promote(json("POST", "/api/wishlist/wish-1/promote", { budgetId: "budget-1", category: "EQUIPMENT", unitCostCents: 100, quantity: 1, unplanned: false }), ctx);
+    expect(res.status).toBe(201);
+    expect(tx.budgetLine!.create!.mock.calls[0]![0].data.unplanned).toBe(true);
+  });
+
   it("refuses to move a declined or already-moved wish", async () => {
     (requireAuth as unknown as MockFn).mockResolvedValue(admin);
     const body = { budgetId: "budget-1", category: "EQUIPMENT", unitCostCents: 100, quantity: 1 };

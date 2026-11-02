@@ -1,4 +1,6 @@
+import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
 import { availabilityDateKey } from "@/lib/student-availability-display";
+
 const TZ = process.env.INSTITUTION_TZ ?? "America/Chicago";
 
 export type AvailabilityKind = "WEEKLY" | "AD_HOC";
@@ -143,10 +145,29 @@ function formatConflictNote(block: AvailabilityBlockLike, intent = blockIntent(b
 
 type LocalWindow = { date: string; dayOfWeek: number; startsAt: string; endsAt: string };
 
+function nextDate(date: string): string {
+  return availabilityDateKey(new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000));
+}
+
+/**
+ * Split a window into the Madison calendar days it touches, each with the
+ * wall-clock range covered on that day. A game that runs past midnight is
+ * two pieces, so a block late on the second day still counts.
+ */
 function localWindows(window: AvailabilityWindow): LocalWindow[] {
   const result: LocalWindow[] = [];
   const endMs = window.endsAt.getTime();
   if (!Number.isFinite(window.startsAt.getTime()) || !Number.isFinite(endMs) || window.startsAt.getTime() >= endMs) return result;
+  // An inherited all-day window is stored as UTC midnights (the all-day
+  // CalendarEvent convention), which reads as the previous evening in
+  // Madison. It means "those whole dates", not a clock range.
+  if (isFullDayBoundaryWindow({ startsAt: window.startsAt.toISOString(), endsAt: window.endsAt.toISOString() })) {
+    const last = availabilityDateKey(window.endsAt);
+    for (let date = availabilityDateKey(window.startsAt); date < last; date = nextDate(date)) {
+      result.push({ date, dayOfWeek: new Date(`${date}T00:00:00Z`).getUTCDay(), startsAt: "00:00:00.000", endsAt: "24:00:00.000" });
+    }
+    return result;
+  }
   const minute = 60_000;
   const day = 86_400_000;
   const offsetAt = (ms: number) => {
@@ -194,6 +215,9 @@ function overlapsAvailabilityBlock(block: AvailabilityBlockLike, windows: LocalW
       const first = dateOnly(block.date);
       const last = dateOnly(block.dateEndsOn) ?? first;
       if (!first || !last || window.date < first || window.date > last) return false;
+      // A dated range is inclusive. All-day ranges intentionally ignore the
+      // stored canonical 00:00-23:59 wall-clock values so a full-day trip still
+      // conflicts with any call window on any covered date.
       if (block.allDay) return true;
     } else if (block.dayOfWeek !== window.dayOfWeek || !isWithinDateBounds(window.date, block)) {
       return false;

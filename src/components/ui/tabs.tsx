@@ -5,16 +5,23 @@ import { Tabs as TabsPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
+// Tabs that only filter a list below them render no TabsContent, so their triggers
+// must not claim to control a panel that does not exist.
+const PanelsContext = React.createContext(true)
+
 function Tabs({
   className,
+  panels = true,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
+}: React.ComponentProps<typeof TabsPrimitive.Root> & { panels?: boolean }) {
   return (
-    <TabsPrimitive.Root
-      data-slot="tabs"
-      className={cn("flex flex-col gap-2", className)}
-      {...props}
-    />
+    <PanelsContext.Provider value={panels}>
+      <TabsPrimitive.Root
+        data-slot="tabs"
+        className={cn("flex flex-col gap-2", className)}
+        {...props}
+      />
+    </PanelsContext.Provider>
   )
 }
 
@@ -90,9 +97,11 @@ function TabsTrigger({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+  const panels = React.useContext(PanelsContext)
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
+      {...(panels ? {} : { "aria-controls": undefined })}
       className={cn(
         "min-h-10 cursor-pointer px-4 py-2.5 text-base font-medium text-muted-foreground transition-[color,border-color] duration-200 border-b-2 border-transparent -mb-px hover:text-foreground data-[state=active]:text-foreground data-[state=active]:border-foreground group-data-[indicator]/tabs-list:data-[state=active]:border-transparent data-[state=active]:font-semibold rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
         className,

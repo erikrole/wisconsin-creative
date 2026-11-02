@@ -127,7 +127,7 @@ type NavGroup = {
 const navGroups: NavGroup[] = [
   {
     items: [
-      { label: "Dashboard", href: "/", icon: HouseIcon },
+      { label: "Home", href: "/", icon: HouseIcon },
       { label: "Schedule", href: "/schedule", icon: CalendarDaysIcon },
       { label: "Bookings", href: "/bookings", icon: ClipboardListIcon },
       { label: "Items", href: "/items", icon: CameraIcon },
@@ -584,13 +584,12 @@ export default function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <div className={cn(chromeFont.className, "flex min-h-0 flex-1 flex-col")}>
+      <nav aria-label="Sidebar" className={cn(chromeFont.className, "flex min-h-0 flex-1 flex-col")}>
       {user && (
         <SidebarHeader className="px-3 pb-3 pt-4 max-md:pr-12 group-data-[collapsible=icon]:px-2">
           <Link
             prefetch={false}
             href="/"
-            aria-label="Wisconsin Creative home"
             className="flex items-center gap-2.5 rounded-md no-underline outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-[var(--sidebar-ring)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
             <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-white shadow-[0_0_0_1px_var(--sidebar-border),0_1px_2px_rgba(0,0,0,0.06)]">
@@ -611,6 +610,8 @@ export default function AppSidebar({
                 UW Athletics
               </p>
             </div>
+            {/* Names the link when the rail is collapsed to icons and the text above is display:none. */}
+            <span className="sr-only hidden group-data-[collapsible=icon]:inline">Wisconsin Creative home</span>
           </Link>
         </SidebarHeader>
       )}
@@ -631,9 +632,9 @@ export default function AppSidebar({
       )}
 
       <SidebarContent className="gap-0 px-1 pb-2 pt-1">
-        <nav aria-label="Workspace navigation" className="flex min-h-full flex-1 flex-col">
+        <div className="flex min-h-full flex-1 flex-col">
           {displayGroups.map((group, groupIdx) => renderGroup(group, groupIdx))}
-        </nav>
+        </div>
       </SidebarContent>
 
       {user && (
@@ -679,7 +680,6 @@ export default function AppSidebar({
                   <SidebarMenuButton
                     size="lg"
                     tooltip={{ children: user.name, className: railTooltipClass }}
-                    aria-label="Account menu"
                     isActive={isOnAccountPage}
                     className={cn(
                       "h-11 gap-2.5 rounded-md px-1.5 text-[color:var(--sidebar-text-active)] hover:bg-[var(--sidebar-hover)] hover:text-[color:var(--sidebar-text-active)] data-[state=open]:bg-[var(--sidebar-active)] data-[state=open]:hover:bg-[var(--sidebar-active)] data-[state=open]:hover:text-[color:var(--sidebar-text-active)] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full",
@@ -699,6 +699,7 @@ export default function AppSidebar({
                         {roleCaption}
                       </p>
                     </div>
+                    <span className="sr-only">Account menu</span>
                     <ChevronsUpDownIcon className="ml-auto size-3.5 text-[color:var(--sidebar-muted)] group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
@@ -796,7 +797,7 @@ export default function AppSidebar({
           />}
         </SidebarFooter>
       )}
-      </div>
+      </nav>
     </Sidebar>
   );
 }

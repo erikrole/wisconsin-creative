@@ -21,6 +21,8 @@ export type BookingTableRowProps = {
   onClick: () => void;
   menuProps: Omit<BookingMenuProps, "item">;
   selectable?: boolean;
+  /** The table has a selection column, so a row that cannot be selected still needs its empty cell. */
+  selectionColumn?: boolean;
   selected?: boolean;
   onSelectedChange?: (selected: boolean) => void;
 };
@@ -31,6 +33,7 @@ export function BookingTableRow({
   onClick,
   menuProps,
   selectable,
+  selectionColumn,
   selected,
   onSelectedChange,
 }: BookingTableRowProps) {
@@ -57,7 +60,7 @@ export function BookingTableRow({
           onClick();
         }}
       >
-        {selectable && (
+        {selectable ? (
           <TableCell className="w-11" onClick={(event) => event.stopPropagation()}>
             <Checkbox
               checked={selected}
@@ -65,7 +68,7 @@ export function BookingTableRow({
               aria-label={`Select ${item.title}`}
             />
           </TableCell>
-        )}
+        ) : selectionColumn && <TableCell className="w-11" />}
         <TableCell>
           <div className="flex w-full flex-col gap-1">
             <span

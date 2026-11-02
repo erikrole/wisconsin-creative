@@ -12,9 +12,17 @@ describe("native Creative Wrapped wiring", () => {
     expect(teamView).toContain("WrappedPromo.state(role: session.currentUser?.role)");
     expect(teamView).toContain(".fullScreenCover(isPresented: $showsWrapped)");
     // Unlock and promo window mirror src/lib/wrapped/dates.ts.
+    expect(wrapped).toContain('"2026-11-15T06:00:00Z"');
     expect(wrapped).toContain('"2026-12-01T06:00:00Z"');
     expect(wrapped).toContain('"2027-01-16T06:00:00Z"');
     expect(wrapped).toContain('guard let role, role != "COLLABORATOR" else { return .hidden }');
+    expect(wrapped).toContain("return isAdmin && now >= previewStartsAt ? .preview : .hidden");
+  });
+
+  it("rolls big counts up with the server's comma spelling", () => {
+    const wrapped = source("ios/Wisconsin/Views/WrappedView.swift");
+    expect(wrapped).toContain('value.formatted(.number.locale(Locale(identifier: "en_US")))');
+    expect(wrapped).toContain("replacingOccurrences(of: WrappedCount.text(countTo), with: WrappedCount.text(rolled))");
   });
 
   it("invites people in once after unlock from the app shell", () => {

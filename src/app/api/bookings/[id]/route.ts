@@ -16,6 +16,7 @@ import {
   staleBookingError,
 } from "@/lib/booking-concurrency";
 import { assertSupportedReservationPickupLocation } from "@/lib/services/reservation-pickup-location";
+import { assertReservationStartAllowed, loadReservationRules } from "@/lib/services/reservation-rules";
 import { sortedStrings } from "@/lib/utils";
 
 type BookingPatchBody = z.infer<typeof updateBookingSchema>;
@@ -128,6 +129,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   await requireBookingAction(id, user, "edit");
 
   if (detail.kind === "RESERVATION") {
+    if (body.startsAt !== undefined && !sameDateInstant(body.startsAt, detail.startsAt)) {
+      assertReservationStartAllowed(new Date(body.startsAt), await loadReservationRules());
+    }
     await updateReservation(id, user.id, {
       title: body.title,
       requesterUserId: body.requesterUserId,

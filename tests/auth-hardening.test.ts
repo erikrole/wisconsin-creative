@@ -16,6 +16,7 @@ const mockTx = {
   user: {
     updateMany: vi.fn(),
   },
+  apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
   session: {
     deleteMany: vi.fn(),
   },
@@ -43,6 +44,7 @@ vi.mock("@/lib/db", () => ({
       findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
     },
+    apiToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     session: {
       deleteMany: vi.fn(),
     },
@@ -60,6 +62,7 @@ vi.mock("@/lib/audit", () => ({
 
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
+  enforceRateLimit: vi.fn(),
   getClientIp: vi.fn(),
 }));
 
@@ -74,7 +77,7 @@ vi.mock("@sentry/nextjs", () => ({
 import { requireAuth, tokenHash, hashPassword, verifyPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimit, enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { revokeCompanionUser } from "@/lib/companion-store";
 import { PATCH as patchProfile } from "@/app/api/profile/route";
 import { POST as resetPassword } from "@/app/api/auth/reset-password/route";
@@ -174,6 +177,7 @@ describe("auth hardening", () => {
     expect(db.$transaction).toHaveBeenCalledWith([
       expect.any(Promise),
       expect.any(Promise),
+      expect.any(Promise),
     ]);
     expect(revokeCompanionUser).toHaveBeenCalledWith("user-1");
     expect(createAuditEntry).toHaveBeenCalledWith(
@@ -182,6 +186,33 @@ describe("auth hardening", () => {
         action: "password_change",
       }),
     );
+  });
+
+  it("throttles password guesses through the profile route like the dedicated one", async () => {
+    vi.mocked(verifyPassword).mockResolvedValue(false);
+
+    const res = await patchProfile(
+      authedRequest("/api/profile", { action: "change_password", currentPassword: "wrong-password", newPassword: "new-password" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(400);
+    expect(enforceRateLimit).toHaveBeenCalledWith("change-password:user-1", { max: 5, windowMs: 60_000 });
+  });
+
+  it("refuses a password change from an API token", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      id: "user-1", email: "user@example.com", name: "User One", role: Role.STAFF, avatarUrl: null, apiTokenScope: "WRITE",
+    });
+
+    const res = await patchProfile(
+      authedRequest("/api/profile", { action: "change_password", currentPassword: "old-password", newPassword: "new-password" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(403);
+    expect(verifyPassword).not.toHaveBeenCalled();
+    expect(db.user.update).not.toHaveBeenCalled();
   });
 
   it("reports a committed profile password change when companion revocation fails", async () => {

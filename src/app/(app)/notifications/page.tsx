@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell,
-  CheckCircle2,
-  ExternalLink,
+  CheckIcon,
   RefreshCw,
   Settings2Icon,
   MoreHorizontalIcon,
@@ -16,16 +14,14 @@ import EmptyState from "@/components/EmptyState";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
-import { Item, ItemMedia, ItemContent, ItemTitle, ItemDescription, ItemActions } from "@/components/ui/item";
-import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { useUrlState } from "@/hooks/use-url-state";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { INSTITUTION_TZ } from "@/lib/format";
 import { Spinner } from "@/components/ui/spinner";
 import { dispatchNotificationCountChanged } from "@/lib/notification-count-sync";
 import { notificationDestinationPath } from "@/lib/notification-destination";
@@ -64,28 +60,23 @@ function notificationDate(notification: Notification) {
   return notification.sentAt ?? notification.createdAt;
 }
 
+const centralDay = new Intl.DateTimeFormat("en-CA", { timeZone: INSTITUTION_TZ });
+
+/** Day group for a notification on the Central calendar: Today, Yesterday, This week, or the date. */
 function dayLabel(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const notifDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diffDays = Math.floor(
-    (today.getTime() - notifDay.getTime()) / 86_400_000,
-  );
+  const day = (date: Date) => Date.parse(centralDay.format(date));
+  const diffDays = Math.round((day(new Date()) - day(new Date(dateStr))) / 86_400_000);
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return "This week";
-  return notifDay.toLocaleDateString(undefined, {
-    month: "long",
-    day: "numeric",
-  });
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: INSTITUTION_TZ });
 }
 
 function NotificationsSkeleton() {
   return (
     <div className="flex flex-col gap-3 p-4">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex gap-3 rounded-lg border border-border/50 p-3">
+        <div key={i} className="flex gap-3 p-1">
           <Skeleton className="size-9 rounded-full shrink-0" />
           <div className="flex flex-1 flex-col gap-2">
             <Skeleton className="h-4 w-3/4" />
@@ -156,18 +147,6 @@ export default function NotificationsPage() {
   const unreadCount = data?.unreadCount ?? 0;
   const hasNotifications = inboxTotal > 0;
   const canProcess = canProcessNotifications(meData?.role);
-  const railItems: OperationalStatusRailItem[] = unreadCount > 0 ? [{
-    id: "unread",
-    label: "Unread",
-    value: unreadCount,
-    detail: "Notifications that still need review.",
-    icon: Bell,
-    tone: "warning",
-    onSelect: () => {
-      setUnreadOnly(true);
-      setPage(0);
-    },
-  }] : [];
 
   /** Optimistically update the raw query cache for notifications */
   const setNotificationsData = useCallback(
@@ -352,15 +331,18 @@ export default function NotificationsPage() {
 
   return (
     <FadeUp>
-      <PageHeader
-        title="Notifications"
-        description="Updates that need your attention across gear, bookings, shifts, and trades."
-      >
+      <PageHeader title="Notifications" className="max-sm:flex-row max-sm:items-center max-sm:justify-between">
+        {unreadCount > 0 && (
+          <Button className="h-10" variant="outline" onClick={markAllRead} disabled={markingAll}>
+            {markingAll ? <Spinner data-icon="inline-start" /> : <CheckIcon data-icon="inline-start" />}
+            {markingAll ? "Marking all read" : "Mark all read"}
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button className="h-10" variant="outline" aria-label="More notification actions">
               <MoreHorizontalIcon data-icon="inline-start" />
-              More
+              <span className="max-sm:sr-only">More</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
@@ -382,54 +364,32 @@ export default function NotificationsPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {unreadCount > 0 && (
-          <Button className="h-10" onClick={markAllRead} disabled={markingAll}>
-            {markingAll && <Spinner data-icon="inline-start" />}
-            {markingAll ? "Marking all read" : "Mark all read"}
-          </Button>
-        )}
       </PageHeader>
 
-      <OperationalStatusRail
-        className="mb-4"
-        orientation={{
-          label: "Inbox",
-          value: `${inboxTotal} ${inboxTotal === 1 ? "notification" : "notifications"}`,
-          icon: Bell,
-        }}
-        items={railItems}
-        allClearLabel={unreadCount === 0 ? "No unread notifications" : undefined}
-      />
-
       <Card>
-        <CardHeader className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <ToggleGroup
-            type="single"
+        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-2">
+          <Tabs
+            panels={false}
             value={unreadOnly ? "unread" : "all"}
             onValueChange={(value) => {
-              if (!value) return;
               setUnreadOnly(value === "unread");
               setPage(0);
             }}
-            aria-label="Filter notifications"
           >
-            <ToggleGroupItem value="all" className="min-h-10">All</ToggleGroupItem>
-            <ToggleGroupItem value="unread" className="min-h-10">
-              Unread
-              {unreadCount > 0 && <span className="tabular-nums">{unreadCount}</span>}
-            </ToggleGroupItem>
-          </ToggleGroup>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {refreshing && (
-              <span className="inline-flex items-center gap-2" role="status">
-                <Spinner />
-                Updating
-              </span>
-            )}
-            <span className="tabular-nums">
-              {total > 0 ? `${visibleStart}-${visibleEnd} of ${total}` : unreadOnly ? "No unread" : "Inbox empty"}
+            <TabsList aria-label="Filter notifications">
+              <TabsTrigger value="all" className="px-3 text-sm">All</TabsTrigger>
+              <TabsTrigger value="unread" className="px-3 text-sm">
+                Unread
+                {unreadCount > 0 && <span className="ml-1.5 text-xs font-normal tabular-nums text-muted-foreground">{unreadCount}</span>}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {refreshing && (
+            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground" role="status">
+              <Spinner />
+              Updating
             </span>
-          </div>
+          )}
         </CardHeader>
 
         <CardContent className="p-0">
@@ -463,13 +423,10 @@ export default function NotificationsPage() {
               } : undefined}
             />
           ) : (
-            <div className="divide-y">
+            <div className="pb-2">
               {grouped.map((group) => (
                 <div key={group.label}>
-                  <div className="flex items-center justify-between bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span>{group.label}</span>
-                    <span className="tabular-nums">{group.items.length}</span>
-                  </div>
+                  <div className="px-4 pb-1 pt-4 text-xs font-medium text-muted-foreground">{group.label}</div>
                   {group.items.map((n) => (
                     <NotificationRow
                       key={n.id}
@@ -485,17 +442,13 @@ export default function NotificationsPage() {
         </CardContent>
       </Card>
 
-      {total > 0 && (
+      {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between gap-3 text-sm text-muted-foreground">
-          <span className="tabular-nums">
-            {totalPages > 1 ? `Showing ${visibleStart}-${visibleEnd} of ${total}` : `${total} ${total === 1 ? "notification" : "notifications"}`}
-          </span>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button className="h-10" variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
-              <Button className="h-10" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</Button>
-            </div>
-          )}
+          <span className="tabular-nums">Showing {visibleStart}-{visibleEnd} of {total}</span>
+          <div className="flex items-center gap-2">
+            <Button className="h-10" variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
+            <Button className="h-10" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</Button>
+          </div>
         </div>
       )}
     </FadeUp>
@@ -518,74 +471,43 @@ function NotificationRow({
   const unread = !notification.readAt;
 
   return (
-    <Item
-      size="sm"
-      className={cn(
-        "group items-start transition-[background-color,box-shadow] max-sm:flex-col",
-        unread ? "bg-primary/5 hover:bg-primary/10" : "bg-background hover:bg-muted/35",
-      )}
-    >
-      <ItemMedia variant="icon" className={meta.toneClass}>
-        <Icon />
-      </ItemMedia>
-      <ItemContent>
-        <ItemTitle
-          className={
-            unread
-              ? "w-full items-start gap-2 font-semibold text-foreground"
-              : "w-full items-start gap-2 font-normal text-muted-foreground"
-          }
-        >
-          <span className="min-w-0 flex-1 text-balance">{notification.title}</span>
-          <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground">
-            {formatTime(notificationDate(notification))}
-          </span>
-        </ItemTitle>
-        <ItemDescription className="text-pretty">
-          {notification.body ?? "Open the related workflow for details."}
-        </ItemDescription>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant="outline" size="sm">
-            {meta.label}
-          </Badge>
-          {unread ? (
-            <Badge variant="blue" size="sm">
-              Unread
-            </Badge>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <CheckCircle2 />
-              Read
-            </span>
-          )}
-        </div>
-      </ItemContent>
-      <ItemActions className="max-sm:w-full max-sm:flex-row max-sm:justify-end">
-        {href && actionLabel && (
-          <Button
-            variant="ghost"
-            className="h-10 text-xs font-semibold text-[var(--accent)] max-sm:flex-1"
-            asChild
-          >
-            <Link href={href}>
-              {actionLabel}
-              <ExternalLink data-icon="inline-end" />
+    <div className="group relative flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full [&_svg]:size-4", meta.toneClass)}>
+        <Icon aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cn("text-pretty text-sm", unread ? "font-semibold text-foreground" : "text-foreground/80")}>
+          {href ? (
+            <Link href={href} className="outline-none after:absolute after:inset-0 focus-visible:underline">
+              {notification.title}
+              {actionLabel && <span className="sr-only">. {actionLabel}</span>}
             </Link>
-          </Button>
+          ) : notification.title}
+        </p>
+        {notification.body && (
+          <p className="mt-0.5 line-clamp-2 text-pretty text-sm text-muted-foreground">{notification.body}</p>
         )}
-        {unread && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {meta.label} · <span className="tabular-nums">{formatTime(notificationDate(notification))}</span>
+        </p>
+      </div>
+      {unread && (
+        <div className="relative z-10 flex shrink-0 items-center gap-1">
           <Button
             variant="ghost"
-            className="h-10 text-xs text-muted-foreground max-sm:flex-1"
+            size="icon"
+            className="size-9 text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
             onClick={() => onMarkRead(notification.id)}
             disabled={marking}
+            aria-label="Mark read"
+            title="Mark read"
           >
-            {marking && <Spinner data-icon="inline-start" />}
-            {marking ? "Marking read" : "Mark read"}
+            {marking ? <Spinner /> : <CheckIcon />}
           </Button>
-        )}
-      </ItemActions>
-    </Item>
+          <span aria-label="Unread" className="size-2 rounded-full bg-[var(--brand-red)]" />
+        </div>
+      )}
+    </div>
   );
 }
 

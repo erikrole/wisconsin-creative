@@ -53,6 +53,8 @@ const SECURITY_ACTIONS = new Set([
   "password_change",
   "sessions_signed_out",
   "session_signed_out",
+  "api_token_created",
+  "api_token_revoked",
   "change_password",
   "password_reset",
   "password_reset_self",
@@ -106,6 +108,7 @@ const ENTITY_CATEGORIES: Record<string, AuditCategory> = {
   kiosk_device: "kiosk",
   kiosk_operation: "kiosk",
   session: "security",
+  api_token: "security",
   passkey_credential: "security",
 };
 
@@ -118,6 +121,7 @@ export function auditCategory(action: string, entityType: string | undefined): A
 
 /** Sentence for actions without bespoke wording. Past tense, no actor. */
 export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
+  capture_plan: "Saved a budget plan",
   adopted_for_hire: "Brought an applicant on as a hire",
   bulk_marked_maintenance: "Marked several items as needing maintenance",
   bulk_cleared_maintenance: "Cleared maintenance on several items",
@@ -215,6 +219,8 @@ export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
   notifications_marked_all_read: "Marked all notifications read",
   notifications_marked_unread: "Marked notifications unread",
   numbered_unit_balance_reconciled: "Corrected the numbered unit count",
+  onboarding_check_updated: "Updated a student onboarding step",
+  onboarding_guide_updated: "Updated the onboarding contacts and notes",
   onboarding_completed: "Finished onboarding",
   overdue_responders_updated: "Updated who answers overdue alerts",
   passkey_login: "Signed in with a passkey",
@@ -222,6 +228,8 @@ export const AUDIT_ACTION_SENTENCES: Record<string, string> = {
   passkey_revoked: "Removed a passkey",
   password_change: "Changed their password",
   password_reset: "Reset a password",
+  api_token_created: "Created an API token",
+  api_token_revoked: "Revoked an API token",
   session_signed_out: "Signed out one of their devices",
   sessions_signed_out: "Signed out their other devices",
   pending_profile_updated: "Updated a pending profile",

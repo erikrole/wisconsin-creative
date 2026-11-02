@@ -111,6 +111,7 @@ export function WrappedPlayer({
   const [sharing, setSharing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const holdTimer = useRef<number | null>(null);
+  const stage = useRef<HTMLDivElement>(null);
   const heldRef = useRef(false);
   const last = slides.length - 1;
   const finished = index === last && elapsed >= CARD_MS;
@@ -118,6 +119,8 @@ export function WrappedPlayer({
   // settled after mount so the server and first client render agree.
   const [autoPlay, setAutoPlay] = useState(true);
   useEffect(() => setAutoPlay(!reduced), [reduced]);
+  // A dialog takes focus when it opens, so keyboard and screen-reader users land in the story.
+  useEffect(() => stage.current?.focus(), []);
   const running = autoPlay && !paused && !holding && !showGrid && !finished;
 
   const go = useCallback((next: number) => {
@@ -187,7 +190,9 @@ export function WrappedPlayer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0b0c10] sm:p-6"
+      ref={stage}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0b0c10] outline-none sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label="Creative Wrapped"

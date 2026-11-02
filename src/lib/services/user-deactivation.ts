@@ -299,6 +299,7 @@ export async function deactivateUserWithCleanup(args: {
 
     const notificationAccessRevokedAt = new Date();
     await tx.session.deleteMany({ where: { userId: targetUserId } });
+    await tx.apiToken.deleteMany({ where: { userId: targetUserId } });
     const deviceTokenCleanup = await tx.deviceToken.updateMany({
       where: { userId: targetUserId, revokedAt: null },
       data: { revokedAt: notificationAccessRevokedAt },

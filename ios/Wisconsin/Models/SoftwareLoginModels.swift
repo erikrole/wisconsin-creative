@@ -1,5 +1,13 @@
 import Foundation
 
+/// The department Wi-Fi from `GET /api/wifi`. `qrPayload` is the standard
+/// `WIFI:` join string the web card also encodes.
+struct SharedWifi: Decodable, Equatable, Sendable {
+    let ssid: String
+    let password: String
+    let qrPayload: String
+}
+
 /// One department login from `GET /api/software`. The list never includes the
 /// password. A password arrives only from the separate reveal request.
 struct SoftwareLogin: Codable, Identifiable, Equatable, Sendable {

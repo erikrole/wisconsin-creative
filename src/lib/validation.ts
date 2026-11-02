@@ -293,7 +293,7 @@ export const createBulkSkuSchema = z.object({
 
 export const updateBulkSkuSchema = z.object({
   name: z.string().min(1).max(500).optional(),
-  category: z.string().optional(),
+  category: z.string().max(200).optional(),
   categoryId: databaseIdSchema.nullable().optional(),
   departmentId: databaseIdSchema.nullable().optional(),
   unit: z.string().min(1).max(100).optional(),

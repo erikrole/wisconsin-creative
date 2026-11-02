@@ -44,7 +44,7 @@ struct TeamAvailabilityView: View {
             Section {
                 if isLoading && students.isEmpty {
                     ProgressView().frame(maxWidth: .infinity)
-                } else if filtered.isEmpty {
+                } else if filtered.isEmpty, error == nil {
                     Text(searchText.isEmpty ? "No students yet." : "No students match “\(searchText)”.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

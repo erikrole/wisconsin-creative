@@ -50,13 +50,15 @@ export function GettingStartedCard() {
   ) : syncing ? <p role="status" className="text-xs text-muted-foreground">Saving checklist…</p> : null;
   if (saved.dismissed) return syncFeedback;
 
-  const profileDone = completion?.completion.profileComplete === true;
+  // Once the team has what it needs, the only profile ask left is the photo.
+  const requiredDone = completion?.completion.requiredComplete === true;
+  const profileDone = requiredDone ? completion?.completion.completeByField.photo === true : false;
   const mark = (id: GettingStartedRow) => update({ done: [id] });
   const dismiss = () => update({ dismissed: true });
   const has = (id: GettingStartedRow) => saved.done.includes(id);
 
   const hasUnavailable = (blocks ?? []).some(isUnavailableBlock);
-  const profile: Item = { id: "profile", label: "Finish your profile", done: profileDone, onClick: openProfileCompletion };
+  const profile: Item = { id: "profile", label: requiredDone ? "Add a profile photo" : "Finish your profile", done: profileDone, onClick: openProfileCompletion };
   const guides: Item = { id: "guides", label: "Read the guides", done: has("guides"), href: "/resources" };
   const app: Item = { id: "app", label: "Get the iPhone app", done: has("app"), href: APP_STORE_URL, external: true };
   const items: Item[] = isStudent

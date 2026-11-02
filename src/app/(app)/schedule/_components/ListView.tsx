@@ -13,7 +13,7 @@ import { toast } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { formatCalendarEventDateRange, eventSpansMultipleDays } from "@/lib/calendar-event-dates";
-import { sportLabel } from "@/lib/sports";
+import { sportDotColor } from "@/lib/sport-color";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -49,6 +49,7 @@ import {
   useDesktopScheduleList,
 } from "./ListViewTimeline";
 import { eventStartLabel } from "./list-view-helpers";
+import { EntryPendingReview } from "./EntryPendingReview";
 import { EventRows } from "./ListViewEventRows";
 
 export type CrewTemplateSide = "HOME" | "AWAY" | "EMPTY";
@@ -86,6 +87,7 @@ type ListViewProps = {
   clearQueue: () => void;
   currentUserId: string;
   isStaff: boolean;
+  canReviewClaims?: boolean;
   expandedRowId: string | null;
   setExpandedRowId: (id: string | null) => void;
   onSelectGroup: (groupId: string | null) => void;
@@ -144,6 +146,7 @@ export function ListView({
   clearQueue,
   currentUserId,
   isStaff,
+  canReviewClaims = false,
   expandedRowId,
   setExpandedRowId,
   onSelectGroup,
@@ -718,9 +721,9 @@ export function ListView({
         {/* ── Header ── */}
         <div className="flex items-center justify-between border-b border-border/60 bg-muted/15 px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm! font-semibold! text-foreground">
+            <h2 className="text-sm! font-semibold! text-foreground">
               {myShiftsOnly ? "My shifts timeline" : "Timeline"}
-            </h3>
+            </h2>
             <span className="text-xs font-medium tabular-nums text-muted-foreground">
               {filteredEntries.length !== entries.length
                 ? `${filteredEntries.length} of ${entries.length}`
@@ -786,8 +789,8 @@ export function ListView({
                 : hasFilters
                   ? "No events match these filters"
                   : myShiftsOnly
-                    ? "No shifts assigned"
-                    : "No events found"
+                    ? "No shifts yet"
+                    : "Nothing on the schedule yet"
             }
             description={
               activeQueueMeta
@@ -795,8 +798,10 @@ export function ListView({
                 : hasFilters
                   ? "Try adjusting or clearing filters to see more of the schedule."
                   : myShiftsOnly
-                    ? "You don't have shift assignments in this timeline."
-                    : "No schedule events are available. Check Settings > Calendar Sources to add an ICS feed."
+                    ? "Shifts you\u2019re scheduled on show up here. Until then, the full schedule shows what\u2019s coming up."
+                    : isStaff
+                      ? "No schedule events are available. Check Settings > Calendar Sources to add an ICS feed."
+                      : "Events show up here once the team adds them."
             }
             actionLabel={
               activeQueueMeta
@@ -805,10 +810,10 @@ export function ListView({
                   ? "Clear filters"
                   : myShiftsOnly
                     ? "Show all events"
-                    : "Calendar Sources"
+                    : isStaff ? "Calendar Sources" : undefined
             }
             actionHref={
-              activeQueueMeta || hasFilters || myShiftsOnly
+              activeQueueMeta || hasFilters || myShiftsOnly || !isStaff
                 ? undefined
                 : "/settings/calendar-sources"
             }
@@ -894,6 +899,7 @@ export function ListView({
                             onPostTrade={isStaff ? undefined : openTradeDialog}
                             onCancelTrade={isStaff ? undefined : handleCancelTrade}
                             canClaim={!isStaff}
+                            canReview={canReviewClaims}
                             onClaimed={loadData}
                             onSetupCrew={isStaff ? onSetupCrew : undefined}
                             onQuickManageCrew={isStaff ? onQuickManageCrew : undefined}
@@ -1001,19 +1007,24 @@ export function ListView({
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground flex gap-2 flex-wrap pl-5">
-                    <span>
-                      {entry.allDay
-                        ? formatCalendarEventDateRange(entry)
-                        : formatDateShort(entry.startsAt, entry.allDay)}
-                    </span>
-                    {entry.sportCode && (
-                      <span>{sportLabel(entry.sportCode)}</span>
+                  {/* The day header above already carries the date, and the title the sport. */}
+                  <div className="text-xs text-muted-foreground flex items-center gap-x-2 gap-y-1 flex-wrap pl-5">
+                    {entry.allDay && (
+                      <span>{formatCalendarEventDateRange(entry)}</span>
                     )}
+                    <span className="inline-flex items-center gap-1.5">
+                      {entry.sportCode && (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: sportDotColor(entry.sportCode) ?? undefined }}
+                        />
+                      )}
+                      {venueTone.label}
+                    </span>
                     {titleParts.detail && (
                       <span>{titleParts.detail}</span>
                     )}
-                    <span>{venueTone.label}</span>
                     {(entry.combinedEventCount ?? 0) > 1 && (
                       <span>{entry.combinedEventCount} events · shared crew</span>
                     )}
@@ -1066,6 +1077,10 @@ export function ListView({
                       {cardSummary}
                     </div>
                   )}
+
+                  <div className="px-4 empty:hidden">
+                    <EntryPendingReview entry={entry} canReview={canReviewClaims} onReviewed={loadData} />
+                  </div>
 
                   {isStaff && (Boolean(entry.shiftGroupId) || onSetupCrew || onHideEvent) && (
                     <div className="absolute right-2 top-2">

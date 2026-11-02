@@ -66,10 +66,9 @@ export function SettingsCommand({ visibleSections }: { visibleSections: Readonly
         size="sm"
         onClick={() => setOpen(true)}
         className="size-10 text-muted-foreground sm:w-auto sm:px-3"
-        aria-label="Search settings"
       >
         <SearchIcon data-icon="inline-start" />
-        <span className="hidden sm:inline">Search settings</span>
+        <span className="sr-only sm:not-sr-only">Search settings</span>
         <kbd className="ml-2 hidden md:inline-flex items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono">
           ⌘K
         </kbd>

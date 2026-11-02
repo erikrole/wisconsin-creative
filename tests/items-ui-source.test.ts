@@ -8,8 +8,8 @@ describe("Items design-language contracts", () => {
     const facetedFilter = source("src/app/(app)/items/faceted-filter.tsx");
     const columns = source("src/app/(app)/items/columns.tsx");
 
-    expect(toolbar.match(/<ToggleGroupItem[^>]+className="h-10 px-3 text-xs"/g)).toHaveLength(4);
-    expect(toolbar).not.toContain('className="h-9 px-3 text-xs"');
+    expect(toolbar).toContain('aria-label="Item type"');
+    expect(toolbar.match(/<SelectTrigger className="h-10 /g)).toHaveLength(2);
     expect(toolbar).toContain('<Label htmlFor="show-accessories" className="flex h-10 cursor-pointer');
     expect(facetedFilter).toContain('className="h-10 border-dashed"');
     expect(facetedFilter).not.toContain('className="h-9 border-dashed"');

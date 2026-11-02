@@ -236,7 +236,7 @@ export default function ItemInfoCard({
             onSave={(v) => saveField("assetTag", v)}
           />
           <TextInputField
-            label="Product Name"
+            label="Product name"
             value={asset.name || ""}
             placeholder="Add product name"
             canEdit={canEdit}
@@ -265,7 +265,7 @@ export default function ItemInfoCard({
             warnDuplicate={{ field: "serialNumber", assetId: asset.id }}
           />
           <TextInputField
-            label="UW Asset Tag"
+            label="UW asset tag"
             value={asset.metadata?.uwAssetTag || ""}
             placeholder="Add UW asset tag"
             canEdit={canEdit}
@@ -318,7 +318,7 @@ export default function ItemInfoCard({
               }}
             />
             <SaveableNativeSelectField
-              label="Fiscal Year"
+              label="Fiscal year"
               value={asset.metadata?.fiscalYearPurchased || ""}
               options={getFiscalYearOptions()}
               placeholder="Select fiscal year"
