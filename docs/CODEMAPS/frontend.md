@@ -197,7 +197,7 @@
 | `src/components/TradeBoard.tsx` | 940 |
 | `src/components/BookingListPage.tsx` | 933 |
 | `src/components/EquipmentPicker.tsx` | 898 |
-| `src/components/Sidebar.tsx` | 803 |
+| `src/components/Sidebar.tsx` | 804 |
 | `src/components/ShiftDetailPanel.tsx` | 799 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |

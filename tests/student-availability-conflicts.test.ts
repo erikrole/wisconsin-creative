@@ -295,4 +295,25 @@ describe("inherited all-day windows", () => {
       { kind: "AD_HOC", date: "2026-11-15", startsAt: "09:00", endsAt: "10:00" },
     ], { startsAt: new Date("2026-11-14T00:00:00.000Z"), endsAt: new Date("2026-11-16T00:00:00.000Z") })).not.toBeNull();
   });
+  it("keeps the all-day shortcut on a fall-back date instead of splitting the day at the offset change", () => {
+    // All-day Sunday 2026-11-01 (clocks fall back at 2:00 that morning), stored as UTC midnights.
+    const fallBackSunday = { startsAt: new Date("2026-11-01T00:00:00.000Z"), endsAt: new Date("2026-11-02T00:00:00.000Z") };
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "01:00", endsAt: "02:00", label: "Sunday early" },
+    ], fallBackSunday)).not.toBeNull();
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "22:00", endsAt: "23:00" },
+    ], fallBackSunday)).not.toBeNull();
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 6, startsAt: "19:00", endsAt: "21:00", label: "Saturday night" },
+    ], fallBackSunday)).toBeNull();
+  });
+
+  it("splits a timed call that crosses the fall-back midnight into both Madison days", () => {
+    // Saturday 23:00 CDT to Sunday 02:30 CST (clocks repeat 01:00-02:00).
+    const window = { startsAt: new Date("2026-11-01T04:00:00.000Z"), endsAt: new Date("2026-11-01T08:30:00.000Z") };
+    expect(findAvailabilityConflict([{ kind: "WEEKLY", dayOfWeek: 6, startsAt: "23:30", endsAt: "23:45" }], window)).not.toBeNull();
+    expect(findAvailabilityConflict([{ kind: "WEEKLY", dayOfWeek: 0, startsAt: "01:30", endsAt: "01:45" }], window)).not.toBeNull();
+    expect(findAvailabilityConflict([{ kind: "WEEKLY", dayOfWeek: 0, startsAt: "02:30", endsAt: "03:00" }], window)).toBeNull();
+  });
 });

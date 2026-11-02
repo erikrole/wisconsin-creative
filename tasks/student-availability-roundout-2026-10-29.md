@@ -4,7 +4,7 @@
 
 User requested end-to-end student entry, staff review and scheduling accuracy, and explicitly required preserving Claude's uncommitted paint roller feature.
 Owners: `docs/BRIEF_STUDENT_AVAILABILITY_V1.md`, `docs/AREA_SHIFTS.md`, `docs/AREA_USERS.md`, `docs/AREA_MOBILE.md`.
-Preserve Student scheduling-class ownership, Staff/Admin time-off review, ordinary advisory conflicts and approved-time-off blocking. Initial slice had no schema or publication changes; the explicitly authorized preview follow-up below adds migration 0208 and a PR-owned preview.
+Preserve Student scheduling-class ownership, Staff/Admin time-off review, ordinary advisory conflicts and approved-time-off blocking. Initial slice had no schema or publication changes; the explicitly authorized preview follow-up below adds migration 0213 and a PR-owned preview.
 
 ## Source and preservation
 
@@ -39,7 +39,7 @@ Preserve Student scheduling-class ownership, Staff/Admin time-off review, ordina
 ## Remaining acceptance and next bounded slice
 
 - [ ] Authenticated student entry → staff review → persisted Schedule conflict readback and in-app notification delivery in the authorized branch-owned preview. Real PostgreSQL rollback/concurrency now passes; managed preview creation awaits this PR and CI. No other branch’s environment or production credentials were used.
-- [x] Durable create idempotency (follow-up): each mounted web/native create form retains a request UUID; migration 0208 records its actor, normalized payload hash and created IDs in the same transaction. Lost/concurrent retries return current entries once; changed payloads/deleted entries return 409. Older clients without the key retain legacy behavior. Six real-PostgreSQL regressions passed.
+- [x] Durable create idempotency (follow-up): each mounted web/native create form retains a request UUID; migration 0213 records its actor, normalized payload hash and created IDs in the same transaction. Lost/concurrent retries return current entries once; changed payloads/deleted entries return 409. Older clients without the key retain legacy behavior. Six real-PostgreSQL regressions passed.
 - [ ] Native authenticated edit/review handoff and distribution. The offline screenshot test proves layout/decoding, not live persistence, push or a released binary. Native stale-conflict recovery has build/source-contract proof, not a simulated HTTP 409 interaction.
 
 Current next step: complete the authorized branch-owned preview acceptance below. Production merge/deployment are not authorized.

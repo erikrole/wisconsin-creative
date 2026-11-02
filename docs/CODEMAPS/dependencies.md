@@ -137,6 +137,7 @@
 - `smoke:deploy`: `node scripts/deploy-smoke.mjs`
 - `start`: `node scripts/run-next.mjs start`
 - `test`: `vitest run`
+- `test:a11y`: `playwright test -c playwright.a11y.config.ts`
 - `test:browser`: `playwright test -c playwright.gear.config.ts && playwright test -c playwright.onboarding.config.ts && playwright test -c playwright.schedule.config.ts && playwright test -c playwright.labels.config.ts`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:flows`: `node scripts/test-e2e-flows.mjs`

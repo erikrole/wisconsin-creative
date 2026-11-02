@@ -782,10 +782,8 @@ export default function UserAvailabilityTab({
               Add recurring class times first, then record one-off days or ranges away. Use Madison time (Central). Staff sets the final call window; approved time off blocks scheduling.
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Button variant="ghost" className="h-10" onClick={reload} disabled={deleting !== null || reviewing !== null}>Refresh</Button>
           {canEdit && !showForm && !editing && (
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
               <Button variant="outline" className="h-10" onClick={() => openNewForm("WEEKLY")}>
                 <PlusIcon className="size-3.5" />
                 Add class time
@@ -796,7 +794,6 @@ export default function UserAvailabilityTab({
               </Button>
             </div>
           )}
-          </div>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">

@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-02",
+    "title": "Safer availability saves and time-off review",
+    "type": "improvement",
+    "summary": "Paint a week of class times and save it in one go, with safe retries if the connection drops. Staff approve or deny time off with a short note the student can read, and past terms move to History.",
+    "details": [
+      "Painted weekdays save together; retrying a failed save never creates duplicate entries.",
+      "Staff see pending time off at the top of a student's Availability tab and can approve or deny it with a note to the student.",
+      "A student's edit of time off sends it back for review. Editing an entry someone else just changed asks you to reopen it first.",
+      "Past dates, ended terms and denied requests live under History on web and in the iPhone app, and all times are Madison time.",
+      "Availability checks now cover overnight calls, all-day events and the daylight-saving change."
+    ],
+    "pr": 735,
+    "platforms": [
+      "Web",
+      "iOS"
+    ]
+  },
+  {
     "date": "2026-11-01",
     "title": "Keyboard and screen-reader pass",
     "type": "improvement",
@@ -256,23 +274,6 @@
     "pr": 734,
     "platforms": [
       "Web"
-    ]
-  },
-  {
-    "date": "2026-10-29",
-    "title": "Availability saves and reviews stay clear",
-    "type": "improvement",
-    "summary": "Paint a week of unavailable time and save it together, with safe retries if the connection drops. Staff can review time off with a note, while students can see current entries and history.",
-    "details": [
-      "Retrying a failed save keeps the same request and avoids duplicate entries.",
-      "Staff decisions show a note; student edits send time off back for review.",
-      "Past dates and ended terms stay in History instead of current scheduling totals.",
-      "Availability checks cover overnight calls and daylight-saving changes."
-    ],
-    "pr": 735,
-    "platforms": [
-      "Web",
-      "iOS"
     ]
   },
   {
