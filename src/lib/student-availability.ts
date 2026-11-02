@@ -1,4 +1,5 @@
 import { isFullDayBoundaryWindow } from "@/lib/shift-call-windows";
+import { availabilityDateKey } from "@/lib/student-availability-display";
 
 const TZ = process.env.INSTITUTION_TZ ?? "America/Chicago";
 
@@ -87,7 +88,7 @@ function toLocalParts(dt: Date): { dayOfWeek: number; date: string; hhmm: string
 function dateOnly(value: Date | string | null | undefined): string | null {
   if (!value) return null;
   if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
+    return availabilityDateKey(value);
   }
   return value.slice(0, 10);
 }
@@ -142,73 +143,98 @@ function formatConflictNote(block: AvailabilityBlockLike, intent = blockIntent(b
   return label ? `Conflicts with ${label} (${detail})` : `Conflicts with ${fallback} ${detail}`;
 }
 
-type LocalSegment = { date: string; dayOfWeek: number; from: string; to: string };
+type LocalWindow = { date: string; dayOfWeek: number; startsAt: string; endsAt: string };
 
 function nextDate(date: string): string {
-  return dateOnly(new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000))!;
+  return availabilityDateKey(new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000));
 }
 
 /**
- * Split a window into the local calendar days it touches, each with the
+ * Split a window into the Madison calendar days it touches, each with the
  * wall-clock range covered on that day. A game that runs past midnight is
- * two segments, so a block late on the second day still counts.
+ * two pieces, so a block late on the second day still counts.
  */
-function toLocalSegments(window: AvailabilityWindow): LocalSegment[] {
+function localWindows(window: AvailabilityWindow): LocalWindow[] {
+  const result: LocalWindow[] = [];
+  const endMs = window.endsAt.getTime();
+  if (!Number.isFinite(window.startsAt.getTime()) || !Number.isFinite(endMs) || window.startsAt.getTime() >= endMs) return result;
   // An inherited all-day window is stored as UTC midnights (the all-day
   // CalendarEvent convention), which reads as the previous evening in
   // Madison. It means "those whole dates", not a clock range.
   if (isFullDayBoundaryWindow({ startsAt: window.startsAt.toISOString(), endsAt: window.endsAt.toISOString() })) {
-    const segments: LocalSegment[] = [];
-    const last = dateOnly(window.endsAt)!;
-    for (let date = dateOnly(window.startsAt)!; date < last; date = nextDate(date)) {
-      segments.push({ date, dayOfWeek: new Date(`${date}T00:00:00Z`).getUTCDay(), from: "00:00", to: "24:00" });
+    const last = availabilityDateKey(window.endsAt);
+    for (let date = availabilityDateKey(window.startsAt); date < last; date = nextDate(date)) {
+      result.push({ date, dayOfWeek: new Date(`${date}T00:00:00Z`).getUTCDay(), startsAt: "00:00:00.000", endsAt: "24:00:00.000" });
     }
-    return segments;
+    return result;
   }
-  const start = toLocalParts(window.startsAt);
-  const end = toLocalParts(window.endsAt);
-  if (start.date >= end.date) {
-    return [{ date: start.date, dayOfWeek: start.dayOfWeek, from: start.hhmm, to: end.hhmm }];
+  const minute = 60_000;
+  const day = 86_400_000;
+  const offsetAt = (ms: number) => {
+    const parts = toLocalParts(new Date(ms));
+    return Date.parse(`${parts.date}T${parts.hhmm}:00Z`) - Math.floor(ms / minute) * minute;
+  };
+  // Split at offset changes before comparing wall clocks. This preserves both
+  // occurrences of a repeated fall-back hour and skips nonexistent spring time.
+  for (let cursor = window.startsAt.getTime(); cursor < endMs;) {
+    const offset = offsetAt(cursor);
+    let boundary = Math.min(cursor + day, endMs);
+    if (offsetAt(boundary - 1) !== offset) {
+      let low = cursor;
+      let high = boundary - 1;
+      while (high - low > 1) {
+        const middle = Math.floor((low + high) / 2);
+        if (offsetAt(middle) === offset) low = middle;
+        else high = middle;
+      }
+      boundary = high;
+    }
+    let localStart = cursor + offset;
+    const localEnd = boundary + offset;
+    while (localStart < localEnd) {
+      const nextDay = Math.floor(localStart / day) * day + day;
+      const stop = Math.min(nextDay, localEnd);
+      const start = new Date(localStart);
+      // Keep seconds so a call beginning just before a minute boundary still overlaps.
+      result.push({
+        date: availabilityDateKey(start),
+        dayOfWeek: start.getUTCDay(),
+        startsAt: start.toISOString().slice(11, 23),
+        endsAt: stop === nextDay ? "24:00:00.000" : new Date(stop).toISOString().slice(11, 23),
+      });
+      localStart = stop;
+    }
+    cursor = boundary;
   }
-  const segments: LocalSegment[] = [{ date: start.date, dayOfWeek: start.dayOfWeek, from: start.hhmm, to: "24:00" }];
-  for (let date = nextDate(start.date); date < end.date; date = nextDate(date)) {
-    segments.push({ date, dayOfWeek: new Date(`${date}T00:00:00Z`).getUTCDay(), from: "00:00", to: "24:00" });
-  }
-  segments.push({ date: end.date, dayOfWeek: end.dayOfWeek, from: "00:00", to: end.hhmm });
-  return segments;
+  return result;
 }
 
-function overlapsAvailabilityBlock(block: AvailabilityBlockLike, segments: LocalSegment[]) {
-  if (block.kind === "AD_HOC") {
-    const blockStart = dateOnly(block.date);
-    const blockEnd = dateOnly(block.dateEndsOn) ?? blockStart;
-    if (!blockStart || !blockEnd) return false;
-
-    // A dated range is inclusive. All-day ranges intentionally ignore the
-    // stored canonical 00:00–23:59 wall-clock values so a full-day trip still
-    // conflicts with any call window on any covered date.
-    const covered = segments.filter((segment) => segment.date >= blockStart && segment.date <= blockEnd);
-    if (covered.length === 0) return false;
-    if (block.allDay) return true;
-    return covered.some((segment) => timeOverlaps(segment.from, segment.to, block.startsAt, block.endsAt));
-  }
-
-  return segments.some((segment) =>
-    segment.dayOfWeek === block.dayOfWeek
-    && timeOverlaps(segment.from, segment.to, block.startsAt, block.endsAt)
-    && isWithinDateBounds(segment.date, block)
-  );
+function overlapsAvailabilityBlock(block: AvailabilityBlockLike, windows: LocalWindow[]) {
+  return windows.some((window) => {
+    if (block.kind === "AD_HOC") {
+      const first = dateOnly(block.date);
+      const last = dateOnly(block.dateEndsOn) ?? first;
+      if (!first || !last || window.date < first || window.date > last) return false;
+      // A dated range is inclusive. All-day ranges intentionally ignore the
+      // stored canonical 00:00-23:59 wall-clock values so a full-day trip still
+      // conflicts with any call window on any covered date.
+      if (block.allDay) return true;
+    } else if (block.dayOfWeek !== window.dayOfWeek || !isWithinDateBounds(window.date, block)) {
+      return false;
+    }
+    return timeOverlaps(window.startsAt, window.endsAt, `${block.startsAt}:00.000`, `${block.endsAt}:00.000`);
+  });
 }
 
 export function evaluateAvailabilityPreferences(
   blocks: AvailabilityBlockLike[],
   window: AvailabilityWindow,
 ): AvailabilityPreferenceEvaluation {
-  const segments = toLocalSegments(window);
+  const windows = localWindows(window);
   const conflicts: AvailabilityConflict[] = [];
 
   for (const block of blocks) {
-    if (!overlapsAvailabilityBlock(block, segments)) continue;
+    if (!overlapsAvailabilityBlock(block, windows)) continue;
     const intent = blockIntent(block);
     const status = blockStatus(block);
     if (status === "DENIED") continue;

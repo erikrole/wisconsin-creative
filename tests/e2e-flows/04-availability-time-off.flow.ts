@@ -16,8 +16,8 @@ test("student files class time and time off; admin approves; approved time off b
   await test.step("the student files time off on their own Availability tab", async () => {
     await teammatePage.goto(`/staff/${teammate.id}`);
     await teammatePage.getByRole("tab", { name: "Availability" }).click();
-    await clickOpens(teammatePage.getByRole("button", { name: "Add day away" }), teammatePage.getByRole("combobox", { name: "Intent" }));
-    await teammatePage.getByRole("combobox", { name: "Intent" }).click();
+    await clickOpens(teammatePage.getByRole("button", { name: "Add day away" }), teammatePage.getByRole("combobox", { name: "Availability" }));
+    await teammatePage.getByRole("combobox", { name: "Availability" }).click();
     await teammatePage.getByRole("option", { name: "Time off" }).click();
     await expect(teammatePage.getByRole("combobox", { name: "Type" })).toHaveText("One-time day or range");
     await teammatePage.getByRole("textbox", { name: "From" }).fill(from);
@@ -31,7 +31,7 @@ test("student files class time and time off; admin approves; approved time off b
     await expect(teammatePage.getByText("Pending time off", { exact: true })).toBeVisible();
     await expect(teammatePage.getByText("Trip home", { exact: true })).toBeVisible();
     // Students do not review their own requests.
-    await expect(teammatePage.getByRole("button", { name: "Approve time off" })).toHaveCount(0);
+    await expect(teammatePage.getByRole("button", { name: "Approve", exact: true })).toHaveCount(0);
     const api = await apiAs(playwright, "teammate");
     const forbidden = await api.post(`/api/users/${seed.users.student.id}/availability`, {
       data: { kind: "AD_HOC", intent: "TIME_OFF", date: from, allDay: true, startsAt: "00:00", endsAt: "23:59" },
@@ -44,7 +44,7 @@ test("student files class time and time off; admin approves; approved time off b
     await adminPage.goto(`/staff/${teammate.id}`);
     await adminPage.getByRole("tab", { name: "Availability" }).click();
     await expect(adminPage.getByText("Pending time off", { exact: true })).toBeVisible();
-    await adminPage.getByRole("button", { name: "Approve time off" }).click();
+    await adminPage.getByRole("button", { name: "Approve", exact: true }).click();
     await expect(adminPage.getByText("Pending time off", { exact: true })).toHaveCount(0);
     await expect(adminPage.getByText(/Approved time off/).first()).toBeVisible();
     const { data: blocks } = await json((await apiAs(playwright, "admin")).get(`/api/users/${teammate.id}/availability`));

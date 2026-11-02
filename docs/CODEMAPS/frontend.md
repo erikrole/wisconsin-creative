@@ -197,7 +197,7 @@
 | `src/components/TradeBoard.tsx` | 940 |
 | `src/components/BookingListPage.tsx` | 933 |
 | `src/components/EquipmentPicker.tsx` | 898 |
-| `src/components/Sidebar.tsx` | 803 |
+| `src/components/Sidebar.tsx` | 804 |
 | `src/components/ShiftDetailPanel.tsx` | 799 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/BookingDetailsSheet.tsx` | 728 |
@@ -218,7 +218,7 @@
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/shift-detail/crew-row.tsx` | 334 |
 | `src/components/public-showroom/ReleasesFeed.tsx` | 314 |
-| `src/components/NotificationsPopover.tsx` | 306 |
+| `src/components/availability/cant-work-forms.tsx` | 308 |
 
 ## Hooks
 

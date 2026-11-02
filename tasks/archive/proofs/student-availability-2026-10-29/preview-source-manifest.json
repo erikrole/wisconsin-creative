@@ -1,0 +1,20 @@
+{
+  "ios/Wisconsin/App/PerformanceTestHarness.swift": "20f6da41079fcbed302de7135507e89bf7396203b448951c11088d25dce513c4",
+  "ios/Wisconsin/Core/APIClient+Bookings.swift": "31b4b14ba358496b81a61d333733ba398ef516768e47a4000d1a93c729bde301",
+  "ios/Wisconsin/Models/ScheduleModels.swift": "da1f133c75857885cc0e706bf6df66617147c1d98e493e548de0f8e1e640701f",
+  "ios/Wisconsin/Views/AvailabilityView.swift": "f308ee9cc76449e5e7d57f6a8d9f2af32852777b677980692fd165597f2bb08b",
+  "src/app/(app)/staff/[id]/UserAvailabilityTab.tsx": "c30b6a837f1cad8eae1be79726f2435a1f943138c11254a3aac58773e911c76a",
+  "src/app/api/users/[id]/availability/[blockId]/route.ts": "713df7421832365a48639389dabc11c44b9ff18b7434687b07f3d4b59f4bb38b",
+  "src/app/api/users/[id]/availability/_shared.ts": "2d32466da305e889f2fc7e85eec84197638562c2904bcaa66e3f7c876dd02d4d",
+  "src/app/api/users/[id]/availability/route.ts": "b6aec54d601ddb1c737eba08d986335f3ab2e9a2a65bcb0a2daee610fe4fdc6d",
+  "src/app/globals.css": "5f276b0bbd5811beb65b9ac0b7138fe701c1daa25b7e4c66f38cc49cbdaa7bee",
+  "src/components/availability/CantWorkDialog.tsx": "8cb448512d0f7b620e4e37f9181af578221ad9840522792f0ae7430fa56e24a0",
+  "src/components/availability/PaintWeek.tsx": "793491af8e0a5f2136f57e62e5703cd3f535b38f30916e0dc2362a7884ba0600",
+  "src/components/availability/cant-work-forms.tsx": "5ca35ee6971a1c33786e5a64340ce826929c2083259de7aab15163f95cb67309",
+  "src/lib/permissions.ts": "4cbb354a3a68b327ae063bc07d9e124b1beeca86da4e60cc7294f688cac00e3c",
+  "src/lib/student-availability-display.ts": "974a66bd97c7d25edbacf571fa2f7c7ed9ab555458b9d2ae8eafd69cc0c1a652",
+  "src/lib/student-availability.ts": "ce72fcbab2aba0e9c37014a3742a54e66ef429f1e153afa7919a6e9efc3a0544",
+  "src/lib/unavailable-times.ts": "f8d5b0923e05867cc92b7ee7d559dac3a127ef583a0d7a7fd1fc43b84075cfd3",
+  "prisma/schema.prisma": "c14c33d83e31f9a9ae9112be81439f95d7d1d6c59c90cfc3392d8d23a180899c",
+  "prisma/migrations/0213_student_availability_saves/migration.sql": "42a7a1083d3c162b46bec6540896ab071538b953b21eca54b4818608d0709453"
+}

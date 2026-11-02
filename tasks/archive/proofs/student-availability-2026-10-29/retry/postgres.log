@@ -1,0 +1,15 @@
+
+> creative-ops@2026.04.08.1 test:postgres
+> node scripts/test-onboarding-postgres.mjs
+
+Disposable PostgreSQL: current Prisma schema; Unix socket only.
+
+ RUN  v5.0.5 /Users/role/.codex/worktrees/student-availability/wisconsin-creative
+
+
+ Test Files  3 passed (3)
+      Tests  19 passed (19)
+   Start at  13:51:41
+   Duration  4.24s (tests 85%, import 12%, transform 3%)
+
+Disposable cluster stopped and removed.

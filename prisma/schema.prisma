@@ -304,6 +304,7 @@ model User {
   resourceAssetUploads          ResourceAssetUpload[]            @relation("ResourceAssetUploadActor")
   resourceAssetFavorites        ResourceAssetFavorite[]          @relation("ResourceAssetFavoriteUser")
   availabilityBlocks            StudentAvailabilityBlock[]
+  availabilitySaves             StudentAvailabilitySave[]
   availabilityReviewed          StudentAvailabilityBlock[]       @relation("AvailabilityReviewer")
   travelMemberships             EventTravelMember[]              @relation("TravelMembers")
   badges                        StudentBadge[]
@@ -2496,6 +2497,19 @@ model ShiftTrade {
   @@index([postedByUserId])
   @@index([claimedByUserId])
   @@map("shift_trades")
+}
+
+/// A committed create request. Retained after block deletion so a retry cannot recreate it.
+model StudentAvailabilitySave {
+  actorId     String   @map("actor_id")
+  requestId   String   @map("request_id") @db.Uuid
+  payloadHash String   @map("payload_hash")
+  blockIds    String[] @default([]) @map("block_ids")
+  createdAt   DateTime @default(now()) @map("created_at")
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@id([actorId, requestId])
+  @@map("student_availability_saves")
 }
 
 model StudentAvailabilityBlock {

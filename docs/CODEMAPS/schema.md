@@ -135,7 +135,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 147
+Fields: 148
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -229,6 +229,7 @@ Fields: 147
 - `resourceAssetUploads          ResourceAssetUpload[]            @relation("ResourceAssetUploadActor")`
 - `resourceAssetFavorites        ResourceAssetFavorite[]          @relation("ResourceAssetFavoriteUser")`
 - `availabilityBlocks            StudentAvailabilityBlock[]`
+- `availabilitySaves             StudentAvailabilitySave[]`
 - `availabilityReviewed          StudentAvailabilityBlock[]       @relation("AvailabilityReviewer")`
 - `travelMemberships             EventTravelMember[]              @relation("TravelMembers")`
 - `badges                        StudentBadge[]`
@@ -2550,6 +2551,22 @@ Indexes and constraints:
 - `@@index([postedByUserId])`
 - `@@index([claimedByUserId])`
 - `@@map("shift_trades")`
+
+## Model `StudentAvailabilitySave`
+
+Fields: 6
+
+- `actorId     String   @map("actor_id")`
+- `requestId   String   @map("request_id") @db.Uuid`
+- `payloadHash String   @map("payload_hash")`
+- `blockIds    String[] @default([]) @map("block_ids")`
+- `createdAt   DateTime @default(now()) @map("created_at")`
+- `actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@id([actorId, requestId])`
+- `@@map("student_availability_saves")`
 
 ## Model `StudentAvailabilityBlock`
 

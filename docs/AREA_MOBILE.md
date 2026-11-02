@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-23
+- Last Updated: 2026-10-29
 - Status: Active
 - Version: V1
 
@@ -109,6 +109,8 @@ Web Home's local 2026-10-21 layout polish keeps its existing single-column readi
 
 - [x] AC-17 (local): Schedule keeps the first visible day selected when its rows fit in the viewport, including rubber-banding and a return to Today. A genuinely scrolled long list still follows its last visible day at the bottom. Native regression and iPhone 18 Pro Max visual proof are recorded under `tasks/archive/proofs/ios-schedule-week-selection-2026-10-20/`; inclusion in a distributed build remains pending.
 
+- [x] AC-18 (local): My Availability history, review feedback, Madison-time controls and versioned edits are implemented with native build/source-contract proof. Live cross-client persistence and release inclusion are unverified.
+
 ## Dependencies
 - `AREA_DASHBOARD.md`
 - `AREA_CHECKOUTS.md`
@@ -149,6 +151,10 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-10-29: **Duplicate-safe availability saves (preview preparation).** Web and native create forms retain a save UUID; an actor-scoped database receipt replays current saved entries without another create/audit/conflict refresh. Migration `0213_student_availability_saves` and six real-PostgreSQL retry/rollback regressions cover the contract. [Preview acceptance ledger](../tasks/student-availability-roundout-2026-10-29.md).
+
+- 2026-10-29: **My Availability follow-through (local, unreleased).** The existing native List shows current entries separately from History, preserves weekday context and displays staff review notes. Dates and controls use Madison time. Edits send optional `expectedUpdatedAt`; a stale response retains the draft and refreshes the underlying list before cancel/reopen. Student-role copy explains that editing time off submits it for review again. Acceptance: source-contract tests and the required iPhone 18 Pro Max build; offline simulator evidence is after-only, with no authenticated API mutation or distributed-build claim. See the [active ledger](../tasks/student-availability-roundout-2026-10-29.md).
 
 - 2026-10-23: **Native emailed-invite signup prepared locally for PR #620.** The native app accepts the canonical HTTPS inbox link in memory, sends its token through discovery and registration, and offers resend when a link is absent or has expired. Fresh links preserve the same student's entered name/password and supersede older discovery/error results. An existing session requires explicit sign-out. Invite emails retain a browser-owned primary action (`web=1`) and raw fallback for installed 1.4 clients; native setup is an explicit secondary action for the updated app. Source/build/fixture evidence is recorded in `tasks/archive/native-invite-pr620-2026-10-23.md`. This is not included in the released 1.4 (36); live inbox, device association/CDN, shared-backend mutation and distribution remain separate gates.
 

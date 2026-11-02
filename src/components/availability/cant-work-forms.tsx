@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { PaintRollerIcon } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,11 @@ import { WEEK_DAYS, defaultWeeklyEndsOn, localToday, type BlockedRange } from "@
  * scheduling and the staff Availability tab read them unchanged.
  */
 
-async function postUnavailable(userId: string, body: Record<string, unknown>) {
+async function postUnavailable(userId: string, body: Record<string, unknown>, requestId: string) {
   const res = await fetch(`/api/users/${userId}/availability`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ intent: "CANNOT_WORK", ...body }),
+    body: JSON.stringify({ intent: "CANNOT_WORK", ...body, requestId }),
   });
   if (handleAuthRedirect(res)) return false;
   if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not save that"));
@@ -51,7 +51,7 @@ function FormShell({
 }) {
   return (
     <form onSubmit={onSubmit} className={cn("flex flex-col gap-5", !bare && "rounded-2xl border border-[var(--border)] bg-card p-5")} aria-label={title}>
-      {children}
+      <fieldset disabled={saving} className="flex min-w-0 flex-col gap-5">{children}</fieldset>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" className="h-11" onClick={onCancel} disabled={saving}>
           Cancel
@@ -117,32 +117,33 @@ export function WeeklyForm({ userId, onSaved, onCancel }: { userId: string; onSa
   const [endsAt, setEndsAt] = useState("10:45");
   const [endsOn, setEndsOn] = useState(defaultWeeklyEndsOn);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const requestId = useRef<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [paintMode, setPaintMode] = useState(false);
   const canSave = days.length > 0 && startsAt < endsAt && !saving;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSave) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
+    setSaveError(null);
     setSaving(true);
-    let count = 0;
     try {
-      for (const dayOfWeek of days) {
-        if (!(await postUnavailable(userId, { kind: "WEEKLY", dayOfWeek, startsAt, endsAt, label: label.trim() || undefined, semesterEndsOn: endsOn || null }))) return;
-        count += 1;
-      }
+      if (!(await postUnavailable(userId, { kind: "WEEKLY", daysOfWeek: days, startsAt, endsAt, label: label.trim() || undefined, semesterEndsOn: endsOn || null }, requestId.current ??= crypto.randomUUID()))) return;
       toast.success(`Added ${label.trim() || "weekly time"}`);
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save that");
-      // Some days may have saved; show what's there rather than guess.
-      if (count > 0) onSaved();
+      setSaveError(err instanceof Error ? err.message : "Could not save that");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
 
   return (
     <FormShell title="Add something weekly" saving={saving} canSave={canSave} onCancel={onCancel} onSubmit={save}>
+      {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={nameId}>What is it?</Label>
         <Input id={nameId} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="COMM 201, job at the Union" maxLength={80} className="h-11" autoFocus />
@@ -165,7 +166,7 @@ export function WeeklyForm({ userId, onSaved, onCancel }: { userId: string; onSa
         </div>
         {paintMode && (
           <div className="mb-2 flex flex-col gap-1.5">
-            <PaintWeek days={days} startsAt={startsAt} endsAt={endsAt} onPaint={(next) => { setDays(next.days); setStartsAt(next.startsAt); setEndsAt(next.endsAt); }} />
+            <PaintWeek days={days} startsAt={startsAt} endsAt={endsAt} onPaint={(next) => { if (savingRef.current) return; setDays(next.days); setStartsAt(next.startsAt); setEndsAt(next.endsAt); }} />
             <p className="text-sm text-[var(--text-secondary)]">Drag across the days and hours you can&apos;t work.</p>
           </div>
         )}
@@ -196,7 +197,7 @@ export function WeeklyForm({ userId, onSaved, onCancel }: { userId: string; onSa
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={endId}>Repeats until</Label>
         <Input id={endId} type="date" value={endsOn} min={localToday()} onChange={(e) => setEndsOn(e.target.value)} className="h-11" />
-        <p className="text-sm text-[var(--text-secondary)]">Usually the end of the term. After this it stops blocking shifts.</p>
+        <p className="text-sm text-[var(--text-secondary)]">Usually the end of the term. Times use Madison time (Central).</p>
       </div>
     </FormShell>
   );
@@ -225,12 +226,17 @@ export function AwayForm({ userId, onSaved, onCancel, initialFrom, bare }: AwayF
   const [startsAt, setStartsAt] = useState("09:00");
   const [endsAt, setEndsAt] = useState("17:00");
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const requestId = useRef<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const datesValid = Boolean(from) && (!through || through >= from);
   const canSave = datesValid && (allDay || startsAt < endsAt) && !saving;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSave) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
+    setSaveError(null);
     setSaving(true);
     try {
       const range: BlockedRange = {
@@ -248,19 +254,21 @@ export function AwayForm({ userId, onSaved, onCancel, initialFrom, bare }: AwayF
         startsAt: range.startsAt,
         endsAt: range.endsAt,
         label: label.trim() || undefined,
-      });
+      }, requestId.current ??= crypto.randomUUID());
       if (!ok) return;
       toast.success(`Added ${label.trim() || "days away"}`);
       onSaved(range);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save that");
+      setSaveError(err instanceof Error ? err.message : "Could not save that");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
 
   return (
     <FormShell title="Add days away" saving={saving} canSave={canSave} bare={bare} saveLabel={bare ? "Add" : "Save"} onCancel={onCancel} onSubmit={save}>
+      {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={nameId}>What for?</Label>
         <Input id={nameId} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Trip home, exam, other job" maxLength={80} className="h-11" autoFocus={!bare} />

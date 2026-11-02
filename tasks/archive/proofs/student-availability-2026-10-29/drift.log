@@ -1,0 +1,5 @@
+
+> creative-ops@2026.04.08.1 drift:ios
+> bash scripts/ios-drift-check.sh
+
+✓ ios-drift-check: no anti-patterns found across 142 swift files

@@ -106,7 +106,7 @@ export function CantWorkDialog({ userId, open, onOpenChange, initialFrom, onSave
           <>
             <DialogHeader className="flex-col items-start gap-1">
               <DialogTitle>Can’t work some days?</DialogTitle>
-              <DialogDescription>A trip, an exam, another job. We won’t schedule you then.</DialogDescription>
+              <DialogDescription>A trip, an exam, another job. Staff will see these days when scheduling.</DialogDescription>
             </DialogHeader>
             <DialogBody className="pb-6">
               {open && (

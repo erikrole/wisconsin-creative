@@ -17,7 +17,6 @@ const KNOWN_UTC_DAY_SLICES: Record<string, number> = {
   "src/lib/hiring/contract.ts": 1,
   "src/lib/services/budget.ts": 2,
   "src/lib/services/wishlist.ts": 1,
-  "src/lib/student-availability.ts": 1,
   "src/lib/youtube/rules.ts": 2,
 };
 

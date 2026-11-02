@@ -741,6 +741,7 @@ extension APIClient {
 
     func createAvailabilityBlock(
         userId: String,
+        requestId: String? = nil,
         kind: String = "WEEKLY",
         intent: String = "CANNOT_WORK",
         dayOfWeek: Int,
@@ -755,6 +756,7 @@ extension APIClient {
         semesterEndsOn: String? = nil
     ) async throws -> AvailabilityBlock {
         struct Body: Encodable {
+            let requestId: String?
             let kind: String
             let intent: String
             let dayOfWeek: Int?
@@ -770,6 +772,7 @@ extension APIClient {
         }
         var req = request(path: "/api/users/\(userId)/availability", method: "POST")
         req.httpBody = try JSONEncoder().encode(Body(
+            requestId: requestId,
             kind: kind,
             intent: intent,
             dayOfWeek: kind == "WEEKLY" ? dayOfWeek : nil,
@@ -790,6 +793,7 @@ extension APIClient {
     func updateAvailabilityBlock(
         userId: String,
         blockId: String,
+        expectedUpdatedAt: String? = nil,
         kind: String,
         intent: String,
         dayOfWeek: Int,
@@ -804,6 +808,7 @@ extension APIClient {
         semesterEndsOn: String? = nil
     ) async throws -> AvailabilityBlock {
         struct Body: Encodable {
+            let expectedUpdatedAt: String?
             let kind: String
             let intent: String
             let dayOfWeek: Int?
@@ -819,6 +824,7 @@ extension APIClient {
         }
         var req = request(path: "/api/users/\(userId)/availability/\(blockId)", method: "PATCH")
         req.httpBody = try JSONEncoder().encode(Body(
+            expectedUpdatedAt: expectedUpdatedAt,
             kind: kind,
             intent: intent,
             dayOfWeek: kind == "WEEKLY" ? dayOfWeek : nil,

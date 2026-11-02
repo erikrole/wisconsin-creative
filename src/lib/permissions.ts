@@ -187,6 +187,13 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     view: ["ADMIN", "STAFF"],
     manage: ["ADMIN", "STAFF"],
   },
+  student_availability: {
+    view: ["ADMIN", "STAFF", "STUDENT"],
+    create: ["ADMIN", "STAFF", "STUDENT"],
+    edit: ["ADMIN", "STAFF", "STUDENT"],
+    delete: ["ADMIN", "STAFF", "STUDENT"],
+    review: ["ADMIN", "STAFF"],
+  },
   student_sport: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     manage: ["ADMIN", "STAFF"],

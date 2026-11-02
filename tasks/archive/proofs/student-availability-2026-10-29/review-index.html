@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Availability</title>
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Local review · October 29, 2026 · Unreleased</p>
+    <h1>Student Availability</h1>
+    <p class="lede">Keep the paint roller, save a week together, make staff review clear, and use the same availability rules across scheduling and native iOS.</p>
+    <hr class="rule">
+  </header>
+  <div class="stats">
+    <div class="stat">
+      <p class="k">Full unit suite</p>
+      <p class="v">8,475 passed</p>
+      <p class="n">Coverage gates passed; 13 existing skipped tests. Also 19 real PostgreSQL checks.</p>
+    </div>
+    <div class="stat">
+      <p class="k">Painted weekdays</p>
+      <p class="v">1 request</p>
+      <p class="n">One transaction for all selected weekdays, audits and conflict refresh.</p>
+    </div></div>
+
+  <h2>The paint roller stays</h2>
+  <p class="sec-note">Actual preserved Claude baseline and edited source, identical painted days, times, form values and viewport. PaintWeek itself has no diff.</p>
+
+      <section class="pair">
+        <div class="pair-head">
+          <h3>Monday–Friday, 9–10:30 AM</h3>
+          <p></p>
+        </div>
+        <div class="shots">
+          <figure>
+            <span class="tag tag-before">Before</span>
+            <img src="before-paint.png" alt="Monday–Friday, 9–10:30 AM, before">
+            <figcaption>The existing paint interaction.</figcaption>
+          </figure>
+          <figure>
+            <span class="tag tag-after">After</span>
+            <img src="preview-paint.png" alt="Monday–Friday, 9–10:30 AM, after">
+            <figcaption>Same interaction and controls; submission now creates all weekdays together.</figcaption>
+          </figure>
+        </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{
+  &quot;before&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;dc4f328735da42911c6301708b8c1eababc09c05&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;d7adbeeb5b1e17889569fce0e5663561ba9b48860d68759a97017653dbc5d06c&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        1280,
+        1000
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STUDENT&quot;,
+      &quot;route&quot;: &quot;WeeklyForm student entry (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;2e8caaec0e6eca3e69ce43eac1e4b2b41403b62d32f694fb0743f43e0102f783&quot;,
+    &quot;dimensions&quot;: [
+      1280,
+      1000
+    ]
+  },
+  &quot;after&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;7ec52b645f0c62131f43492c5f348b1361b46fd0&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;11d04cf0f7432b1f38244427af122b10ef815e1696cba7757cb6f6659ef92bba&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        1280,
+        1000
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STUDENT&quot;,
+      &quot;route&quot;: &quot;WeeklyForm student entry (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;aa3d4dfb08930829439757dc4123fa979b6f2b793caf159f8ba7f759ae720d29&quot;,
+    &quot;dimensions&quot;: [
+      1280,
+      1000
+    ]
+  }
+}</pre></details>
+      </section>
+
+  <h2>Review requests and keep the current schedule clear</h2>
+  <p class="sec-note">Actual components rendered with matched synthetic data. This is fixture proof, not an authenticated server session.</p>
+
+      <section class="pair">
+        <div class="pair-head">
+          <h3>Staff Availability</h3>
+          <p></p>
+        </div>
+        <div class="shots">
+          <figure>
+            <span class="tag tag-before">Before</span>
+            <img src="before-desktop.png" alt="Staff Availability, before">
+            <figcaption>Past terms and dates mixed with active entries; compact approval icons.</figcaption>
+          </figure>
+          <figure>
+            <span class="tag tag-after">After</span>
+            <img src="preview-desktop.png" alt="Staff Availability, after">
+            <figcaption>Pending requests have visible decisions and an optional note. Current totals exclude history; existing review feedback is readable.</figcaption>
+          </figure>
+        </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{
+  &quot;before&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;dc4f328735da42911c6301708b8c1eababc09c05&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;d7adbeeb5b1e17889569fce0e5663561ba9b48860d68759a97017653dbc5d06c&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        1280,
+        1400
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;6aa6ff140b8beeb223b44274fbb201db41af688506125cd268b8225e814fe659&quot;,
+    &quot;dimensions&quot;: [
+      1280,
+      1400
+    ]
+  },
+  &quot;after&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;7ec52b645f0c62131f43492c5f348b1361b46fd0&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;11d04cf0f7432b1f38244427af122b10ef815e1696cba7757cb6f6659ef92bba&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        1280,
+        1400
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;60f8702a264492ace870cf6b05a5561186bd755004a6aa7c1bce7711677efcb2&quot;,
+    &quot;dimensions&quot;: [
+      1280,
+      1400
+    ]
+  }
+}</pre></details>
+      </section>
+      <section class="pair">
+        <div class="pair-head">
+          <h3>Tablet width</h3>
+          <p></p>
+        </div>
+        <div class="shots">
+          <figure>
+            <span class="tag tag-before">Before</span>
+            <img src="before-tablet.png" alt="Tablet width, before">
+            <figcaption>The same six saved entries.</figcaption>
+          </figure>
+          <figure>
+            <span class="tag tag-after">After</span>
+            <img src="preview-tablet.png" alt="Tablet width, after">
+            <figcaption>The pending request and staff note remain readable.</figcaption>
+          </figure>
+        </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{
+  &quot;before&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;dc4f328735da42911c6301708b8c1eababc09c05&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;d7adbeeb5b1e17889569fce0e5663561ba9b48860d68759a97017653dbc5d06c&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        768,
+        1024
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;c05ceeba7e607256610aae3f7aa29457dd9e2e0dc5c4282414fd1c6b61ea7d08&quot;,
+    &quot;dimensions&quot;: [
+      768,
+      1024
+    ]
+  },
+  &quot;after&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;7ec52b645f0c62131f43492c5f348b1361b46fd0&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;11d04cf0f7432b1f38244427af122b10ef815e1696cba7757cb6f6659ef92bba&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        768,
+        1024
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;24324aae1958ab832d623d2ead4b59b646a55c2b8b784de07e5998ee8da09ad1&quot;,
+    &quot;dimensions&quot;: [
+      768,
+      1024
+    ]
+  }
+}</pre></details>
+      </section>
+      <section class="pair">
+        <div class="pair-head">
+          <h3>Phone-width web smoke</h3>
+          <p></p>
+        </div>
+        <div class="shots">
+          <figure>
+            <span class="tag tag-before">Before</span>
+            <img src="before-phone.png" alt="Phone-width web smoke, before">
+            <figcaption>Header and saved rows compete for width.</figcaption>
+          </figure>
+          <figure>
+            <span class="tag tag-after">After</span>
+            <img src="preview-phone.png" alt="Phone-width web smoke, after">
+            <figcaption>Controls wrap and the current summary fits the viewport. Native iOS remains the phone workflow.</figcaption>
+          </figure>
+        </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{
+  &quot;before&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;dc4f328735da42911c6301708b8c1eababc09c05&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;d7adbeeb5b1e17889569fce0e5663561ba9b48860d68759a97017653dbc5d06c&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        390,
+        844
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;7dd8ed99edc0d8601b15badc6e982083a893d02461e7815b0eeca925da949d2e&quot;,
+    &quot;dimensions&quot;: [
+      390,
+      844
+    ]
+  },
+  &quot;after&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;7ec52b645f0c62131f43492c5f348b1361b46fd0&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;11d04cf0f7432b1f38244427af122b10ef815e1696cba7757cb6f6659ef92bba&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        390,
+        844
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture)&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;d2bf9bf8cb7048b8f689bba670b3fe662ede5e044ff2a6a669c464b50615ce24&quot;,
+    &quot;dimensions&quot;: [
+      390,
+      844
+    ]
+  }
+}</pre></details>
+      </section>
+
+  <h2>Drafts and recovery</h2>
+
+
+      <section class="pair">
+        <div class="pair-head">
+          <h3>Add a class time</h3>
+          <p></p>
+        </div>
+        <div class="shots">
+          <figure>
+            <span class="tag tag-before">Before</span>
+            <img src="before-editor.png" alt="Add a class time, before">
+            <figcaption>Existing profile editor.</figcaption>
+          </figure>
+          <figure>
+            <span class="tag tag-after">After</span>
+            <img src="after-editor.png" alt="Add a class time, after">
+            <figcaption>Central-time guidance and isolated form actions; failed edits keep their inputs.</figcaption>
+          </figure>
+        </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{
+  &quot;before&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;dc4f328735da42911c6301708b8c1eababc09c05&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;d7adbeeb5b1e17889569fce0e5663561ba9b48860d68759a97017653dbc5d06c&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        1280,
+        1400
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture) / add class time&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;9de7a9a41248e23092473cae0a066469b2f7be07c18ceeba42d76ba7d79c8e21&quot;,
+    &quot;dimensions&quot;: [
+      1280,
+      1400
+    ]
+  },
+  &quot;after&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;7ec52b645f0c62131f43492c5f348b1361b46fd0&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;11d04cf0f7432b1f38244427af122b10ef815e1696cba7757cb6f6659ef92bba&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium, deviceScaleFactor 1&quot;,
+      &quot;viewport&quot;: [
+        1280,
+        1400
+      ],
+      &quot;fixture&quot;: &quot;student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814&quot;,
+      &quot;role&quot;: &quot;STAFF&quot;,
+      &quot;route&quot;: &quot;/staff/student-1?tab=availability (fixture) / add class time&quot;,
+      &quot;appearance&quot;: &quot;light&quot;,
+      &quot;textSize&quot;: &quot;browser default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;2026-10-29T17:00:00Z&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;987e35c858bdf715ef59a397c68ca1e9c7cc62b3a7bb88c8e21f84601c740ec3&quot;,
+    &quot;dimensions&quot;: [
+      1280,
+      1400
+    ]
+  }
+}</pre></details>
+      </section>
+
+      <figure>
+        <span class="tag tag-after">After</span>
+        <img src="preview-paint-failure.png" alt="Failed painted-week save">
+        <figcaption>After-only failure state: a simulated 503 keeps the label, weekdays and time range visible. The browser check then submits the same batch successfully.</figcaption>
+      </figure>
+  <h2>Native iOS</h2>
+  <p class="sec-note">After-only: no matched pre-change native capture was retained. Existing offline Availability scenario, WisconsinPerformance, iPhone 18 Pro Max on iOS 27.0. Fixture dates are relative to the recorded October 29 capture. No live API writes or push delivery are exercised.</p>
+
+
+      <figure>
+        <span class="tag tag-after">After</span>
+        <img src="native-after-top.png" alt="My Availability on iPhone 18 Pro Max">
+        <figcaption>Native List retained; Central-time guidance, staff review feedback and History are visible.</figcaption>
+      </figure>
+  <h2>What changed, and why</h2>
+  <div class="change">
+    <h3>A painted week saves together</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>One request per weekday could leave a partially saved week after failure.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>One validated batch and one serializable transaction create all selected weekdays with their audits and conflict refresh.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Review applies to the current request</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>A full stale form could replace dates during a decision, and student edits could retain an earlier approval.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Staff decisions send only status, note and version. Student edits return time off to pending; a stale supplied version yields 409 and retains the draft.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Scheduling checks the full call window</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>A same-day wall-clock comparison missed availability on overnight windows.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>The shared evaluator covers every local date, exact end boundaries, spring-forward gaps and repeated fall-back hours.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li>8,475 unit tests passed with coverage gates; 13 existing tests skipped. Full lint:ci passed with its existing 121 warnings.</li><li>All 19 disposable PostgreSQL tests passed, including six Availability retry, concurrency, rollback, actor/target scoping and review cases.</li><li>Chromium fixture checks passed for history, staff review payload/note, student controls, stale-edit recovery, retained drafts and the same save ID on retry. No page errors.</li><li>Required Wisconsin simulator build passed; offline native captures remain from the preceding visual slice. No native layout changed in the retry follow-up.</li><li>Migration 0208 generated by Prisma; schema validation, client generation, iOS drift/project and 213 migration-prefix checks passed.</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>Preview preparation, unreleased. Claude’s original paint-roller checkout and untracked demo remain preserved with verified recovery archives. PaintWeek has no diff.</li><li>Authenticated student → staff → Schedule persistence and in-app notification acceptance await the branch-owned preview. No production deployment.</li><li>Before captures retain the actual preserved baseline. Web after captures were refreshed after the retry fix and 40px approval controls; receipts bind PNG bytes and matching declared inputs. Native captures remain after-only from the prior visual slice.</li><li>Retries reuse the mounted form’s save ID. Older clients without an ID retain legacy behavior; closing and opening a new form starts a new save.</li></ul></div>
+</div>
+</body></html>

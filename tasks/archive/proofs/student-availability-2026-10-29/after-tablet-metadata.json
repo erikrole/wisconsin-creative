@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "dc4f328735da42911c6301708b8c1eababc09c05",
+  "sourcePatchSha256": "f8ebb984d8e79fe1ea9aa4a3f3a9b4dc360f1cf87609f0ecf546535465b64682",
+  "settings": {
+    "device": "Playwright Chromium, deviceScaleFactor 1",
+    "viewport": [
+      768,
+      1024
+    ],
+    "fixture": "student-availability 21d77f2ffacbb8e4e06dcaa917047ba963b557ea3b5b2360cf2e5b44b24c1814",
+    "role": "STAFF",
+    "route": "/staff/student-1?tab=availability (fixture)",
+    "appearance": "light",
+    "textSize": "browser default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-10-29T17:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

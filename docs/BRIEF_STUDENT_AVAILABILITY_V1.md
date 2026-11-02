@@ -3,8 +3,8 @@
 ## Document Control
 - Owner: Wisconsin Athletics Creative Product
 - Area: AREA_SHIFTS / AREA_USERS
-- Status: Shipped
-- Last Updated: 2026-08-21
+- Status: Shipped baseline; 2026-10-29 follow-up local and unreleased
+- Last Updated: 2026-10-29
 
 ## Problem
 
@@ -14,7 +14,7 @@ Staff need to know when students are predictably unavailable before assigning sh
 
 Student-scheduling-class users and staff can maintain recurring class unavailability blocks and one-off days away on the user profile Availability tab. A block records a weekday or inclusive date range, local start/end time when timed, an all-day flag when appropriate, and an optional label such as a class name.
 
-This is intentionally an availability-warning system. It does not prevent staff/admin overrides, because operations may still need to assign a conflicted student after direct confirmation.
+Cannot-work and dislike entries are advisory: staff can assign after direct confirmation. Approved time off is blocking for assignment, pickup, trades and call-window changes; pending requests remain advisory.
 
 ## Shipped Behavior
 
@@ -100,6 +100,18 @@ This is intentionally an availability-warning system. It does not prevent staff/
 - Native iOS adds optional class-term bounds alongside the existing 15-minute time controls and keeps new range/all-day response fields optional for rollout safety.
 - The additive schema/API contract preserves legacy single-date and timed rows; no availability policy changes were introduced for advisory signals or approved time off.
 
+## Local Follow-Up (2026-10-29; not deployed)
+
+- Preserve the existing `PaintWeek` interaction. `POST` accepts optional `daysOfWeek` (1–7 distinct weekdays, weekly entries only) and saves all selected days, per-row audits and one future conflict refresh in a serializable transaction. The legacy `dayOfWeek` request and `{ data: block }` response remain supported; batch responses also contain `blocks`.
+- Only Staff/Admin can approve or deny time off or write review notes. Student time-off edits become pending and clear previous review metadata, including when an older client echoes the old approved status.
+- `PATCH` accepts a status-only staff review body and optional `expectedUpdatedAt` on reviews or full edits. A stale supplied version returns 409 before mutation. Existing clients without the version remain supported; they cannot receive stale-write protection until updated.
+- Create/update/delete audits and conflict refresh are atomic. Review inbox rows commit with the update; push is dispatched after commit. A resubmitted request can notify again when reviewed.
+- Dates must exist on the calendar; wall-clock times must be valid. The shared evaluator checks every local date crossed by the call window, exclusive end boundaries and daylight-saving transitions in the institution timezone.
+- Web and iOS show ended terms, past dates and denied requests in History. Staff notes are visible. Web has a pending-review section with an optional note. Current/upcoming summaries exclude history.
+- Inputs use Madison time (Central). Failed saves retain drafts. Web and native stale-edit handling refresh the list so cancel/reopen loads the latest record.
+- Migration `0213_student_availability_saves` adds an actor/request UUID primary key and a payload hash plus created block IDs. Web and native forms retain one UUID across retries. The receipt commits with the blocks/audits/conflict refresh; a retry returns current entries without repeating writes. Reusing that save ID for different details or deleted entries returns 409. Receipts survive block deletion and cascade only when their actor account is deleted. Older clients without `requestId` remain compatible but do not gain retry protection. Deploy the migration and server/web together; release native afterward.
+- Local source, tests/builds and fixture evidence are tracked in [the ledger](../tasks/student-availability-roundout-2026-10-29.md). Disposable-PostgreSQL rollback/concurrency passes. Authenticated preview persistence, push delivery and distributed native acceptance remain open.
+
 ## Acceptance Criteria
 
 - [x] AC-1: A student can add a recurring weekly unavailability block for themselves.
@@ -117,6 +129,10 @@ This is intentionally an availability-warning system. It does not prevent staff/
 - [x] AC-13: Native iOS My Availability can display and create weekly, one-time, preference, dislike, and time-off signals without breaking older payloads.
 - [x] AC-14: Availability mutations refresh persisted future assignment conflict state so Schedule queues, exports, and assignment review do not show stale conflicts.
 - [x] AC-15: Web and native iOS can add recurring class windows plus one-off single-date, inclusive-range, and all-day cannot-work entries without breaking legacy availability rows.
+
+- [x] AC-16 (local): Painted weekdays save together; current/history and review-note workflows have local fixture proof.
+- [x] AC-17 (local): Time-off review permissions, stale supplied versions and overnight/DST conflicts have owner-boundary regression coverage.
+- [ ] AC-18 (runtime): Confirm authenticated student → staff review → Schedule conflict readback and in-app notification delivery in this change’s own preview.
 
 ## Out Of Scope
 

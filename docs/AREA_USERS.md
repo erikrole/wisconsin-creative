@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Users
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-10-11
+- Last Updated: 2026-10-29
 - Status: Active
 - Version: V1.5
 
@@ -99,6 +99,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - `STAFF`: view, add, and remove availability blocks for any Student-scheduling-class user.
 - `STUDENT`: view, add, and remove only their own availability blocks when their Scheduling class is Student.
 
+Local follow-up (2026-10-29, not deployed): `student_availability` grants own-record Student edits and Staff/Admin review. Students cannot create approved time off or submit review notes; editing their time off returns it to pending and clears prior review metadata. See the brief for the additive batch/version contract.
+
 ## Dashboard Action Visibility Mapping
 1. Dashboard actions are role-filtered per row.
 2. `STUDENT` can view team dashboard rows but never sees edit actions for non-owned reservations/check-outs.
@@ -139,6 +141,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - [x] AC-7: Every authenticated role can read active, visible Scoreboard identity and metrics without gaining private profile access.
 - [x] AC-8: Team Scoreboard filters stack across sport, Schedule venue, opponent, and site while keeping all totals, breakdowns, Snapshots, and person rankings on one server-owned intersection.
 
+- [x] AC-9 (local): Current/history separation, visible staff review notes, retained failed drafts and atomic painted-weekday creation have source and fixture-browser proof. Authenticated runtime acceptance remains pending.
+
 ## Developer Brief (No Code)
 1. Define a centralized permission policy map keyed by role and resource.
 2. Add ownership checks for student reservation and check-out mutations.
@@ -161,6 +165,9 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 - 2026-11-01: **Staff contact details stay out of student reads.** `GET /api/users` and `GET /api/users/[id]` return `phone`, `personalPhone`, `workPhone`, `athleticsEmail`, `birthdayMonth` and `birthdayDay` as null unless the reader is the person, staff or admin, or the target is a student (`canReadContactDetails` in `src/lib/user-visibility.ts`, the rule the people CSV export already applied). Students still see each other's numbers for game day. The CSV export keeps its stricter staff-reads-staff rule for now.
 - 2026-10-31: **Account takeover guards.** Staff can change roles only for students (a staff member could demote a peer, re-point their email and reset the password). A personal API token cannot change anyone's email or active flag, and cannot change a password through `PATCH /api/profile`, which now shares the 5-per-minute guess limit of `/api/me/change-password`. Changing a login email drops that user's pending reset links. Nobody can deactivate their own account. Forgot-password sends at most 3 links per address per hour. A role-preview cookie no longer blocks `/api/auth/*` sign-in routes after the session cookie is gone. A student's edit of time off always returns it to Pending review.
+- 2026-10-29: **Duplicate-safe availability saves (preview preparation).** Web and native create forms retain a save UUID; an actor-scoped database receipt replays current saved entries without another create/audit/conflict refresh. Migration `0213_student_availability_saves` and six real-PostgreSQL retry/rollback regressions cover the contract. [Preview acceptance ledger](../tasks/student-availability-roundout-2026-10-29.md).
+
+- 2026-10-29: **Student Availability roundout (local, unreleased).** The existing paint roller is retained; selected weekdays save in one atomic request with inline failure recovery. Profile Availability separates pending review, current entries and History, offers visible Approve/Deny controls with a student note, and preserves drafts on failures. Student edits resubmit time off; supplied versions reject stale edits/reviews. Owner scope remains Student scheduling class with Staff/Admin review. Acceptance: focused route/helper/client tests and matched local browser fixtures; authenticated persistence and delivery remain unverified; disposable-PostgreSQL rollback/concurrency now passes. See the [active ledger](../tasks/student-availability-roundout-2026-10-29.md) and [UI review](../tasks/archive/proofs/student-availability-2026-10-29/review-index.html).
 - 2026-10-25: **One password-change path.** `PATCH /api/me` (name and password edits, no client callers) is removed. It changed passwords without the 5-per-minute limit or companion revocation that `POST /api/me/change-password` applies. Names change through `/api/me/profile`. `GET /api/me` is unchanged.
 - 2026-10-23: **Token-aware native signup prepared locally for PR #620.** The updated iPhone client accepts its emailed invitation, creates the account through the existing guarded endpoint, and enters native Welcome. Missing/expired proof offers native resend; the email retains a browser-owned primary setup action and an explicit latest-app action so installed 1.4 clients still have a usable path. The existing 1.4 (36) App Store binary is unchanged. Local source/build/fixture evidence and remaining inbox, shared-backend, device association and distribution gates are tracked in `tasks/archive/native-invite-pr620-2026-10-23.md`.
 

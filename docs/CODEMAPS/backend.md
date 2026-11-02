@@ -151,7 +151,7 @@
 | `src/lib/services/user-deactivation.ts` | 590 |
 | `src/lib/services/utilization-report.ts` | 444 |
 | `src/lib/services/wishlist.ts` | 193 |
-| `src/lib/services/wrapped.ts` | 286 |
+| `src/lib/services/wrapped.ts` | 290 |
 
 ## Key Library Files
 
@@ -292,7 +292,7 @@
 | `src/lib/passkey-client.ts` | 126 |
 | `src/lib/passkey.ts` | 398 |
 | `src/lib/password-rules.ts` | 16 |
-| `src/lib/permissions.ts` | 286 |
+| `src/lib/permissions.ts` | 293 |
 | `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 43 |
 | `src/lib/profile-completion-cache.ts` | 10 |
@@ -377,14 +377,15 @@
 | `src/lib/sports.ts` | 98 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 19 |
-| `src/lib/student-availability.ts` | 248 |
+| `src/lib/student-availability-display.ts` | 24 |
+| `src/lib/student-availability.ts` | 274 |
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/team-availability.ts` | 64 |
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 35 |
 | `src/lib/title-normalization.ts` | 117 |
 | `src/lib/toast.ts` | 53 |
-| `src/lib/unavailable-times.ts` | 185 |
+| `src/lib/unavailable-times.ts` | 186 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 105 |
 | `src/lib/user-directory-query.ts` | 110 |

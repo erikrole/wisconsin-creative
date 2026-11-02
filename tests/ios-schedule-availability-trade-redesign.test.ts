@@ -19,7 +19,25 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(client).toContain("func updateAvailabilityBlock(");
     expect(client).toContain("/availability/\\(blockId)\", method: \"PATCH\"");
     expect(updateRoute).toContain("export const PATCH");
-    expect(updateRoute).toContain("recomputeFutureAssignmentAvailabilityConflictsForUser(id)");
+    // Atomic conflict refresh is covered by student-availability-routes.test.ts.
+  });
+
+  it("shows staff review feedback and passes an optional version when editing availability", () => {
+    const view = source("ios/Wisconsin/Views/AvailabilityView.swift");
+    const client = apiClientSource();
+    const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
+    expect(view).toContain("Staff note:");
+    expect(view).toContain("Saving changes sends this request back to staff for review.");
+    expect(view).toContain("History (");
+    expect(view).toContain("Madison time (Central)");
+    expect(models).toContain("let updatedAt: String?");
+    expect(client).toContain("expectedUpdatedAt: String? = nil");
+    expect(client).toContain("let requestId: String?");
+    expect(view).toContain("@State private var createRequestId = UUID().uuidString");
+    expect(view).toContain("requestId: createRequestId,");
+    expect(view).toContain("expectedUpdatedAt: block.updatedAt");
+    expect(view).toContain("if case APIError.conflict = error { await onStale() }");
+    expect(view).toContain("onStale: { await load() }");
   });
 
   it("keeps Availability in the Schedule flow for Student workers", () => {

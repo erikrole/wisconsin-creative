@@ -170,6 +170,32 @@ describe("student availability conflict helpers", () => {
     })).toBe("Approved time off: Family trip (10:00-11:00)");
   });
 
+  it.each([
+    ["second day of an overnight shift", { kind: "WEEKLY", dayOfWeek: 3, startsAt: "00:15", endsAt: "01:00" }, "2026-10-07T04:00:00Z", "2026-10-07T06:00:00Z", true],
+    ["first day of an overnight shift", { kind: "WEEKLY", dayOfWeek: 2, startsAt: "22:30", endsAt: "23:30" }, "2026-10-07T04:00:00Z", "2026-10-07T06:00:00Z", true],
+    ["timed range on an intermediate date", { kind: "AD_HOC", date: "2026-10-07", startsAt: "10:00", endsAt: "11:00" }, "2026-10-07T04:00:00Z", "2026-10-08T06:00:00Z", true],
+    ["all-day request beginning exactly at release", { kind: "AD_HOC", date: "2026-10-07", allDay: true, startsAt: "00:00", endsAt: "23:59" }, "2026-10-07T04:00:00Z", "2026-10-07T05:00:00Z", false],
+    ["term ending on the first overnight day", { kind: "WEEKLY", dayOfWeek: 3, startsAt: "00:15", endsAt: "01:00", semesterEndsOn: "2026-10-06" }, "2026-10-07T04:00:00Z", "2026-10-07T06:00:00Z", false],
+    ["zero length window", { kind: "AD_HOC", date: "2026-10-07", allDay: true, startsAt: "00:00", endsAt: "23:59" }, "2026-10-07T06:00:00Z", "2026-10-07T06:00:00Z", false],
+  ])("handles %s", (_name, block, start, end, matches) => {
+    expect(findAvailabilityConflict([block], { startsAt: new Date(start), endsAt: new Date(end) }) !== null).toBe(matches);
+  });
+
+  it.each([
+    ["fall-back first occurrence", "2026-11-01T06:50:00Z", "2026-11-01T07:10:00Z", "01:55", "01:59", true],
+    ["fall-back second occurrence", "2026-11-01T06:50:00Z", "2026-11-01T07:10:00Z", "01:01", "01:05", true],
+    ["fall-back gap between the two traversed windows", "2026-11-01T06:50:00Z", "2026-11-01T07:10:00Z", "01:20", "01:30", false],
+    ["spring-forward nonexistent hour", "2026-03-08T07:30:00Z", "2026-03-08T08:30:00Z", "02:10", "02:20", false],
+    ["spring-forward actual hour", "2026-03-08T07:30:00Z", "2026-03-08T08:30:00Z", "03:10", "03:20", true],
+    ["exact adjacent boundary", "2026-10-07T14:00:00Z", "2026-10-07T15:00:00Z", "10:00", "11:00", false],
+    ["sub-minute overlap", "2026-10-07T14:59:59Z", "2026-10-07T15:00:01Z", "10:00", "11:00", true],
+  ])("handles %s", (_name, start, end, startsAt, endsAt, matches) => {
+    const date = start.slice(0, 10);
+    expect(findAvailabilityConflict([{ kind: "AD_HOC", date, startsAt, endsAt }], {
+      startsAt: new Date(start), endsAt: new Date(end),
+    }) !== null).toBe(matches);
+  });
+
   it("keeps call-window precedence unchanged for conflict checks", () => {
     const window = effectiveCallWindow({
       startsAt: "2026-10-06T14:00:00.000Z",
@@ -268,5 +294,26 @@ describe("inherited all-day windows", () => {
     expect(findAvailabilityConflict([
       { kind: "AD_HOC", date: "2026-11-15", startsAt: "09:00", endsAt: "10:00" },
     ], { startsAt: new Date("2026-11-14T00:00:00.000Z"), endsAt: new Date("2026-11-16T00:00:00.000Z") })).not.toBeNull();
+  });
+  it("keeps the all-day shortcut on a fall-back date instead of splitting the day at the offset change", () => {
+    // All-day Sunday 2026-11-01 (clocks fall back at 2:00 that morning), stored as UTC midnights.
+    const fallBackSunday = { startsAt: new Date("2026-11-01T00:00:00.000Z"), endsAt: new Date("2026-11-02T00:00:00.000Z") };
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "01:00", endsAt: "02:00", label: "Sunday early" },
+    ], fallBackSunday)).not.toBeNull();
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 0, startsAt: "22:00", endsAt: "23:00" },
+    ], fallBackSunday)).not.toBeNull();
+    expect(findAvailabilityConflict([
+      { kind: "WEEKLY", dayOfWeek: 6, startsAt: "19:00", endsAt: "21:00", label: "Saturday night" },
+    ], fallBackSunday)).toBeNull();
+  });
+
+  it("splits a timed call that crosses the fall-back midnight into both Madison days", () => {
+    // Saturday 23:00 CDT to Sunday 02:30 CST (clocks repeat 01:00-02:00).
+    const window = { startsAt: new Date("2026-11-01T04:00:00.000Z"), endsAt: new Date("2026-11-01T08:30:00.000Z") };
+    expect(findAvailabilityConflict([{ kind: "WEEKLY", dayOfWeek: 6, startsAt: "23:30", endsAt: "23:45" }], window)).not.toBeNull();
+    expect(findAvailabilityConflict([{ kind: "WEEKLY", dayOfWeek: 0, startsAt: "01:30", endsAt: "01:45" }], window)).not.toBeNull();
+    expect(findAvailabilityConflict([{ kind: "WEEKLY", dayOfWeek: 0, startsAt: "02:30", endsAt: "03:00" }], window)).toBeNull();
   });
 });
