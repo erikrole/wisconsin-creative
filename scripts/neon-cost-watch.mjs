@@ -7,7 +7,10 @@ import { readInfrastructureConfig } from "./lib/migration-baseline.mjs";
 
 const config = readInfrastructureConfig(), watch = config.costWatch;
 const token = process.env.NEON_COST_WATCH_API_KEY;
-if (!token) { console.log("NEON_COST_WATCH_API_KEY is not set; nothing to watch. Add a read-only Neon API key that can see every project."); process.exit(0); }
+if (!token) {
+  console.error("Neon cost watch did not run: NEON_COST_WATCH_API_KEY is missing. Configure a dedicated credential with access to the configured projects; do not reuse the preview infrastructure key.");
+  process.exit(1);
+}
 const api = new NeonPreviewApi(token);
 const since = Date.now() - (watch.windowDays + 1) * 86_400_000;
 
